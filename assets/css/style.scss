@@ -146,3 +146,74 @@ article h5:hover .anchor-link,
 article h6:hover .anchor-link {
     opacity: 1;
 }
+
+/* ==========================================================================
+   Hero Banner for Homepage
+   ========================================================================== */
+
+.hero {
+  position: relative; /* Needed for the overlay effect */
+  padding: 8em 2em;
+  text-align: center;
+  color: #fff; /* We'll use white text on the dark image */
+
+  /* --- The background image --- */
+  background-image: url("{{ site.baseurl }}/assets/images/library-hero.png");
+  background-size: cover; /* Cover the entire area */
+  background-position: center 60%; /* Center the image, slightly lower */
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+/* --- Darkening overlay to make text readable --- */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  border-radius: 5px; /* Match the parent's border-radius */
+  z-index: 1;
+}
+
+/* --- Style the text on top of the banner --- */
+.hero-content {
+  position: relative; /* Put the text on top of the overlay */
+  z-index: 2;
+}
+
+.hero-title {
+  font-family: 'Lora', serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 4em;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.7); /* Add a shadow for readability */
+}
+
+.hero-description {
+  font-size: 1.2em;
+  color: #d4c8b0; /* Use the parchment color for the subtitle */
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+}
+
+
+/* ==========================================================================
+   Simpler Header for other pages
+   ========================================================================== */
+
+.page-header {
+  text-align: center;
+  border-bottom: 1px solid #54483b;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  font-family: 'Lora', serif;
+  font-style: italic;
+  font-size: 2em;
+  color: #b89f62;
+}
