@@ -7,7 +7,7 @@ title: 📜 The Tome of Secrets: Keeper's Character Sheet 📜
 
 * **Keeper Name:** _________________________
 * **🌟 Level:** _____
-* **✨ Magical School:** _________________________
+* **✨ Wizard School:** _________________________
 * **🏛️ Library Sanctum:** _________________________
 
 ---
@@ -25,9 +25,9 @@ title: 📜 The Tome of Secrets: Keeper's Character Sheet 📜
 
 ### ✨ Magical School Benefit
 *(Write your chosen school's starting benefit here)*
-* ### 🏛️ Library Sanctum Benefit
+### 🏛️ Library Sanctum Benefit
 *(Write your chosen sanctum's benefit and its associated buffs here)*
-* * **Associated Buffs:** ### 🏆 Permanent Bonuses (from Leveling)
+- **Associated Buffs:** ### 🏆 Permanent Bonuses (from Leveling)
 *(Note bonuses as you unlock them)*
 * **Level 3 - Atmospheric Forecaster:** _________________________
 * **Level 6 - Novice's Focus:** _________________________
@@ -36,8 +36,8 @@ title: 📜 The Tome of Secrets: Keeper's Character Sheet 📜
 
 ### 🧙 School Mastery Abilities
 *(List abilities acquired by spending SMP)*
-* _________________________
-* _________________________
+* _____________________
+* _____________________
 
 ---
 
@@ -47,12 +47,10 @@ title: 📜 The Tome of Secrets: Keeper's Character Sheet 📜
 * **👕 Wearable Slot:** _________________________
 * **🗝️ Non-Wearable Slot:** _________________________
 * **🐾 Familiar Slot:** _________________________
-* **Unlocked Slot(s):** _________________________
 
 ### 📦 Unequipped Items & Familiars (Inventory)
 * **Magical Items:**
-    * * **Befriended Familiars:**
-    * ---
+* **Befriended Familiars:**
 
 ## 📅 Monthly Tracker
 
@@ -67,8 +65,11 @@ title: 📜 The Tome of Secrets: Keeper's Character Sheet 📜
 5.  
 
 ### 🕯️ Active Atmospheric Buffs
-* ### 💀 The Shroud's Curse
-* **Current Worn Pages:** ______
+*(List your drawn atmospheric buffs here)*
+
+### 💀 The Shroud's Curse
+
+**Current Worn Pages:** ______
 *_(Track penalties from uncompleted quests)_*
 
 | Worn Page # | Curse Description (Roll at start of next month) |
