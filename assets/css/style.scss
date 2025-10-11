@@ -115,21 +115,30 @@ a:hover {
 
 /* Styling for the hover-to-show anchor links on headers */
 article h2, article h3, article h4, article h5, article h6 {
-    position: relative; /* This is necessary for positioning the anchor link */
+    position: relative;
+    padding-left: 1.2em; /* Add padding to the header to make room */
 }
 
 .anchor-link {
     position: absolute;
-    left: -1em; /* Position it to the left of the header text */
-    top: 0;
-    opacity: 0; /* Hide it by default */
-    transition: opacity 0.2s ease-in-out; /* Smooth fade effect */
-    color: #cca352; /* Use the gold link color */
+    /* Position the link in the new padding area */
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%); /* This perfectly centers the link vertically */
+
+    /* Make the link invisible by default */
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+
+    /* Styling for the '#' symbol */
+    color: #cca352;
     text-decoration: none;
     border-bottom: none;
+    font-size: 0.8em; /* Make the symbol slightly smaller than the header text */
+    font-weight: normal;
 }
 
-/* When you hover over the header, make the anchor link visible */
+/* ONLY when you hover over the header, make the anchor link visible */
 article h2:hover .anchor-link,
 article h3:hover .anchor-link,
 article h4:hover .anchor-link,
