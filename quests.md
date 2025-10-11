@@ -1,3 +1,8 @@
+---
+layout: default
+title: Quests and Challenges
+---
+
 # Chapter 3: Quests and Challenges
 
 ## Genre Quests (Roll a d6)

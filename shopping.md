@@ -1,3 +1,8 @@
+---
+layout: default
+title: Shopping Episode
+---
+
 # Chapter 7: Shopping Episode
 Use your collected Ink Drops and Paper Scraps to embark on a trip to a bookstore. This is more than simply buying a book—it's a chance to immerse yourself in the sights, scents, and atmosphere of shelves brimming with potential adventures.
 

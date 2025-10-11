@@ -1,3 +1,8 @@
+---
+layout: default
+title: The Core Mechanics
+---
+
 # Chapter 2: The Core Mechanics
 
 ## The Core Gameplay Loop

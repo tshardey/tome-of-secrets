@@ -1,3 +1,8 @@
+---
+layout: default
+title: The Grand Library
+---
+
 # Chapter 1b: The Grand Library
 
 ## Your Library Sanctum

@@ -1,3 +1,8 @@
+---
+layout: default
+title: The Shroud's Curse
+---
+
 # Chapter 6: The Shroud's Curse
 The Shroud creeps like spilled ink through the stacks, feeding on unread stories. Each missed quest gives it strength, curling around your shelves like a choking fog. To fall too far behind is to risk losing not only the tales but the magic that binds them together.
 

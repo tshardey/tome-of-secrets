@@ -1,3 +1,8 @@
+---
+layout: default
+title: Rewards
+---
+
 # Chapter 5: Rewards
 
 ## Magical Items and Companions

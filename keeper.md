@@ -1,3 +1,8 @@
+---
+layout: default
+title: The Keeper
+---
+
 # Chapter 1a: The Keeper
 
 ## Character Creation: Your Magical School
