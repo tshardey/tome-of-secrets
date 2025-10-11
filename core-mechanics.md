@@ -3,8 +3,6 @@ layout: default
 title: The Core Mechanics
 ---
 
-# Chapter 2: The Core Mechanics
-
 ## The Core Gameplay Loop
 Your journey through the Grand Library unfolds in a steady rhythm of discovery, choice, and reading. Each month, follow this loop to guide your adventure:
 

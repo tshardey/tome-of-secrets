@@ -3,8 +3,6 @@ layout: default
 title: Leveling Up
 ---
 
-# Leveling
-
 This document details the Leveling Up & Class Customization expansion for The Tome of Secrets. As the Keeper gains experience, they unlock permanent bonuses and gain School Mastery Points (SMP) to acquire powerful abilities tied to their chosen Magical School.
 
 ## Leveling Up Rewards (Levels 1–20)

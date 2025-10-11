@@ -3,8 +3,6 @@ layout: default
 title: The Keeper
 ---
 
-# Chapter 1a: The Keeper
-
 ## Character Creation: Your Magical School
 Every Keeper draws power from a magical school, which grants them unique abilities to aid in their quests. Choose one of the following to be your primary specialization. This choice gives you a powerful, permanent benefit for your journey.
 

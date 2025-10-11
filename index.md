@@ -1,10 +1,6 @@
 ---
 layout: default
-title: Home
+title: Welcome to the Tome of Secrets!
 ---
 
-## Welcome to the Tome of Secrets!
-
-This is a solo TTRPG journaling game where you take on the role of a Keeper of a magical library.
-
-Navigate using the links on the left to learn how to play. You can start with the [Introduction]({{ site.baseurl }}/introduction.html).
+Welcome, Keeper, to the Grand Library, a repository of all stories. Your sacred duty is to ensure the tales are read and the magic they hold is preserved. For too long, an unread shadow known as the "Shroud" has crept through the archives, threatening to consume the very pages of your To Be Read list. Your journey as a Keeper begins now, an adventure to save the books and restore the Grand Library to its former glory.

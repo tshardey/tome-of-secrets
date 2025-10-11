@@ -3,8 +3,6 @@ layout: default
 title: The Grand Library
 ---
 
-# Chapter 1b: The Grand Library
-
 ## Your Library Sanctum
 The heart of your adventure is your library, which is also your home. Choosing a type of library grants you a permanent ability that enhances certain Atmospheric Buffs. For any buff listed in your chosen library's description, you now earn x2 Ink Drops whenever that buff would normally provide an Ink Drop bonus.
 

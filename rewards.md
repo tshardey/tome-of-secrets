@@ -3,8 +3,6 @@ layout: default
 title: Rewards
 ---
 
-# Chapter 5: Rewards
-
 ## Magical Items and Companions
 This document serves as a guide to the magical items and familiars you can discover on your journey through the Grand Library. Each artifact hums with history, carrying whispers of the stories it has touched.
 

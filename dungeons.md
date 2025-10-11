@@ -3,8 +3,6 @@ layout: default
 title: Dungeons
 ---
 
-# Chapter 4: Dungeons
-
 Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both challenge and encounter. Friendly creatures grant +10 Ink Drops, familiars grant +5 Page Scraps, monsters grant +50 XP. Earn a base of 25 XP for every book you complete. Failure to defeat/befriend a monster will result in a loss of 5 ink drops and 10 XP.
 
 *Note: After rolling a room, roll 1d4: 1-2 = first prompt; 3-4 = second prompt.*

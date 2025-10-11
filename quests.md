@@ -3,8 +3,6 @@ layout: default
 title: Quests and Challenges
 ---
 
-# Chapter 3: Quests and Challenges
-
 ## Genre Quests (Roll a d6)
 * **Historical Fiction:** Read a book set in the past or with a historical figure as a character.
 * **Fantasy:** Read a book with magical creatures, settings, or a non-human protagonist.
