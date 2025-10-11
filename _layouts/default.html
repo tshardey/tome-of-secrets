@@ -13,19 +13,16 @@
 </head>
 
 <body>
-
-    {% if page.url == "/" %}
-      <div class="hero">
-        <div class="hero-content">
-          <h1 class="hero-title">{{ site.title }}</h1>
-          <p class="hero-description">{{ site.description }}</p>
-        </div>
-      </div>
-    {% else %}
-      <header class="page-header">
-        <h1>{{ site.title }}</h1>
-      </header>
-    {% endif %}
+    <div class="hero">
+    <div class="hero-content">
+        {% if page.url == "/" %}
+        <h1 class="hero-title">{{ site.title }}</h1>
+        <p class="hero-description">{{ site.description }}</p>
+        {% else %}
+        <h1 class="hero-title">{{ page.title }}</h1>
+        {% endif %}
+    </div>
+    </div>
 
     <div class="container">
         <div class="main-content">
@@ -47,7 +44,9 @@
             </aside>
             <main>
                 <article>
-                    <h2 class="page-title">{{ page.title }}</h2>
+                    {% if page.url == "/" %}
+                        <h2 class="page-title">{{ page.title }}</h2>
+                    {% endif %}
                     {{ content }}
                 </article>
             </main>
