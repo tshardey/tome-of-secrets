@@ -1,3 +1,7 @@
 title: Tome of Secrets
 description: A solo TTRPG journaling game.
-theme: jekyll-theme-minimal
+theme: jekyll-theme-minimal # This can stay as a fallback
+
+# Add these two lines
+baseurl: "/tome-of-secrets" # The name of your repository
+url: "https://tshardey.github.io" # Your main GitHub Pages URL
