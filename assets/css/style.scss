@@ -79,10 +79,10 @@ a {
 }
 
 /* Style for the main page title to make it look like a chapter head */
-article h2 {
-  font-size: 2.5em;         /* Make the font significantly larger */
-  margin-bottom: 25px;      /* Add more space below the title */
-  padding-bottom: 15px;     /* Add space between text and the new border */
-  border-bottom: 1px solid #444; /* Add a subtle line underneath */
-  line-height: 1.2;         /* Adjust line height for the larger font */
+.page-title {
+    font-size: 2.5em;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #444;
+    line-height: 1.2;
 }
