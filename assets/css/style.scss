@@ -1,12 +1,19 @@
---- 
---- 
+---
+---
+/* Dark Academia Theme */
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    /* New Fonts and Colors */
+    font-family: 'Source Serif Pro', serif;
+    background-color: #2a231d; /* Deep, warm brown */
+    color: #d4c8b0; /* Parchment/cream text */
+    
+    /* Subtle paper texture background */
+    background-image: url("https://www.transparenttextures.com/patterns/old-paper.png");
+    
     margin: 0;
     padding: 20px;
-    line-height: 1.6;
+    line-height: 1.7; /* Slightly more spacious for readability */
 }
 
 .container {
@@ -16,14 +23,24 @@ body {
 
 header {
     text-align: center;
-    border-bottom: 1px solid #444;
+    border-bottom: 1px solid #54483b; /* Darker brown border */
     padding-bottom: 20px;
     margin-bottom: 20px;
 }
 
-h1,
-h2 {
-    color: #569cd6;
+/* Use Lora for the main site title */
+header h1 {
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 3em;
+    color: #b89f62; /* Muted gold */
+}
+
+/* General heading styles */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Lora', serif;
+    color: #b89f62; /* Muted gold */
 }
 
 .main-content {
@@ -43,16 +60,18 @@ h2 {
 
 .sidebar nav a {
     text-decoration: none;
-    color: #d4d4d4;
+    color: #d4c8b0; /* Parchment text */
     display: block;
     padding: 8px 10px;
     border-radius: 4px;
     transition: background-color 0.2s;
+    font-family: 'Lora', serif;
+    font-style: italic;
 }
 
 .sidebar nav a:hover {
-    background-color: #333;
-    color: #fff;
+    background-color: #3e352f;
+    color: #cca352; /* Brighter gold on hover */
 }
 
 main {
@@ -60,9 +79,9 @@ main {
 }
 
 article {
-    background-color: #252526;
-    border: 1px solid #333;
-    padding: 20px;
+    background-color: #3e352f; /* Lighter, warm brown */
+    border: 1px solid #54483b;
+    padding: 25px;
     border-radius: 5px;
 }
 
@@ -70,19 +89,26 @@ footer {
     text-align: center;
     margin-top: 40px;
     padding-top: 20px;
-    border-top: 1px solid #444;
-    color: #888;
+    border-top: 1px solid #54483b;
+    color: #8a7a61; /* Muted text */
+    font-style: italic;
 }
 
 a {
-    color: #9cdcfe;
+    color: #cca352; /* Brighter gold for links */
+    text-decoration: none;
+    border-bottom: 1px dotted #cca352;
 }
 
-/* Style for the main page title to make it look like a chapter head */
+a:hover {
+    border-bottom: 1px solid #cca352;
+}
+
+/* Style for the main page title */
 .page-title {
-    font-size: 2.5em;
+    font-size: 2.8em;
     margin-bottom: 25px;
     padding-bottom: 15px;
-    border-bottom: 1px solid #444;
+    border-bottom: 2px double #54483b; /* Classic double border */
     line-height: 1.2;
 }
