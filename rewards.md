@@ -1,312 +1,200 @@
 ---
 layout: default
-title: Dungeons
+title: Rewards
 ---
 
-## ♠️ Dungeon Rooms (Roll a d12 )
-Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards-roll-a-d10">Dungeon Completion Rewards</a> table.
+## Magical Items and Companions
+This document serves as a guide to the magical items and familiars you can discover on your journey through the Grand Library. Each artifact hums with history, carrying whispers of the stories it has touched.
 
-<h3>Dungeon Rewards & Penalties</h3>
-<table>
-  <thead>
-    <tr>
-      <th>Encounter Type</th>
-      <th>Reward</th>
-      <th>Penalty (on Failure)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Book Completion</strong></td>
-      <td>+25 XP</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td><strong>Monster</strong></td>
-      <td>+50 XP</td>
-      <td>-5 Ink Drops & -10 XP</td>
-    </tr>
-    <tr>
-      <td><strong>Friendly Creature</strong></td>
-      <td>+10 Ink Drops</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td><strong>Familiar</strong></td>
-      <td>+5 Page Scraps</td>
-      <td>-</td>
-    </tr>
-  </tbody>
-</table>
+### Wearable
 
-<br>
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/librarians-compass.png" alt="Librarian's Compass">
+  </div>
+  <div class="reward-description">
+    <h4 id="librarians-compass">Librarian's Compass</h4>
+    <p>Forged from brass and bound with threadlike etchings of constellations, this compass always points you toward a new adventure.</p>
+    <p><strong>Bonus:</strong> Earn a +20 Ink Drop bonus for any book by a new-to-you author.</p>
+  </div>
+</div>
 
-<table>
-  <thead>
-    <tr>
-      <th>Roll</th>
-      <th>Room Description & Encounters</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>1</strong></td>
-      <td>
-        <strong>The Hall of Whispers:</strong> Echoes of unread tales drift endlessly through this vaulted chamber. The walls hum with voices too faint to catch, yet heavy with longing.
-        <br><strong>Challenge:</strong> Read in a quiet space without music.
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Librarian's Spirit (Friendly Creature):</strong> A gentle ghost flickering with lantern light.
-                <br><strong>Befriend:</strong> Read a book with a ghost-like being or a mystery.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Will-o-wisps (Monster):</strong> Glittering lights that lure you astray.
-                <br><strong>Defeat:</strong> Read a book that involves fated destiny or a newly revealed path.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>2</strong></td>
-      <td>
-        <strong>The Glimmering Pools:</strong> Shallow pools glow like liquid starlight, each ripple whispering a forgotten secret. Step wrong, and the ink clings like chains.
-        <br><strong>Challenge:</strong> Read a book with a beautiful or unique cover (+10 Ink Drops).
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Mysterious Nymph (Friendly Creature):</strong> Her laughter shimmers across the water.
-                <br><strong>Befriend:</strong> Read a book that explores allure or transformation. Roll even for <a href="{{ site.baseurl }}/rewards.html#amulet-of-duality">Amulet of Duality</a>, odd for Worn Page curse.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Mischievous Pixie (Friendly Creature):</strong> Flitting overhead, scattering glowing droplets.
-                <br><strong>Befriend:</strong> Read a book where a character discovers unexpected magic or hidden talents.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>3</strong></td>
-      <td>
-        <strong>The Lost Garden:</strong> Trees and vines reclaim toppled shelves, their blossoms glowing faintly in the dark. Forgotten statues weep with moss.
-        <br><strong>Challenge:</strong> Read a book with a magical garden or a hidden realm.
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Dryad (Friendly Creature):</strong> Whispers secrets of roots and rivers.
-                <br><strong>Befriend:</strong> Read a book with a natural or wilderness setting.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Treant (Friendly Creature):</strong> Slow and steady, branches heavy with books as fruit.
-                <br><strong>Befriend:</strong> Read a book where things aren't what they seem, or the setting is much more than it appears to be.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>4</strong></td>
-      <td>
-        <strong>The Cursed Tome:</strong> A massive volume chained to a pedestal, its pages leaking mist and sorrow. The air grows cold with each breath.
-        <br><strong>Challenge:</strong> Read a book with a curse or a dark theme.
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Zombies (Monster):</strong> Clawing free from the ink, groaning for stories unfinished.
-                <br><strong>Defeat:</strong> Read a book that deals with themes of death, rebirth, or the afterlife.
-                <br><strong>Befriend:</strong> Read a book where a character finds hope or humanity in a dark, hopeless situation.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Banshee (Monster):</strong> Wails through the halls, scattering loose pages like autumn leaves.
-                <br><strong>Defeat:</strong> Read a book with a ghost-like being or a death theme.
-                <br><strong>Befriend:</strong> Read a book with a character that finds a way to move on from a tragic event.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>5</strong></td>
-      <td>
-        <strong>The Archivist's Riddle:</strong> A spectral figure waits, quill in hand, offering only riddles for passage. Its eyes gleam with the weight of endless catalogues.
-        <br><strong>Challenge:</strong> Read a book that has a mystery or secret at its core (+5 XP).
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong><a href="{{ site.baseurl }}/rewards.html#tome-bound-cat">Tome-Bound Cat</a> (Familiar):</strong> Purrs wisdom between riddles.
-                <br><strong>Befriend:</strong> Read a book with a cozy or comforting vibe.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Guardian Owl (Friendly Creature):</strong> Its feathers ink-black, gazing knowingly.
-                <br><strong>Befriend:</strong> Read a book that teaches you something new.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>6</strong></td>
-      <td>
-        <strong>The Starlit Observatory:</strong> A domed chamber where stars drift across the ceiling like a living sky. Telescopes of brass and crystal point toward unknown worlds.
-        <br><strong>Challenge:</strong> Read a book with a cosmic or future setting (+10 Ink Drops).
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong><a href="{{ site.baseurl }}/rewards.html#pocket-dragon">Pocket Dragon</a> (Familiar):</strong> Tiny but fierce, curling around an astrolabe.
-                <br><strong>Befriend:</strong> Read a book with a dragon or a fire element.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Glabrezu (Monster):</strong> Towering and terrible, offering honeyed bargains.
-                <br><strong>Defeat:</strong> Read a book with a morally gray love interest or a deceptive character.
-                <br><strong>Befriend:</strong> Read a book where power is the main theme.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>7</strong></td>
-      <td>
-        <strong>The Neglected Archives:</strong> Stacks of dust-caked scrolls sag in forgotten alcoves, watched by shadowy eyes.
-        <br><strong>Challenge:</strong> Read a book with a ghost-like being or a death theme.
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Banshee (Monster):</strong> Lingering over half-burned records.
-                <br><strong>Defeat:</strong> Read a book with a ghost-like being or a death theme.
-                <br><strong>Befriend:</strong> Read a book where a character finds a way to move on from a tragic event.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Vampire (Monster):</strong> Rising from the dust with hunger and grace.
-                <br><strong>Defeat:</strong> Read a book with an immortal or night-dwelling creature.
-                <br><strong>Befriend:</strong> Read a book where desire or temptation plays a major role.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>8</strong></td>
-      <td>
-        <strong>The Author's Study:</strong> Candles gutter beside ink-stained desks, their wax frozen mid-drip. Drafts lie unfinished, quills snapped in haste.
-        <br><strong>Challenge:</strong> Read a book by the author you think used this study. Optional journaling: describe whose study this might be.
-        <br><strong>Reward:</strong> +10 Paper Scraps.
-      </td>
-    </tr>
-    <tr>
-      <td><strong>9</strong></td>
-      <td>
-        <strong>The Endless Corridor:</strong> Door after door stretches into eternity, each pulsing with unread stories. The echo of your steps threatens to never end.
-        <br><strong>Challenge:</strong> Read a book that is part of a series you have not started.
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Cheerful Sprite (Friendly Creature):</strong> Darting from door to door.
-                <br><strong>Befriend:</strong> Read a book you've been putting off for a fun, easy-to-read, or relaxing read.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Ooze (Monster):</strong> Slithering down the walls, devouring titles whole.
-                <br><strong>Defeat:</strong> Read a book with a character who overcomes a seemingly impossible obstacle.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>10</strong></td>
-      <td>
-        <strong>The Grand Gallery:</strong> Oil paintings leer from gilded frames, their subjects shifting when you look away.
-        <br><strong>Challenge:</strong> Read a book you've had on your TBR for over a year.
-        <br><strong>Reward:</strong> Gilded Painting (+1 Ink Drop when reading in an ornate location).
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong><a href="{{ site.baseurl }}/rewards.html#mystical-moth">Mystical Moth</a> (Familiar):</strong> Wings glowing faintly like painted glass.
-                <br><strong>Befriend:</strong> Read a book with something hidden or nocturnal.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong>Animated Armor (Monster):</strong> Clattering from its frame. (Cannot be befriended).
-                <br><strong>Defeat:</strong> Read a book with a foiled cover.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>11</strong></td>
-      <td>
-        <strong>The Shroud's Heart:</strong> Here the air is thick, trembling with the Shroud's presence. Shadows twist like ink smoke.
-        <br><strong>Challenge:</strong> Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty.
-        <br><em>Roll a d4 to determine the encounter:</em>
-        <table class="nested-table">
-          <tbody>
-            <tr>
-              <td>[1-2]</td>
-              <td><strong>Fomorian (Monster):</strong> Hulking, its voice a storm of curses.
-                <br><strong>Defeat:</strong> Read a book containing a curse or a monster-like being.
-                <br><strong>Befriend:</strong> Read a book where the main character must accept a tragic flaw.</td>
-            </tr>
-            <tr>
-              <td>[3-4]</td>
-              <td><strong><a href="{{ site.baseurl }}/rewards.html#page-sprite">Page Sprite</a> (Familiar):</strong> Flitting nervously, clutching half-burned parchment.
-                <br><strong>Befriend:</strong> Read a book that is 300 pages or less.</td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>12</strong></td>
-      <td>
-        <strong>The Mimic's Lair:</strong> Shelves and chairs twitch with hidden hunger, waiting for you to turn your back.
-        <br><strong>Challenge:</strong> Read a book that subverts a common trope.
-        <br><strong>Encounter:</strong> Mimic (Monster) lunging from false bindings. (Cannot be befriended).
-        <br><strong>Defeat:</strong> Read a book that feels deceptive or has a major twist.
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/amulet-of-duality.png" alt="Amulet of Duality">
+  </div>
+  <div class="reward-description">
+    <h4 id="amulet-of-duality">Amulet of Duality</h4>
+    <p>A silver pendant that glows faintly with two opposing lights, revealing both sides of a story.</p>
+    <p><strong>Bonus:</strong> Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators.</p>
+  </div>
+</div>
 
-## ♠️ Dungeon Completion Rewards (Roll a d10)
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/scatter-brain-scarab.png" alt="Scatter Brain Scarab">
+  </div>
+  <div class="reward-description">
+    <h4 id="scatter-brain-scarab">Scatter Brain Scarab</h4>
+    <p>A jeweled scarab that scuttles restlessly, scattering your notes until new connections form.</p>
+    <p><strong>Bonus:</strong> When equipped, gain a x3 Ink Drop bonus for reading three books at the same time.</p>
+  </div>
+</div>
 
-| Roll | Reward |
-|:----:|:---|
-| **1** | **The Librarian's Hoard:** Gain +150 Ink Drops and +20 Paper Scraps. |
-| **2** | **Chalice of Restoration:** You find a [Chalice of Restoration]({{ site.baseurl }}/rewards.html#chalice-of-restoration). |
-| **3** | **Librarian's Blessing:** You may remove up to two Worn Page penalties. |
-| **4** | **Librarian's Quill:** You find a [Librarian's Quill]({{ site.baseurl }}/rewards.html#librarians-quill). |
-| **5** | **Enchanted Focus:** The next three books you complete grant a x1.5 Ink Drop bonus. |
-| **6** | **Lantern of Foresight:** You find a [Lantern of Foresight]({{ site.baseurl }}/rewards.html#lantern-of-foresight). |
-| **7** | **Unwavering Resolve:** for the next month, you are immune to Worn Page penalties. |
-| **8** | **Cloak of the Story-Weaver:** You find a [Cloak of the Story-Weaver]({{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver). |
-| **9** | **The Archivist's Favor:** Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off. |
-| **10**| **The Grand Key:** You find a master key for a special, rare quest. |
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/cloak-of-the-story-weaver.png" alt="Cloak of the Story-Weaver">
+  </div>
+  <div class="reward-description">
+    <h4 id="cloak-of-the-story-weaver">Cloak of the Story-Weaver</h4>
+    <p>Woven from threads of countless tales, this cloak rustles with whispers of adventures past.</p>
+    <p><strong>Bonus:</strong> Earn a permanent +10 Ink Drop bonus for books that are part of a series.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/bookwyrms-scale.png" alt="The Bookwyrm's Scale">
+  </div>
+  <div class="reward-description">
+    <h4 id="the-bookwyrms-scale">The Bookwyrm's Scale</h4>
+    <p>A glittering scale from an ancient dragon, warm to the touch, granting immense focus.</p>
+    <p><strong>Bonus:</strong> For every book over 500 pages, gain a +10 Ink Drop bonus.</p>
+  </div>
+</div>
+
+### Non-Wearable
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/key-of-the-archive.png" alt="Key of the Archive">
+  </div>
+  <div class="reward-description">
+    <h4 id="key-of-the-archive">Key of the Archive</h4>
+    <p>This key hums in the presence of secrets, its teeth shimmering with unspoken stories.</p>
+    <p><strong>Bonus:</strong> Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/tome-of-potential.png" alt="Tome of Potential">
+  </div>
+  <div class="reward-description">
+    <h4 id="tome-of-potential">Tome of Potential</h4>
+    <p>A blank tome that vibrates with anticipation, its pages waiting for the story that excites you most.</p>
+    <p><strong>Bonus:</strong> Earn a x3 Ink Drop bonus for books over 400 pages.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/librarians-quill.png" alt="Librarian's Quill">
+  </div>
+  <div class="reward-description">
+    <h4 id="librarians-quill">Librarian's Quill</h4>
+    <p>An ink-stained feather that writes of its own accord, recording your thoughts as you read.</p>
+    <p><strong>Bonus:</strong> Earn a permanent +2 Paper Scraps bonus for every book you journal about after finishing.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/chalice-of-restoration.png" alt="Chalice of Restoration">
+  </div>
+  <div class="reward-description">
+    <h4 id="chalice-of-restoration">Chalice of Restoration</h4>
+    <p>Carved from crystal and glowing faintly, this chalice restores your spirit when lifted to your lips.</p>
+    <p><strong>Bonus:</strong> Once per month, you may use this item to remove a Worn Page penalty.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/lantern-of-foresight.png" alt="Lantern of Foresight">
+  </div>
+  <div class="reward-description">
+    <h4 id="lantern-of-foresight">Lantern of Foresight</h4>
+    <p>A brass lantern whose flame flickers in patterns that reveal what is to come.</p>
+    <p><strong>Bonus:</strong> Once per month, you may re-roll a prompt or a die roll to get a new result, and you must keep the new result.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/scepter-of-knowledge.png" alt="The Scepter of Knowledge">
+  </div>
+  <div class="reward-description">
+    <h4 id="the-scepter-of-knowledge">The Scepter of Knowledge</h4>
+    <p>A staff capped with a crystal that hums with forgotten lore.</p>
+    <p><strong>Bonus:</strong> Once per month, you may switch the genre of any quest you roll to Non-Fiction.</p>
+  </div>
+</div>
+
+### Familiars
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/celestial-koi-fish.png" alt="Celestial Koi Fish">
+  </div>
+  <div class="reward-description">
+    <h4 id="celestial-koi-fish">Celestial Koi Fish</h4>
+    <p>Found in The Glimmering Pools. Its scales shimmer like starlight reflected on water, bringing balance and serenity.</p>
+    <p><strong>Bonus:</strong> Once per month, you may use this familiar's insight to switch a genre-based quest (d6) to its opposing genre.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/tome-bound-cat.png" alt="Tome-Bound Cat">
+  </div>
+  <div class="reward-description">
+    <h4 id="tome-bound-cat">Tome-Bound Cat</h4>
+    <p>Found in The Archivist's Riddle. This cat curls beside your reading chair, its purr syncing with the turn of each page.</p>
+    <p><strong>Bonus:</strong> When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/pocket-dragon.png" alt="Pocket Dragon">
+  </div>
+  <div class="reward-description">
+    <h4 id="pocket-dragon">Pocket Dragon</h4>
+    <p>Found in The Starlit Observatory. A small dragon with iridescent wings that sparks flame when excited.</p>
+    <p><strong>Bonus:</strong> Earn a +20 Ink Drop bonus for books in a fantasy series.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/garden-gnome.png" alt="Garden Gnome">
+  </div>
+  <div class="reward-description">
+    <h4 id="garden-gnome">Garden Gnome</h4>
+    <p>Found in The Author's Study. A mischievous, earth-smudged gnome who tends tiny potted plants while you read.</p>
+    <p><strong>Bonus:</strong> Earn +1 Ink Drop on any day where you read outside in nature or in a plant filled room.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/mystical-moth.png" alt="Mystical Moth">
+  </div>
+  <div class="reward-description">
+    <h4 id="mystical-moth">Mystical Moth</h4>
+    <p>Found in The Grand Gallery. This silken-winged moth flutters to lamplight, drawn to secrets and shadows.</p>
+    <p><strong>Bonus:</strong> Earn +1 Ink Drop on nights when you read by lamplight.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/page-sprite.png" alt="Page Sprite">
+  </div>
+  <div class="reward-description">
+    <h4 id="page-sprite">Page Sprite</h4>
+    <p>Found in The Shroud's Heart. This sprite zips through pages with infectious glee.</p>
+    <p><strong>Bonus:</strong> Earn a x2 Ink Drop bonus on any book under 300 pages.</p>
+  </div>
+</div>
