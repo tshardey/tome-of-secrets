@@ -3,6 +3,7 @@ layout: default
 title: Dungeons
 ---
 
+## ♠️ Dungeon Rooms (Roll a d12 )
 Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both.
 
 | Roll | Room Description & Encounters |
@@ -20,7 +21,7 @@ Roll a d12 to determine your dungeon room. Each room offers a narrative challeng
 | **11**| **The Shroud's Heart:** The air is thick with the Shroud's presence. **Challenge:** Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty. <br> **Encounter 1 [1-2]:** Fomorian. *Defeat:* Read a book with a curse or monster. *Befriend:* Read a book where the MC must accept a tragic flaw. <br> **Encounter 2 [3-4]:** [Page Sprite]({{ site.baseurl }}/rewards.html#page-sprite) (Familiar). *Prompt:* Read a book under 300 pages. |
 | **12**| **The Mimic's Lair:** Shelves and chairs twitch with hidden hunger. **Challenge:** Read a book that subverts a common trope. **Encounter:** Mimic (Cannot be befriended). *Prompt:* Read a book that feels deceptive or has a major twist. |
 
-## ♠️ Dungeon Completion Rewards (Roll a d10)
+## Dungeon Completion Rewards (Roll a d10)
 Upon clearing all dungeon rooms for the month, roll a d10 to see what treasure you find!
 
 | Roll | Reward |
