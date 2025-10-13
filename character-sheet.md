@@ -1,6 +1,6 @@
 ---
 layout: default
-title: 📜 The Tome of Secrets: Keeper's Character Sheet 📜
+title: Keeper's Character Sheet
 ---
 
 ## 👤 Character Information
