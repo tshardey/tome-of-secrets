@@ -4,7 +4,16 @@ title: Dungeons
 ---
 
 ## ♠️ Dungeon Rooms (Roll a d12 )
-Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both.
+Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the dungeon rewards.
+
+### Dungeon Rewards & Penalties
+| Encounter Type | Reward | Penalty (on Failure) |
+|:---|:---|:---|
+| **Book Completion** | +25 XP | - |
+| **Monster** | +50 XP | -5 Ink Drops & -10 XP |
+| **Friendly Creature** | +10 Ink Drops | - |
+| **Familiar** | +5 Page Scraps | - |
+
 
 <br>
 
