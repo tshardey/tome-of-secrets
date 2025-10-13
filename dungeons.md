@@ -4,16 +4,40 @@ title: Dungeons
 ---
 
 ## ♠️ Dungeon Rooms (Roll a d12 )
-Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the dungeon rewards.
+Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards-roll-a-d10">Dungeon Completion Rewards</a> table.
 
-### Dungeon Rewards & Penalties
-| Encounter Type | Reward | Penalty (on Failure) |
-|:---|:---|:---|
-| **Book Completion** | +25 XP | - |
-| **Monster** | +50 XP | -5 Ink Drops & -10 XP |
-| **Friendly Creature** | +10 Ink Drops | - |
-| **Familiar** | +5 Page Scraps | - |
-
+<h3>Dungeon Rewards & Penalties</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Encounter Type</th>
+      <th>Reward</th>
+      <th>Penalty (on Failure)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Book Completion</strong></td>
+      <td>+25 XP</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>Monster</strong></td>
+      <td>+50 XP</td>
+      <td>-5 Ink Drops & -10 XP</td>
+    </tr>
+    <tr>
+      <td><strong>Friendly Creature</strong></td>
+      <td>+10 Ink Drops</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><strong>Familiar</strong></td>
+      <td>+5 Page Scraps</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+</table>
 
 <br>
 
@@ -255,7 +279,7 @@ Roll a d12 to determine your dungeon room. Each room offers a narrative challeng
 | **4** | **Librarian's Quill:** You find a [Librarian's Quill]({{ site.baseurl }}/rewards.html#librarians-quill). |
 | **5** | **Enchanted Focus:** The next three books you complete grant a x1.5 Ink Drop bonus. |
 | **6** | **Lantern of Foresight:** You find a [Lantern of Foresight]({{ site.baseurl }}/rewards.html#lantern-of-foresight). |
-| **7** | **Unwavering Resolve:** For the next month, you are immune to Worn Page penalties. |
+| **7** | **Unwavering Resolve:** for the next month, you are immune to Worn Page penalties. |
 | **8** | **Cloak of the Story-Weaver:** You find a [Cloak of the Story-Weaver]({{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver). |
 | **9** | **The Archivist's Favor:** Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off. |
 | **10**| **The Grand Key:** You find a master key for a special, rare quest. |
