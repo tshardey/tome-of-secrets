@@ -3,7 +3,7 @@ layout: default
 title: Quests and Challenges
 ---
 
-## Genre Quests (Roll a d6)
+## ♥️ Genre Quests (Roll a d6)
 
 | Roll | Quest Description |
 |:----:|:---|
@@ -14,7 +14,7 @@ title: Quests and Challenges
 | **5** | **Thriller:** Read a book with a plot twist, deception, or hidden identity. |
 | **6** | **Classic:** Read a classic novel you have not yet read. |
 
-## Atmospheric Buffs (Roll a d8)
+## ♦️ Atmospheric Buffs (Roll a d8)
 These buffs are daily bonuses. Once per day, when you set a mood for reading, you can earn +1 Ink Drop. You can earn a bonus of +2 Ink Drops if the atmosphere you choose reflects the book or your library.
 
 | Roll | Buff Description |
@@ -28,7 +28,7 @@ These buffs are daily bonuses. Once per day, when you set a mood for reading, yo
 | **7** | **The Wanderer's Path:** Read in a new place, either in your home or somewhere new entirely. |
 | **8** | **Head in the Clouds:** Read in a cozy, overstuffed chair, bed, or another favorite comfortable spot. |
 
-## Side Quests (Roll a d8)
+## ♣️ Side Quests (Roll a d8)
 Completing a side quest rewards you with a magical item or a bonus.
 
 | Roll | Quest Description |
@@ -41,18 +41,3 @@ Completing a side quest rewards you with a magical item or a bonus.
 | **6** | **The Chime of Opening:** A silver chime hums with anticipation. **Prompt:** Read a book where a long-hidden truth is revealed. **Reward:** Receive a [Key of the Archive]({{ site.baseurl }}/rewards.html#key-of-the-archive). |
 | **7** | **The Scarecrow's Cornfield:** Rustling stalks and a grim figure loom. **Prompt:** Read a book with an unreliable narrator. **Reward:** Temp buff: Disjointed Perception (+10 Ink Drops, +5 Page Scraps). |
 | **8** | **The Empty Shelf:** A hollow space on the stacks calls out. **Prompt:** Choose a book from your TBR you are most excited for. **Reward:** Receive a [Tome of Potential]({{ site.baseurl }}/rewards.html#tome-of-potential). |
-
-## Dungeon Completion Rewards (Roll a d10)
-
-| Roll | Reward |
-|:----:|:---|
-| **1** | **The Librarian's Hoard:** Gain +150 Ink Drops and +20 Paper Scraps. |
-| **2** | **Chalice of Restoration:** You find a [Chalice of Restoration]({{ site.baseurl }}/rewards.html#chalice-of-restoration). |
-| **3** | **Librarian's Blessing:** You may remove up to two Worn Page penalties. |
-| **4** | **Librarian's Quill:** You find a [Librarian's Quill]({{ site.baseurl }}/rewards.html#librarians-quill). |
-| **5** | **Enchanted Focus:** The next three books you complete grant a x1.5 Ink Drop bonus. |
-| **6** | **Lantern of Foresight:** You find a [Lantern of Foresight]({{ site.baseurl }}/rewards.html#lantern-of-foresight). |
-| **7** | **Unwavering Resolve:** For the next month, you are immune to Worn Page penalties. |
-| **8** | **Cloak of the Story-Weaver:** You find a [Cloak of the Story-Weaver]({{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver). |
-| **9** | **The Archivist's Favor:** Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off. |
-| **10**| **The Grand Key:** You find a master key for a special, rare quest. |

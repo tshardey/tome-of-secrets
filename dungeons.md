@@ -19,3 +19,19 @@ Roll a d12 to determine your dungeon room. Each room offers a narrative challeng
 | **10**| **The Grand Gallery:** Oil paintings leer from gilded frames. **Challenge:** Read a book you've had on your TBR for over a year. **Reward:** Gilded Painting (+1 Ink Drop when reading in an ornate location). <br> **Encounter 1 [1-2]:** [Mystical Moth]({{ site.baseurl }}/rewards.html#mystical-moth) (Familiar). *Prompt:* Read a book with something hidden or nocturnal. <br> **Encounter 2 [3-4]:** Animated Armor (Cannot be befriended). *Prompt:* Read a book with a foiled cover. |
 | **11**| **The Shroud's Heart:** The air is thick with the Shroud's presence. **Challenge:** Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty. <br> **Encounter 1 [1-2]:** Fomorian. *Defeat:* Read a book with a curse or monster. *Befriend:* Read a book where the MC must accept a tragic flaw. <br> **Encounter 2 [3-4]:** [Page Sprite]({{ site.baseurl }}/rewards.html#page-sprite) (Familiar). *Prompt:* Read a book under 300 pages. |
 | **12**| **The Mimic's Lair:** Shelves and chairs twitch with hidden hunger. **Challenge:** Read a book that subverts a common trope. **Encounter:** Mimic (Cannot be befriended). *Prompt:* Read a book that feels deceptive or has a major twist. |
+
+## ♠️ Dungeon Completion Rewards (Roll a d10)
+Upon clearing all dungeon rooms for the month, roll a d10 to see what treasure you find!
+
+| Roll | Reward |
+|:----:|:---|
+| **1** | **The Librarian's Hoard:** Gain +150 Ink Drops and +20 Paper Scraps. |
+| **2** | **Chalice of Restoration:** You find a [Chalice of Restoration]({{ site.baseurl }}/rewards.html#chalice-of-restoration). |
+| **3** | **Librarian's Blessing:** You may remove up to two Worn Page penalties. |
+| **4** | **Librarian's Quill:** You find a [Librarian's Quill]({{ site.baseurl }}/rewards.html#librarians-quill). |
+| **5** | **Enchanted Focus:** The next three books you complete grant a x1.5 Ink Drop bonus. |
+| **6** | **Lantern of Foresight:** You find a [Lantern of Foresight]({{ site.baseurl }}/rewards.html#lantern-of-foresight). |
+| **7** | **Unwavering Resolve:** For the next month, you are immune to Worn Page penalties. |
+| **8** | **Cloak of the Story-Weaver:** You find a [Cloak of the Story-Weaver]({{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver). |
+| **9** | **The Archivist's Favor:** Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off. |
+| **10**| **The Grand Key:** You find a master key for a special, rare quest. |
