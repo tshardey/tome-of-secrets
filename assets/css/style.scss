@@ -330,3 +330,74 @@ article th:first-child {
         width: 100%;
     }
 }
+
+/* ==========================================================================
+   Character Sheet Form Styles
+   ========================================================================== */
+
+#character-sheet input[type="text"],
+#character-sheet input[type="number"],
+#character-sheet select,
+#character-sheet textarea {
+    background-color: #2a231d; /* The darker brown from nested tables */
+    color: #d4c8b0; /* Parchment text color */
+    border: 1px solid #54483b; /* Darker brown border */
+    border-radius: 4px;
+    padding: 8px;
+    font-family: 'Source Serif Pro', serif;
+    font-size: 1em;
+    margin-top: 5px;
+}
+
+#character-sheet textarea {
+    width: 100%;
+    box-sizing: border-box; /* Ensures padding doesn't add to the width */
+    min-height: 120px;
+    resize: vertical;
+}
+
+#character-sheet .form-list {
+    list-style: none;
+    padding: 0;
+}
+
+#character-sheet .form-list li {
+    margin-bottom: 15px;
+}
+
+#character-sheet .form-list label {
+    margin-right: 10px;
+}
+
+#character-sheet .form-list input,
+#character-sheet .form-list select {
+    width: 100%;
+    max-width: 400px; /* Prevents short inputs from being too wide */
+    box-sizing: border-box;
+}
+
+#character-sheet .full-width-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-buttons button {
+    background-color: #b89f62; /* Muted gold */
+    color: #2a231d; /* Deep brown text */
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    margin-right: 10px;
+}
+
+.form-buttons button:hover {
+    background-color: #cca352; /* Brighter gold on hover */
+}
