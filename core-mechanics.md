@@ -43,7 +43,7 @@ There are two primary currencies that define your progress, plus a third for cha
 * **Ink Drops:** The primary currency for in-game rewards and essential for creating books. You earn 10 Ink Drops for every completed book. Use them to purchase in-game items, buffs, and to help create new books.
 * **Paper Scraps:** Earned from specific quests and activities, such as journaling about a book. You also earn 5 Paper Scraps for every book you read outside of your monthly quest pool (e.g., book club books, buddy reads, or mood reads) and 3 for every completed journal entry. Use them, in conjunction with Ink Drops, to "create" a new book to add to your collection.
 
-*Note: See the Shopping Episode section for more details on creating books.*
+*Note: See the [Shopping Episode]({{ site.baseurl }}/shopping.html) section for more details on creating books.*
 
 ## Keeper's Loadout
 As a Keeper, you have three starting item slots: one Wearable, one Non-Wearable, and one Familiar. You can only equip one item per slot at a time. The Familiar slot is filled when you befriend a familiar in a dungeon. As you level up, you can unlock more item slots. This loadout lets you tailor your approach each month, adding strategy to how you tackle quests and challenges.

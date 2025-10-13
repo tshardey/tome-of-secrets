@@ -21,7 +21,7 @@ Echoes of unread tales drift endlessly through this vaulted chamber. The walls h
 Shallow pools glow like liquid starlight, each ripple whispering a forgotten secret. Step wrong, and the ink clings like chains.
 **Challenge:** Read a book with a beautiful or unique cover (+10 Ink Drops).
 * **Encounter 1 (Friendly Creature):** A mysterious nymph whose laughter shimmers across the water.
-    * **Prompt:** Read a book that explores allure or transformation. Roll a die: on even gain Amulet of Duality; on odd gain one Worn Page curse.
+    * **Prompt:** Read a book that explores allure or transformation. Roll a die: on even gain [Amulet of Duality]({{ site.baseurl }}/rewards.html#amulet-of-duality); on odd gain one Worn Page curse.
 * **Encounter 2 (Friendly Creature):** A mischievous pixie flitting overhead, scattering glowing droplets.
     * **Defeat:** Read a book where enchantment or trickery plays a key role.
     * **Befriend:** Read a book where a character discovers unexpected magic or hidden talents.
@@ -47,7 +47,7 @@ A massive volume chained to a pedestal, its pages leaking mist and sorrow. The a
 ### The Archivist's Riddle
 A spectral figure waits, quill in hand, offering only riddles for passage. Its eyes gleam with the weight of endless catalogues.
 **Challenge:** Read a book that has a mystery or secret at its core (+5 XP).
-* **Encounter 1 (Familiar):** Tome-Bound Cat, who purrs wisdom between riddles.
+* **Encounter 1 (Familiar):** [Tome-Bound Cat]({{ site.baseurl }}/rewards.html#tome-bound-cat), who purrs wisdom between riddles.
     * **Prompt:** Read a book with a cozy or comforting vibe.
 * **Encounter 2 (Friendly Creature):** Guardian Owl, its feathers ink-black, gazing knowingly.
     * **Prompt:** Read a book that teaches you something new.
@@ -55,7 +55,7 @@ A spectral figure waits, quill in hand, offering only riddles for passage. Its e
 ### The Starlit Observatory
 A domed chamber where stars drift across the ceiling like a living sky. Telescopes of brass and crystal point toward unknown worlds.
 **Challenge:** Read a book with a cosmic or future setting (+10 Ink Drops).
-* **Encounter 1 (Familiar):** Pocket Dragon, tiny but fierce, curling around an astrolabe.
+* **Encounter 1 (Familiar):** [Pocket Dragon]({{ site.baseurl }}/rewards.html#pocket-dragon), tiny but fierce, curling around an astrolabe.
     * **Prompt:** Read a book with a dragon or a fire element.
 * **Encounter 2 (Monster):** Glabrezu, towering and terrible, offering honeyed bargains.
     * **Defeat:** Read a book with a morally gray love interest or a deceptive character.
@@ -88,7 +88,7 @@ Door after door stretches into eternity, each pulsing with unread stories. The e
 Oil paintings leer from gilded frames, their subjects shifting when you look away.
 **Challenge:** Read a book you've had on your TBR for over a year.
 **Reward:** Gilded Painting (+1 Ink Drop when reading in an ornate location).
-* **Encounter 1 (Familiar):** Mystical Moth, wings glowing faintly like painted glass.
+* **Encounter 1 (Familiar):** [Mystical Moth]({{ site.baseurl }}/rewards.html#mystical-moth), wings glowing faintly like painted glass.
     * **Prompt:** Read a book with something hidden or nocturnal.
 * **Encounter 2 (Monster):** An animated suit of armor clattering from its frame. Cannot be befriended.
     * **Prompt:** Read a book with a foiled cover.
@@ -99,7 +99,7 @@ Here the air is thick, trembling with the Shroud's presence. Shadows twist like 
 * **Encounter 1 (Monster):** Fomorian hulking, its voice a storm of curses.
     * **Defeat:** Read a book containing a curse or a monster-like being.
     * **Befriend:** Read a book where the main character must accept a tragic flaw.
-* **Encounter 2 (Familiar):** Page Sprite flitting nervously, clutching half-burned parchment.
+* **Encounter 2 (Familiar):** [Page Sprite]({{ site.baseurl }}/rewards.html#page-sprite) flitting nervously, clutching half-burned parchment.
     * **Prompt:** Read a book that is 300 pages or less.
 
 ### The Mimic's Lair

@@ -34,33 +34,33 @@ Completing a side quest rewards you with a magical item or a bonus. These quests
     * **Reward:** Gain the Bloodline Affinity buff (+15 Ink Drops for your next book in a series).
 * **The Bag of Holding.** A battered satchel yawns impossibly wide, its contents shifting like a puzzle.
     * **Prompt:** Read a story with multiple POVs or a complex plot.
-    * **Reward:** Receive a Scatter Brain Scarab (x3 Ink Drop bonus for reading three books at the same time).
+    * **Reward:** Receive a [Scatter Brain Scarab]({{ site.baseurl }}/rewards.html#scatter-brain-scarab).
 * **The Wandering Merchant's Request.** A traveler draped in scarves and maps greets you with tales of distant lands.
     * **Prompt:** Read a book featuring a journey or trip.
-    * **Reward:** Receive a Librarian's Compass magical item.
+    * **Reward:** Receive a [Librarian's Compass]({{ site.baseurl }}/rewards.html#librarians-compass) magical item.
 * **The Glimmering Pools' Gift.** A nymph rises from glowing waters, her laughter echoing like ripples of moonlight.
     * **Prompt:** Read a book that explores allure or transformation.
-    * **Reward:** Roll a die: on even gain an Amulet of Duality; on odd gain one Worn Page curse.
+    * **Reward:** Roll a die: on even gain an [Amulet of Duality]({{ site.baseurl }}/rewards.html#amulet-of-duality); on odd gain one Worn Page curse.
 * **The Chime of Opening.** A silver chime hums with anticipation, resonating with unseen locks.
     * **Prompt:** Read a book where a long-hidden truth is revealed.
-    * **Reward:** Receive a Key of the Archive magical item.
+    * **Reward:** Receive a [Key of the Archive]({{ site.baseurl }}/rewards.html#key-of-the-archive) magical item.
 * **The Scarecrow's Cornfield.** Rustling stalks and a grim figure loom as whispers scatter in the field.
     * **Prompt:** Read a book with a fragmented structure or an unreliable narrator.
     * **Reward:** Gain a temporary buff: Disjointed Perception (+10 Ink Drops and +5 Page Scraps).
 * **The Empty Shelf.** A hollow space on the stacks calls out like an unanswered question.
     * **Prompt:** Choose a book from your TBR that you are most excited to read.
-    * **Reward:** Receive a Tome of Potential magical item.
+    * **Reward:** Receive a [Tome of Potential]({{ site.baseurl }}/rewards.html#tome-of-potential) magical item.
 
 ## Dungeon Completion Rewards (Roll a d10)
 Upon clearing all dungeon rooms for the month, roll a d10 to see what treasure you find!
 
 1.  **The Librarian's Hoard:** Gain +150 Ink Drops and +20 Paper Scraps.
-2.  **Chalice of Restoration:** You find a new magical item.
+2.  **Chalice of Restoration:** You find a new magical item: [Chalice of Restoration]({{ site.baseurl }}/rewards.html#chalice-of-restoration).
 3.  **Librarian's Blessing:** You may remove up to two Worn Page penalties.
-4.  **Librarian's Quill:** You find a new magical item.
+4.  **Librarian's Quill:** You find a new magical item: [Librarian's Quill]({{ site.baseurl }}/rewards.html#librarians-quill).
 5.  **Enchanted Focus:** The next three books you complete grant a x1.5 Ink Drop bonus.
-6.  **Lantern of Foresight:** You find a new magical item.
+6.  **Lantern of Foresight:** You find a new magical item: [Lantern of Foresight]({{ site.baseurl }}/rewards.html#lantern-of-foresight).
 7.  **Unwavering Resolve:** For the next month, you are immune to Worn Page penalties.
-8.  **Cloak of the Story-Weaver:** You find a new magical item.
+8.  **Cloak of the Story-Weaver:** You find a new magical item: [Cloak of the Story-Weaver]({{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver).
 9.  **The Archivist's Favor:** You may choose one of the following: reroll a prompt you don't like, gain a one-time +100 XP bonus, or purchase any one item from the Traveling Merchant at a 50% discount.
 10. **The Grand Key:** You find a master key that can be used once to unlock a special, rare quest.
