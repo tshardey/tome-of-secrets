@@ -283,3 +283,24 @@ article th:first-child {
   font-weight: bold;
   text-align: center;
 }
+
+/* ==========================================================================
+   Nested Table Styles (for Dungeons)
+   ========================================================================== */
+
+.nested-table {
+  margin-top: 15px !important; /* Add some space above the inner table */
+  background-color: #2a231d; /* Match the darker site background */
+  border: none;
+}
+
+.nested-table td {
+  border: 1px solid #54483b;
+}
+
+/* Keep the first column narrow for the roll */
+.nested-table td:first-child {
+  width: 15% !important;
+  text-align: center;
+  font-weight: bold;
+}
