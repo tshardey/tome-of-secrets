@@ -304,3 +304,29 @@ article th:first-child {
   text-align: center;
   font-weight: bold;
 }
+
+/* ==========================================================================
+   Print-specific styles
+   ========================================================================== */
+@media print {
+    body {
+        background-image: none;
+        background-color: #fff;
+        color: #000;
+    }
+
+    .sidebar, footer, .hero, .no-print {
+        display: none;
+    }
+
+    article {
+        border: none;
+        padding: 0;
+    }
+
+    input, textarea {
+        border: 1px solid #ccc;
+        padding: 5px;
+        width: 100%;
+    }
+}
