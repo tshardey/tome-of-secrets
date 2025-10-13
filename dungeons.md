@@ -4,7 +4,7 @@ title: Dungeons
 ---
 
 ## ♠️ Dungeon Rooms (Roll a d12 )
-Roll a d12 to determine your dungeon room. Each room offers a **narrative challenge** and **encounter**. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards-roll-a-d10">Dungeon Completion Rewards</a> table.
+Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards-roll-a-d10">Dungeon Completion Rewards</a> table.
 
 <h3>Dungeon Rewards & Penalties</h3>
 <table>
@@ -52,18 +52,20 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>1</strong></td>
       <td>
-        <strong>The Hall of Whispers:</strong> Echoes of unread tales drift through this vaulted chamber.
+        <strong>The Hall of Whispers:</strong> Echoes of unread tales drift endlessly through this vaulted chamber. The walls hum with voices too faint to catch, yet heavy with longing.
         <br><strong>Challenge:</strong> Read in a quiet space without music.
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Friendly Creature):</strong> Librarian's Spirit. <em>Prompt:</em> Read a book with a ghost or a mystery.</td>
+              <td><strong>Librarian's Spirit (Friendly Creature):</strong> A gentle ghost flickering with lantern light.
+                <br><strong>Befriend:</strong> Read a book with a ghost-like being or a mystery.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Monster):</strong> Will-o-wisps. <em>Defeat:</em> Read a book about fated destiny.</td>
+              <td><strong>Will-o-wisps (Monster):</strong> Glittering lights that lure you astray.
+                <br><strong>Defeat:</strong> Read a book that involves fated destiny or a newly revealed path.</td>
             </tr>
           </tbody>
         </table>
@@ -72,18 +74,20 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>2</strong></td>
       <td>
-        <strong>The Glimmering Pools:</strong> Shallow pools glow like liquid starlight.
-        <br><strong>Challenge:</strong> Read a book with a beautiful cover (+10 Ink Drops).
+        <strong>The Glimmering Pools:</strong> Shallow pools glow like liquid starlight, each ripple whispering a forgotten secret. Step wrong, and the ink clings like chains.
+        <br><strong>Challenge:</strong> Read a book with a beautiful or unique cover (+10 Ink Drops).
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Friendly Creature):</strong> Mysterious Nymph. <em>Prompt:</em> Read a book about transformation. Roll even for <a href="{{ site.baseurl }}/rewards.html#amulet-of-duality">Amulet of Duality</a>, odd for Worn Page curse.</td>
+              <td><strong>Mysterious Nymph (Friendly Creature):</strong> Her laughter shimmers across the water.
+                <br><strong>Befriend:</strong> Read a book that explores allure or transformation. Roll even for <a href="{{ site.baseurl }}/rewards.html#amulet-of-duality">Amulet of Duality</a>, odd for Worn Page curse.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Friendly Creature):</strong> Mischievous Pixie. <em>Defeat:</em> Read a book with trickery. <em>Befriend:</em> Read a book with unexpected magic.</td>
+              <td><strong>Mischievous Pixie (Friendly Creature):</strong> Flitting overhead, scattering glowing droplets.
+                <br><strong>Befriend:</strong> Read a book where a character discovers unexpected magic or hidden talents.</td>
             </tr>
           </tbody>
         </table>
@@ -92,18 +96,20 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>3</strong></td>
       <td>
-        <strong>The Lost Garden:</strong> Trees and vines reclaim toppled shelves.
-        <br><strong>Challenge:</strong> Read a book with a magical garden.
+        <strong>The Lost Garden:</strong> Trees and vines reclaim toppled shelves, their blossoms glowing faintly in the dark. Forgotten statues weep with moss.
+        <br><strong>Challenge:</strong> Read a book with a magical garden or a hidden realm.
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Friendly Creature):</strong> Dryad. <em>Prompt:</em> Read a book with a wilderness setting.</td>
+              <td><strong>Dryad (Friendly Creature):</strong> Whispers secrets of roots and rivers.
+                <br><strong>Befriend:</strong> Read a book with a natural or wilderness setting.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Friendly Creature):</strong> Treant. <em>Prompt:</em> Read a book where things aren't what they seem.</td>
+              <td><strong>Treant (Friendly Creature):</strong> Slow and steady, branches heavy with books as fruit.
+                <br><strong>Befriend:</strong> Read a book where things aren't what they seem, or the setting is much more than it appears to be.</td>
             </tr>
           </tbody>
         </table>
@@ -112,18 +118,22 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>4</strong></td>
       <td>
-        <strong>The Cursed Tome:</strong> A massive volume chained to a pedestal leaks mist.
-        <br><strong>Challenge:</strong> Read a book with a curse or dark theme.
+        <strong>The Cursed Tome:</strong> A massive volume chained to a pedestal, its pages leaking mist and sorrow. The air grows cold with each breath.
+        <br><strong>Challenge:</strong> Read a book with a curse or a dark theme.
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Monster):</strong> Zombies. <em>Defeat:</em> Read a book about death/rebirth. <em>Befriend:</em> Read a book about finding hope in darkness.</td>
+              <td><strong>Zombies (Monster):</strong> Clawing free from the ink, groaning for stories unfinished.
+                <br><strong>Defeat:</strong> Read a book that deals with themes of death, rebirth, or the afterlife.
+                <br><strong>Befriend:</strong> Read a book where a character finds hope or humanity in a dark, hopeless situation.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Monster):</strong> Banshee. <em>Defeat:</em> Read a book with a ghost/death theme. <em>Befriend:</em> Read a book about moving on from tragedy.</td>
+              <td><strong>Banshee (Monster):</strong> Wails through the halls, scattering loose pages like autumn leaves.
+                <br><strong>Defeat:</strong> Read a book with a ghost-like being or a death theme.
+                <br><strong>Befriend:</strong> Read a book with a character that finds a way to move on from a tragic event.</td>
             </tr>
           </tbody>
         </table>
@@ -132,18 +142,20 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>5</strong></td>
       <td>
-        <strong>The Archivist's Riddle:</strong> A spectral figure waits with riddles for passage.
-        <br><strong>Challenge:</strong> Read a book with a mystery at its core (+5 XP).
+        <strong>The Archivist's Riddle:</strong> A spectral figure waits, quill in hand, offering only riddles for passage. Its eyes gleam with the weight of endless catalogues.
+        <br><strong>Challenge:</strong> Read a book that has a mystery or secret at its core (+5 XP).
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Familiar):</strong> <a href="{{ site.baseurl }}/rewards.html#tome-bound-cat">Tome-Bound Cat</a>. <em>Prompt:</em> Read a book with a cozy vibe.</td>
+              <td><strong><a href="{{ site.baseurl }}/rewards.html#tome-bound-cat">Tome-Bound Cat</a> (Familiar):</strong> Purrs wisdom between riddles.
+                <br><strong>Befriend:</strong> Read a book with a cozy or comforting vibe.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Friendly Creature):</strong> Guardian Owl. <em>Prompt:</em> Read a book that teaches you something new.</td>
+              <td><strong>Guardian Owl (Friendly Creature):</strong> Its feathers ink-black, gazing knowingly.
+                <br><strong>Befriend:</strong> Read a book that teaches you something new.</td>
             </tr>
           </tbody>
         </table>
@@ -152,18 +164,21 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>6</strong></td>
       <td>
-        <strong>The Starlit Observatory:</strong> A domed chamber with stars drifting across the ceiling.
+        <strong>The Starlit Observatory:</strong> A domed chamber where stars drift across the ceiling like a living sky. Telescopes of brass and crystal point toward unknown worlds.
         <br><strong>Challenge:</strong> Read a book with a cosmic or future setting (+10 Ink Drops).
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Familiar):</strong> <a href="{{ site.baseurl }}/rewards.html#pocket-dragon">Pocket Dragon</a>. <em>Prompt:</em> Read a book with a dragon.</td>
+              <td><strong><a href="{{ site.baseurl }}/rewards.html#pocket-dragon">Pocket Dragon</a> (Familiar):</strong> Tiny but fierce, curling around an astrolabe.
+                <br><strong>Befriend:</strong> Read a book with a dragon or a fire element.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Monster):</strong> Glabrezu. <em>Defeat:</em> Read a book with a deceptive character. <em>Befriend:</em> Read a book where power is the main theme.</td>
+              <td><strong>Glabrezu (Monster):</strong> Towering and terrible, offering honeyed bargains.
+                <br><strong>Defeat:</strong> Read a book with a morally gray love interest or a deceptive character.
+                <br><strong>Befriend:</strong> Read a book where power is the main theme.</td>
             </tr>
           </tbody>
         </table>
@@ -172,18 +187,22 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>7</strong></td>
       <td>
-        <strong>The Neglected Archives:</strong> Stacks of dust-caked scrolls sag in forgotten alcoves.
-        <br><strong>Challenge:</strong> Read a book with a ghost or death theme.
+        <strong>The Neglected Archives:</strong> Stacks of dust-caked scrolls sag in forgotten alcoves, watched by shadowy eyes.
+        <br><strong>Challenge:</strong> Read a book with a ghost-like being or a death theme.
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Monster):</strong> Banshee. <em>Defeat:</em> Read a book with a ghost/death theme. <em>Befriend:</em> Read about moving on from tragedy.</td>
+              <td><strong>Banshee (Monster):</strong> Lingering over half-burned records.
+                <br><strong>Defeat:</strong> Read a book with a ghost-like being or a death theme.
+                <br><strong>Befriend:</strong> Read a book where a character finds a way to move on from a tragic event.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Monster):</strong> Vampire. <em>Defeat:</em> Read a book with an immortal. <em>Befriend:</em> Read a book where temptation is a major role.</td>
+              <td><strong>Vampire (Monster):</strong> Rising from the dust with hunger and grace.
+                <br><strong>Defeat:</strong> Read a book with an immortal or night-dwelling creature.
+                <br><strong>Befriend:</strong> Read a book where desire or temptation plays a major role.</td>
             </tr>
           </tbody>
         </table>
@@ -192,26 +211,28 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>8</strong></td>
       <td>
-        <strong>The Author's Study:</strong> Candles gutter beside ink-stained desks.
-        <br><strong>Challenge:</strong> Read a book by the author you think used this study.
+        <strong>The Author's Study:</strong> Candles gutter beside ink-stained desks, their wax frozen mid-drip. Drafts lie unfinished, quills snapped in haste.
+        <br><strong>Challenge:</strong> Read a book by the author you think used this study. Optional journaling: describe whose study this might be.
         <br><strong>Reward:</strong> +10 Paper Scraps.
       </td>
     </tr>
     <tr>
       <td><strong>9</strong></td>
       <td>
-        <strong>The Endless Corridor:</strong> Door after door stretches into eternity.
+        <strong>The Endless Corridor:</strong> Door after door stretches into eternity, each pulsing with unread stories. The echo of your steps threatens to never end.
         <br><strong>Challenge:</strong> Read a book that is part of a series you have not started.
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Friendly Creature):</strong> Cheerful Sprite. <em>Prompt:</em> Read a fun, easy book you've been putting off.</td>
+              <td><strong>Cheerful Sprite (Friendly Creature):</strong> Darting from door to door.
+                <br><strong>Befriend:</strong> Read a book you've been putting off for a fun, easy-to-read, or relaxing read.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Monster):</strong> Ooze. <em>Defeat:</em> Read a book where a character overcomes an impossible obstacle.</td>
+              <td><strong>Ooze (Monster):</strong> Slithering down the walls, devouring titles whole.
+                <br><strong>Defeat:</strong> Read a book with a character who overcomes a seemingly impossible obstacle.</td>
             </tr>
           </tbody>
         </table>
@@ -220,7 +241,7 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>10</strong></td>
       <td>
-        <strong>The Grand Gallery:</strong> Oil paintings leer from gilded frames.
+        <strong>The Grand Gallery:</strong> Oil paintings leer from gilded frames, their subjects shifting when you look away.
         <br><strong>Challenge:</strong> Read a book you've had on your TBR for over a year.
         <br><strong>Reward:</strong> Gilded Painting (+1 Ink Drop when reading in an ornate location).
         <br><em>Roll a d4 to determine the encounter:</em>
@@ -228,11 +249,13 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Familiar):</strong> <a href="{{ site.baseurl }}/rewards.html#mystical-moth">Mystical Moth</a>. <em>Prompt:</em> Read a book with something hidden or nocturnal.</td>
+              <td><strong><a href="{{ site.baseurl }}/rewards.html#mystical-moth">Mystical Moth</a> (Familiar):</strong> Wings glowing faintly like painted glass.
+                <br><strong>Befriend:</strong> Read a book with something hidden or nocturnal.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Monster):</strong> Animated Armor (Cannot be befriended). <em>Prompt:</em> Read a book with a foiled cover.</td>
+              <td><strong>Animated Armor (Monster):</strong> Clattering from its frame. (Cannot be befriended).
+                <br><strong>Defeat:</strong> Read a book with a foiled cover.</td>
             </tr>
           </tbody>
         </table>
@@ -241,18 +264,21 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>11</strong></td>
       <td>
-        <strong>The Shroud's Heart:</strong> The air is thick with the Shroud's presence.
+        <strong>The Shroud's Heart:</strong> Here the air is thick, trembling with the Shroud's presence. Shadows twist like ink smoke.
         <br><strong>Challenge:</strong> Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty.
         <br><em>Roll a d4 to determine the encounter:</em>
         <table class="nested-table">
           <tbody>
             <tr>
               <td>[1-2]</td>
-              <td><strong>(Monster):</strong> Fomorian. <em>Defeat:</em> Read a book with a curse or monster. <em>Befriend:</em> Read a book where the MC must accept a tragic flaw.</td>
+              <td><strong>Fomorian (Monster):</strong> Hulking, its voice a storm of curses.
+                <br><strong>Defeat:</strong> Read a book containing a curse or a monster-like being.
+                <br><strong>Befriend:</strong> Read a book where the main character must accept a tragic flaw.</td>
             </tr>
             <tr>
               <td>[3-4]</td>
-              <td><strong>(Familiar):</strong> <a href="{{ site.baseurl }}/rewards.html#page-sprite">Page Sprite</a>. <em>Prompt:</em> Read a book under 300 pages.</td>
+              <td><strong><a href="{{ site.baseurl }}/rewards.html#page-sprite">Page Sprite</a> (Familiar):</strong> Flitting nervously, clutching half-burned parchment.
+                <br><strong>Befriend:</strong> Read a book that is 300 pages or less.</td>
             </tr>
           </tbody>
         </table>
@@ -261,15 +287,16 @@ Roll a d12 to determine your dungeon room. Each room offers a **narrative challe
     <tr>
       <td><strong>12</strong></td>
       <td>
-        <strong>The Mimic's Lair:</strong> Shelves and chairs twitch with hidden hunger.
+        <strong>The Mimic's Lair:</strong> Shelves and chairs twitch with hidden hunger, waiting for you to turn your back.
         <br><strong>Challenge:</strong> Read a book that subverts a common trope.
-        <br><strong>Encounter:</strong> Mimic (Cannot be befriended). <em>Prompt:</em> Read a book that feels deceptive or has a major twist.
+        <br><strong>Encounter:</strong> Mimic (Monster) lunging from false bindings. (Cannot be befriended).
+        <br><strong>Defeat:</strong> Read a book that feels deceptive or has a major twist.
       </td>
     </tr>
   </tbody>
 </table>
 
-## Dungeon Completion Rewards (Roll a d10)
+## ♠️ Dungeon Completion Rewards (Roll a d10)
 
 | Roll | Reward |
 |:----:|:---|
