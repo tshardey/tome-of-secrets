@@ -365,14 +365,16 @@ article th:first-child {
     margin-bottom: 15px;
 }
 
+/* This will stack the label on top of the input field for a cleaner look */
 #character-sheet .form-list label {
-    margin-right: 10px;
+    display: block;
+    margin-bottom: 5px;
 }
 
+/* This removes the max-width, allowing the inputs to span the full container */
 #character-sheet .form-list input,
 #character-sheet .form-list select {
     width: 100%;
-    max-width: 400px; /* Prevents short inputs from being too wide */
     box-sizing: border-box;
 }
 
