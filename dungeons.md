@@ -99,11 +99,4 @@ Here the air is thick, trembling with the Shroud's presence. Shadows twist like 
 * **Encounter 1 (Monster):** Fomorian hulking, its voice a storm of curses.
     * **Defeat:** Read a book containing a curse or a monster-like being.
     * **Befriend:** Read a book where the main character must accept a tragic flaw.
-* **Encounter 2 (Familiar):** [Page Sprite]({{ site.baseurl }}/rewards.html#page-sprite) flitting nervously, clutching half-burned parchment.
-    * **Prompt:** Read a book that is 300 pages or less.
-
-### The Mimic's Lair
-Shelves and chairs twitch with hidden hunger, waiting for you to turn your back.
-**Challenge:** Read a book that subverts a common trope. Cannot be befriended.
-* **Encounter (Monster):** Mimic lunging from false bindings.
-    * **Prompt:** Read a book that feels deceptive or has a major twist.
+* **Encounter 2 (Familiar):** [Page Sprite]({{ site.baseurl }}/rewards.html#page-sprite) flitting nervously

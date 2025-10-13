@@ -37,19 +37,19 @@ Completing a side quest rewards you with a magical item or a bonus. These quests
     * **Reward:** Receive a [Scatter Brain Scarab]({{ site.baseurl }}/rewards.html#scatter-brain-scarab).
 * **The Wandering Merchant's Request.** A traveler draped in scarves and maps greets you with tales of distant lands.
     * **Prompt:** Read a book featuring a journey or trip.
-    * **Reward:** Receive a [Librarian's Compass]({{ site.baseurl }}/rewards.html#librarians-compass) magical item.
+    * **Reward:** Receive a [Librarian's Compass]({{ site.baseurl }}/rewards.html#librarians-compass).
 * **The Glimmering Pools' Gift.** A nymph rises from glowing waters, her laughter echoing like ripples of moonlight.
     * **Prompt:** Read a book that explores allure or transformation.
     * **Reward:** Roll a die: on even gain an [Amulet of Duality]({{ site.baseurl }}/rewards.html#amulet-of-duality); on odd gain one Worn Page curse.
 * **The Chime of Opening.** A silver chime hums with anticipation, resonating with unseen locks.
     * **Prompt:** Read a book where a long-hidden truth is revealed.
-    * **Reward:** Receive a [Key of the Archive]({{ site.baseurl }}/rewards.html#key-of-the-archive) magical item.
+    * **Reward:** Receive a [Key of the Archive]({{ site.baseurl }}/rewards.html#key-of-the-archive).
 * **The Scarecrow's Cornfield.** Rustling stalks and a grim figure loom as whispers scatter in the field.
     * **Prompt:** Read a book with a fragmented structure or an unreliable narrator.
     * **Reward:** Gain a temporary buff: Disjointed Perception (+10 Ink Drops and +5 Page Scraps).
 * **The Empty Shelf.** A hollow space on the stacks calls out like an unanswered question.
     * **Prompt:** Choose a book from your TBR that you are most excited to read.
-    * **Reward:** Receive a [Tome of Potential]({{ site.baseurl }}/rewards.html#tome-of-potential) magical item.
+    * **Reward:** Receive a [Tome of Potential]({{ site.baseurl }}/rewards.html#tome-of-potential).
 
 ## Dungeon Completion Rewards (Roll a d10)
 Upon clearing all dungeon rooms for the month, roll a d10 to see what treasure you find!
