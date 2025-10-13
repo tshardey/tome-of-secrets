@@ -232,8 +232,8 @@ article h6:hover .anchor-link {
 }
 
 .reward-image img {
-  width: 150px;
-  height: 150px;
+  width: 150px;  /* This controls the image size */
+  height: 150px; /* This controls the image size */
   object-fit: cover; /* This prevents the image from being stretched or squished */
   border-radius: 5px;
   border: 2px solid #54483b;
@@ -242,7 +242,7 @@ article h6:hover .anchor-link {
 .reward-description h4 {
   margin-top: 0;
   font-size: 1.8em;
-  border-bottom: none; /* Remove the default border from h4 if it exists */
+  border-bottom: none;
   padding-bottom: 0;
   margin-bottom: 10px;
 }
