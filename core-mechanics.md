@@ -39,9 +39,24 @@ Each card suit corresponds to a specific type of challenge or quest.
 ## Currencies and Progression
 There are two primary currencies that define your progress, plus a third for character advancement.
 
-* **XP (Experience Points):** Your XP is for character progression and leveling up. You earn 15 XP for every completed side quest. Completing a dungeon room grants 25 XP.
-* **Ink Drops:** The primary currency for in-game rewards and essential for creating books. You earn 10 Ink Drops for every completed book. Use them to purchase in-game items, buffs, and to help create new books.
-* **Paper Scraps:** Earned from specific quests and activities, such as journaling about a book. You also earn 5 Paper Scraps for every book you read outside of your monthly quest pool (e.g., book club books, buddy reads, or mood reads) and 3 for every completed journal entry. Use them, in conjunction with Ink Drops, to "create" a new book to add to your collection.
+* **XP (Experience Points):** Your XP is for character progression and leveling up.
+
+    **Earn XP for:**
+    *  Each book you complete in a *Dungeon Room* (base of 25 XP)
+    *  Defeating monsters in a *Dungeon Room* 
+* **Ink Drops:** The primary currency for in-game rewards and essential for creating books.  Use them to purchase in-game items, buffs, and to help create new books.
+
+    **Earn Ink Drops by:**
+    *  Completing any book (base of 10 *Ink Drops*)
+    *  Triggering *Atmospheric Buffs*
+    *  Completing *Side Quests*
+    *  Coming across *Friendly Creatures* in a *Dungeon Room*
+* **Paper Scraps:** Earned from specific quests and activities, such as journaling about a book or your adventures in the library. Use them, in conjunction with Ink Drops, to "create" a new book to add to your collection.
+
+    **Earn 5 Paper Scraps for all of the following:**
+    *  Reading books outside of your quest pool 
+    *  Completing adventure journal entries 
+    *  Taming a *Familiar* in a *Dungeon Room*
 
 *Note: See the [Shopping Episode]({{ site.baseurl }}/shopping.html) section for more details on creating books.*
 
