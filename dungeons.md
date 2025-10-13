@@ -4,7 +4,7 @@ title: Dungeons
 ---
 
 ## ♠️ Dungeon Rooms (Roll a d12 )
-Roll a d12 to determine your dungeon room. Each room offers a *narrative challenge* and *encounter*. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards-roll-a-d10">Dungeon Completion Rewards</a> table.
+Roll a d12 to determine your dungeon room. Each room offers a **narrative challenge** and **encounter**. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards-roll-a-d10">Dungeon Completion Rewards</a> table.
 
 <h3>Dungeon Rewards & Penalties</h3>
 <table>
