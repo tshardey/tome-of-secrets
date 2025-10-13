@@ -217,3 +217,36 @@ article h6:hover .anchor-link {
   font-size: 2em;
   color: #b89f62;
 }
+
+/* ==========================================================================
+   Reward Item Layout
+   ========================================================================== */
+
+.reward-item {
+  display: flex; /* This creates the side-by-side layout */
+  align-items: center; /* This vertically aligns the image and text */
+  gap: 25px; /* This creates space between the image and the text */
+  margin-bottom: 40px; /* This creates space between each reward item */
+  padding-bottom: 20px;
+  border-bottom: 1px solid #54483b;
+}
+
+.reward-image img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover; /* This prevents the image from being stretched or squished */
+  border-radius: 5px;
+  border: 2px solid #54483b;
+}
+
+.reward-description h4 {
+  margin-top: 0;
+  font-size: 1.8em;
+  border-bottom: none; /* Remove the default border from h4 if it exists */
+  padding-bottom: 0;
+  margin-bottom: 10px;
+}
+
+.reward-description p {
+  margin-bottom: 0.5em;
+}
