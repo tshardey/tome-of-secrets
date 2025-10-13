@@ -250,3 +250,36 @@ article h6:hover .anchor-link {
 .reward-description p {
   margin-bottom: 0.5em;
 }
+
+/* ==========================================================================
+   Custom Table Styles for Rollable Quests & Dungeons
+   ========================================================================== */
+
+article table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+
+article th,
+article td {
+  padding: 12px 15px;
+  border: 1px solid #54483b;
+  text-align: left;
+}
+
+article th {
+  background-color: #3e352f;
+  font-family: 'Lora', serif;
+  font-size: 1.2em;
+}
+
+/* --- Control Column Widths --- */
+/* Target the first column of any table in the article */
+article td:first-child,
+article th:first-child {
+  width: 15%; /* Make the first column narrow */
+  font-weight: bold;
+  text-align: center;
+}
