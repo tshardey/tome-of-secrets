@@ -35,19 +35,40 @@ title: Keeper's Character Sheet
     </div>
 
     <div class="form-section">
-        <h2>🔮 Abilities & Benefits</h2>
-        <label for="magicalSchoolBenefit"><h3>✨ Magical School Benefit</h3></label>
-        <textarea id="magicalSchoolBenefit" placeholder="Write your chosen school's starting benefit here"></textarea>
+    <h2>🔮 Abilities & Benefits</h2>
 
-        <label for="librarySanctumBenefit"><h3>🏛️ Library Sanctum Benefit</h3></label>
-        <textarea id="librarySanctumBenefit" placeholder="Write your chosen sanctum's benefit and its associated buffs here"></textarea>
-
-        <label for="permanentBonuses"><h3>🏆 Permanent Bonuses (from Leveling)</h3></label>
-        <textarea id="permanentBonuses" placeholder="Note bonuses as you unlock them"></textarea>
-
-        <label for="schoolMasteryAbilities"><h3>🧙 School Mastery Abilities</h3></label>
-        <textarea id="schoolMasteryAbilities" placeholder="List abilities acquired by spending SMP"></textarea>
+    <div class="benefit-display">
+        <h3>✨ Magical School Benefit</h3>
+        <p id="magicalSchoolBenefitDisplay">-- Select a school to see its benefit --</p>
     </div>
+
+    <div class="benefit-display">
+        <h3>🏛️ Library Sanctum Benefit</h3>
+        <p id="librarySanctumBenefitDisplay">-- Select a sanctum to see its benefit --</p>
+    </div>
+
+    <div class="mastery-abilities-container">
+        <h3>🧙 School Mastery Abilities</h3>
+        <p>Use your School Mastery Points (SMP) to learn new abilities. Your current SMP: <strong id="smp-display">0</strong></p>
+        
+        <div class="add-item-form">
+            <div class="form-row">
+                <select id="ability-select">
+                    <option value="">-- Select an ability to learn --</option>
+                    </select>
+                <button type="button" id="learn-ability-button">Learn Ability</button>
+            </div>
+        </div>
+
+        <div id="learned-abilities-list" class="item-grid">
+            </div>
+    </div>
+
+    <div>
+        <label for="permanentBonuses"><h3>🏆 Permanent Bonuses (from Leveling)</h3></label>
+        <textarea id="permanentBonuses" placeholder="Note bonuses as you unlock them, e.g., Atmospheric Forecaster, Novice's Focus..."></textarea>
+    </div>
+</div>
     
 <div class="form-section">
     <h2>🎒 Keeper's Loadout & Inventory</h2>

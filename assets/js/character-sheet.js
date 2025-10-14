@@ -1,231 +1,156 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // --- MASTER ITEM DATABASE ---
-    const allItems = {
-        // Wearable Items
-        "Librarian's Compass": { type: "Wearable", img: "assets/images/rewards/librarians-compass.png", bonus: "Earn a +20 Ink Drop bonus for any book by a new-to-you author." }, //
-        "Amulet of Duality": { type: "Wearable", img: "assets/images/rewards/amulet-of-duality.png", bonus: "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators." }, //
-        "Scatter Brain Scarab": { type: "Wearable", img: "assets/images/rewards/scatter-brain-scarab.png", bonus: "When equipped, gain a x3 Ink Drop bonus for reading three books at the same time." }, //
-        "Cloak of the Story-Weaver": { type: "Wearable", img: "assets/images/rewards/cloak-of-the-story-weaver.png", bonus: "Earn a permanent +10 Ink Drop bonus for books that are part of a series." }, //
-        "The Bookwyrm's Scale": { type: "Wearable", img: "assets/images/rewards/bookwyrms-scale.png", bonus: "For every book over 500 pages, gain a +10 Ink Drop bonus." }, //
-        // Non-Wearable Items
-        "Key of the Archive": { type: "Non-Wearable", img: "assets/images/rewards/key-of-the-archive.png", bonus: "Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively." }, //
-        "Tome of Potential": { type: "Non-Wearable", img: "assets/images/rewards/tome-of-potential.png", bonus: "Earn a x3 Ink Drop bonus for books over 400 pages." }, //
-        "Librarian's Quill": { type: "Non-Wearable", img: "assets/images/rewards/librarians-quill.png", bonus: "Earn a permanent +2 Paper Scraps bonus for every book you journal about after finishing." }, //
-        "Chalice of Restoration": { type: "Non-Wearable", img: "assets/images/rewards/chalice-of-restoration.png", bonus: "Once per month, you may use this item to remove a Worn Page penalty." }, //
-        "Lantern of Foresight": { type: "Non-Wearable", img: "assets/images/rewards/lantern-of-foresight.png", bonus: "Once per month, you may re-roll a prompt or a die roll to get a new result, and you must keep the new result." }, //
-        "The Scepter of Knowledge": { type: "Non-Wearable", img: "assets/images/rewards/scepter-of-knowledge.png", bonus: "Once per month, you may switch the genre of any quest you roll to Non-Fiction." }, //
-        // Familiars
-        "Celestial Koi Fish": { type: "Familiar", img: "assets/images/rewards/celestial-koi-fish.png", bonus: "Once per month, you may use this familiar's insight to switch a genre-based quest (d6) to its opposing genre." }, //
-        "Tome-Bound Cat": { type: "Familiar", img: "assets/images/rewards/tome-bound-cat.png", bonus: "When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect." }, //
-        "Pocket Dragon": { type: "Familiar", img: "assets/images/rewards/pocket-dragon.png", bonus: "Earn a +20 Ink Drop bonus for books in a fantasy series." }, //
-        "Garden Gnome": { type: "Familiar", img: "assets/images/rewards/garden-gnome.png", bonus: "Earn +1 Ink Drop on any day where you read outside in nature or in a plant filled room." }, //
-        "Mystical Moth": { type: "Familiar", img: "assets/images/rewards/mystical-moth.png", bonus: "Earn +1 Ink Drop on nights when you read by lamplight." }, //
-        "Page Sprite": { type: "Familiar", img: "assets/images/rewards/page-sprite.png", bonus: "Earn a x2 Ink Drop bonus on any book under 300 pages." } //
+    // --- DATABASES ---
+    const allItems = { /* ... existing item database ... */ };
+    
+    const schoolBenefits = {
+        "Abjuration": "Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.", //
+        "Divination": "Once per month, you may roll 2 dice instead of 1 for a Monthly Quest, and choose which result you want to use.", //
+        "Evocation": "Once per month, when battling a monster in a dungeon, you may choose to defeat it quickly by reading a short story or novella instead of a novel.", //
+        "Enchantment": "When you befriend a monster in a dungeon, you earn 1.5x the base XP for that quest.", //
+        "Conjuration": "When you complete a quest while your Familiar slot is equipped, you gain an additional +5 Ink Drops for each quest.", //
+        "Transmutation": "Once per month, you may transmute your currency. You can exchange 5 Ink Drops for 1 Paper Scrap, or 1 Paper Scrap for 5 Ink Drops." //
     };
 
-    const form = document.getElementById('character-sheet');
-    const printButton = document.getElementById('print-button');
-    
-    // --- NEW: Input fields for slot counts ---
-    const wearableSlotsInput = document.getElementById('wearable-slots');
-    const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
-    const familiarSlotsInput = document.getElementById('familiar-slots');
+    const sanctumBenefits = {
+        "The Spire of Whispers": "Associated Buffs: Candle-lit Study, Cozy Hearth, Head in the Clouds. (Earn x2 Ink Drops from these buffs)", //
+        "The Verdant Athenaeum": "Associated Buffs: Herbalist's Nook, Soaking in Nature, Soundscape Spire. (Earn x2 Ink Drops from these buffs)", //
+        "The Sunken Archives": "Associated Buffs: Soundscape Spire, Wanderer's Path, Excavation. (Earn x2 Ink Drops from these buffs)" //
+    };
 
+    const masteryAbilities = {
+        "Ward Against the Shroud": { school: "Abjuration", cost: 1, benefit: "Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it." }, //
+        "Grand Dispelling": { school: "Abjuration", cost: 2, benefit: "Once per month, you may perform a powerful cleansing ritual. Remove all active Worn Page penalties you currently have." }, //
+        "Flicker of Prophecy": { school: "Divination", cost: 1, benefit: "When rolling a d6 for a Genre Quest, you may choose to treat the result as one number higher or lower (e.g., a 2 can become a 1 or a 3)." }, //
+        "Master of Fates": { school: "Divination", cost: 2, benefit: "Once per month, when establishing your Monthly Quest Pool, you may draw two additional cards." }, //
+        "Quick Shot": { school: "Evocation", cost: 1, benefit: "The benefit of Evocation may now be used to complete any single dungeon room challenge with a short story, not just a monster encounter." }, //
+        "Concussive Blast": { school: "Evocation", cost: 2, benefit: "When you use your Evocation benefit to complete a dungeon room challenge, the blast of power also completes a second prompt in the same room (if one exists)." }, //
+        "Silver Tongue": { school: "Enchantment", cost: 1, benefit: "When you complete a Side Quest, you gain an additional +5 Paper Scraps." }, //
+        "Irresistible Charm": { school: "Enchantment", cost: 2, benefit: "Once per month, you may choose to automatically succeed at befriending a monster without needing to read a book for the 'befriend' prompt." }, //
+        "Empowered Bond": { school: "Conjuration", cost: 1, benefit: "The Ink Drop or Paper Scrap bonus granted by your equipped Familiar is permanently increased by +5." }, //
+        "Echo Chamber": { school: "Conjuration", cost: 2, benefit: "You permanently unlock an additional Familiar slot on top of any Familiar slots you have already unlocked." }, //
+        "Alchemic Focus": { school: "Transmutation", cost: 1, benefit: "You gain an additional +5 XP for every book you read outside of your monthly quest pool." }, //
+        "Philosopher's Stone": { school: "Transmutation", cost: 2, benefit: "Once per month, you may sacrifice 50 XP to instantly gain 50 Ink Drops and 10 Paper Scraps." } //
+    };
+
+    // --- FORM ELEMENTS ---
+    const form = document.getElementById('character-sheet');
+    const wizardSchoolSelect = document.getElementById('wizardSchool');
+    const librarySanctumSelect = document.getElementById('librarySanctum');
+    const smpInput = document.getElementById('smp');
+
+    // --- STATE MANAGEMENT ---
+    let learnedAbilities = [];
     let equippedItems = [];
     let inventoryItems = [];
+    let activeAssignments = [];
+    let completedQuests = [];
 
-    // Populate the item dropdown
-    const itemSelect = document.getElementById('item-select');
-    if(itemSelect) {
-        for (const name in allItems) {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            itemSelect.appendChild(option);
-        }
-    }
-    
-    // --- REWRITTEN: SLOT CALCULATION ---
-    const getSlotLimits = () => {
-        const wearable = parseInt(wearableSlotsInput.value, 10) || 0;
-        const nonWearable = parseInt(nonWearableSlotsInput.value, 10) || 0;
-        const familiar = parseInt(familiarSlotsInput.value, 10) || 0;
-        return {
-            'Wearable': wearable,
-            'Non-Wearable': nonWearable,
-            'Familiar': familiar,
-            'total': wearable + nonWearable + familiar
-        };
+    // --- RENDER FUNCTIONS ---
+    const renderBenefits = () => {
+        const school = wizardSchoolSelect.value;
+        const sanctum = librarySanctumSelect.value;
+        document.getElementById('magicalSchoolBenefitDisplay').textContent = schoolBenefits[school] || "-- Select a school to see its benefit --";
+        document.getElementById('librarySanctumBenefitDisplay').textContent = sanctumBenefits[sanctum] || "-- Select a sanctum to see its benefit --";
     };
 
-    // --- UPDATED: RENDER LOADOUT ---
-    const renderLoadout = () => {
-        const equippedList = document.getElementById('equipped-items-list');
-        const inventoryList = document.getElementById('inventory-list');
-        if (!equippedList || !inventoryList) return;
+    const renderMasteryAbilities = () => {
+        const smpDisplay = document.getElementById('smp-display');
+        const abilitySelect = document.getElementById('ability-select');
+        const learnedList = document.getElementById('learned-abilities-list');
+        
+        const currentSmp = parseInt(smpInput.value, 10) || 0;
+        smpDisplay.textContent = currentSmp;
+        learnedList.innerHTML = '';
 
-        equippedList.innerHTML = '';
-        inventoryList.innerHTML = '';
-
-        const slotLimits = getSlotLimits();
-        const equippedCounts = { 'Wearable': 0, 'Non-Wearable': 0, 'Familiar': 0 };
-
-        // Render Equipped Items
-        equippedItems.forEach((item, index) => {
-            equippedCounts[item.type]++;
-            equippedList.innerHTML += `
+        // Populate learned abilities
+        learnedAbilities.forEach((abilityName, index) => {
+            const ability = masteryAbilities[abilityName];
+            learnedList.innerHTML += `
                 <div class="item-card">
-                    <img src="${item.img}" alt="${item.name}">
                     <div class="item-info">
-                        <h4>${item.name}</h4>
-                        <p><strong>Type:</strong> ${item.type}</p>
-                        <p>${item.bonus}</p>
-                        <button class="unequip-btn" data-index="${index}">Unequip</button>
+                        <h4>${abilityName}</h4>
+                        <p>${ability.benefit}</p>
+                        <p class="ability-cost"><strong>School:</strong> ${ability.school} | <strong>Cost:</strong> ${ability.cost} SMP</p>
+                        <button class="delete-ability-btn" data-index="${index}">Forget</button>
                     </div>
                 </div>
             `;
         });
         
-        // Render Empty Slots for each specific type
-        for (let i = equippedCounts['Wearable']; i < slotLimits['Wearable']; i++) {
-            equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Wearable Slot</p></div>`;
-        }
-        for (let i = equippedCounts['Non-Wearable']; i < slotLimits['Non-Wearable']; i++) {
-            equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Non-Wearable Slot</p></div>`;
-        }
-        for (let i = equippedCounts['Familiar']; i < slotLimits['Familiar']; i++) {
-            equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Familiar Slot</p></div>`;
-        }
-
-        // Render Inventory Items or Empty Message
-        if (inventoryItems.length > 0) {
-            inventoryItems.forEach((item, index) => {
-                inventoryList.innerHTML += `
-                    <div class="item-card">
-                        <img src="${item.img}" alt="${item.name}">
-                        <div class="item-info">
-                            <h4>${item.name}</h4>
-                            <p><strong>Type:</strong> ${item.type}</p>
-                            <p>${item.bonus}</p>
-                            <button class="equip-btn" data-index="${index}">Equip</button>
-                            <button class="delete-item-btn" data-index="${index}">Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            inventoryList.innerHTML = `<p id="empty-inventory-message">Your inventory is empty. Add items using the dropdown above.</p>`;
-        }
-        
-        document.getElementById('equipped-summary').innerText = `Equipped Items (${equippedItems.length}/${slotLimits.total} Slots Used)`;
-    };
-
-    // --- (Monthly Tracker and Data Handling code remains largely the same) ---
-    const addQuestButton = document.getElementById('add-quest-button');
-    let activeAssignments = [];
-    let completedQuests = [];
-
-    const renderActiveAssignments = () => { /* ... same as before ... */ };
-    const renderCompletedQuests = () => { /* ... same as before ... */ };
-
-    const loadData = () => {
-        const characterData = JSON.parse(localStorage.getItem('characterSheet'));
-        if (characterData) {
-            for (const key in characterData) {
-                if (form.elements[key]) form.elements[key].value = characterData[key];
+        // Populate dropdown with available, unlearned abilities
+        abilitySelect.innerHTML = '<option value="">-- Select an ability to learn --</option>';
+        for (const name in masteryAbilities) {
+            if (!learnedAbilities.includes(name)) {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = `${name} (${masteryAbilities[name].school}, ${masteryAbilities[name].cost} SMP)`;
+                abilitySelect.appendChild(option);
             }
         }
-        activeAssignments = JSON.parse(localStorage.getItem('activeAssignments')) || [];
-        completedQuests = JSON.parse(localStorage.getItem('completedQuests')) || [];
-        equippedItems = JSON.parse(localStorage.getItem('equippedItems')) || [];
-        inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
+    };
 
-        renderActiveAssignments();
-        renderCompletedQuests();
-        renderLoadout();
+    // (Keep your existing renderLoadout, renderActiveAssignments, and renderCompletedQuests functions here)
+
+    // --- DATA HANDLING ---
+    const loadData = () => {
+        // ... (load other data)
+        learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];
+        // ...
+        renderBenefits();
+        renderMasteryAbilities();
+        // ... (call other render functions)
     };
 
     const saveData = () => {
-        const characterData = {};
-        for (const element of form.elements) {
-            if (element.id && element.type !== 'button' && !element.id.startsWith('new-quest-') && element.id !== 'item-select') {
-                characterData[element.id] = element.value;
-            }
-        }
-        localStorage.setItem('characterSheet', JSON.stringify(characterData));
-        localStorage.setItem('activeAssignments', JSON.stringify(activeAssignments));
-        localStorage.setItem('completedQuests', JSON.stringify(completedQuests));
-        localStorage.setItem('equippedItems', JSON.stringify(equippedItems));
-        localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+        // ... (save other data)
+        localStorage.setItem('learnedAbilities', JSON.stringify(learnedAbilities));
+        // ...
     };
 
     // --- EVENT LISTENERS ---
-    
-    // NEW: Listen for changes on slot inputs
-    wearableSlotsInput.addEventListener('change', renderLoadout);
-    nonWearableSlotsInput.addEventListener('change', renderLoadout);
-    familiarSlotsInput.addEventListener('change', renderLoadout);
+    wizardSchoolSelect.addEventListener('change', renderBenefits);
+    librarySanctumSelect.addEventListener('change', renderBenefits);
+    smpInput.addEventListener('input', renderMasteryAbilities); // Update display when SMP changes
 
-    form.addEventListener('submit', (e) => { /* ... same as before ... */ });
-    
-    const addItemButton = document.getElementById('add-item-button');
-    if(addItemButton) { /* ... same as before ... */ }
+    document.getElementById('learn-ability-button').addEventListener('click', () => {
+        const abilityName = document.getElementById('ability-select').value;
+        if (!abilityName) return;
 
-    // UPDATED: Main event listener for equip/unequip/delete
-    document.querySelector('main').addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.closest('.item-card') && target.dataset.index) {
-            const index = parseInt(target.dataset.index, 10);
+        const ability = masteryAbilities[abilityName];
+        let currentSmp = parseInt(smpInput.value, 10) || 0;
 
-            // --- UPDATED EQUIP LOGIC ---
-            if (target.classList.contains('equip-btn')) {
-                const itemToEquip = inventoryItems[index];
-                const slotLimits = getSlotLimits();
-                const equippedCountForType = equippedItems.filter(item => item.type === itemToEquip.type).length;
-
-                if (equippedCountForType < slotLimits[itemToEquip.type]) {
-                    equippedItems.push(inventoryItems.splice(index, 1)[0]);
-                    renderLoadout();
-                    saveData();
-                } else {
-                    alert(`No empty ${itemToEquip.type} slots available!`);
-                }
-            }
-
-            if (target.classList.contains('unequip-btn')) {
-                inventoryItems.push(equippedItems.splice(index, 1)[0]);
-                renderLoadout();
-                saveData();
-            }
-            
-            if (target.classList.contains('delete-item-btn')) {
-                if (confirm(`Are you sure you want to permanently delete ${inventoryItems[index].name}?`)) {
-                    inventoryItems.splice(index, 1);
-                    renderLoadout();
-                    saveData();
-                }
-            }
+        if (currentSmp >= ability.cost) {
+            currentSmp -= ability.cost;
+            smpInput.value = currentSmp;
+            learnedAbilities.push(abilityName);
+            renderMasteryAbilities();
+            saveData();
+        } else {
+            alert('Not enough School Mastery Points to learn this ability!');
         }
     });
 
-    if(addQuestButton) { /* ... same as before ... */ }
-    document.querySelector('.container').addEventListener('click', function(e) { /* ... same as before ... */ });
-    if (printButton) printButton.addEventListener('click', () => window.print());
+    document.querySelector('main').addEventListener('click', (e) => {
+        // Handle forgetting an ability
+        if (e.target.classList.contains('delete-ability-btn')) {
+            const index = parseInt(e.target.dataset.index, 10);
+            const abilityName = learnedAbilities[index];
+            const ability = masteryAbilities[abilityName];
+            let currentSmp = parseInt(smpInput.value, 10) || 0;
+            
+            if (confirm(`Are you sure you want to forget "${abilityName}"? This will refund ${ability.cost} SMP.`)) {
+                currentSmp += ability.cost;
+                smpInput.value = currentSmp;
+                learnedAbilities.splice(index, 1);
+                renderMasteryAbilities();
+                saveData();
+            }
+        }
+        // ... (existing equip/unequip/delete item logic) ...
+    });
 
-    // --- Helper functions to keep the file clean ---
-    const renderAssignments = () => {
-        const tbody = document.getElementById('active-assignments-body');
-        if(!tbody) return;
-        tbody.innerHTML = '';
-        activeAssignments.forEach((quest, index) => { /* ... */ });
-        document.getElementById('active-summary').innerText = `Active Book Assignments (${activeAssignments.length} Remaining)`;
-    };
+    // (Keep all other existing event listeners)
 
-    // (Duplicating the functions from above to ensure they are present)
-    form.addEventListener('submit', (e) => { e.preventDefault(); saveData(); alert('Character sheet info saved!'); });
-    if(addItemButton) { addItemButton.addEventListener('click', () => { const itemName = itemSelect.value; if (itemName && allItems[itemName]) { const itemData = { name: itemName, ...allItems[itemName] }; inventoryItems.push(itemData); renderLoadout(); saveData(); } }); }
-    if(addQuestButton) { addQuestButton.addEventListener('click', function() { const status = document.getElementById('new-quest-status').value; const type = document.getElementById('new-quest-type').value; const prompt = document.getElementById('new-quest-prompt').value; const book = document.getElementById('new-quest-book').value; const notes = document.getElementById('new-quest-notes').value; if (!prompt || !book) { alert('Please fill in at least the Prompt and Book Title.'); return; } const newQuest = { type, prompt, book, notes }; if (status === 'active') { activeAssignments.push(newQuest); renderActiveAssignments(); } else { completedQuests.push(newQuest); renderCompletedQuests(); } saveData(); document.getElementById('new-quest-prompt').value = ''; document.getElementById('new-quest-book').value = ''; document.getElementById('new-quest-notes').value = ''; }); }
-    document.querySelector('.container').addEventListener('click', function(e) { if (e.target && e.target.classList.contains('delete-btn')) { const list = e.target.getAttribute('data-list'); const index = parseInt(e.target.getAttribute('data-index'), 10); if (list === 'active') { activeAssignments.splice(index, 1); renderActiveAssignments(); } else if (list === 'completed') { completedQuests.splice(index, 1); renderCompletedQuests(); } saveData(); } });
-
+    // Initial Load
     loadData();
 });
