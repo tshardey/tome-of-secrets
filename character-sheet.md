@@ -49,31 +49,40 @@ title: Keeper's Character Sheet
         <textarea id="schoolMasteryAbilities" placeholder="List abilities acquired by spending SMP"></textarea>
     </div>
     
-    <div class="form-section">
-        <h2>🎒 Keeper's Loadout & Inventory</h2>
+<div class="form-section">
+    <h2>🎒 Keeper's Loadout & Inventory</h2>
 
-        <div class="add-item-form">
-            <label for="item-select"><h3>Add Item to Inventory</h3></label>
-            <div class="form-row">
-                <select id="item-select">
-                    <option value="">-- Select an item to add --</option>
-                    </select>
-                <button type="button" id="add-item-button">Add Item</button>
-            </div>
-        </div>
+    <div class="slot-management">
+        <h3>Equipment Slots</h3>
+        <ul class="form-list slot-inputs">
+            <li><label for="wearable-slots">Wearable Slots:</label> <input type="number" id="wearable-slots" value="1" min="0" max="9"></li>
+            <li><label for="non-wearable-slots">Non-Wearable Slots:</label> <input type="number" id="non-wearable-slots" value="1" min="0" max="9"></li>
+            <li><label for="familiar-slots">Familiar Slots:</label> <input type="number" id="familiar-slots" value="1" min="0" max="9"></li>
+        </ul>
+    </div>
 
-        <div class="equipped-items-container">
-            <h3 id="equipped-summary">Equipped Items (0/0 Slots Used)</h3>
-            <div id="equipped-items-list" class="item-grid">
-                </div>
-        </div>
-
-        <div class="inventory-container">
-            <h3>📦 Inventory (Unequipped)</h3>
-            <div id="inventory-list" class="item-grid">
-                </div>
+    <div class="add-item-form">
+        <label for="item-select"><h3>Add Item to Inventory</h3></label>
+        <div class="form-row">
+            <select id="item-select">
+                <option value="">-- Select an item to add --</option>
+            </select>
+            <button type="button" id="add-item-button">Add Item</button>
         </div>
     </div>
+
+    <div class="equipped-items-container">
+        <h3 id="equipped-summary">Equipped Items (0/0 Slots Used)</h3>
+        <div id="equipped-items-list" class="item-grid">
+            </div>
+    </div>
+
+    <div class="inventory-container">
+        <h3>📦 Inventory (Unequipped)</h3>
+        <div id="inventory-list" class="item-grid">
+            </div>
+    </div>
+</div>
 
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
