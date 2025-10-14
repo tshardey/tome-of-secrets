@@ -634,3 +634,44 @@ article th:first-child {
 .slot-inputs label {
     text-align: center;
 }
+
+/* ==========================================================================
+   Abilities & Benefits Styles
+   ========================================================================== */
+
+.benefit-display {
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 5px;
+    padding: 15px 20px;
+    margin-bottom: 25px;
+}
+
+.benefit-display h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.benefit-display p {
+    color: #d4c8b0;
+    font-style: italic;
+    margin-bottom: 0;
+}
+
+.mastery-abilities-container {
+    margin-top: 40px;
+    margin-bottom: 40px;
+}
+
+.mastery-abilities-container > p {
+    text-align: center;
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+/* Re-use item-card style for abilities */
+.item-card .ability-cost {
+    font-size: 0.9em;
+    color: #8a7a61;
+    margin-top: 10px;
+}
