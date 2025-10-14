@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
     // --- MASTER ITEM DATABASE ---
-    // All items from rewards.md are stored here for easy access.
     const allItems = {
         // Wearable Items
         "Librarian's Compass": { type: "Wearable", img: "assets/images/rewards/librarians-compass.png", bonus: "Earn a +20 Ink Drop bonus for any book by a new-to-you author." }, //
@@ -52,33 +51,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (level >= 12) totalSlots++; //
         if (level >= 16) totalSlots++; //
         if (level >= 19) totalSlots++; //
-        
-        // Define slot types and how many of each are available.
-        // For now, it's 1 of each base, and we can assume new slots are flexible.
-        // A more complex system could be built if needed. This is a simple interpretation.
-        let slots = {
-            Wearable: 1,
-            "Non-Wearable": 1,
-            Familiar: 1,
-            Flexible: totalSlots - 3
-        };
-        return { slots, totalSlots };
+        return totalSlots;
     };
 
     // --- RENDER FUNCTIONS for Loadout ---
     const renderLoadout = () => {
         const equippedList = document.getElementById('equipped-items-list');
         const inventoryList = document.getElementById('inventory-list');
-        
+        if (!equippedList || !inventoryList) return;
+
         equippedList.innerHTML = '';
         inventoryList.innerHTML = '';
 
-        const { slots, totalSlots } = calculateSlots();
-        let equippedCounts = { Wearable: 0, "Non-Wearable": 0, Familiar: 0 };
+        const totalSlots = calculateSlots();
 
         // Render Equipped Items
         equippedItems.forEach((item, index) => {
-            equippedCounts[item.type]++;
             equippedList.innerHTML += `
                 <div class="item-card">
                     <img src="${item.img}" alt="${item.name}">
@@ -92,9 +80,8 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         });
         
-        // Render Empty Slots (Simplified)
-        const usedSlots = equippedItems.length;
-        for (let i = usedSlots; i < totalSlots; i++) {
+        // Render Empty Slots
+        for (let i = equippedItems.length; i < totalSlots; i++) {
             equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Item Slot</p></div>`;
         }
 
@@ -115,58 +102,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
         } else {
-            // If inventory is empty, add the message directly
             inventoryList.innerHTML = `<p id="empty-inventory-message">Your inventory is empty. Add items using the dropdown above.</p>`;
         }
         
-        // Update summary
-        document.getElementById('equipped-summary').innerText = `Equipped Items (${equippedItems.length}/${totalSlots} Slots Used)`;
-    };
-        
-        // Render Empty Slots
-        for (let i = equippedCounts.Wearable; i < slots.Wearable; i++) {
-             equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Wearable Slot</p></div>`;
-        }
-        for (let i = equippedCounts["Non-Wearable"]; i < slots["Non-Wearable"]; i++) {
-             equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Non-Wearable Slot</p></div>`;
-        }
-        for (let i = equippedCounts.Familiar; i < slots.Familiar; i++) {
-             equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Familiar Slot</p></div>`;
-        }
-        // Simplified: Display remaining total slots as empty generic slots.
-        const usedSlots = equippedItems.length;
-        for (let i=usedSlots; i < totalSlots; i++){
-            if(i >= (slots.Wearable + slots["Non-Wearable"] + slots.Familiar)){
-                 equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Item Slot</p></div>`;
-            }
-        }
-
-
-        // Render Inventory Items
-        if (inventoryItems.length > 0) {
-            emptyInventoryMsg.style.display = 'none';
-            inventoryItems.forEach((item, index) => {
-                inventoryList.innerHTML += `
-                    <div class="item-card">
-                        <img src="${item.img}" alt="${item.name}">
-                        <div class="item-info">
-                            <h4>${item.name}</h4>
-                            <p><strong>Type:</strong> ${item.type}</p>
-                            <p>${item.bonus}</p>
-                            <button class="equip-btn" data-index="${index}">Equip</button>
-                            <button class="delete-item-btn" data-index="${index}">Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            emptyInventoryMsg.style.display = 'block';
-        }
-        
         document.getElementById('equipped-summary').innerText = `Equipped Items (${equippedItems.length}/${totalSlots} Slots Used)`;
     };
 
-    // --- MONTHLY TRACKER (Existing Code) ---
+    // --- MONTHLY TRACKER ---
     const addQuestButton = document.getElementById('add-quest-button');
     let activeAssignments = [];
     let completedQuests = [];
@@ -263,36 +205,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelector('main').addEventListener('click', (e) => {
         const target = e.target;
-        if (!target.dataset.index) return;
-        const index = parseInt(target.dataset.index, 10);
+        if (target.closest('.item-card') && target.dataset.index) {
+            const index = parseInt(target.dataset.index, 10);
 
-        if (target.classList.contains('equip-btn')) {
-            const itemToEquip = inventoryItems[index];
-            const { totalSlots } = calculateSlots();
-            
-            if (equippedItems.length < totalSlots) {
-                equippedItems.push(itemToEquip);
-                inventoryItems.splice(index, 1);
-                renderLoadout();
-                saveData();
-            } else {
-                alert(`No empty item slots available!`);
+            if (target.classList.contains('equip-btn')) {
+                const totalSlots = calculateSlots();
+                if (equippedItems.length < totalSlots) {
+                    equippedItems.push(inventoryItems[index]);
+                    inventoryItems.splice(index, 1);
+                    renderLoadout();
+                    saveData();
+                } else {
+                    alert(`No empty item slots available!`);
+                }
             }
-        }
 
-        if (target.classList.contains('unequip-btn')) {
-            const itemToUnequip = equippedItems[index];
-            inventoryItems.push(itemToUnequip);
-            equippedItems.splice(index, 1);
-            renderLoadout();
-            saveData();
-        }
-        
-        if (target.classList.contains('delete-item-btn')) {
-            if (confirm(`Are you sure you want to permanently delete ${inventoryItems[index].name}?`)) {
-                inventoryItems.splice(index, 1);
+            if (target.classList.contains('unequip-btn')) {
+                inventoryItems.push(equippedItems[index]);
+                equippedItems.splice(index, 1);
                 renderLoadout();
                 saveData();
+            }
+            
+            if (target.classList.contains('delete-item-btn')) {
+                if (confirm(`Are you sure you want to permanently delete ${inventoryItems[index].name}?`)) {
+                    inventoryItems.splice(index, 1);
+                    renderLoadout();
+                    saveData();
+                }
             }
         }
     });
