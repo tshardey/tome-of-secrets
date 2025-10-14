@@ -27,10 +27,29 @@ title: Keeper's Character Sheet
     <div class="form-section">
         <h2>📈 Resources & Progression</h2>
         <ul class="form-list">
-            <li><label for="xp"><strong>Experience Points (XP):</strong></label> <input type="text" id="xp" placeholder="Current / To Next Level" /></li>
-            <li><label for="inkDrops"><strong>💧 Ink Drops:</strong></label> <input type="number" id="inkDrops" /></li>
-            <li><label for="paperScraps"><strong>📄 Paper Scraps:</strong></label> <input type="number" id="paperScraps" /></li>
-            <li><label for="smp"><strong>🎓 School Mastery Points (SMP):</strong></label> <input type="number" id="smp" /></li>
+            <li>
+                <label for="xp-current"><strong>Experience Points (XP):</strong></label>
+                <div class="xp-tracker">
+                    <input type="number" id="xp-current" value="0" />
+                    <span class="xp-divider">/</span>
+                    <input type="text" id="xp-needed" value="100" readonly />
+                </div>
+            </li>
+
+            <li class="resource-row">
+                <div>
+                    <label for="inkDrops"><strong>💧 Ink Drops:</strong></label>
+                    <input type="number" id="inkDrops" />
+                </div>
+                <div>
+                    <label for="paperScraps"><strong>📄 Paper Scraps:</strong></label>
+                    <input type="number" id="paperScraps" />
+                </div>
+                <div>
+                    <label for="smp"><strong>🎓 School Mastery Points (SMP):</strong></label>
+                    <input type="number" id="smp" />
+                </div>
+            </li>
         </ul>
     </div>
 
