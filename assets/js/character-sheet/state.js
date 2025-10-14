@@ -3,7 +3,8 @@ export let characterState = {
     equippedItems: [],
     inventoryItems: [],
     activeAssignments: [],
-    completedQuests: []
+    completedQuests: [],
+    discardedQuests: []
 };
 
 export function loadState(form) {
@@ -15,6 +16,7 @@ export function loadState(form) {
     }
     characterState.activeAssignments = JSON.parse(localStorage.getItem('activeAssignments')) || [];
     characterState.completedQuests = JSON.parse(localStorage.getItem('completedQuests')) || [];
+    characterState.discardedQuests = JSON.parse(localStorage.getItem('discardedQuests')) || [];
     characterState.equippedItems = JSON.parse(localStorage.getItem('equippedItems')) || [];
     characterState.inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
     characterState.learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];

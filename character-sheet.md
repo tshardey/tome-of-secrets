@@ -46,7 +46,7 @@ title: Keeper's Character Sheet
                     <input type="number" id="paperScraps" />
                 </div>
                 <div>
-                    <label for="smp"><strong>🎓 School Mastery Points (SMP):</strong></label>
+                    <label for="smp"><strong>🎓 SMP:</strong></label>
                     <input type="number" id="smp" />
                 </div>
             </li>
@@ -129,11 +129,19 @@ title: Keeper's Character Sheet
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
 
+    <ul class="form-list resource-row">
+        <li>
+            <label for="quest-month"><strong>Month:</strong></label> <input type="text" id="quest-month" />
+        </li>
+        <li>
+            <label for="quest-year"><strong>Year:</strong></label> <input type="text" id="quest-year" />
+        </li>
+    </ul>
+
         <div class="add-quest-form">
             <div class="form-row">
                 <select id="new-quest-status">
-                    <option value="active">Active Assignment</option>
-                    <option value="completed">Completed Quest</option>
+                <option value="active">Active Assignment</option> <option value="completed">Completed Quest</option> <option value="discarded">Discarded Quest</option>
                 </select>
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
@@ -179,6 +187,23 @@ title: Keeper's Character Sheet
                     </tr>
                 </thead>
                 <tbody id="completed-quests-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="discarded-quests-container">
+            <h3 id="discarded-summary">Discarded Quests</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th>Quest Type</th>
+                        <th>Prompt</th>
+                        <th>Book Title</th>
+                        <th>Notes</th>
+                        <th class="no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="discarded-quests-body">
                     </tbody>
             </table>
         </div>

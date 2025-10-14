@@ -114,6 +114,16 @@ export function renderCompletedQuests() {
     document.getElementById('completed-summary').innerText = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
 }
 
+export function renderDiscardedQuests() {
+    const tbody = document.getElementById('discarded-quests-body');
+    tbody.innerHTML = '';
+    characterState.discardedQuests.forEach((quest, index) => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${quest.notes}</td><td class="no-print"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
+    });
+    document.getElementById('discarded-summary').innerText = `Discarded Quests (${characterState.discardedQuests.length})`;
+}
+
 export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
     updateXpNeeded(levelInput, xpNeededInput);
     renderPermanentBonuses(levelInput);
@@ -122,4 +132,5 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     renderActiveAssignments();
     renderCompletedQuests();
+    renderDiscardedQuests();
 }
