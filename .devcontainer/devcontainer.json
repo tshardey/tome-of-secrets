@@ -1,0 +1,36 @@
+{
+	"name": "Tome of Secrets (Jekyll)",
+	// Use the official Microsoft-maintained image for Jekyll development.
+	"image": "mcr.microsoft.com/devcontainers/jekyll",
+
+	// Forward the Jekyll server port so you can access it from your local browser.
+	"forwardPorts": [4000],
+
+	// Mount your personal git config and SSH keys into the container.
+	"mounts": [
+		// Mount your .gitconfig file
+		"source=C:/Users/anthu/.gitconfig-tshardey,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+		// Mount your SSH keys
+		"source=C:/Users/anthu/.ssh-tshardey,target=/home/vscode/.ssh,type=bind,consistency=cached"
+	],
+
+	// Run 'bundle install' automatically after the container is created.
+	// This ensures all Ruby gems from the Gemfile are installed.
+	"postCreateCommand": "bundle install",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"DavidAnson.vscode-markdownlint",
+				"google.geminicodeassist"
+			]
+		}
+	},
+
+	// By default, the container runs as a non-root user. 
+	// If you need to install additional packages, you can connect as root.
+	// "remoteUser": "root"
+}
