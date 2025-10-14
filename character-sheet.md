@@ -129,19 +129,15 @@ title: Keeper's Character Sheet
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
 
-    <ul class="form-list resource-row">
-        <li>
-            <label for="quest-month"><strong>Month:</strong></label> <input type="text" id="quest-month" />
-        </li>
-        <li>
-            <label for="quest-year"><strong>Year:</strong></label> <input type="text" id="quest-year" />
-        </li>
-    </ul>
-
         <div class="add-quest-form">
             <div class="form-row">
+                <input type="text" id="quest-month" placeholder="Month (e.g., October)">
+                <input type="text" id="quest-year" placeholder="Year (e.g., 2025)">
+            </div>
+            <div class="form-row">
                 <select id="new-quest-status">
-                <option value="active">Active Assignment</option> <option value="completed">Completed Quest</option> <option value="discarded">Discarded Quest</option>
+                <option value="active">Add as Active</option>
+                <option value="completed">Add as Completed</option>
                 </select>
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
@@ -162,6 +158,8 @@ title: Keeper's Character Sheet
             <table class="tracker-table">
                 <thead>
                     <tr>
+                        <th>Month</th>
+                        <th>Year</th>
                         <th>Quest Type</th>
                         <th>Prompt</th>
                         <th>Book Title</th>
@@ -179,6 +177,8 @@ title: Keeper's Character Sheet
             <table class="tracker-table">
                 <thead>
                     <tr>
+                        <th>Month</th>
+                        <th>Year</th>
                         <th>Quest Type</th>
                         <th>Prompt</th>
                         <th>Book Title</th>
@@ -196,6 +196,8 @@ title: Keeper's Character Sheet
             <table class="tracker-table">
                 <thead>
                     <tr>
+                        <th>Month</th>
+                        <th>Year</th>
                         <th>Quest Type</th>
                         <th>Prompt</th>
                         <th>Book Title</th>
