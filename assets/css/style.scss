@@ -410,6 +410,7 @@ article th:first-child {
   border-collapse: collapse;
   margin-top: 1.5em;
   margin-bottom: 1.5em;
+  table-layout: fixed; /* This is important for respecting column widths */
 }
 
 .tracker-table th,
@@ -417,6 +418,7 @@ article th:first-child {
   padding: 12px 15px;
   border: 1px solid #54483b;
   text-align: left;
+  word-wrap: break-word; /* Helps with long text in fixed-width columns */
 }
 
 .tracker-table th {
@@ -424,6 +426,15 @@ article th:first-child {
   font-family: 'Lora', serif;
   font-size: 1.1em;
 }
+
+/* --- Column Widths for Tracker Tables --- */
+.tracker-table .col-month      { width: 8%; }
+.tracker-table .col-year       { width: 8%; }
+.tracker-table .col-quest-type { width: 12%; }
+.tracker-table .col-prompt     { width: 15%; }
+.tracker-table .col-book-title { width: 15%; }
+.tracker-table .col-notes      { width: 34%; }
+.tracker-table .col-action     { width: 8%; }
 
 #active-assignments-container, 
 #completed-quests-container,
@@ -472,40 +483,35 @@ article th:first-child {
     background-color: #cca352;
 }
 
-.delete-btn {
-    background: none;
-    border: none;
-    color: #cca352;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
-    font-size: 0.9em;
-}
-
-.action-cell button {
+/* Base style for all buttons inside the action cell */
+.action-cell .complete-quest-btn,
+.action-cell .discard-quest-btn,
+.action-cell .delete-btn {
     display: block; /* Stack the buttons vertically */
     margin-bottom: 5px;
-}
-
-.action-cell button,
-.delete-btn {
     background: none;
     border: none;
-    text-decoration: underline;
     cursor: pointer;
     padding: 0;
     font-size: 0.9em;
     font-family: 'Source Serif Pro', serif;
     transition: opacity 0.2s;
+    text-decoration: underline;
 }
 
-.action-cell button:hover,
-.delete-btn:hover {
+.action-cell button:hover {
     opacity: 0.8;
 }
 
+/* Specific colors for each action button */
+.action-cell .complete-quest-btn {
+    color: #253D2C;
+}
 .action-cell .discard-quest-btn {
-    color: #cca352; /* Orangey-gold */
+    color: #800000; /* Maroon */
+}
+.action-cell .delete-btn {
+    color: #3F1717;
 }
 
 /* ==========================================================================
