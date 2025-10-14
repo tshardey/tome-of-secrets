@@ -486,30 +486,29 @@ article th:first-child {
 }
 
 .action-cell button {
-    margin-right: 5px;
-    background: none;
-    border: 1px solid #b89f62;
-    color: #b89f62;
-    padding: 5px 10px;
-    cursor: pointer;
-    border-radius: 3px;
-    transition: background-color 0.2s, color 0.2s;
-    font-family: 'Source Serif Pro', serif;
-    font-size: 0.9em;
+    display: block; /* Stack the buttons vertically */
+    margin-bottom: 5px;
 }
 
-.action-cell button:hover {
-    background-color: #b89f62;
-    color: #2a231d;
+.action-cell button,
+.delete-btn {
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9em;
+    font-family: 'Source Serif Pro', serif;
+    transition: opacity 0.2s;
+}
+
+.action-cell button:hover,
+.delete-btn:hover {
+    opacity: 0.8;
 }
 
 .action-cell .discard-quest-btn {
-    border-color: #8a6262;
-    color: #8a6262;
-}
-.action-cell .discard-quest-btn:hover {
-    background-color: #8a6262;
-    color: #fff;
+    color: #cca352; /* Orangey-gold */
 }
 
 /* ==========================================================================
