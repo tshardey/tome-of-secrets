@@ -1,6 +1,6 @@
-import * as data from './character-sheet/data.js';
-import * as ui from './character-sheet/ui.js';
-import { characterState, loadState, saveState } from './character-sheet/state.js';
+import * as data from '/tome-of-secrets/assets/js/character-sheet/data.js';
+import * as ui from '/tome-of-secrets/assets/js/character-sheet/ui.js';
+import { characterState, loadState, saveState } from '/tome-of-secrets/assets/js/character-sheet/state.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     // --- FORM ELEMENTS ---
