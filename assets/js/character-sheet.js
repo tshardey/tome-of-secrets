@@ -84,12 +84,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentLevel = parseInt(levelInput.value, 10) || 1;
         xpNeededInput.value = xpLevels[currentLevel] || "Max";
     };
-    
+
     const renderPermanentBonuses = () => {
         const bonusList = document.getElementById('permanentBonusesList');
         const currentLevel = parseInt(levelInput.value, 10) || 1;
         bonusList.innerHTML = '';
         let bonusesFound = false;
+
         for (const level in permanentBonuses) {
             if (currentLevel >= level) {
                 bonusesFound = true;
@@ -98,6 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 bonusList.appendChild(li);
             }
         }
+
         if (!bonusesFound) {
             bonusList.innerHTML = '<li>-- No bonuses unlocked at this level --</li>';
         }
@@ -234,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateXpNeeded();
         renderPermanentBonuses();
     });
+
     wizardSchoolSelect.addEventListener('change', renderBenefits);
     librarySanctumSelect.addEventListener('change', renderBenefits);
     smpInput.addEventListener('input', renderMasteryAbilities);
@@ -286,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelector('main').addEventListener('click', (e) => {
         const target = e.target;
-        if (!target.dataset.index) return;
+        if (target.dataset.index === undefined) return;
         const index = parseInt(target.dataset.index, 10);
 
         if (target.classList.contains('delete-ability-btn')) {
