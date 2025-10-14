@@ -63,9 +63,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const book = document.getElementById('new-quest-book').value;
         const notes = document.getElementById('new-quest-notes').value;
         if (!prompt || !book) { alert('Please fill in at least the Prompt and Book Title.'); return; }
+
         const newQuest = { type, prompt, book, notes };
-        if (status === 'active') { characterState.activeAssignments.push(newQuest); ui.renderActiveAssignments(); } 
-        else { characterState.completedQuests.push(newQuest); ui.renderCompletedQuests(); }
+        if (status === 'active') {
+            characterState.activeAssignments.push(newQuest); ui.renderActiveAssignments();
+        } else if (status === 'completed') {
+            characterState.completedQuests.push(newQuest); ui.renderCompletedQuests();
+        } else if (status === 'discarded') {
+            characterState.discardedQuests.push(newQuest); ui.renderDiscardedQuests();
+        }
         saveState(form);
         document.getElementById('new-quest-prompt').value = '';
         document.getElementById('new-quest-book').value = '';
@@ -112,8 +118,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else if (target.classList.contains('delete-btn')) {
             const list = target.dataset.list;
-            if (list === 'active') { characterState.activeAssignments.splice(index, 1); ui.renderActiveAssignments(); } 
-            else if (list === 'completed') { characterState.completedQuests.splice(index, 1); ui.renderCompletedQuests(); }
+            if (list === 'active') {
+                characterState.activeAssignments.splice(index, 1); ui.renderActiveAssignments();
+            } else if (list === 'completed') {
+                characterState.completedQuests.splice(index, 1); ui.renderCompletedQuests();
+            } else if (list === 'discarded') {
+                characterState.discardedQuests.splice(index, 1); ui.renderDiscardedQuests();
+            }
             saveState(form);
         }
     });
