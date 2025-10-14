@@ -711,3 +711,23 @@ article th:first-child {
     flex-grow: 1;
     flex-basis: 30%;
 }
+
+/* ==========================================================================
+   Permanent Bonuses List Styles
+   ========================================================================== */
+
+#permanentBonusesList {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+    font-style: italic;
+    color: #d4c8b0;
+}
+
+#permanentBonusesList li {
+    margin-bottom: 8px;
+}
+
+#permanentBonusesList li:last-child {
+    margin-bottom: 0;
+}

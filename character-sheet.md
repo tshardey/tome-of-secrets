@@ -83,9 +83,11 @@ title: Keeper's Character Sheet
             </div>
     </div>
 
-    <div>
-        <label for="permanentBonuses"><h3>🏆 Permanent Bonuses (from Leveling)</h3></label>
-        <textarea id="permanentBonuses" placeholder="Note bonuses as you unlock them, e.g., Atmospheric Forecaster, Novice's Focus..."></textarea>
+    <div class="benefit-display">
+        <h3>🏆 Permanent Bonuses (from Leveling)</h3>
+        <ul id="permanentBonusesList">
+            <li>-- No bonuses unlocked at this level --</li>
+        </ul>
     </div>
 </div>
     

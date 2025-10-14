@@ -5,6 +5,12 @@ document.addEventListener('DOMContentLoaded', function() {
         10: 9750, 11: 12250, 12: 15000, 13: 18000, 14: 21500, 15: 25500, 16: 30000, 
         17: 35000, 18: 40500, 19: 47000, 20: "Max"
     };
+    const permanentBonuses = {
+        3: "<strong>Atmospheric Forecaster:</strong> Before drawing your Monthly Quest Pool, you may roll for one additional Atmospheric Bonus and choose which one to apply (or none).",
+        6: "<strong>Novice's Focus:</strong> You gain an additional +5 XP for every book completed that is 300 pages or more.",
+        7: "<strong>Focused Atmosphere:</strong> All positive Ink Drop bonuses granted by an active Atmospheric Bonus are increased by +1 (usually resulting in a +2 bonus).",
+        9: "<strong>Insightful Draw:</strong> When drawing your Monthly Quest Pool, you draw one extra quest card and then discard one card of your choice."
+    };
     const allItems = {
         "Librarian's Compass": { type: "Wearable", img: "assets/images/rewards/librarians-compass.png", bonus: "Earn a +20 Ink Drop bonus for any book by a new-to-you author." },
         "Amulet of Duality": { type: "Wearable", img: "assets/images/rewards/amulet-of-duality.png", bonus: "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators." },
@@ -78,6 +84,24 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentLevel = parseInt(levelInput.value, 10) || 1;
         xpNeededInput.value = xpLevels[currentLevel] || "Max";
     };
+    
+    const renderPermanentBonuses = () => {
+        const bonusList = document.getElementById('permanentBonusesList');
+        const currentLevel = parseInt(levelInput.value, 10) || 1;
+        bonusList.innerHTML = '';
+        let bonusesFound = false;
+        for (const level in permanentBonuses) {
+            if (currentLevel >= level) {
+                bonusesFound = true;
+                const li = document.createElement('li');
+                li.innerHTML = permanentBonuses[level];
+                bonusList.appendChild(li);
+            }
+        }
+        if (!bonusesFound) {
+            bonusList.innerHTML = '<li>-- No bonuses unlocked at this level --</li>';
+        }
+    };
 
     const renderBenefits = () => {
         const school = wizardSchoolSelect.value;
@@ -98,16 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         learnedAbilities.forEach((abilityName, index) => {
             const ability = masteryAbilities[abilityName];
-            learnedList.innerHTML += `
-                <div class="item-card">
-                    <div class="item-info">
-                        <h4>${abilityName}</h4>
-                        <p>${ability.benefit}</p>
-                        <p class="ability-cost"><strong>School:</strong> ${ability.school} | <strong>Cost:</strong> ${ability.cost} SMP</p>
-                        <button class="delete-ability-btn" data-index="${index}">Forget</button>
-                    </div>
-                </div>
-            `;
+            learnedList.innerHTML += `<div class="item-card"><div class="item-info"><h4>${abilityName}</h4><p>${ability.benefit}</p><p class="ability-cost"><strong>School:</strong> ${ability.school} | <strong>Cost:</strong> ${ability.cost} SMP</p><button class="delete-ability-btn" data-index="${index}">Forget</button></div></div>`;
         });
 
         for (const name in masteryAbilities) {
@@ -124,12 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const wearable = parseInt(wearableSlotsInput.value, 10) || 0;
         const nonWearable = parseInt(nonWearableSlotsInput.value, 10) || 0;
         const familiar = parseInt(familiarSlotsInput.value, 10) || 0;
-        return {
-            'Wearable': wearable,
-            'Non-Wearable': nonWearable,
-            'Familiar': familiar,
-            'total': wearable + nonWearable + familiar
-        };
+        return { 'Wearable': wearable, 'Non-Wearable': nonWearable, 'Familiar': familiar, 'total': wearable + nonWearable + familiar };
     };
 
     const renderLoadout = () => {
@@ -196,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];
 
         updateXpNeeded();
+        renderPermanentBonuses();
         renderBenefits();
         renderMasteryAbilities();
         renderLoadout();
@@ -219,7 +230,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // --- EVENT LISTENERS ---
-    levelInput.addEventListener('change', updateXpNeeded);
+    levelInput.addEventListener('change', () => {
+        updateXpNeeded();
+        renderPermanentBonuses();
+    });
     wizardSchoolSelect.addEventListener('change', renderBenefits);
     librarySanctumSelect.addEventListener('change', renderBenefits);
     smpInput.addEventListener('input', renderMasteryAbilities);
@@ -272,6 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelector('main').addEventListener('click', (e) => {
         const target = e.target;
+        if (!target.dataset.index) return;
         const index = parseInt(target.dataset.index, 10);
 
         if (target.classList.contains('delete-ability-btn')) {
@@ -312,7 +327,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Populate Item Select Dropdown
     if(itemSelect) {
         for (const name in allItems) {
             const option = document.createElement('option');
