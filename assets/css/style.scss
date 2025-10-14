@@ -604,3 +604,33 @@ article th:first-child {
     color: #8a7a61;
     font-style: italic;
 }
+
+/* ==========================================================================
+   Slot Management Styles
+   ========================================================================== */
+.slot-management {
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 5px;
+    padding: 10px 20px 15px;
+    margin-bottom: 30px;
+}
+
+.slot-management h3 {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.slot-inputs {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+}
+
+.slot-inputs li {
+    flex-basis: 30%;
+}
+
+.slot-inputs label {
+    text-align: center;
+}
