@@ -675,3 +675,39 @@ article th:first-child {
     color: #8a7a61;
     margin-top: 10px;
 }
+
+/* ==========================================================================
+   Condensed Resources Styles
+   ========================================================================== */
+
+.xp-tracker {
+    display: flex;
+    align-items: center;
+}
+
+.xp-tracker input {
+    flex-grow: 1;
+}
+
+.xp-tracker .xp-divider {
+    font-size: 1.5em;
+    padding: 0 10px;
+    color: #8a7a61;
+}
+
+#xp-needed {
+    background-color: #2a231d; /* Darker background for read-only */
+    text-align: center;
+    font-weight: bold;
+}
+
+.resource-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.resource-row > div {
+    flex-grow: 1;
+    flex-basis: 30%;
+}

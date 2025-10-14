@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     // --- DATABASES ---
+    const xpLevels = {
+        1: 100, 2: 250, 3: 500, 4: 1000, 5: 1750, 6: 2750, 7: 4000, 8: 5500, 9: 7500,
+        10: 9750, 11: 12250, 12: 15000, 13: 18000, 14: 21500, 15: 25500, 16: 30000, 
+        17: 35000, 18: 40500, 19: 47000, 20: "Max"
+    };
     const allItems = {
         "Librarian's Compass": { type: "Wearable", img: "assets/images/rewards/librarians-compass.png", bonus: "Earn a +20 Ink Drop bonus for any book by a new-to-you author." },
         "Amulet of Duality": { type: "Wearable", img: "assets/images/rewards/amulet-of-duality.png", bonus: "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators." },
@@ -50,6 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- FORM ELEMENTS ---
     const form = document.getElementById('character-sheet');
     const printButton = document.getElementById('print-button');
+    const levelInput = document.getElementById('level');
+    const xpNeededInput = document.getElementById('xp-needed');
     const wizardSchoolSelect = document.getElementById('wizardSchool');
     const librarySanctumSelect = document.getElementById('librarySanctum');
     const smpInput = document.getElementById('smp');
@@ -67,6 +74,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let completedQuests = [];
 
     // --- RENDER FUNCTIONS ---
+    const updateXpNeeded = () => {
+        const currentLevel = parseInt(levelInput.value, 10) || 1;
+        xpNeededInput.value = xpLevels[currentLevel] || "Max";
+    };
+
     const renderBenefits = () => {
         const school = wizardSchoolSelect.value;
         const sanctum = librarySanctumSelect.value;
@@ -183,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
         inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
         learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];
 
+        updateXpNeeded();
         renderBenefits();
         renderMasteryAbilities();
         renderLoadout();
@@ -193,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveData = () => {
         const characterData = {};
         for (const element of form.elements) {
-            if (element.id && element.type !== 'button' && !element.id.startsWith('new-quest-') && element.id !== 'item-select' && element.id !== 'ability-select') {
+            if (element.id && element.type !== 'button' && !element.id.startsWith('new-quest-') && element.id !== 'item-select' && element.id !== 'ability-select' && element.id !== 'xp-needed') {
                 characterData[element.id] = element.value;
             }
         }
@@ -206,6 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // --- EVENT LISTENERS ---
+    levelInput.addEventListener('change', updateXpNeeded);
     wizardSchoolSelect.addEventListener('change', renderBenefits);
     librarySanctumSelect.addEventListener('change', renderBenefits);
     smpInput.addEventListener('input', renderMasteryAbilities);
@@ -298,6 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Populate Item Select Dropdown
     if(itemSelect) {
         for (const name in allItems) {
             const option = document.createElement('option');
@@ -307,5 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Initial Load
     loadData();
 });
