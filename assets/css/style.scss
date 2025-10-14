@@ -486,9 +486,30 @@ article th:first-child {
 }
 
 .action-cell button {
-    margin-right: 8px;
-    padding: 2px 4px;
-    font-size: 0.85em;
+    margin-right: 5px;
+    background: none;
+    border: 1px solid #b89f62;
+    color: #b89f62;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s, color 0.2s;
+    font-family: 'Source Serif Pro', serif;
+    font-size: 0.9em;
+}
+
+.action-cell button:hover {
+    background-color: #b89f62;
+    color: #2a231d;
+}
+
+.action-cell .discard-quest-btn {
+    border-color: #8a6262;
+    color: #8a6262;
+}
+.action-cell .discard-quest-btn:hover {
+    background-color: #8a6262;
+    color: #fff;
 }
 
 /* ==========================================================================
