@@ -34,31 +34,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Populate the item dropdown
     const itemSelect = document.getElementById('item-select');
-    for (const name in allItems) {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        itemSelect.appendChild(option);
+    if(itemSelect) {
+        for (const name in allItems) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            itemSelect.appendChild(option);
+        }
     }
     
     // --- SLOT CALCULATION ---
     const calculateSlots = () => {
         const level = parseInt(levelInput.value, 10) || 1;
-        let wearable = 1;
-        let nonWearable = 1;
-        let familiar = 1;
-
-        if (level >= 4) { nonWearable++; } //
-        if (level >= 8) { wearable++; } //
-        if (level >= 12) { nonWearable++; } //
-        if (level >= 16) { wearable++; } //
-        if (level >= 19) { nonWearable++; } //
+        let totalSlots = 3; // Starting slots at level 1
+        if (level >= 4) totalSlots++; //
+        if (level >= 8) totalSlots++; //
+        if (level >= 12) totalSlots++; //
+        if (level >= 16) totalSlots++; //
+        if (level >= 19) totalSlots++; //
         
-        // This logic can be expanded if class abilities add slots
-        // For now, it's based on level as a simple example.
-        // A better approach if more slot types are added would be more complex.
-        
-        return { wearable, nonWearable, familiar };
+        // Define slot types and how many of each are available.
+        // For now, it's 1 of each base, and we can assume new slots are flexible.
+        // A more complex system could be built if needed. This is a simple interpretation.
+        let slots = {
+            Wearable: 1,
+            "Non-Wearable": 1,
+            Familiar: 1,
+            Flexible: totalSlots - 3
+        };
+        return { slots, totalSlots };
     };
 
     // --- RENDER FUNCTIONS for Loadout ---
@@ -66,10 +70,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const equippedList = document.getElementById('equipped-items-list');
         const inventoryList = document.getElementById('inventory-list');
         const emptyInventoryMsg = document.getElementById('empty-inventory-message');
+        if (!equippedList || !inventoryList) return; // Exit if elements aren't on page
+
         equippedList.innerHTML = '';
         inventoryList.innerHTML = '';
 
-        const slots = calculateSlots();
+        const { slots, totalSlots } = calculateSlots();
         let equippedCounts = { Wearable: 0, "Non-Wearable": 0, Familiar: 0 };
 
         // Render Equipped Items
@@ -89,15 +95,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Render Empty Slots
-        for (let i = equippedCounts.Wearable; i < slots.wearable; i++) {
+        for (let i = equippedCounts.Wearable; i < slots.Wearable; i++) {
              equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Wearable Slot</p></div>`;
         }
-        for (let i = equippedCounts["Non-Wearable"]; i < slots.nonWearable; i++) {
+        for (let i = equippedCounts["Non-Wearable"]; i < slots["Non-Wearable"]; i++) {
              equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Non-Wearable Slot</p></div>`;
         }
-        for (let i = equippedCounts.Familiar; i < slots.familiar; i++) {
+        for (let i = equippedCounts.Familiar; i < slots.Familiar; i++) {
              equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Familiar Slot</p></div>`;
         }
+        // Simplified: Display remaining total slots as empty generic slots.
+        const usedSlots = equippedItems.length;
+        for (let i=usedSlots; i < totalSlots; i++){
+            if(i >= (slots.Wearable + slots["Non-Wearable"] + slots.Familiar)){
+                 equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Item Slot</p></div>`;
+            }
+        }
+
 
         // Render Inventory Items
         if (inventoryItems.length > 0) {
@@ -120,8 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
             emptyInventoryMsg.style.display = 'block';
         }
         
-        // Update summary
-        const totalSlots = slots.wearable + slots.nonWearable + slots.familiar;
         document.getElementById('equipped-summary').innerText = `Equipped Items (${equippedItems.length}/${totalSlots} Slots Used)`;
     };
 
@@ -130,11 +142,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let activeAssignments = [];
     let completedQuests = [];
 
-    const renderActiveAssignments = () => { /* ... existing code ... */ };
-    const renderCompletedQuests = () => { /* ... existing code ... */ };
-    // --- (Keep your existing renderActiveAssignments and renderCompletedQuests functions here) ---
     const renderActiveAssignments = () => {
         const tbody = document.getElementById('active-assignments-body');
+        if(!tbody) return;
         tbody.innerHTML = '';
         activeAssignments.forEach((quest, index) => {
             const row = tbody.insertRow();
@@ -151,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const renderCompletedQuests = () => {
         const tbody = document.getElementById('completed-quests-body');
+        if(!tbody) return;
         tbody.innerHTML = '';
         completedQuests.forEach((quest, index) => {
             const row = tbody.insertRow();
@@ -168,17 +179,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- DATA HANDLING (Combined) ---
     const loadData = () => {
-        // Character Info
         const characterData = JSON.parse(localStorage.getItem('characterSheet'));
         if (characterData) {
             for (const key in characterData) {
                 if (form.elements[key]) form.elements[key].value = characterData[key];
             }
         }
-        // Quest Tracker
         activeAssignments = JSON.parse(localStorage.getItem('activeAssignments')) || [];
         completedQuests = JSON.parse(localStorage.getItem('completedQuests')) || [];
-        // Loadout
         equippedItems = JSON.parse(localStorage.getItem('equippedItems')) || [];
         inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
 
@@ -188,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     const saveData = () => {
-        // Character Info
         const characterData = {};
         for (const element of form.elements) {
             if (element.id && element.type !== 'button' && !element.id.startsWith('new-quest-') && element.id !== 'item-select') {
@@ -196,60 +203,54 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         localStorage.setItem('characterSheet', JSON.stringify(characterData));
-        // Quest Tracker
         localStorage.setItem('activeAssignments', JSON.stringify(activeAssignments));
         localStorage.setItem('completedQuests', JSON.stringify(completedQuests));
-        // Loadout
         localStorage.setItem('equippedItems', JSON.stringify(equippedItems));
         localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
     };
 
     // --- EVENT LISTENERS ---
     
-    // Level change listener to update slots
-    levelInput.addEventListener('change', renderLoadout);
+    if(levelInput) levelInput.addEventListener('change', renderLoadout);
 
-    // Save button
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         saveData();
         alert('Character sheet info saved!');
     });
+    
+    const addItemButton = document.getElementById('add-item-button');
+    if(addItemButton) {
+        addItemButton.addEventListener('click', () => {
+            const itemName = itemSelect.value;
+            if (itemName && allItems[itemName]) {
+                const itemData = { name: itemName, ...allItems[itemName] };
+                inventoryItems.push(itemData);
+                renderLoadout();
+                saveData();
+            }
+        });
+    }
 
-    // Add Item button
-    document.getElementById('add-item-button').addEventListener('click', () => {
-        const itemName = itemSelect.value;
-        if (itemName && allItems[itemName]) {
-            const itemData = { name: itemName, ...allItems[itemName] };
-            inventoryItems.push(itemData);
-            renderLoadout();
-            saveData();
-        }
-    });
-
-    // Main container for delegated events (Equip, Unequip, Delete Item)
     document.querySelector('main').addEventListener('click', (e) => {
         const target = e.target;
+        if (!target.dataset.index) return;
         const index = parseInt(target.dataset.index, 10);
 
-        // Equip Button
         if (target.classList.contains('equip-btn')) {
             const itemToEquip = inventoryItems[index];
-            const slots = calculateSlots();
-            const equippedCount = equippedItems.filter(item => item.type === itemToEquip.type).length;
-            const slotLimit = slots[itemToEquip.type.toLowerCase().replace('-', '')];
+            const { totalSlots } = calculateSlots();
             
-            if (equippedCount < slotLimit) {
+            if (equippedItems.length < totalSlots) {
                 equippedItems.push(itemToEquip);
                 inventoryItems.splice(index, 1);
                 renderLoadout();
                 saveData();
             } else {
-                alert(`No empty ${itemToEquip.type} slots available!`);
+                alert(`No empty item slots available!`);
             }
         }
 
-        // Unequip Button
         if (target.classList.contains('unequip-btn')) {
             const itemToUnequip = equippedItems[index];
             inventoryItems.push(itemToUnequip);
@@ -258,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
             saveData();
         }
         
-        // Delete Item Button
         if (target.classList.contains('delete-item-btn')) {
             if (confirm(`Are you sure you want to permanently delete ${inventoryItems[index].name}?`)) {
                 inventoryItems.splice(index, 1);
@@ -268,35 +268,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- (Keep your existing Monthly Tracker listeners here) ---
-    addQuestButton.addEventListener('click', function() {
-        // ... existing code ...
-        const status = document.getElementById('new-quest-status').value;
-        const type = document.getElementById('new-quest-type').value;
-        const prompt = document.getElementById('new-quest-prompt').value;
-        const book = document.getElementById('new-quest-book').value;
-        const notes = document.getElementById('new-quest-notes').value;
-        if (!prompt || !book) {
-            alert('Please fill in at least the Prompt and Book Title.');
-            return;
-        }
-        const newQuest = { type, prompt, book, notes };
-        if (status === 'active') {
-            activeAssignments.push(newQuest);
-            renderActiveAssignments();
-        } else {
-            completedQuests.push(newQuest);
-            renderCompletedQuests();
-        }
-        saveData();
-        document.getElementById('new-quest-prompt').value = '';
-        document.getElementById('new-quest-book').value = '';
-        document.getElementById('new-quest-notes').value = '';
-    });
+    if(addQuestButton) {
+        addQuestButton.addEventListener('click', function() {
+            const status = document.getElementById('new-quest-status').value;
+            const type = document.getElementById('new-quest-type').value;
+            const prompt = document.getElementById('new-quest-prompt').value;
+            const book = document.getElementById('new-quest-book').value;
+            const notes = document.getElementById('new-quest-notes').value;
+            if (!prompt || !book) {
+                alert('Please fill in at least the Prompt and Book Title.');
+                return;
+            }
+            const newQuest = { type, prompt, book, notes };
+            if (status === 'active') {
+                activeAssignments.push(newQuest);
+                renderActiveAssignments();
+            } else {
+                completedQuests.push(newQuest);
+                renderCompletedQuests();
+            }
+            saveData();
+            document.getElementById('new-quest-prompt').value = '';
+            document.getElementById('new-quest-book').value = '';
+            document.getElementById('new-quest-notes').value = '';
+        });
+    }
 
     document.querySelector('.container').addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('delete-btn')) {
-            // ... existing code ...
             const list = e.target.getAttribute('data-list');
             const index = parseInt(e.target.getAttribute('data-index'), 10);
             if (list === 'active') {
@@ -312,6 +311,5 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (printButton) printButton.addEventListener('click', () => window.print());
 
-    // Initial Load
     loadData();
 });
