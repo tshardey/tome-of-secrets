@@ -17,7 +17,6 @@ body {
 }
 
 .container {
-    max-width: 960px;
     margin: 0 auto;
 }
 
@@ -279,7 +278,6 @@ article th {
 /* Target the first column of any table in the article */
 article td:first-child,
 article th:first-child {
-  width: 15%; /* Make the first column narrow */
   font-weight: bold;
   text-align: center;
 }
@@ -300,7 +298,6 @@ article th:first-child {
 
 /* Keep the first column narrow for the roll */
 .nested-table td:first-child {
-  width: 15% !important;
   text-align: center;
   font-weight: bold;
 }
@@ -762,4 +759,26 @@ article th:first-child {
 
 #permanentBonusesList li:last-child {
     margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media screen and (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+
+    article td:first-child,
+    article th:first-child,
+    .nested-table td:first-child {
+        width: auto;
+    }
 }
