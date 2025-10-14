@@ -158,13 +158,13 @@ title: Keeper's Character Sheet
             <table class="tracker-table">
                 <thead>
                     <tr>
-                        <th>Month</th>
-                        <th>Year</th>
-                        <th>Quest Type</th>
-                        <th>Prompt</th>
-                        <th>Book Title</th>
-                        <th>Notes</th>
-                        <th class="no-print">Action</th>
+                        <th class="col-month">Month</th>
+                        <th class="col-year">Year</th>
+                        <th class="col-quest-type">Quest Type</th>
+                        <th class="col-prompt">Prompt</th>
+                        <th class="col-book-title">Book Title</th>
+                        <th class="col-notes">Notes / Rewards</th>
+                        <th class="col-action no-print">Action</th>
                     </tr>
                 </thead>
                 <tbody id="active-assignments-body">
@@ -177,13 +177,13 @@ title: Keeper's Character Sheet
             <table class="tracker-table">
                 <thead>
                     <tr>
-                        <th>Month</th>
-                        <th>Year</th>
-                        <th>Quest Type</th>
-                        <th>Prompt</th>
-                        <th>Book Title</th>
-                        <th>Reward Earned</th>
-                        <th class="no-print">Action</th>
+                        <th class="col-month">Month</th>
+                        <th class="col-year">Year</th>
+                        <th class="col-quest-type">Quest Type</th>
+                        <th class="col-prompt">Prompt</th>
+                        <th class="col-book-title">Book Title</th>
+                        <th class="col-notes">Notes / Rewards</th>
+                        <th class="col-action no-print">Action</th>
                     </tr>
                 </thead>
                 <tbody id="completed-quests-body">
@@ -196,13 +196,13 @@ title: Keeper's Character Sheet
             <table class="tracker-table">
                 <thead>
                     <tr>
-                        <th>Month</th>
-                        <th>Year</th>
-                        <th>Quest Type</th>
-                        <th>Prompt</th>
-                        <th>Book Title</th>
-                        <th>Notes</th>
-                        <th class="no-print">Action</th>
+                        <th class="col-month">Month</th>
+                        <th class="col-year">Year</th>
+                        <th class="col-quest-type">Quest Type</th>
+                        <th class="col-prompt">Prompt</th>
+                        <th class="col-book-title">Book Title</th>
+                        <th class="col-notes">Notes / Rewards</th>
+                        <th class="col-action no-print">Action</th>
                     </tr>
                 </thead>
                 <tbody id="discarded-quests-body">
