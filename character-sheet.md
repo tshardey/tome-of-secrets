@@ -51,14 +51,29 @@ title: Keeper's Character Sheet
     
     <div class="form-section">
         <h2>🎒 Keeper's Loadout & Inventory</h2>
-        <h3>Equipped Items</h3>
-        <ul class="form-list">
-            <li><label for="wearableSlot"><strong>👕 Wearable Slot:</strong></label> <input type="text" id="wearableSlot" /></li>
-            <li><label for="nonWearableSlot"><strong>🗝️ Non-Wearable Slot:</strong></label> <input type="text" id="nonWearableSlot" /></li>
-            <li><label for="familiarSlot"><strong>🐾 Familiar Slot:</strong></label> <input type="text" id="familiarSlot" /></li>
-        </ul>
-        <label for="unequippedItems"><h3>📦 Unequipped Items & Familiars (Inventory)</h3></label>
-        <textarea id="unequippedItems" placeholder="Magical Items, Befriended Familiars"></textarea>
+
+        <div class="add-item-form">
+            <label for="item-select"><h3>Add Item to Inventory</h3></label>
+            <div class="form-row">
+                <select id="item-select">
+                    <option value="">-- Select an item to add --</option>
+                    </select>
+                <button type="button" id="add-item-button">Add Item</button>
+            </div>
+        </div>
+
+        <div class="equipped-items-container">
+            <h3 id="equipped-summary">Equipped Items (0/0 Slots Used)</h3>
+            <div id="equipped-items-list" class="item-grid">
+                </div>
+        </div>
+
+        <div class="inventory-container">
+            <h3>📦 Inventory (Unequipped)</h3>
+            <div id="inventory-list" class="item-grid">
+                <p id="empty-inventory-message">Your inventory is empty. Add items using the dropdown above.</p>
+            </div>
+        </div>
     </div>
 
     <div class="form-section">
