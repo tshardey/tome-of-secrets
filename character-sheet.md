@@ -63,24 +63,64 @@ title: Keeper's Character Sheet
 
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
-        <label for="currentMonthYear"><h3>Current Month & Year:</h3></label>
-        <input type="text" id="currentMonthYear" class="full-width-input" />
 
-        <label for="monthlyQuestPool"><h3>🃏 Monthly Quest Pool</h3></label>
-        <textarea id="monthlyQuestPool" placeholder="List your card draws and results here"></textarea>
+        <div class="add-quest-form">
+            <div class="form-row">
+                <select id="new-quest-status">
+                    <option value="active">Active Assignment</option>
+                    <option value="completed">Completed Quest</option>
+                </select>
+                <select id="new-quest-type">
+                    <option value="">-- Quest Type --</option>
+                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Genre Quest">♥ Genre Quest</option> <option value="♦ Atmospheric Buff">♦ Atmospheric Buff</option> </select>
+                <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
+            </div>
+            <div class="form-row">
+                <input type="text" id="new-quest-book" placeholder="Book Title">
+                <input type="text" id="new-quest-notes" placeholder="Notes / Reward Earned">
+            </div>
+            <div class="form-row">
+                <button type="button" id="add-quest-button">Add Quest</button>
+            </div>
+        </div>
 
-        <label for="activeAtmosphericBuffs"><h3>🕯️ Active Atmospheric Buffs</h3></label>
-        <textarea id="activeAtmosphericBuffs" placeholder="List your drawn atmospheric buffs here"></textarea>
+        <div id="active-assignments-container">
+            <h3 id="active-summary">Active Book Assignments</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th>Quest Type</th>
+                        <th>Prompt</th>
+                        <th>Book Title</th>
+                        <th>Notes</th>
+                        <th class="no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="active-assignments-body">
+                    </tbody>
+            </table>
+        </div>
 
-        <label for="shroudCurse"><h3>💀 The Shroud's Curse</h3></label>
-        <ul class="form-list">
-             <li><label for="wornPages"><strong>Current Worn Pages:</strong></label> <input type="number" id="wornPages" /></li>
-        </ul>
-        <textarea id="shroudCurse" placeholder="Track penalties from uncompleted quests"></textarea>
+        <div id="completed-quests-container">
+            <h3 id="completed-summary">Completed Quests</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th>Quest Type</th>
+                        <th>Prompt</th>
+                        <th>Book Title</th>
+                        <th>Reward Earned</th>
+                        <th class="no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="completed-quests-body">
+                    </tbody>
+            </table>
+        </div>
     </div>
 
     <div class="form-buttons no-print">
-      <button type="submit">Save</button>
-      <button type="button" id="print-button">Print</button>
+    <button type="submit">Save Character Info</button>
+    <button type="button" id="print-button">Print</button>
     </div>
 </form>

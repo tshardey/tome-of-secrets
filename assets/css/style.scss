@@ -403,3 +403,83 @@ article th:first-child {
 .form-buttons button:hover {
     background-color: #cca352; /* Brighter gold on hover */
 }
+
+/* ==========================================================================
+   Monthly Tracker Table and Form Styles
+   ========================================================================== */
+
+.tracker-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+
+.tracker-table th,
+.tracker-table td {
+  padding: 12px 15px;
+  border: 1px solid #54483b;
+  text-align: left;
+}
+
+.tracker-table th {
+  background-color: #3e352f;
+  font-family: 'Lora', serif;
+  font-size: 1.1em;
+}
+
+#active-assignments-container, 
+#completed-quests-container {
+    margin-top: 30px;
+}
+
+.add-quest-form {
+    border: 1px solid #54483b;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 40px;
+    background-color: #3e352f;
+}
+
+.add-quest-form .form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.add-quest-form .form-row:last-child {
+    margin-bottom: 0;
+}
+
+.add-quest-form input,
+.add-quest-form select {
+    flex-grow: 1; /* Allows inputs to fill the space */
+    width: 33.33%; /* Default width for flex items */
+}
+
+.add-quest-form button {
+    width: 100%;
+    background-color: #b89f62;
+    color: #2a231d;
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.add-quest-form button:hover {
+    background-color: #cca352;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #cca352;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9em;
+}
