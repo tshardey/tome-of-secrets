@@ -69,9 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const renderLoadout = () => {
         const equippedList = document.getElementById('equipped-items-list');
         const inventoryList = document.getElementById('inventory-list');
-        const emptyInventoryMsg = document.getElementById('empty-inventory-message');
-        if (!equippedList || !inventoryList) return; // Exit if elements aren't on page
-
+        
         equippedList.innerHTML = '';
         inventoryList.innerHTML = '';
 
@@ -93,6 +91,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         });
+        
+        // Render Empty Slots (Simplified)
+        const usedSlots = equippedItems.length;
+        for (let i = usedSlots; i < totalSlots; i++) {
+            equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Item Slot</p></div>`;
+        }
+
+        // Render Inventory Items or Empty Message
+        if (inventoryItems.length > 0) {
+            inventoryItems.forEach((item, index) => {
+                inventoryList.innerHTML += `
+                    <div class="item-card">
+                        <img src="${item.img}" alt="${item.name}">
+                        <div class="item-info">
+                            <h4>${item.name}</h4>
+                            <p><strong>Type:</strong> ${item.type}</p>
+                            <p>${item.bonus}</p>
+                            <button class="equip-btn" data-index="${index}">Equip</button>
+                            <button class="delete-item-btn" data-index="${index}">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            // If inventory is empty, add the message directly
+            inventoryList.innerHTML = `<p id="empty-inventory-message">Your inventory is empty. Add items using the dropdown above.</p>`;
+        }
+        
+        // Update summary
+        document.getElementById('equipped-summary').innerText = `Equipped Items (${equippedItems.length}/${totalSlots} Slots Used)`;
+    };
         
         // Render Empty Slots
         for (let i = equippedCounts.Wearable; i < slots.Wearable; i++) {

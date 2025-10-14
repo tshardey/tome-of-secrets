@@ -71,8 +71,7 @@ title: Keeper's Character Sheet
         <div class="inventory-container">
             <h3>📦 Inventory (Unequipped)</h3>
             <div id="inventory-list" class="item-grid">
-                <p id="empty-inventory-message">Your inventory is empty. Add items using the dropdown above.</p>
-            </div>
+                </div>
         </div>
     </div>
 
