@@ -3,6 +3,8 @@ layout: default
 title: Keeper's Character Sheet
 ---
 
+<link rel="stylesheet" href="{{ site.baseurl }}/assets/css/character-sheet.css">
+
 <form id="character-sheet">
     <div class="form-section">
         <h2>👤 Character Information</h2>
@@ -57,12 +59,16 @@ title: Keeper's Character Sheet
     <h2>🔮 Abilities & Benefits</h2>
 
     <div class="benefit-display">
-        <h3>✨ Magical School Benefit</h3>
+        <h3>✨ Magical School</h3>
+        <p id="magicalSchoolDescriptionDisplay" class="description">-- Select a school to see its description --</p>
+        <strong>Benefit:</strong>
         <p id="magicalSchoolBenefitDisplay">-- Select a school to see its benefit --</p>
     </div>
 
     <div class="benefit-display">
-        <h3>🏛️ Library Sanctum Benefit</h3>
+        <h3>🏛️ Library Sanctum</h3>
+        <p id="librarySanctumDescriptionDisplay" class="description">-- Select a sanctum to see its description --</p>
+        <strong>Benefit:</strong>
         <p id="librarySanctumBenefitDisplay">-- Select a sanctum to see its benefit --</p>
     </div>
 
@@ -128,6 +134,23 @@ title: Keeper's Character Sheet
 
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
+
+        <div id="atmospheric-buffs-container">
+            <h3>♦️ Atmospheric Buffs</h3>
+            <table class="tracker-table" style="width: 50%; margin-left: auto; margin-right: auto;">
+                <thead>
+                    <tr>
+                        <th>Atmospheric Buff</th>
+                        <th>Daily Buff</th>
+                        <th>Active</th>
+                        <th>Total Days Used</th>
+                        <th>Monthly Total</th>
+                    </tr>
+                </thead>
+                <tbody id="atmospheric-buffs-body">
+                </tbody>
+            </table>
+        </div>
 
         <div class="add-quest-form">
             <div class="form-row">

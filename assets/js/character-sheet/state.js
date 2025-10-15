@@ -4,7 +4,8 @@ export let characterState = {
     inventoryItems: [],
     activeAssignments: [],
     completedQuests: [],
-    discardedQuests: []
+    discardedQuests: [],
+    atmosphericBuffs: {}
 };
 
 export function loadState(form) {
@@ -20,6 +21,7 @@ export function loadState(form) {
     characterState.equippedItems = JSON.parse(localStorage.getItem('equippedItems')) || [];
     characterState.inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
     characterState.learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];
+    characterState.atmosphericBuffs = JSON.parse(localStorage.getItem('atmosphericBuffs')) || {};
 }
 
 export function saveState(form) {

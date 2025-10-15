@@ -32,18 +32,41 @@ export const allItems = {
 };
 
 export const schoolBenefits = {
-    "Abjuration": "Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.",
-    "Divination": "Once per month, you may roll 2 dice instead of 1 for a Monthly Quest, and choose which result you want to use.",
-    "Evocation": "Once per month, when battling a monster in a dungeon, you may choose to defeat it quickly by reading a short story or novella instead of a novel.",
-    "Enchantment": "When you befriend a monster in a dungeon, you earn 1.5x the base XP for that quest.",
-    "Conjuration": "When you complete a quest while your Familiar slot is equipped, you gain an additional +5 Ink Drops for each quest.",
-    "Transmutation": "Once per month, you may transmute your currency. You can exchange 5 Ink Drops for 1 Paper Scrap, or 1 Paper Scrap for 5 Ink Drops."
+    "Abjuration": { description: "Cloaked in shimmering wards and whispered mantras of guardianship, Abjurers dedicate themselves to shielding the Grand Library from the Shroud. Their studies echo with protective charms etched into the very stones of their sanctums.", benefit: "Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete." },
+    "Divination": { description: "Keepers of Divination peer into pools of ink and read the shimmer of futures hidden within the margins. Their foresight is prized, for they glimpse truths beyond the turning of a page.", benefit: "Once per month, you may roll 2 dice instead of 1 for a Monthly Quest, and choose which result you want to use." },
+    "Evocation": { description: "Sparks dance from their fingertips as Evokers study in fire-lit halls, conjuring storms and flame from words alone. Their passion for raw power blazes with every tale they consume.", benefit: "Once per month, when battling a monster in a dungeon, you may choose to defeat it quickly by reading a short story or novella instead of a novel." },
+    "Enchantment": { description: "With soft voices and subtle gestures, Enchanters weave influence not only over wandering spirits but over the books themselves, coaxing stories to reveal their hidden depths.", benefit: "When you befriend a monster in a dungeon, you earn 1.5x the base XP for that quest." },
+    "Conjuration": { description: "Conjurers summon echoes of beings and places from other times, filling their sanctums with flickering companions and phantom libraries. Their craft ensures no story is ever truly lost.", benefit: "When you complete a quest while your Familiar slot is equipped, you gain an additional +5 Ink Drops for each quest." },
+    "Transmutation": { description: "Focuses on the arcane art of alchemy, allowing the Keeper to shift the essence and value of their collected resources. You master the rare skill of converting one material into another, understanding that the value of ink and paper is fluid.", benefit: "Once per month, you may transmute your currency. You can exchange 5 Ink Drops for 1 Paper Scrap, or 1 Paper Scrap for 5 Ink Drops." }
+};
+
+export const atmosphericBuffs = {
+    "The Candlight Study": { description: "Light a [scented] candle while you read." },
+    "The Herbalist's Nook": { description: "Brew a special cup of tea or a hot beverage to enjoy with your book." },
+    "The Soundscape Spire": { description: "Create a vibe with ambient music or a 'bookish vibe' video on YouTube." },
+    "The Excavation": { description: "Clean and organize your reading space before you read." },
+    "The Cozy Hearth": { description: "Sit by a fire, real or from a television." },
+    "The Soaking in Nature": { description: "Read outside in the grass or in your garden." },
+    "The Wanderer's Path": { description: "Read in a new place, either in your home or somewhere new entirely." },
+    "Head in the Clouds": { description: "Read in a cozy, overstuffed chair, bed, or another favorite comfortable spot." }
 };
 
 export const sanctumBenefits = {
-    "The Spire of Whispers": "Associated Buffs: Candle-lit Study, Cozy Hearth, Head in the Clouds. (Earn x2 Ink Drops from these buffs)",
-    "The Verdant Athenaeum": "Associated Buffs: Herbalist's Nook, Soaking in Nature, Soundscape Spire. (Earn x2 Ink Drops from these buffs)",
-    "The Sunken Archives": "Associated Buffs: Soundscape Spire, Wanderer's Path, Excavation. (Earn x2 Ink Drops from these buffs)"
+    "The Spire of Whispers": {
+        description: "Rising endlessly into the clouds, this vast tower is filled with spiral staircases and high, arched windows. Whispers of half-read stories drift through the air, a chorus of encouragement and warning. It is a place of quiet study, candlelight, and the comfort of hearthfire.",
+        benefit: "<strong>Associated Buffs:</strong> The Candlight Study, The Cozy Hearth, Head in the Clouds. (Earn x2 Ink Drops from these buffs)",
+        associatedBuffs: ["The Candlight Study", "The Cozy Hearth", "Head in the Clouds"]
+    },
+    "The Verdant Athenaeum": {
+        description: "Nestled within an enchanted forest, this living library sprawls with vines, glowing blossoms, and winding paths. Birds flit through the rafters, and every step seems to awaken the rustle of leaves eager to share their secrets. Here, wisdom is nurtured in the embrace of nature itself.",
+        benefit: "<strong>Associated Buffs:</strong> The Herbalist's Nook, The Soaking in Nature, The Soundscape Spire. (Earn x2 Ink Drops from these buffs)",
+        associatedBuffs: ["The Herbalist's Nook", "The Soaking in Nature", "The Soundscape Spire"]
+    },
+    "The Sunken Archives": {
+        description: "Buried beneath dunes of shifting sand, this ancient library is a labyrinth of collapsed halls and half-submerged chambers. Scrolls crumble into dust, guarded by spectral archivists who watch intruders with owl-like intensity, reminiscent of Wan Shi Tong's eternal vigilance. The air is thick with the weight of forgotten knowledge, daring you to unearth it.",
+        benefit: "<strong>Associated Buffs:</strong> The Soundscape Spire, The Wanderer's Path, The Excavation. (Earn x2 Ink Drops from these buffs)",
+        associatedBuffs: ["The Soundscape Spire", "The Wanderer's Path", "The Excavation"]
+    }
 };
 
 export const masteryAbilities = {
