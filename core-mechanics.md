@@ -42,12 +42,14 @@ There are two primary currencies that define your progress, plus a third for cha
 * **XP (Experience Points):** Your XP is for character progression and leveling up.
 
     **Earn XP for:**
+    *  Completing a *Genre Quest* (+15 XP)
     *  Each book you complete in a *Dungeon Room* (base of 25 XP)
     *  Defeating monsters in a *Dungeon Room* 
 * **Ink Drops:** The primary currency for in-game rewards and essential for creating books.  Use them to purchase in-game items, buffs, and to help create new books.
 
     **Earn Ink Drops by:**
     *  Completing any book (base of 10 *Ink Drops*)
+    *  Completing a *Genre Quest* (+10 *Ink Drops*)
     *  Triggering *Atmospheric Buffs*
     *  Completing *Side Quests*
     *  Coming across *Friendly Creatures* in a *Dungeon Room*

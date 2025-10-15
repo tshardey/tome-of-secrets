@@ -4,6 +4,7 @@ title: Quests and Challenges
 ---
 
 ## ♥️ Genre Quests (Roll a d6)
+Completing a Genre Quest rewards you with **+15 XP** and **+10 Ink Drops**
 
 | Roll | Quest Description |
 |:----:|:---|
