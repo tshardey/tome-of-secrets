@@ -164,7 +164,7 @@ title: Keeper's Character Sheet
                 </select>
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
-                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Genre Quest">♥ Genre Quest</option> <option value="♦ Atmospheric Buff">♦ Atmospheric Buff</option> </select>
+                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Genre Quest">♥ Genre Quest</option> </select>
                 <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
             </div>
             <div class="form-row">
