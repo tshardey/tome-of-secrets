@@ -1,0 +1,15 @@
+/* General Table Styling */
+.tracker-table input[type="number"] {
+    width: 60px; /* Give number inputs a consistent width */
+    box-sizing: border-box; /* Ensure padding and border are included in the width */
+}
+
+.tracker-table td, .tracker-table th {
+    padding: 8px; /* Add some padding to prevent content from touching borders */
+}
+
+/* Highlight for associated atmospheric buffs */
+.tracker-table .highlight {
+    background-color: #b89f62; /* A warmer, subtle highlight for dark theme */
+    font-weight: bold;
+}

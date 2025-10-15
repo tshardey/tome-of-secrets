@@ -27,10 +27,28 @@ export function renderPermanentBonuses(levelInput) {
 }
 
 export function renderBenefits(wizardSchoolSelect, librarySanctumSelect) {
-    const school = wizardSchoolSelect.value;
-    const sanctum = librarySanctumSelect.value;
-    document.getElementById('magicalSchoolBenefitDisplay').textContent = data.schoolBenefits[school] || "-- Select a school to see its benefit --";
-    document.getElementById('librarySanctumBenefitDisplay').textContent = data.sanctumBenefits[sanctum] || "-- Select a sanctum to see its benefit --";
+    const schoolDescriptionDisplay = document.getElementById('magicalSchoolDescriptionDisplay');
+    const schoolBenefitDisplay = document.getElementById('magicalSchoolBenefitDisplay');
+    const sanctumDescriptionDisplay = document.getElementById('librarySanctumDescriptionDisplay');
+    const sanctumBenefitDisplay = document.getElementById('librarySanctumBenefitDisplay');
+
+    const selectedSchool = wizardSchoolSelect.value;
+    if (selectedSchool && data.schoolBenefits[selectedSchool]) {
+        schoolDescriptionDisplay.innerHTML = data.schoolBenefits[selectedSchool].description;
+        schoolBenefitDisplay.innerHTML = data.schoolBenefits[selectedSchool].benefit;
+    } else {
+        schoolDescriptionDisplay.innerHTML = '-- Select a school to see its description --';
+        schoolBenefitDisplay.innerHTML = '-- Select a school to see its benefit --';
+    }
+
+    const selectedSanctum = librarySanctumSelect.value;
+    if (selectedSanctum && data.sanctumBenefits[selectedSanctum]) {
+        sanctumDescriptionDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].description;
+        sanctumBenefitDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].benefit;
+    } else {
+        sanctumDescriptionDisplay.innerHTML = '-- Select a sanctum to see its description --';
+        sanctumBenefitDisplay.innerHTML = '-- Select a sanctum to see its benefit --';
+    }
 }
 
 export function renderMasteryAbilities(smpInput) {
@@ -94,6 +112,41 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
     document.getElementById('equipped-summary').innerText = `Equipped Items (${characterState.equippedItems.length}/${slotLimits.total} Slots Used)`;
 }
 
+export function renderAtmosphericBuffs(librarySanctumSelect) {
+    const tbody = document.getElementById('atmospheric-buffs-body');
+    tbody.innerHTML = '';
+
+    const selectedSanctum = librarySanctumSelect.value;
+    const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+
+    for (const buffName in data.atmosphericBuffs) {
+        const isAssociated = associatedBuffs.includes(buffName);
+        const dailyValue = isAssociated ? 2 : 1;
+        const daysUsed = characterState.atmosphericBuffs[buffName]?.daysUsed || 0;
+        const isActive = characterState.atmosphericBuffs[buffName]?.isActive || false;
+
+        const row = tbody.insertRow();
+        if (isAssociated) {
+            row.classList.add('highlight');
+        }
+
+        row.innerHTML = `
+            <td>${buffName}</td>
+            <td>${dailyValue}</td>
+            <td><input type="checkbox" class="buff-active-check" data-buff-name="${buffName}" ${isActive ? 'checked' : ''}></td>
+            <td><input type="number" class="buff-days-input" value="${daysUsed}" min="0" data-buff-name="${buffName}" data-daily-value="${dailyValue}"></td>
+            <td id="total-${buffName.replace(/\s+/g, '')}">${daysUsed * dailyValue}</td>
+        `;
+    }
+}
+
+export function updateBuffTotal(inputElement) {
+    const buffName = inputElement.dataset.buffName;
+    const daysUsed = parseInt(inputElement.value, 10) || 0;
+    const dailyValue = parseInt(inputElement.dataset.dailyValue, 10);
+    document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * dailyValue;
+}
+
 export function renderActiveAssignments() {
     const tbody = document.getElementById('active-assignments-body');
     tbody.innerHTML = '';
@@ -136,6 +189,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderBenefits(wizardSchoolSelect, librarySanctumSelect);
     renderMasteryAbilities(smpInput);
     renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    renderAtmosphericBuffs(librarySanctumSelect);
     renderActiveAssignments();
     renderCompletedQuests();
     renderDiscardedQuests();

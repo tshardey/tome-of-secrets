@@ -23,8 +23,12 @@ document.addEventListener('DOMContentLoaded', function() {
         ui.renderPermanentBonuses(levelInput);
     });
 
+    const onSanctumChange = () => {
+        ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect);
+        ui.renderAtmosphericBuffs(librarySanctumSelect);
+    };
     wizardSchoolSelect.addEventListener('change', () => ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect));
-    librarySanctumSelect.addEventListener('change', () => ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect));
+    librarySanctumSelect.addEventListener('change', onSanctumChange);
     smpInput.addEventListener('input', () => ui.renderMasteryAbilities(smpInput));
     
     const renderLoadout = () => ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
@@ -83,6 +87,18 @@ document.addEventListener('DOMContentLoaded', function() {
     printButton.addEventListener('click', () => window.print());
 
     document.querySelector('main').addEventListener('click', (e) => {
+        // Handle buff active checkbox clicks
+        if (e.target.classList.contains('buff-active-check')) {
+            const buffName = e.target.dataset.buffName;
+            if (!characterState.atmosphericBuffs[buffName]) {
+                characterState.atmosphericBuffs[buffName] = { daysUsed: 0, isActive: false };
+            }
+            characterState.atmosphericBuffs[buffName].isActive = e.target.checked;
+            // No need to save state on every check, it's temporary for the day
+            return; // prevent other handlers from firing
+        }
+
+        // Handle other clicks
         const target = e.target;
         if (target.dataset.index === undefined) return;
         const index = parseInt(target.dataset.index, 10);
@@ -139,6 +155,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 characterState.discardedQuests.splice(index, 1); ui.renderDiscardedQuests();
             }
             saveState(form);
+        }
+    });
+
+    document.getElementById('atmospheric-buffs-body').addEventListener('input', (e) => {
+        if (e.target.classList.contains('buff-days-input')) {
+            const buffName = e.target.dataset.buffName;
+            const daysUsed = parseInt(e.target.value, 10) || 0;
+
+            if (!characterState.atmosphericBuffs[buffName]) {
+                characterState.atmosphericBuffs[buffName] = { daysUsed: 0, isActive: false };
+            }
+            characterState.atmosphericBuffs[buffName].daysUsed = daysUsed;
+            ui.updateBuffTotal(e.target);
         }
     });
 
