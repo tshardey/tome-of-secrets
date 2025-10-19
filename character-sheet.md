@@ -173,6 +173,7 @@ title: Keeper's Character Sheet
             </div>
             <div class="form-row">
                 <button type="button" id="add-quest-button">Add Quest</button>
+                <button type="button" id="cancel-edit-quest-button" style="display: none;">Cancel</button>
             </div>
         </div>
 

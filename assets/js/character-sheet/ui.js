@@ -159,6 +159,7 @@ export function renderActiveAssignments() {
                          <td>${quest.book}</td>
                          <td>${quest.notes || ''}</td>
                          <td class="no-print action-cell"><button class="complete-quest-btn" data-index="${index}">Complete</button><button class="discard-quest-btn" data-index="${index}">Discard</button><button class="delete-btn" data-index="${index}" data-list="active">Delete</button></td>`;
+        row.querySelector('.action-cell').prepend(createEditButton(index, 'activeAssignments'));
     });
     document.getElementById('active-summary').innerText = `Active Book Assignments (${characterState.activeAssignments.length} Remaining)`;
 }
@@ -169,6 +170,7 @@ export function renderCompletedQuests() {
     characterState.completedQuests.forEach((quest, index) => {
         const row = tbody.insertRow();
         row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
+        row.querySelector('.action-cell').prepend(createEditButton(index, 'completedQuests'));
     });
     document.getElementById('completed-summary').innerText = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
 }
@@ -179,8 +181,19 @@ export function renderDiscardedQuests() {
     characterState.discardedQuests.forEach((quest, index) => {
         const row = tbody.insertRow();
         row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
+        row.querySelector('.action-cell').prepend(createEditButton(index, 'discardedQuests'));
     });
     document.getElementById('discarded-summary').innerText = `Discarded Quests (${characterState.discardedQuests.length})`;
+}
+
+function createEditButton(index, listName) {
+    const button = document.createElement('button');
+    button.className = 'edit-quest-btn';
+    button.type = 'button'; // Prevents form submission
+    button.textContent = 'Edit';
+    button.dataset.index = index;
+    button.dataset.list = listName;
+    return button;
 }
 
 export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {

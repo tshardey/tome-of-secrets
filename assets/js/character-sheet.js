@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const familiarSlotsInput = document.getElementById('familiar-slots');
     const itemSelect = document.getElementById('item-select');
     const addQuestButton = document.getElementById('add-quest-button');
+    const cancelEditQuestButton = document.getElementById('cancel-edit-quest-button');
+
+    // --- STATE FOR EDITING ---
+    let editingQuestInfo = null; // { list: 'activeAssignments', index: 0 }
 
     // --- EVENT LISTENERS ---
     levelInput.addEventListener('change', () => {
@@ -60,29 +64,65 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    function resetQuestForm() {
+        // Clear form fields
+        document.getElementById('new-quest-prompt').value = '';
+        document.getElementById('new-quest-book').value = '';
+        document.getElementById('new-quest-notes').value = '';
+        // Reset month/year if desired, or leave them for convenience
+        // document.getElementById('quest-month').value = '';
+        // document.getElementById('quest-year').value = '';
+
+        // Reset editing state
+        editingQuestInfo = null;
+        addQuestButton.textContent = 'Add Quest';
+        document.getElementById('new-quest-status').style.display = 'inline-block';
+        cancelEditQuestButton.style.display = 'none';
+        addQuestButton.style.width = '100%';
+    }
+
     addQuestButton.addEventListener('click', () => {
-        const status = document.getElementById('new-quest-status').value;
         const type = document.getElementById('new-quest-type').value;
         const prompt = document.getElementById('new-quest-prompt').value;
         const book = document.getElementById('new-quest-book').value;
         const notes = document.getElementById('new-quest-notes').value;
         const month = document.getElementById('quest-month').value;
         const year = document.getElementById('quest-year').value;
-        if (!prompt || !book || !month || !year) { alert('Please fill in the Month, Year, Prompt, and Book Title.'); return; }
+        if (!prompt || !book || !month || !year) { 
+            alert('Please fill in the Month, Year, Prompt, and Book Title.'); 
+            return; 
+        }
 
-        const newQuest = { month, year, type, prompt, book, notes };
-        if (status === 'active') {
-            characterState.activeAssignments.push(newQuest); ui.renderActiveAssignments();
-        } else if (status === 'completed') {
-            characterState.completedQuests.push(newQuest); ui.renderCompletedQuests();
+        const questData = { month, year, type, prompt, book, notes };
+
+        if (editingQuestInfo) {
+            // Update existing quest
+            characterState[editingQuestInfo.list][editingQuestInfo.index] = questData;
+            
+            // Re-render the correct list
+            if (editingQuestInfo.list === 'activeAssignments') ui.renderActiveAssignments();
+            else if (editingQuestInfo.list === 'completedQuests') ui.renderCompletedQuests();
+            else if (editingQuestInfo.list === 'discardedQuests') ui.renderDiscardedQuests();
+
+            resetQuestForm();
+        } else {
+            // Add new quest
+            const status = document.getElementById('new-quest-status').value;
+            if (status === 'active') {
+                characterState.activeAssignments.push(questData); 
+                ui.renderActiveAssignments();
+            } else if (status === 'completed') {
+                characterState.completedQuests.push(questData); 
+                ui.renderCompletedQuests();
+            }
         }
 
         saveState(form);
-        document.getElementById('new-quest-prompt').value = '';
-        document.getElementById('new-quest-book').value = '';
-        document.getElementById('new-quest-notes').value = '';
+        resetQuestForm(); // Clear form after adding
     });
     
+    cancelEditQuestButton.addEventListener('click', resetQuestForm);
+
     form.addEventListener('submit', (e) => { e.preventDefault(); saveState(form); alert('Character sheet saved!'); });
     printButton.addEventListener('click', () => window.print());
 
@@ -155,6 +195,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 characterState.discardedQuests.splice(index, 1); ui.renderDiscardedQuests();
             }
             saveState(form);
+        } else if (target.classList.contains('edit-quest-btn')) {
+            const list = target.dataset.list;
+            const index = parseInt(target.dataset.index, 10);
+            const quest = characterState[list][index];
+
+            // Populate form
+            document.getElementById('quest-month').value = quest.month;
+            document.getElementById('quest-year').value = quest.year;
+            document.getElementById('new-quest-type').value = quest.type;
+            document.getElementById('new-quest-prompt').value = quest.prompt;
+            document.getElementById('new-quest-book').value = quest.book;
+            document.getElementById('new-quest-notes').value = quest.notes;
+
+            // Set editing state
+            editingQuestInfo = { list, index };
+            addQuestButton.textContent = 'Update Quest';
+            document.getElementById('new-quest-status').style.display = 'none'; // Hide status dropdown
+            cancelEditQuestButton.style.display = 'inline-block';
+            addQuestButton.style.width = '50%';
+            cancelEditQuestButton.style.width = '50%';
+
+            addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     });
 

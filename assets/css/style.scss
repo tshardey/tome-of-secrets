@@ -486,7 +486,8 @@ article th:first-child {
 /* Base style for all buttons inside the action cell */
 .action-cell .complete-quest-btn,
 .action-cell .discard-quest-btn,
-.action-cell .delete-btn {
+.action-cell .delete-btn,
+.action-cell .edit-quest-btn {
     display: block; /* Stack the buttons vertically */
     margin-bottom: 5px;
     background: none;
@@ -504,6 +505,9 @@ article th:first-child {
 }
 
 /* Specific colors for each action button */
+.action-cell .edit-quest-btn {
+    color: #b89f62; /* Muted Gold */
+}
 .action-cell .complete-quest-btn {
     color: #253D2C;
 }
