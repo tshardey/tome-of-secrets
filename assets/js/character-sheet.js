@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemSelect = document.getElementById('item-select');
     const addQuestButton = document.getElementById('add-quest-button');
     const cancelEditQuestButton = document.getElementById('cancel-edit-quest-button');
+    const questTypeSelect = document.getElementById('new-quest-type');
+    const dungeonRoomSelect = document.getElementById('dungeon-room-select');
+    const dungeonEncounterSelect = document.getElementById('dungeon-encounter-select');
 
     // --- STATE FOR EDITING ---
     let editingQuestInfo = null; // { list: 'activeAssignments', index: 0 }
@@ -64,6 +67,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    questTypeSelect.addEventListener('change', () => {
+        const standardContainer = document.getElementById('standard-prompt-container');
+        const dungeonContainer = document.getElementById('dungeon-prompt-container');
+        dungeonEncounterSelect.style.display = 'none'; // Always hide encounter on type change
+
+        if (questTypeSelect.value === '♠ Dungeon Crawl') {
+            standardContainer.style.display = 'none';
+            dungeonContainer.style.display = 'flex';
+            // Populate room select
+            dungeonRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
+            for (const roomNumber in data.dungeonRooms) {
+                const option = document.createElement('option');
+                option.value = roomNumber;
+                option.textContent = `${roomNumber}: ${data.dungeonRooms[roomNumber].challenge.split(':')[0]}`;
+                dungeonRoomSelect.appendChild(option);
+            }
+        } else {
+            standardContainer.style.display = 'flex';
+            dungeonContainer.style.display = 'none';
+        }
+    });
+
+    dungeonRoomSelect.addEventListener('change', () => {
+        const selectedRoomNumber = dungeonRoomSelect.value;
+        dungeonEncounterSelect.innerHTML = '<option value="">-- Select an Encounter --</option>';
+
+        if (selectedRoomNumber && data.dungeonRooms[selectedRoomNumber].encounters.length > 0) {
+            data.dungeonRooms[selectedRoomNumber].encounters.forEach(encounterText => {
+                const option = document.createElement('option');
+                option.value = encounterText;
+                option.textContent = encounterText.split(':')[0]; // Show only the name
+                dungeonEncounterSelect.appendChild(option);
+            });
+            dungeonEncounterSelect.style.display = 'block';
+        } else {
+            dungeonEncounterSelect.style.display = 'none';
+        }
+    });
+
     function resetQuestForm() {
         // Clear form fields
         document.getElementById('new-quest-prompt').value = '';
@@ -71,6 +113,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('new-quest-notes').value = '';
         // Reset month/year if desired, or leave them for convenience
         // document.getElementById('quest-month').value = '';
+        dungeonRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
+        dungeonEncounterSelect.innerHTML = '<option value="">-- Select an Encounter --</option>';
         // document.getElementById('quest-year').value = '';
 
         // Reset editing state
@@ -79,25 +123,41 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('new-quest-status').style.display = 'inline-block';
         cancelEditQuestButton.style.display = 'none';
         addQuestButton.style.width = '100%';
+
+        // Reset prompt visibility
+        document.getElementById('standard-prompt-container').style.display = 'flex';
+        document.getElementById('dungeon-prompt-container').style.display = 'none';
     }
 
     addQuestButton.addEventListener('click', () => {
-        const type = document.getElementById('new-quest-type').value;
-        const prompt = document.getElementById('new-quest-prompt').value;
+        const type = questTypeSelect.value;
         const book = document.getElementById('new-quest-book').value;
         const notes = document.getElementById('new-quest-notes').value;
         const month = document.getElementById('quest-month').value;
         const year = document.getElementById('quest-year').value;
-        if (!prompt || !book || !month || !year) { 
-            alert('Please fill in the Month, Year, Prompt, and Book Title.'); 
-            return; 
-        }
-
-        const questData = { month, year, type, prompt, book, notes };
 
         if (editingQuestInfo) {
             // Update existing quest
-            characterState[editingQuestInfo.list][editingQuestInfo.index] = questData;
+            // Note: Editing a dungeon quest will condense it back to a single entry.
+            // A more complex implementation would be needed to edit both parts simultaneously.
+            if (type === '♠ Dungeon Crawl') {
+                const roomNumber = dungeonRoomSelect.value;
+                if (!roomNumber) {
+                    alert('Please select a dungeon room to update.');
+                    return;
+                }
+                // When editing, we just update the single selected entry.
+                const roomPrompt = data.dungeonRooms[roomNumber].challenge;
+                questData.prompt = roomPrompt;
+                characterState[editingQuestInfo.list][editingQuestInfo.index] = { month, year, type, prompt: roomPrompt, book, notes };
+            } else {
+                 if (!prompt) {
+                    alert('Please fill in the Prompt field.');
+                    return;
+                }
+                questData.prompt = prompt;
+            }
+            characterState[editingQuestInfo.list][editingQuestInfo.index] = { month, year, type, prompt: document.getElementById('new-quest-prompt').value, book, notes };
             
             // Re-render the correct list
             if (editingQuestInfo.list === 'activeAssignments') ui.renderActiveAssignments();
@@ -106,6 +166,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
             resetQuestForm();
         } else {
+            // Handle special case for adding a new Dungeon Crawl
+            if (type === '♠ Dungeon Crawl') {
+                const roomNumber = dungeonRoomSelect.value;
+                const roomData = data.dungeonRooms[roomNumber];
+                const encounterPrompt = dungeonEncounterSelect.value;
+
+                if (!roomNumber || !book || !month || !year) {
+                    alert('Please fill in Month, Year, Book, and select a Room.');
+                    return;
+                }
+                if (roomData.encounters.length > 0 && !encounterPrompt) {
+                    alert('Please select an Encounter for this room.');
+                    return;
+                }
+                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes };
+                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes };
+
+                characterState.activeAssignments.push(roomQuest, encounterQuest);
+                ui.renderActiveAssignments();
+                saveState(form);
+                resetQuestForm();
+                return; // Exit after handling dungeon
+            }
+
+            // Standard validation for non-dungeon quests
+            const prompt = document.getElementById('new-quest-prompt').value;
+            if (!prompt || !book || !month || !year) {
+                alert('Please fill in the Month, Year, Prompt, and Book Title.');
+                return;
+            }
+            const questData = { month, year, type, prompt, book, notes };
             // Add new quest
             const status = document.getElementById('new-quest-status').value;
             if (status === 'active') {
@@ -207,6 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('new-quest-prompt').value = quest.prompt;
             document.getElementById('new-quest-book').value = quest.book;
             document.getElementById('new-quest-notes').value = quest.notes;
+
+            // Show correct prompt field for editing
+            if (quest.type === '♠ Dungeon Crawl') {
+                document.getElementById('standard-prompt-container').style.display = 'none';
+                document.getElementById('dungeon-prompt-container').style.display = 'flex';
+                // Editing dungeon quests is simplified; we don't try to re-select the dropdowns.
+                // The user can change the type or re-select a new dungeon room.
+            }
 
             // Set editing state
             editingQuestInfo = { list, index };

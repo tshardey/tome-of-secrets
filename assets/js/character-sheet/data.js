@@ -83,3 +83,84 @@ export const masteryAbilities = {
     "Alchemic Focus": { school: "Transmutation", cost: 1, benefit: "You gain an additional +5 XP for every book you read outside of your monthly quest pool." },
     "Philosopher's Stone": { school: "Transmutation", cost: 2, benefit: "Once per month, you may sacrifice 50 XP to instantly gain 50 Ink Drops and 10 Paper Scraps." }
 };
+
+export const dungeonRooms = {
+    "1": {
+        challenge: "The Hall of Whispers: Read in a quiet space without music.",
+        encounters: [
+            "Librarian's Spirit: Read a book with a ghost-like being or a mystery.",
+            "Will-o-wisps: Read a book that involves fated destiny or a newly revealed path."
+        ]
+    },
+    "2": {
+        challenge: "The Glimmering Pools: Read a book with a beautiful or unique cover.",
+        encounters: [
+            "Mysterious Nymph: Read a book that explores allure or transformation.",
+            "Mischievous Pixie: Read a book where a character discovers unexpected magic or hidden talents."
+        ]
+    },
+    "3": {
+        challenge: "The Lost Garden: Read a book with a magical garden or a hidden realm.",
+        encounters: [
+            "Dryad: Read a book with a natural or wilderness setting.",
+            "Treant: Read a book where things aren't what they seem."
+        ]
+    },
+    "4": {
+        challenge: "The Cursed Tome: Read a book with a curse or a dark theme.",
+        encounters: [
+            "Zombies: Read a book that deals with themes of death, rebirth, or the afterlife.",
+            "Banshee: Read a book with a ghost-like being or a death theme."
+        ]
+    },
+    "5": {
+        challenge: "The Archivist's Riddle: Read a book that has a mystery or secret at its core.",
+        encounters: [
+            "Tome-Bound Cat: Read a book with a cozy or comforting vibe.",
+            "Guardian Owl: Read a book that teaches you something new."
+        ]
+    },
+    "6": {
+        challenge: "The Starlit Observatory: Read a book with a cosmic or future setting.",
+        encounters: [
+            "Pocket Dragon: Read a book with a dragon or a fire element.",
+            "Glabrezu: Read a book with a morally gray love interest or a deceptive character."
+        ]
+    },
+    "7": {
+        challenge: "The Neglected Archives: Read a book with a ghost-like being or a death theme.",
+        encounters: [
+            "Banshee: Read a book with a ghost-like being or a death theme.",
+            "Vampire: Read a book with an immortal or night-dwelling creature."
+        ]
+    },
+    "8": {
+        challenge: "The Author's Study: Read a book by the author you think used this study.",
+        encounters: [] // This room has no sub-encounter
+    },
+    "9": {
+        challenge: "The Endless Corridor: Read a book that is part of a series you have not started.",
+        encounters: [
+            "Cheerful Sprite: Read a book you've been putting off for a fun, easy-to-read, or relaxing read.",
+            "Ooze: Read a book with a character who overcomes a seemingly impossible obstacle."
+        ]
+    },
+    "10": {
+        challenge: "The Grand Gallery: Read a book you've had on your TBR for over a year.",
+        encounters: [
+            "Mystical Moth: Read a book with something hidden or nocturnal.",
+            "Animated Armor: Read a book with a foiled cover."
+        ]
+    },
+    "11": {
+        challenge: "The Shroud's Heart: Read a book you believe will be 5 stars.",
+        encounters: [
+            "Fomorian: Read a book containing a curse or a monster-like being.",
+            "Page Sprite: Read a book that is 300 pages or less."
+        ]
+    },
+    "12": {
+        challenge: "The Mimic's Lair: Read a book that subverts a common trope.",
+        encounters: ["Mimic: Read a book that feels deceptive or has a major twist."]
+    }
+};

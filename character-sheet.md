@@ -165,7 +165,13 @@ title: Keeper's Character Sheet
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
                     <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Genre Quest">♥ Genre Quest</option> </select>
-                <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
+                <div id="standard-prompt-container" class="prompt-container">
+                    <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
+                </div>
+                <div id="dungeon-prompt-container" class="prompt-container" style="display: none;">
+                    <select id="dungeon-room-select"><option value="">-- Select a Room --</option></select>
+                    <select id="dungeon-encounter-select" style="display: none;"><option value="">-- Select an Encounter --</option></select>
+                </div>
             </div>
             <div class="form-row">
                 <input type="text" id="new-quest-book" placeholder="Book Title">

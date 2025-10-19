@@ -483,6 +483,13 @@ article th:first-child {
     background-color: #cca352;
 }
 
+.prompt-container {
+    display: flex;
+    flex-grow: 1;
+    gap: 15px;
+    width: 33.33%; /* Match the default width of other inputs in the row */
+}
+
 /* Base style for all buttons inside the action cell */
 .action-cell .complete-quest-btn,
 .action-cell .discard-quest-btn,
