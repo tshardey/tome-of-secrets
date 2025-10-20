@@ -6,6 +6,12 @@
 	// Forward the Jekyll server port so you can access it from your local browser.
 	"forwardPorts": [4000],
 
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		}
+	},
+
 	// Mount your personal git config and SSH keys into the container.
 	"mounts": [
 		// Mount your .gitconfig file
@@ -14,8 +20,8 @@
 		"source=C:/Users/anthu/.ssh-tshardey,target=/home/vscode/.ssh,type=bind,consistency=cached"
 	],
 
-	// Run 'bundle install' automatically after the container is created.
-	// This ensures all Ruby gems from the Gemfile are installed.
+
+	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bundle install",
 
 	// Configure tool-specific properties.
@@ -30,7 +36,6 @@
 		}
 	},
 
-	// By default, the container runs as a non-root user. 
-	// If you need to install additional packages, you can connect as root.
-	// "remoteUser": "root"
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "vscode"
 }

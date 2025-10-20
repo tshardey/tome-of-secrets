@@ -1,5 +1,5 @@
-import * as data from '/tome-of-secrets/assets/js/character-sheet/data.js';
-import { characterState } from '/tome-of-secrets/assets/js/character-sheet/state.js';
+import * as data from './data.js';
+import { characterState } from './state.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
     const currentLevel = parseInt(levelInput.value, 10) || 1;

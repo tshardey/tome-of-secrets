@@ -3,3 +3,5 @@
 .devcontainer/
 
 _site/
+
+/tests/node_modules/

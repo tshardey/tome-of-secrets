@@ -71,3 +71,25 @@ To see your changes live on your own computer before pushing them to GitHub, thi
 5.  **View Your Site:** The terminal will show that the server is running. VS Code will automatically forward port 4000 from the container to your local machine. You can now open a web browser and navigate to **`http://localhost:4000`** to see your live site.
 
 Any changes you save to the project files will automatically trigger a rebuild, and you can see the updates by simply refreshing your browser.
+
+---
+
+## Testing
+
+This project uses [Jest](https://jestjs.io/) for JavaScript testing to ensure the interactive functionality of the Character Sheet remains stable.
+
+The development container is already configured with Node.js and npm, so no additional installation is required on your local machine.
+
+### Running the Test Suite
+
+To run the tests, open the integrated terminal in VS Code while inside the devcontainer. All testing-related commands should be run from the `tests` directory.
+
+1.  **Install Dependencies:** The first time you run tests (or after any changes to `package.json`), install the necessary packages:
+    ```bash
+    cd tests
+    npm install
+    ```
+2.  **Run Tests:** You can then run the entire test suite with:
+    ```bash
+    npm test
+    ```

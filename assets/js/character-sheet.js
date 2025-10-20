@@ -1,10 +1,15 @@
-import * as data from '/tome-of-secrets/assets/js/character-sheet/data.js';
-import * as ui from '/tome-of-secrets/assets/js/character-sheet/ui.js';
-import { characterState, loadState, saveState } from '/tome-of-secrets/assets/js/character-sheet/state.js';
+import * as data from './character-sheet/data.js';
+import * as ui from './character-sheet/ui.js';
+import { characterState, loadState, saveState } from './character-sheet/state.js';
 
-document.addEventListener('DOMContentLoaded', function() {
+export function initializeCharacterSheet() {
     // --- FORM ELEMENTS ---
     const form = document.getElementById('character-sheet');
+    if (!form) {
+        // If the form isn't on the page, don't try to add listeners.
+        // This is important for testing and for other pages on the site.
+        return;
+    }
     const printButton = document.getElementById('print-button');
     const levelInput = document.getElementById('level');
     const xpNeededInput = document.getElementById('xp-needed');
@@ -259,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', (e) => { e.preventDefault(); saveState(form); alert('Character sheet saved!'); });
     printButton.addEventListener('click', () => window.print());
 
-    document.querySelector('main').addEventListener('click', (e) => {
+    form.addEventListener('click', (e) => {
         // Handle buff active checkbox clicks
         if (e.target.classList.contains('buff-active-check')) {
             const buffName = e.target.dataset.buffName;
@@ -366,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    });
+    }); // End of form event listener
 
     document.getElementById('atmospheric-buffs-body').addEventListener('input', (e) => {
         if (e.target.classList.contains('buff-days-input')) {
@@ -393,4 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial Load
     loadState(form);
     ui.renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-});
+}
+
+// Run the initialization when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initializeCharacterSheet);
