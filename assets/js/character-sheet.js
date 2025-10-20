@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const questTypeSelect = document.getElementById('new-quest-type');
     const dungeonRoomSelect = document.getElementById('dungeon-room-select');
     const dungeonEncounterSelect = document.getElementById('dungeon-encounter-select');
+    const genreQuestSelect = document.getElementById('genre-quest-select');
+    const sideQuestSelect = document.getElementById('side-quest-select');
 
     // --- STATE FOR EDITING ---
     let editingQuestInfo = null; // { list: 'activeAssignments', index: 0 }
@@ -70,12 +72,20 @@ document.addEventListener('DOMContentLoaded', function() {
     questTypeSelect.addEventListener('change', () => {
         const standardContainer = document.getElementById('standard-prompt-container');
         const dungeonContainer = document.getElementById('dungeon-prompt-container');
+        const genreContainer = document.getElementById('genre-prompt-container');
+        const sideContainer = document.getElementById('side-prompt-container');
+
+        // Hide all prompt containers by default
+        standardContainer.style.display = 'none';
+        dungeonContainer.style.display = 'none';
+        genreContainer.style.display = 'none';
+        sideContainer.style.display = 'none';
         dungeonEncounterSelect.style.display = 'none'; // Always hide encounter on type change
 
-        if (questTypeSelect.value === '♠ Dungeon Crawl') {
-            standardContainer.style.display = 'none';
+        const selectedType = questTypeSelect.value;
+
+        if (selectedType === '♠ Dungeon Crawl') {
             dungeonContainer.style.display = 'flex';
-            // Populate room select
             dungeonRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
             for (const roomNumber in data.dungeonRooms) {
                 const option = document.createElement('option');
@@ -83,9 +93,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.textContent = `${roomNumber}: ${data.dungeonRooms[roomNumber].challenge.split(':')[0]}`;
                 dungeonRoomSelect.appendChild(option);
             }
+        } else if (selectedType === '♥ Genre Quest') {
+            genreContainer.style.display = 'flex';
+            genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
+            for (const key in data.genreQuests) {
+                const option = document.createElement('option');
+                option.value = data.genreQuests[key];
+                option.textContent = `${key}: ${data.genreQuests[key].split(':')[0]}`;
+                genreQuestSelect.appendChild(option);
+            }
+        } else if (selectedType === '♣ Side Quest') {
+            sideContainer.style.display = 'flex';
+            sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
+            for (const key in data.sideQuests) {
+                const option = document.createElement('option');
+                option.value = data.sideQuests[key];
+                option.textContent = `${key}: ${data.sideQuests[key].split(':')[0]}`;
+                sideQuestSelect.appendChild(option);
+            }
         } else {
+            // Show standard text input for empty or other types
             standardContainer.style.display = 'flex';
-            dungeonContainer.style.display = 'none';
         }
     });
 
@@ -115,6 +143,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // document.getElementById('quest-month').value = '';
         dungeonRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
         dungeonEncounterSelect.innerHTML = '<option value="">-- Select an Encounter --</option>';
+        genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
+        sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
         // document.getElementById('quest-year').value = '';
 
         // Reset editing state
@@ -126,6 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Reset prompt visibility
         document.getElementById('standard-prompt-container').style.display = 'flex';
+        document.getElementById('genre-prompt-container').style.display = 'none';
+        document.getElementById('side-prompt-container').style.display = 'none';
         document.getElementById('dungeon-prompt-container').style.display = 'none';
     }
 
@@ -135,29 +167,31 @@ document.addEventListener('DOMContentLoaded', function() {
         const notes = document.getElementById('new-quest-notes').value;
         const month = document.getElementById('quest-month').value;
         const year = document.getElementById('quest-year').value;
+        let prompt = '';
 
         if (editingQuestInfo) {
-            // Update existing quest
-            // Note: Editing a dungeon quest will condense it back to a single entry.
-            // A more complex implementation would be needed to edit both parts simultaneously.
+            // Determine the prompt source based on the quest type
             if (type === '♠ Dungeon Crawl') {
                 const roomNumber = dungeonRoomSelect.value;
                 if (!roomNumber) {
                     alert('Please select a dungeon room to update.');
                     return;
                 }
-                // When editing, we just update the single selected entry.
-                const roomPrompt = data.dungeonRooms[roomNumber].challenge;
-                questData.prompt = roomPrompt;
-                characterState[editingQuestInfo.list][editingQuestInfo.index] = { month, year, type, prompt: roomPrompt, book, notes };
+                prompt = data.dungeonRooms[roomNumber].challenge;
+            } else if (type === '♥ Genre Quest') {
+                prompt = genreQuestSelect.value;
+            } else if (type === '♣ Side Quest') {
+                prompt = sideQuestSelect.value;
             } else {
-                 if (!prompt) {
+                prompt = document.getElementById('new-quest-prompt').value;
+            }
+
+            if (!prompt) {
                     alert('Please fill in the Prompt field.');
                     return;
                 }
-                questData.prompt = prompt;
-            }
-            characterState[editingQuestInfo.list][editingQuestInfo.index] = { month, year, type, prompt: document.getElementById('new-quest-prompt').value, book, notes };
+            // Update the quest in the state
+            characterState[editingQuestInfo.list][editingQuestInfo.index] = { month, year, type, prompt, book, notes };
             
             // Re-render the correct list
             if (editingQuestInfo.list === 'activeAssignments') ui.renderActiveAssignments();
@@ -190,12 +224,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 return; // Exit after handling dungeon
             }
 
-            // Standard validation for non-dungeon quests
-            const prompt = document.getElementById('new-quest-prompt').value;
+            if (type === '♥ Genre Quest') {
+                prompt = genreQuestSelect.value;
+            } else if (type === '♣ Side Quest') {
+                prompt = sideQuestSelect.value;
+            } else {
+                prompt = document.getElementById('new-quest-prompt').value;
+            }
+
             if (!prompt || !book || !month || !year) {
                 alert('Please fill in the Month, Year, Prompt, and Book Title.');
                 return;
             }
+
+            // For dropdowns, the prompt is already the full text. For standard, it's just the input value.
             const questData = { month, year, type, prompt, book, notes };
             // Add new quest
             const status = document.getElementById('new-quest-status').value;
@@ -299,10 +341,17 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('new-quest-book').value = quest.book;
             document.getElementById('new-quest-notes').value = quest.notes;
 
+            // Trigger change to show correct prompt containers
+            questTypeSelect.dispatchEvent(new Event('change'));
+
             // Show correct prompt field for editing
             if (quest.type === '♠ Dungeon Crawl') {
-                document.getElementById('standard-prompt-container').style.display = 'none';
-                document.getElementById('dungeon-prompt-container').style.display = 'flex';
+                // We don't re-select the dropdowns for dungeon, user must re-select if they want to change it.
+            } else if (quest.type === '♥ Genre Quest') {
+                genreQuestSelect.value = quest.prompt;
+            } else if (quest.type === '♣ Side Quest') {
+                sideQuestSelect.value = quest.prompt;
+            } else {
                 // Editing dungeon quests is simplified; we don't try to re-select the dropdowns.
                 // The user can change the type or re-select a new dungeon room.
             }

@@ -168,6 +168,12 @@ title: Keeper's Character Sheet
                 <div id="standard-prompt-container" class="prompt-container">
                     <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
                 </div>
+                <div id="genre-prompt-container" class="prompt-container" style="display: none;">
+                    <select id="genre-quest-select"><option value="">-- Select a Genre Quest --</option></select>
+                </div>
+                <div id="side-prompt-container" class="prompt-container" style="display: none;">
+                    <select id="side-quest-select"><option value="">-- Select a Side Quest --</option></select>
+                </div>
                 <div id="dungeon-prompt-container" class="prompt-container" style="display: none;">
                     <select id="dungeon-room-select"><option value="">-- Select a Room --</option></select>
                     <select id="dungeon-encounter-select" style="display: none;"><option value="">-- Select an Encounter --</option></select>

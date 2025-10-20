@@ -164,3 +164,23 @@ export const dungeonRooms = {
         encounters: ["Mimic: Read a book that feels deceptive or has a major twist."]
     }
 };
+
+export const genreQuests = {
+    "1": "Historical Fiction: Read a book set in the past or with a historical figure as a character.",
+    "2": "Fantasy: Read a book with magical creatures, settings, or a non-human protagonist.",
+    "3": "Romantasy: Read a book with a magical system and/or a romantic plot.",
+    "4": "Sci-Fi: Read a book set in the future or one with a morally gray main character.",
+    "5": "Thriller: Read a book with a plot twist, deception, or hidden identity.",
+    "6": "Classic: Read a classic novel you have not yet read."
+};
+
+export const sideQuests = {
+    "1": "The Arcane Grimoire: Read the book on your TBR the longest.",
+    "2": "The Blood Fury Tattoo: Read a book featuring a counter culture rebellion.",
+    "3": "The Bag of Holding: Read a story with multiple POVs.",
+    "4": "The Wandering Merchant's Request: Read a book featuring a journey.",
+    "5": "The Glimmering Pools' Gift: Read a book about transformation.",
+    "6": "The Chime of Opening: Read a book where a long-hidden truth is revealed.",
+    "7": "The Scarecrow's Cornfield: Read a book with an unreliable narrator.",
+    "8": "The Empty Shelf: Choose a book from your TBR you are most excited for."
+};
