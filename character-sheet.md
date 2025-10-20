@@ -3,8 +3,6 @@ layout: default
 title: Keeper's Character Sheet
 ---
 
-<link rel="stylesheet" href="{{ site.baseurl }}/assets/css/character-sheet.css">
-
 <form id="character-sheet">
     <div class="form-section">
         <h2>👤 Character Information</h2>
@@ -177,6 +175,13 @@ title: Keeper's Character Sheet
                 <div id="dungeon-prompt-container" class="prompt-container" style="display: none;">
                     <select id="dungeon-room-select"><option value="">-- Select a Room --</option></select>
                     <select id="dungeon-encounter-select" style="display: none;"><option value="">-- Select an Encounter --</option></select>
+                    <div id="dungeon-action-container" style="display: none;">
+                        <label class="switch">
+                            <input type="checkbox" id="dungeon-action-toggle">
+                            <span class="slider"></span>
+                        </label>
+                        <span id="dungeon-action-label">Defeat</span>
+                    </div>
                 </div>
             </div>
             <div class="form-row">

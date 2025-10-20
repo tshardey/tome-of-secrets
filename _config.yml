@@ -3,3 +3,8 @@ description: A solo TBR journaling game, inspired by solo role playing games.
 
 baseurl: "/tome-of-secrets" 
 url: "https://tshardey.github.io"
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - tests/

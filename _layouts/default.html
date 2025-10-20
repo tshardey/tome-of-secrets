@@ -1,67 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page.title }} | {{ site.title }}</title>
     
+    <!-- Favicon Links -->
+    <link rel="icon" href="https://www.clipartmax.com/png/small/44-448715_free-book-icon.png" type="image/png">
+    <link rel="shortcut icon" href="https://www.clipartmax.com/png/small/44-448715_free-book-icon.png" type="image/png">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Serif+Pro:wght@400;700&display=swap" rel="stylesheet">
-    
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Source+Serif+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/style.css">
 </head>
-
 <body>
-    <div class="hero">
-    <div class="hero-content">
-        {% if page.url == "/" %}
-        <h1 class="hero-title">{{ site.title }}</h1>
-        <p class="hero-description">{{ site.description }}</p>
-        {% else %}
-        <h1 class="hero-title">{{ page.title }}</h1>
-        {% endif %}
-    </div>
-    </div>
-
     <div class="container">
-        <div class="main-content">
-            <aside class="sidebar">
-                <nav>
-                    <ul>
-                        <li><a href="{{ site.baseurl }}">Introduction</a></li>
-                        <li><a href="{{ site.baseurl }}/keeper.html">The Keeper</a></li>
-                        <li><a href="{{ site.baseurl }}/sanctum.html">The Sanctum</a></li>
-                        <li><a href="{{ site.baseurl }}/core-mechanics.html">Core Mechanics</a></li>
-                        <li><a href="{{ site.baseurl }}/quests.html">Quests</a></li>
-                        <li><a href="{{ site.baseurl }}/dungeons.html">Dungeons</a></li>
-                        <li><a href="{{ site.baseurl }}/rewards.html">Rewards</a></li>
-                        <li><a href="{{ site.baseurl }}/shroud.html">The Shroud</a></li>
-                        <li><a href="{{ site.baseurl }}/shopping.html">Shopping</a></li>
-                        <li><a href="{{ site.baseurl }}/leveling.html">Level Up</a></li>
-                        <li><a href="{{ site.baseurl }}/character-sheet.html">Character Sheet</a></li>
-                    </ul>
-                </nav>
-            </aside>
-            <main>
-                <article>
-                    {% if page.url == "/" %}
-                        <h2 class="page-title">{{ page.title }}</h2>
-                    {% endif %}
-                    {{ content }}
-                </article>
-            </main>
-        </div>
-        <footer>
-            <p>&copy; 2024 tshardey. Built with Jekyll.</p>
-        </footer>
+        <main>
+            <article>
+                {{ content }}
+            </article>
+        </main>
     </div>
-
-    <script src="{{ site.baseurl }}/assets/js/anchor.js"></script>
-
-    {% if page.url == "/character-sheet.html" %}
-    <script src="{{ site.baseurl }}/assets/js/character-sheet.js" type="module"></script>
-    {% endif %}
-
+    <script src="{{ site.baseurl }}/assets/js/main.js" type="module"></script>
 </body>
 </html>

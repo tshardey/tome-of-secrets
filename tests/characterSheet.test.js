@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests } from '../assets/js/character-sheet/data.js';
+import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms } from '../assets/js/character-sheet/data.js';
 
 // We will create the main character sheet script in a later step.
 // For now, we can import it, assuming it will exist at this path.
@@ -17,6 +17,7 @@ describe('Character Sheet', () => {
     characterState.equippedItems = [];
     characterState.activeAssignments = [];
     characterState.completedQuests = [];
+    characterState.discardedQuests = [];
 
     // Load the character sheet HTML before each test
     loadHTML('character-sheet.md');
@@ -187,14 +188,120 @@ describe('Character Sheet', () => {
       questTypeSelect.dispatchEvent(new Event('change'));
       document.getElementById('dungeon-room-select').value = '1';
       document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
-      document.getElementById('dungeon-encounter-select').value = "Librarian's Spirit: Read a book with a ghost-like being or a mystery.";
+      document.getElementById('dungeon-encounter-select').value = "Librarian's Spirit";
 
       document.getElementById('add-quest-button').click();
 
       // Assert that two rows were added to the active quests table
       expect(activeAssignmentsBody.querySelectorAll('tr').length).toBe(2);
-      expect(activeAssignmentsBody.textContent).toContain('The Hall of Whispers');
+      expect(activeAssignmentsBody.textContent).toContain(dungeonRooms['1'].challenge);
       expect(activeAssignmentsBody.textContent).toContain("Librarian's Spirit");
+    });
+
+    it('should add the correct dungeon encounter prompt based on the fight/befriend toggle', () => {
+        // --- 1. Setup for Defeat (default) ---
+        document.getElementById('quest-month').value = 'January';
+        document.getElementById('quest-year').value = '2026';
+        document.getElementById('new-quest-book').value = 'Monster Manual';
+        const questTypeSelect = document.getElementById('new-quest-type');
+        questTypeSelect.value = '♠ Dungeon Crawl';
+        questTypeSelect.dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-room-select').value = '4'; // Room with Zombies
+        document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-encounter-select').value = 'Zombies';
+        document.getElementById('dungeon-encounter-select').dispatchEvent(new Event('change'));
+
+        // --- 2. Assert toggle is visible and set to Defeat ---
+        const actionContainer = document.getElementById('dungeon-action-container');
+        const actionToggle = document.getElementById('dungeon-action-toggle');
+        expect(actionContainer.style.display).toBe('flex');
+        expect(actionToggle.checked).toBe(false); // Default is Defeat
+
+        // --- 3. Add quest and assert correct prompt ---
+        document.getElementById('add-quest-button').click();
+        expect(characterState.activeAssignments[1].prompt).toBe(dungeonRooms['4'].encounters['Zombies'].defeat);
+
+        // --- 4. Setup for Befriend (re-adding the quest) ---
+        // The form is reset after adding, so we need to re-select everything.
+        characterState.activeAssignments = []; // Clear state for the second part of the test
+        document.getElementById('new-quest-book').value = 'Monster Manual';
+        questTypeSelect.value = '♠ Dungeon Crawl';
+        questTypeSelect.dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-room-select').value = '4';
+        document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-encounter-select').value = 'Zombies';
+        document.getElementById('dungeon-encounter-select').dispatchEvent(new Event('change'));
+        actionToggle.checked = true; // Switch to Befriend
+        actionToggle.dispatchEvent(new Event('change'));
+        document.getElementById('add-quest-button').click();
+        expect(characterState.activeAssignments.length).toBe(2);
+        expect(characterState.activeAssignments[1].prompt).toBe(dungeonRooms['4'].encounters['Zombies'].befriend);
+    });
+
+    it('should correctly edit only the book title for a dungeon room quest', () => {
+        // 1. Add a dungeon quest
+        document.getElementById('quest-month').value = 'December';
+        document.getElementById('quest-year').value = '2025';
+        document.getElementById('new-quest-book').value = 'Original Book';
+        const questTypeSelect = document.getElementById('new-quest-type');
+        questTypeSelect.value = '♠ Dungeon Crawl';
+        questTypeSelect.dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-room-select').value = '1';
+        document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-encounter-select').value = 'Librarian\'s Spirit';
+        document.getElementById('add-quest-button').click();
+
+        // 2. Click the "Edit" button for the room quest (the first one)
+        document.querySelector('#active-assignments-body .edit-quest-btn[data-index="0"]').click();
+
+        // 3. Change the book title
+        document.getElementById('new-quest-book').value = 'Updated Room Book';
+
+        // 4. Click "Update Quest"
+        document.getElementById('add-quest-button').click();
+
+        // 5. Assertions
+        const activeQuests = characterState.activeAssignments;
+        expect(activeQuests.length).toBe(2);
+        // The room quest should be updated
+        expect(activeQuests[0].book).toBe('Updated Room Book');
+        expect(activeQuests[0].prompt).toBe(dungeonRooms['1'].challenge); // Prompt should not change
+        // The encounter quest should be untouched
+        expect(activeQuests[1].book).toBe('Original Book');
+    });
+
+    it('should correctly edit only the notes for a dungeon encounter quest', () => {
+        // 1. Add a dungeon quest
+        document.getElementById('quest-month').value = 'December';
+        document.getElementById('quest-year').value = '2025';
+        document.getElementById('new-quest-book').value = 'Another Original Book';
+        const questTypeSelect = document.getElementById('new-quest-type');
+        questTypeSelect.value = '♠ Dungeon Crawl';
+        questTypeSelect.dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-room-select').value = '2';
+        document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
+        document.getElementById('dungeon-encounter-select').value = 'Mysterious Nymph';
+        document.getElementById('add-quest-button').click();
+
+        // 2. Click the "Edit" button for the encounter quest (the second one)
+        document.querySelector('#active-assignments-body .edit-quest-btn[data-index="1"]').click();
+
+        // 3. Change the notes
+        document.getElementById('new-quest-notes').value = 'Encounter notes added.';
+
+        // 4. Click "Update Quest"
+        document.getElementById('add-quest-button').click();
+
+        // 5. Assertions
+        // The edit logic updates the object in place.
+        // We need to find which quest in the array is the one we edited.
+        const activeQuests = characterState.activeAssignments;
+        const encounterQuest = activeQuests.find(q => q.isEncounter);
+        const roomQuest = activeQuests.find(q => !q.isEncounter);
+
+        expect(encounterQuest.notes).toBe('Encounter notes added.'); // The notes are updated
+        expect(encounterQuest.prompt).toBe(dungeonRooms['2'].encounters['Mysterious Nymph'].befriend); // Prompt should not change
+        expect(roomQuest.notes).toBe(''); // Room quest notes should be untouched
     });
   });
 });

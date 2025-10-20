@@ -27,6 +27,8 @@ export function initializeCharacterSheet() {
     const dungeonEncounterSelect = document.getElementById('dungeon-encounter-select');
     const genreQuestSelect = document.getElementById('genre-quest-select');
     const sideQuestSelect = document.getElementById('side-quest-select');
+    const dungeonActionContainer = document.getElementById('dungeon-action-container');
+    const dungeonActionToggle = document.getElementById('dungeon-action-toggle');
 
     // --- STATE FOR EDITING ---
     let editingQuestInfo = null; // { list: 'activeAssignments', index: 0 }
@@ -86,6 +88,7 @@ export function initializeCharacterSheet() {
         genreContainer.style.display = 'none';
         sideContainer.style.display = 'none';
         dungeonEncounterSelect.style.display = 'none'; // Always hide encounter on type change
+        dungeonActionContainer.style.display = 'none'; // Always hide action toggle on type change
 
         const selectedType = questTypeSelect.value;
 
@@ -126,17 +129,39 @@ export function initializeCharacterSheet() {
         const selectedRoomNumber = dungeonRoomSelect.value;
         dungeonEncounterSelect.innerHTML = '<option value="">-- Select an Encounter --</option>';
 
-        if (selectedRoomNumber && data.dungeonRooms[selectedRoomNumber].encounters.length > 0) {
-            data.dungeonRooms[selectedRoomNumber].encounters.forEach(encounterText => {
+        if (selectedRoomNumber && Object.keys(data.dungeonRooms[selectedRoomNumber].encounters).length > 0) {
+            for (const encounterName in data.dungeonRooms[selectedRoomNumber].encounters) {
                 const option = document.createElement('option');
-                option.value = encounterText;
-                option.textContent = encounterText.split(':')[0]; // Show only the name
+                option.value = encounterName;
+                option.textContent = encounterName;
                 dungeonEncounterSelect.appendChild(option);
-            });
+            }
             dungeonEncounterSelect.style.display = 'block';
         } else {
             dungeonEncounterSelect.style.display = 'none';
         }
+        dungeonActionContainer.style.display = 'none'; // Hide toggle when room changes
+    });
+
+    dungeonEncounterSelect.addEventListener('change', () => {
+        const roomNumber = dungeonRoomSelect.value;
+        const encounterName = dungeonEncounterSelect.value;
+        if (!roomNumber || !encounterName) {
+            dungeonActionContainer.style.display = 'none';
+            return;
+        }
+
+        const encounterData = data.dungeonRooms[roomNumber].encounters[encounterName];
+        if (encounterData.defeat && encounterData.befriend) {
+            dungeonActionContainer.style.display = 'flex';
+        } else {
+            dungeonActionContainer.style.display = 'none';
+        }
+    });
+
+    dungeonActionToggle.addEventListener('change', () => {
+        const label = document.getElementById('dungeon-action-label');
+        label.textContent = dungeonActionToggle.checked ? 'Befriend' : 'Defeat';
     });
 
     function resetQuestForm() {
@@ -150,6 +175,7 @@ export function initializeCharacterSheet() {
         dungeonEncounterSelect.innerHTML = '<option value="">-- Select an Encounter --</option>';
         genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
         sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
+        dungeonActionContainer.style.display = 'none';
         // document.getElementById('quest-year').value = '';
 
         // Reset editing state
@@ -176,14 +202,28 @@ export function initializeCharacterSheet() {
 
         if (editingQuestInfo) {
             // Determine the prompt source based on the quest type
-            if (type === '♠ Dungeon Crawl') {
+            const originalQuest = characterState[editingQuestInfo.list][editingQuestInfo.index];
+            prompt = originalQuest.prompt; // Default to the original prompt
+
+            if (type === '♠ Dungeon Crawl' && originalQuest.isEncounter && dungeonEncounterSelect.value) {
                 const roomNumber = dungeonRoomSelect.value;
-                if (!roomNumber) {
-                    alert('Please select a dungeon room to update.');
-                    return;
+                const encounterName = dungeonEncounterSelect.value;
+                const encounterData = data.dungeonRooms[roomNumber].encounters[encounterName];
+                
+                if (encounterData.defeat && encounterData.befriend) {
+                    prompt = dungeonActionToggle.checked ? encounterData.befriend : encounterData.defeat;
+                } else {
+                    prompt = encounterData.defeat || encounterData.befriend;
                 }
-                prompt = data.dungeonRooms[roomNumber].challenge;
-            } else if (type === '♥ Genre Quest') {
+
+            } else if (type === '♠ Dungeon Crawl') {
+                const roomNumber = dungeonRoomSelect.value;
+                if (roomNumber) {
+                    // If a new room was selected, update the prompt
+                    prompt = data.dungeonRooms[roomNumber].challenge;
+                }
+            }
+            else if (type === '♥ Genre Quest') {
                 prompt = genreQuestSelect.value;
             } else if (type === '♣ Side Quest') {
                 prompt = sideQuestSelect.value;
@@ -191,12 +231,8 @@ export function initializeCharacterSheet() {
                 prompt = document.getElementById('new-quest-prompt').value;
             }
 
-            if (!prompt) {
-                    alert('Please fill in the Prompt field.');
-                    return;
-                }
             // Update the quest in the state
-            characterState[editingQuestInfo.list][editingQuestInfo.index] = { month, year, type, prompt, book, notes };
+            Object.assign(characterState[editingQuestInfo.list][editingQuestInfo.index], { month, year, type, prompt, book, notes });
             
             // Re-render the correct list
             if (editingQuestInfo.list === 'activeAssignments') ui.renderActiveAssignments();
@@ -209,18 +245,25 @@ export function initializeCharacterSheet() {
             if (type === '♠ Dungeon Crawl') {
                 const roomNumber = dungeonRoomSelect.value;
                 const roomData = data.dungeonRooms[roomNumber];
-                const encounterPrompt = dungeonEncounterSelect.value;
+                const encounterName = dungeonEncounterSelect.value;
+                let encounterPrompt = '';
 
                 if (!roomNumber || !book || !month || !year) {
                     alert('Please fill in Month, Year, Book, and select a Room.');
                     return;
                 }
-                if (roomData.encounters.length > 0 && !encounterPrompt) {
+                if (Object.keys(roomData.encounters).length > 0 && !encounterName) {
                     alert('Please select an Encounter for this room.');
                     return;
                 }
-                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes };
-                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes };
+                if (encounterName) {
+                    const encounterData = roomData.encounters[encounterName];
+                    const isBefriend = dungeonActionToggle.checked;
+                    encounterPrompt = (isBefriend && encounterData.befriend) ? encounterData.befriend : (encounterData.defeat || encounterData.befriend);
+                }
+
+                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false };
+                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true };
 
                 characterState.activeAssignments.push(roomQuest, encounterQuest);
                 ui.renderActiveAssignments();
@@ -351,14 +394,34 @@ export function initializeCharacterSheet() {
 
             // Show correct prompt field for editing
             if (quest.type === '♠ Dungeon Crawl') {
-                // We don't re-select the dropdowns for dungeon, user must re-select if they want to change it.
+                // Find the room number based on the challenge text
+                const roomNumber = Object.keys(data.dungeonRooms).find(key => {
+                    if (data.dungeonRooms[key].challenge === quest.prompt) return true;
+                    for (const encounterName in data.dungeonRooms[key].encounters) {
+                        const encounter = data.dungeonRooms[key].encounters[encounterName];
+                        if (encounter.defeat === quest.prompt || encounter.befriend === quest.prompt) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+
+                if (roomNumber) {
+                    dungeonRoomSelect.value = roomNumber;
+                    // Trigger change to populate encounters
+                    dungeonRoomSelect.dispatchEvent(new Event('change'));
+
+                    // If it's an encounter quest, select the encounter
+                    if (quest.isEncounter) {
+                        const encounterName = quest.prompt?.split(':')[0];
+                        dungeonEncounterSelect.value = encounterName;
+                        dungeonEncounterSelect.dispatchEvent(new Event('change'));
+                    }
+                }
             } else if (quest.type === '♥ Genre Quest') {
                 genreQuestSelect.value = quest.prompt;
             } else if (quest.type === '♣ Side Quest') {
                 sideQuestSelect.value = quest.prompt;
-            } else {
-                // Editing dungeon quests is simplified; we don't try to re-select the dropdowns.
-                // The user can change the type or re-select a new dungeon room.
             }
 
             // Set editing state
@@ -369,7 +432,9 @@ export function initializeCharacterSheet() {
             addQuestButton.style.width = '50%';
             cancelEditQuestButton.style.width = '50%';
 
-            addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (typeof addQuestButton.scrollIntoView === 'function') {
+                addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
     }); // End of form event listener
 
