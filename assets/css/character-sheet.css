@@ -8,8 +8,25 @@
     padding: 8px; /* Add some padding to prevent content from touching borders */
 }
 
+/* Fix: Remove bold from first column cells in atmospheric buffs table */
+#atmospheric-buffs-container .tracker-table td:first-child {
+    font-weight: normal;
+}
+
 /* Highlight for associated atmospheric buffs */
 .tracker-table .highlight {
     background-color: #b89f62; /* A warmer, subtle highlight for dark theme */
     font-weight: bold;
+}
+
+/* More specific selector for atmospheric buffs table highlighting */
+#atmospheric-buffs-container .tracker-table .highlight {
+    background-color: #b89f62 !important; /* A warmer, subtle highlight for dark theme */
+    font-weight: bold !important;
+}
+
+/* Even more specific for table cells within highlighted rows */
+#atmospheric-buffs-container .tracker-table .highlight td {
+    background-color: #b89f62 !important;
+    font-weight: bold !important;
 }

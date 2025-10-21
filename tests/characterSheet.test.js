@@ -125,6 +125,286 @@ describe('Character Sheet', () => {
     });
   });
 
+  describe('Atmospheric Buffs', () => {
+    it('should render all atmospheric buffs in the table', () => {
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const rows = tbody.querySelectorAll('tr');
+
+      // Assert that all 8 atmospheric buffs are rendered
+      expect(rows.length).toBe(8);
+    });
+
+    it('should not highlight any rows when no sanctum is selected', () => {
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const highlightedRows = tbody.querySelectorAll('tr.highlight');
+
+      // Assert that no rows are highlighted
+      expect(highlightedRows.length).toBe(0);
+    });
+
+    it('should highlight associated buffs when The Spire of Whispers is selected', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Spire of Whispers';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const highlightedRows = tbody.querySelectorAll('tr.highlight');
+
+      // The Spire of Whispers has 3 associated buffs
+      expect(highlightedRows.length).toBe(3);
+
+      // Check that the correct buffs are highlighted
+      const highlightedBuffNames = Array.from(highlightedRows).map(row => row.cells[0].textContent);
+      expect(highlightedBuffNames).toContain('The Candlight Study');
+      expect(highlightedBuffNames).toContain('The Cozy Hearth');
+      expect(highlightedBuffNames).toContain('Head in the Clouds');
+    });
+
+    it('should highlight associated buffs when The Verdant Athenaeum is selected', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Verdant Athenaeum';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const highlightedRows = tbody.querySelectorAll('tr.highlight');
+
+      // The Verdant Athenaeum has 3 associated buffs
+      expect(highlightedRows.length).toBe(3);
+
+      // Check that the correct buffs are highlighted
+      const highlightedBuffNames = Array.from(highlightedRows).map(row => row.cells[0].textContent);
+      expect(highlightedBuffNames).toContain('The Herbalist\'s Nook');
+      expect(highlightedBuffNames).toContain('The Soaking in Nature');
+      expect(highlightedBuffNames).toContain('The Soundscape Spire');
+    });
+
+    it('should highlight associated buffs when The Sunken Archives is selected', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Sunken Archives';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const highlightedRows = tbody.querySelectorAll('tr.highlight');
+
+      // The Sunken Archives has 3 associated buffs
+      expect(highlightedRows.length).toBe(3);
+
+      // Check that the correct buffs are highlighted
+      const highlightedBuffNames = Array.from(highlightedRows).map(row => row.cells[0].textContent);
+      expect(highlightedBuffNames).toContain('The Soundscape Spire');
+      expect(highlightedBuffNames).toContain('The Wanderer\'s Path');
+      expect(highlightedBuffNames).toContain('The Excavation');
+    });
+
+    it('should show daily buff value of 2 for highlighted buffs', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Spire of Whispers';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const highlightedRows = tbody.querySelectorAll('tr.highlight');
+
+      // Check that all highlighted rows have a daily buff value of 2
+      highlightedRows.forEach(row => {
+        const dailyBuffValue = row.cells[1].textContent;
+        expect(dailyBuffValue).toBe('2');
+      });
+    });
+
+    it('should show daily buff value of 1 for non-highlighted buffs', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Spire of Whispers';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const nonHighlightedRows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('highlight'));
+
+      // Check that all non-highlighted rows have a daily buff value of 1
+      nonHighlightedRows.forEach(row => {
+        const dailyBuffValue = row.cells[1].textContent;
+        expect(dailyBuffValue).toBe('1');
+      });
+    });
+
+    it('should calculate monthly total correctly for highlighted buffs', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Verdant Athenaeum';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      
+      // Find "The Herbalist's Nook" row (should be highlighted)
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const herbalistRow = rows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
+
+      // The daily buff value for highlighted buffs should be 2
+      expect(herbalistRow.cells[1].textContent).toBe('2');
+
+      // If we set days to 5, the monthly total calculation should use the multiplier of 2
+      // The rendered monthly total is initially 0 * 2 = 0
+      expect(herbalistRow.cells[4].textContent).toBe('0');
+    });
+
+    it('should calculate monthly total correctly for non-highlighted buffs', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Verdant Athenaeum';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      
+      // Find "The Candlight Study" row (should NOT be highlighted for Verdant Athenaeum)
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const candlightRow = rows.find(row => row.cells[0].textContent === 'The Candlight Study');
+
+      // The daily buff value for non-highlighted buffs should be 1
+      expect(candlightRow.cells[1].textContent).toBe('1');
+
+      // The rendered monthly total is initially 0 * 1 = 0
+      expect(candlightRow.cells[4].textContent).toBe('0');
+    });
+
+    it('should update highlighting when sanctum selection changes', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      const tbody = document.getElementById('atmospheric-buffs-body');
+
+      // First select The Spire of Whispers
+      librarySanctumSelect.value = 'The Spire of Whispers';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      let highlightedRows = tbody.querySelectorAll('tr.highlight');
+      expect(highlightedRows.length).toBe(3);
+
+      // Change to The Verdant Athenaeum
+      librarySanctumSelect.value = 'The Verdant Athenaeum';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      highlightedRows = tbody.querySelectorAll('tr.highlight');
+      expect(highlightedRows.length).toBe(3);
+
+      // The highlighted buffs should have changed
+      const highlightedBuffNames = Array.from(highlightedRows).map(row => row.cells[0].textContent);
+      expect(highlightedBuffNames).not.toContain('The Candlight Study');
+      expect(highlightedBuffNames).toContain('The Herbalist\'s Nook');
+    });
+
+    it('should apply the highlight CSS class to the correct rows', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      librarySanctumSelect.value = 'The Spire of Whispers';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+
+      // Check that The Candlight Study has the highlight class
+      const candlightRow = rows.find(row => row.cells[0].textContent === 'The Candlight Study');
+      expect(candlightRow.classList.contains('highlight')).toBe(true);
+
+      // Check that a non-associated buff does NOT have the highlight class
+      const excavationRow = rows.find(row => row.cells[0].textContent === 'The Excavation');
+      expect(excavationRow.classList.contains('highlight')).toBe(false);
+    });
+
+    it('should remove highlight class when sanctum is deselected', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      const tbody = document.getElementById('atmospheric-buffs-body');
+
+      // First, select a sanctum
+      librarySanctumSelect.value = 'The Sunken Archives';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      let highlightedRows = tbody.querySelectorAll('tr.highlight');
+      expect(highlightedRows.length).toBe(3);
+
+      // Now deselect the sanctum
+      librarySanctumSelect.value = '';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      // Assert that no rows are highlighted
+      highlightedRows = tbody.querySelectorAll('tr.highlight');
+      expect(highlightedRows.length).toBe(0);
+    });
+
+    it('should maintain daily buff value of 1 when sanctum is deselected', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      const tbody = document.getElementById('atmospheric-buffs-body');
+
+      // First select a sanctum to get daily buff value of 2
+      librarySanctumSelect.value = 'The Verdant Athenaeum';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const herbalistRow = rows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
+      expect(herbalistRow.cells[1].textContent).toBe('2');
+
+      // Deselect sanctum
+      librarySanctumSelect.value = '';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      // Check that daily buff value returns to 1
+      const updatedRows = Array.from(tbody.querySelectorAll('tr'));
+      const updatedHerbalistRow = updatedRows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
+      expect(updatedHerbalistRow.cells[1].textContent).toBe('1');
+    });
+
+    it('should correctly highlight all three buffs for each sanctum', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      const tbody = document.getElementById('atmospheric-buffs-body');
+
+      // Test all three sanctums
+      const sanctumTests = [
+        {
+          name: 'The Spire of Whispers',
+          expectedBuffs: ['The Candlight Study', 'The Cozy Hearth', 'Head in the Clouds']
+        },
+        {
+          name: 'The Verdant Athenaeum',
+          expectedBuffs: ['The Herbalist\'s Nook', 'The Soaking in Nature', 'The Soundscape Spire']
+        },
+        {
+          name: 'The Sunken Archives',
+          expectedBuffs: ['The Soundscape Spire', 'The Wanderer\'s Path', 'The Excavation']
+        }
+      ];
+
+      sanctumTests.forEach(test => {
+        librarySanctumSelect.value = test.name;
+        librarySanctumSelect.dispatchEvent(new Event('change'));
+
+        const highlightedRows = tbody.querySelectorAll('tr.highlight');
+        expect(highlightedRows.length).toBe(3);
+
+        const highlightedBuffNames = Array.from(highlightedRows).map(row => row.cells[0].textContent);
+        test.expectedBuffs.forEach(buffName => {
+          expect(highlightedBuffNames).toContain(buffName);
+        });
+      });
+    });
+
+    it('should update daily buff values when sanctum changes', () => {
+      const librarySanctumSelect = document.getElementById('librarySanctum');
+      const tbody = document.getElementById('atmospheric-buffs-body');
+
+      // Initially without sanctum, The Soundscape Spire should have daily buff of 1
+      let rows = Array.from(tbody.querySelectorAll('tr'));
+      let soundscapeRow = rows.find(row => row.cells[0].textContent === 'The Soundscape Spire');
+      expect(soundscapeRow.cells[1].textContent).toBe('1');
+
+      // Select a sanctum that includes Soundscape Spire
+      librarySanctumSelect.value = 'The Verdant Athenaeum';
+      librarySanctumSelect.dispatchEvent(new Event('change'));
+
+      // Find the row again after re-render
+      rows = Array.from(tbody.querySelectorAll('tr'));
+      soundscapeRow = rows.find(row => row.cells[0].textContent === 'The Soundscape Spire');
+      
+      // Daily buff value should now be 2 for the associated buff
+      expect(soundscapeRow.cells[1].textContent).toBe('2');
+      
+      // And the row should be highlighted
+      expect(soundscapeRow.classList.contains('highlight')).toBe(true);
+    });
+  });
+
   describe('Monthly Tracker', () => {
     it('should add a new side quest to the active table', () => {
       const activeAssignmentsBody = document.getElementById('active-assignments-body');

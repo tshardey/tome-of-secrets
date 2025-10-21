@@ -81,11 +81,11 @@ The project uses Jest for testing JavaScript functionality.
     ```
 2.  If it's the first time or `package.json` has changed, install dependencies:
     ```bash
-    npm install
+    cd tests && npm install
     ```
 3.  Run the tests:
     ```bash
-    npm test
+    cd tests && npm test
     ```
 
 ### 4. Workspace and File Generation
