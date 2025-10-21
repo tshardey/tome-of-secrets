@@ -436,13 +436,50 @@ article th:first-child {
 .tracker-table .col-notes      { width: 34%; }
 .tracker-table .col-action     { width: 8%; }
 
+/* --- Column Widths for Atmospheric Buffs Table --- */
+#atmospheric-buffs-container .tracker-table {
+    table-layout: fixed;
+}
+
+#atmospheric-buffs-container .tracker-table th:nth-child(1),
+#atmospheric-buffs-container .tracker-table td:nth-child(1) { width: 40%; } /* Atmospheric Buff */
+#atmospheric-buffs-container .tracker-table th:nth-child(2),
+#atmospheric-buffs-container .tracker-table td:nth-child(2) { width: 15%; } /* Daily Buff */
+#atmospheric-buffs-container .tracker-table th:nth-child(3),
+#atmospheric-buffs-container .tracker-table td:nth-child(3) { width: 12%; } /* Active */
+#atmospheric-buffs-container .tracker-table th:nth-child(4),
+#atmospheric-buffs-container .tracker-table td:nth-child(4) { width: 18%; } /* Total Days Used */
+#atmospheric-buffs-container .tracker-table th:nth-child(5),
+#atmospheric-buffs-container .tracker-table td:nth-child(5) { width: 15%; } /* Monthly Total */
+
+/* Ensure text doesn't overflow in atmospheric buffs table */
+#atmospheric-buffs-container .tracker-table th,
+#atmospheric-buffs-container .tracker-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 8px 6px; /* Slightly smaller padding for narrower table */
+}
+
+/* Style input fields in atmospheric buffs table to fit within cells */
+#atmospheric-buffs-container .tracker-table input[type="number"],
+#atmospheric-buffs-container .tracker-table input[type="checkbox"] {
+    width: calc(100% - 8px); /* Account for cell padding */
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 4px 6px;
+    font-size: 0.9em;
+}
+
 #active-assignments-container, 
 #completed-quests-container,
 #discarded-quests-container {
     margin-top: 30px;
 }
 
-.add-quest-form {
+.add-quest-form,
+.add-curse-form {
     border: 1px solid #54483b;
     padding: 20px;
     border-radius: 5px;
@@ -450,20 +487,45 @@ article th:first-child {
     background-color: #3e352f;
 }
 
-.add-quest-form .form-row {
+.add-quest-form .form-row,
+.add-curse-form .form-row {
     display: flex;
     gap: 15px;
     margin-bottom: 15px;
 }
 
-.add-quest-form .form-row:last-child {
+.add-quest-form .form-row:last-child,
+.add-curse-form .form-row:last-child {
     margin-bottom: 0;
 }
 
 .add-quest-form input,
-.add-quest-form select {
+.add-quest-form select,
+.add-curse-form input,
+.add-curse-form select {
     flex-grow: 1; /* Allows inputs to fill the space */
     width: 33.33%; /* Default width for flex items */
+}
+
+.add-curse-form .form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.add-curse-form select {
+    flex: 2; /* Make the select dropdown wider */
+}
+
+.add-curse-form input {
+    flex: 3; /* Make the book title input even wider */
+}
+
+.add-curse-form button {
+    flex: 1; /* Make the button smaller */
+    width: auto; /* Override the 100% width */
+    min-width: 120px; /* Ensure it's not too small */
 }
 
 .add-quest-form button {
@@ -479,7 +541,20 @@ article th:first-child {
     transition: background-color 0.2s;
 }
 
-.add-quest-form button:hover {
+.add-curse-form button {
+    background-color: #b89f62;
+    color: #2a231d;
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.add-quest-form button:hover,
+.add-curse-form button:hover {
     background-color: #cca352;
 }
 
@@ -553,7 +628,10 @@ input:checked + .slider:before {
 .action-cell .complete-quest-btn,
 .action-cell .discard-quest-btn,
 .action-cell .delete-btn,
-.action-cell .edit-quest-btn {
+.action-cell .edit-quest-btn,
+.action-cell .complete-curse-btn,
+.action-cell .edit-curse-btn,
+.action-cell .delete-curse-btn {
     display: block; /* Stack the buttons vertically */
     margin-bottom: 5px;
     background: none;
@@ -571,16 +649,19 @@ input:checked + .slider:before {
 }
 
 /* Specific colors for each action button */
-.action-cell .edit-quest-btn {
+.action-cell .edit-quest-btn,
+.action-cell .edit-curse-btn {
     color: #b89f62; /* Muted Gold */
 }
-.action-cell .complete-quest-btn {
+.action-cell .complete-quest-btn,
+.action-cell .complete-curse-btn {
     color: #253D2C;
 }
 .action-cell .discard-quest-btn {
     color: #800000; /* Maroon */
 }
-.action-cell .delete-btn {
+.action-cell .delete-btn,
+.action-cell .delete-curse-btn {
     color: #3F1717;
 }
 

@@ -234,3 +234,26 @@ export const sideQuests = {
     "7": "The Scarecrow's Cornfield: Read a book with an unreliable narrator.",
     "8": "The Empty Shelf: Choose a book from your TBR you are most excited for."
 };
+
+export const curseTable = {
+    "The Unread Tome": {
+        name: "The Unread Tome",
+        requirement: "Read a book from your DNF list or one you have been putting off",
+        description: "A neglected book groans from your shelf. You must read a book from your DNF list or one you have been putting off."
+    },
+    "The Lost Lore": {
+        name: "The Lost Lore", 
+        requirement: "Read or listen to a non-fiction book or podcast related to science, tech, or nature",
+        description: "Pages crumble to dust before your eyes. You must read or listen to a non-fiction book or podcast related to science, tech, or nature."
+    },
+    "The Forgotten Pages": {
+        name: "The Forgotten Pages",
+        requirement: "Reorganize a section of your physical books or digital library",
+        description: "Dusty shelves collapse, scattering volumes into chaos. You must reorganize a section of your physical books or digital library."
+    },
+    "The Ravenous Shadow": {
+        name: "The Ravenous Shadow",
+        requirement: "Take on one additional quest for your monthly pool",
+        description: "The Shroud claws hungrily at your stack. You must take on one additional quest for your monthly pool."
+    }
+};

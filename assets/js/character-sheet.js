@@ -29,9 +29,13 @@ export function initializeCharacterSheet() {
     const sideQuestSelect = document.getElementById('side-quest-select');
     const dungeonActionContainer = document.getElementById('dungeon-action-container');
     const dungeonActionToggle = document.getElementById('dungeon-action-toggle');
+    const cursePenaltySelect = document.getElementById('curse-penalty-select');
+    const curseBookTitle = document.getElementById('curse-book-title');
+    const addCurseButton = document.getElementById('add-curse-button');
 
     // --- STATE FOR EDITING ---
     let editingQuestInfo = null; // { list: 'activeAssignments', index: 0 }
+    let editingCurseInfo = null; // { index: 0 }
 
     // --- EVENT LISTENERS ---
     levelInput.addEventListener('change', () => {
@@ -304,6 +308,48 @@ export function initializeCharacterSheet() {
     
     cancelEditQuestButton.addEventListener('click', resetQuestForm);
 
+    // --- CURSE FUNCTIONALITY ---
+    function resetCurseForm() {
+        cursePenaltySelect.value = '';
+        curseBookTitle.value = '';
+        editingCurseInfo = null;
+        addCurseButton.textContent = 'Add Curse';
+    }
+
+    addCurseButton.addEventListener('click', () => {
+        const curseName = cursePenaltySelect.value;
+        const bookTitle = curseBookTitle.value;
+        
+        if (!curseName) {
+            alert('Please select a curse penalty.');
+            return;
+        }
+
+        if (editingCurseInfo !== null) {
+            // Editing existing curse
+            const curseData = data.curseTable[curseName];
+            characterState.activeCurses[editingCurseInfo.index] = {
+                name: curseName,
+                requirement: curseData.requirement,
+                book: bookTitle
+            };
+            ui.renderActiveCurses();
+            saveState(form);
+            resetCurseForm();
+        } else {
+            // Adding new curse
+            const curseData = data.curseTable[curseName];
+            characterState.activeCurses.push({
+                name: curseName,
+                requirement: curseData.requirement,
+                book: bookTitle
+            });
+            ui.renderActiveCurses();
+            saveState(form);
+            resetCurseForm();
+        }
+    });
+
     form.addEventListener('submit', (e) => { e.preventDefault(); saveState(form); alert('Character sheet saved!'); });
     printButton.addEventListener('click', () => window.print());
 
@@ -434,6 +480,34 @@ export function initializeCharacterSheet() {
 
             if (typeof addQuestButton.scrollIntoView === 'function') {
                 addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        } else if (target.classList.contains('complete-curse-btn')) {
+            const curseToMove = characterState.activeCurses.splice(index, 1)[0];
+            characterState.completedCurses.push(curseToMove);
+            ui.renderActiveCurses();
+            ui.renderCompletedCurses();
+            saveState(form);
+        } else if (target.classList.contains('edit-curse-btn')) {
+            const curse = characterState.activeCurses[index];
+            cursePenaltySelect.value = curse.name;
+            curseBookTitle.value = curse.book || '';
+            editingCurseInfo = { index };
+            addCurseButton.textContent = 'Update Curse';
+            // Don't save state here - just populate the form
+        } else if (target.classList.contains('delete-curse-btn')) {
+            const list = target.dataset.list;
+            if (list === 'completed') {
+                if (confirm(`Are you sure you want to delete this completed curse penalty?`)) {
+                    characterState.completedCurses.splice(index, 1);
+                    ui.renderCompletedCurses();
+                    saveState(form);
+                }
+            } else {
+                if (confirm(`Are you sure you want to delete this curse penalty?`)) {
+                    characterState.activeCurses.splice(index, 1);
+                    ui.renderActiveCurses();
+                    saveState(form);
+                }
             }
         }
     }); // End of form event listener

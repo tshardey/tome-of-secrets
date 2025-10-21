@@ -252,6 +252,61 @@ title: Keeper's Character Sheet
         </div>
     </div>
 
+    <div class="form-section">
+        <h2>📜 The Shroud's Curse</h2>
+        <p class="description">When you fail to complete your monthly quest pool, the Shroud advances and you receive a Worn Page penalty for each book you missed. For each Worn Page you have, roll on the Curse Table at the start of your next month's quest.</p>
+        
+        <div class="add-curse-form">
+            <h3>Add Curse Penalty</h3>
+            <div class="form-row">
+                <select id="curse-penalty-select">
+                    <option value="">-- Select Curse Penalty --</option>
+                    <option value="The Unread Tome">1. The Unread Tome</option>
+                    <option value="The Lost Lore">2. The Lost Lore</option>
+                    <option value="The Forgotten Pages">3. The Forgotten Pages</option>
+                    <option value="The Ravenous Shadow">4. The Ravenous Shadow</option>
+                </select>
+                <input type="text" id="curse-book-title" placeholder="Book/Activity Title">
+                <button type="button" id="add-curse-button">Add Curse</button>
+            </div>
+        </div>
+
+        <div id="active-curses-container">
+            <h3 id="active-curses-summary">Active Curse Penalties</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th class="col-curse">Curse Penalty</th>
+                        <th class="col-requirement">Requirement</th>
+                        <th class="col-book">Book/Activity</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-action no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="active-curses-body">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="completed-curses-container">
+            <h3 id="completed-curses-summary">Completed Curse Penalties</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th class="col-curse">Curse Penalty</th>
+                        <th class="col-requirement">Requirement</th>
+                        <th class="col-book">Book/Activity</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-action no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="completed-curses-body">
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
     <div class="form-buttons no-print">
     <button type="submit">Save Character Info</button>
     <button type="button" id="print-button">Print</button>

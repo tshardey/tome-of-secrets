@@ -196,6 +196,34 @@ function createEditButton(index, listName) {
     return button;
 }
 
+export function renderActiveCurses() {
+    const tbody = document.getElementById('active-curses-body');
+    tbody.innerHTML = '';
+    characterState.activeCurses.forEach((curse, index) => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${curse.name}</td>
+                         <td>${curse.requirement}</td>
+                         <td>${curse.book || ''}</td>
+                         <td>Active</td>
+                         <td class="no-print action-cell"><button type="button" class="complete-curse-btn" data-index="${index}">Complete</button><button type="button" class="edit-curse-btn" data-index="${index}">Edit</button><button type="button" class="delete-curse-btn" data-index="${index}">Delete</button></td>`;
+    });
+    document.getElementById('active-curses-summary').innerText = `Active Curse Penalties (${characterState.activeCurses.length})`;
+}
+
+export function renderCompletedCurses() {
+    const tbody = document.getElementById('completed-curses-body');
+    tbody.innerHTML = '';
+    characterState.completedCurses.forEach((curse, index) => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${curse.name}</td>
+                         <td>${curse.requirement}</td>
+                         <td>${curse.book || ''}</td>
+                         <td>Completed</td>
+                         <td class="no-print action-cell"><button type="button" class="delete-curse-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
+    });
+    document.getElementById('completed-curses-summary').innerText = `Completed Curse Penalties (${characterState.completedCurses.length})`;
+}
+
 export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
     updateXpNeeded(levelInput, xpNeededInput);
     renderPermanentBonuses(levelInput);
@@ -206,4 +234,6 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderActiveAssignments();
     renderCompletedQuests();
     renderDiscardedQuests();
+    renderActiveCurses();
+    renderCompletedCurses();
 }

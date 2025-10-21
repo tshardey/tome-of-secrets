@@ -1,4 +1,4 @@
-import { allItems, xpLevels, permanentBonuses } from './../assets/js/character-sheet/data.js';
+import { allItems, xpLevels, permanentBonuses, curseTable } from './../assets/js/character-sheet/data.js';
 
 describe('Game Data Integrity', () => {
 
@@ -20,5 +20,23 @@ describe('Game Data Integrity', () => {
             expect(allItems[itemName]).toHaveProperty('img');
             expect(allItems[itemName]).toHaveProperty('bonus');
         }
+    });
+
+    test('curseTable should contain all four curse types with required properties', () => {
+        const expectedCurses = ['The Unread Tome', 'The Lost Lore', 'The Forgotten Pages', 'The Ravenous Shadow'];
+        
+        expectedCurses.forEach(curseName => {
+            expect(curseTable[curseName]).toBeDefined();
+            expect(curseTable[curseName]).toHaveProperty('name');
+            expect(curseTable[curseName]).toHaveProperty('requirement');
+            expect(curseTable[curseName]).toHaveProperty('description');
+            expect(curseTable[curseName].name).toBe(curseName);
+        });
+    });
+
+    test('curseTable should have unique requirements for each curse', () => {
+        const requirements = Object.values(curseTable).map(curse => curse.requirement);
+        const uniqueRequirements = [...new Set(requirements)];
+        expect(requirements.length).toBe(uniqueRequirements.length);
     });
 });

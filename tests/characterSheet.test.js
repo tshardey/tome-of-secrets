@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms } from '../assets/js/character-sheet/data.js';
+import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms, curseTable } from '../assets/js/character-sheet/data.js';
 
 // We will create the main character sheet script in a later step.
 // For now, we can import it, assuming it will exist at this path.
@@ -18,6 +18,8 @@ describe('Character Sheet', () => {
     characterState.activeAssignments = [];
     characterState.completedQuests = [];
     characterState.discardedQuests = [];
+    characterState.activeCurses = [];
+    characterState.completedCurses = [];
 
     // Load the character sheet HTML before each test
     loadHTML('character-sheet.md');
@@ -302,6 +304,194 @@ describe('Character Sheet', () => {
         expect(encounterQuest.notes).toBe('Encounter notes added.'); // The notes are updated
         expect(encounterQuest.prompt).toBe(dungeonRooms['2'].encounters['Mysterious Nymph'].befriend); // Prompt should not change
         expect(roomQuest.notes).toBe(''); // Room quest notes should be untouched
+    });
+  });
+
+  describe("The Shroud's Curse", () => {
+    it('should add a new curse penalty to the active curses table', () => {
+      const cursePenaltySelect = document.getElementById('curse-penalty-select');
+      const curseBookTitle = document.getElementById('curse-book-title');
+      const addCurseButton = document.getElementById('add-curse-button');
+      const activeCursesBody = document.getElementById('active-curses-body');
+
+      // Select a curse penalty and enter a book title
+      cursePenaltySelect.value = 'The Unread Tome';
+      curseBookTitle.value = 'The Forgotten Book';
+      addCurseButton.click();
+
+      // Assert that the curse appears in the active curses table
+      const firstRow = activeCursesBody.querySelector('tr');
+      expect(firstRow.textContent).toContain('The Unread Tome');
+      expect(firstRow.textContent).toContain('The Forgotten Book');
+      expect(firstRow.textContent).toContain('Active');
+      expect(characterState.activeCurses.length).toBe(1);
+    });
+
+    it('should move a curse from active to completed when complete button is clicked', () => {
+      // First, add an active curse
+      document.getElementById('curse-penalty-select').value = 'The Lost Lore';
+      document.getElementById('curse-book-title').value = 'Science Book';
+      document.getElementById('add-curse-button').click();
+
+      const activeCursesBody = document.getElementById('active-curses-body');
+      const completedCursesBody = document.getElementById('completed-curses-body');
+
+      // Click the "Complete" button
+      document.querySelector('#active-curses-body .complete-curse-btn').click();
+
+      // Assert that the curse moved to completed table
+      expect(activeCursesBody.innerHTML).toBe('');
+      expect(completedCursesBody.textContent).toContain('The Lost Lore');
+      expect(completedCursesBody.textContent).toContain('Science Book');
+      expect(completedCursesBody.textContent).toContain('Completed');
+      expect(characterState.activeCurses.length).toBe(0);
+      expect(characterState.completedCurses.length).toBe(1);
+    });
+
+    it('should edit an active curse penalty', () => {
+      // First, add an active curse
+      document.getElementById('curse-penalty-select').value = 'The Forgotten Pages';
+      document.getElementById('curse-book-title').value = 'Original Book';
+      document.getElementById('add-curse-button').click();
+
+      // Click the "Edit" button
+      document.querySelector('#active-curses-body .edit-curse-btn').click();
+
+      // Verify the form is populated
+      expect(document.getElementById('curse-penalty-select').value).toBe('The Forgotten Pages');
+      expect(document.getElementById('curse-book-title').value).toBe('Original Book');
+      expect(document.getElementById('add-curse-button').textContent).toBe('Update Curse');
+
+      // Change the book title and update
+      document.getElementById('curse-book-title').value = 'Updated Book';
+      document.getElementById('add-curse-button').click();
+
+      // Assert that the curse was updated
+      expect(characterState.activeCurses[0].book).toBe('Updated Book');
+      expect(characterState.activeCurses[0].name).toBe('The Forgotten Pages');
+    });
+
+    it('should delete an active curse penalty', () => {
+      // First, add an active curse
+      document.getElementById('curse-penalty-select').value = 'The Ravenous Shadow';
+      document.getElementById('curse-book-title').value = 'Extra Quest Book';
+      document.getElementById('add-curse-button').click();
+
+      const activeCursesBody = document.getElementById('active-curses-body');
+      expect(activeCursesBody.textContent).toContain('The Ravenous Shadow');
+
+      // Click the "Delete" button
+      document.querySelector('#active-curses-body .delete-curse-btn').click();
+
+      // Assert that the curse was removed
+      expect(activeCursesBody.innerHTML).toBe('');
+      expect(characterState.activeCurses.length).toBe(0);
+    });
+
+    it('should delete a completed curse penalty', () => {
+      // First, add and complete a curse
+      document.getElementById('curse-penalty-select').value = 'The Unread Tome';
+      document.getElementById('curse-book-title').value = 'Completed Book';
+      document.getElementById('add-curse-button').click();
+      document.querySelector('#active-curses-body .complete-curse-btn').click();
+
+      const completedCursesBody = document.getElementById('completed-curses-body');
+      expect(completedCursesBody.textContent).toContain('The Unread Tome');
+
+      // Click the "Delete" button on the completed curse
+      document.querySelector('#completed-curses-body .delete-curse-btn').click();
+
+      // Assert that the completed curse was removed
+      expect(completedCursesBody.innerHTML).toBe('');
+      expect(characterState.completedCurses.length).toBe(0);
+    });
+
+    it('should display correct curse requirements from data', () => {
+      const cursePenaltySelect = document.getElementById('curse-penalty-select');
+      const curseBookTitle = document.getElementById('curse-book-title');
+      const addCurseButton = document.getElementById('add-curse-button');
+
+      // Test each curse type
+      const curseTypes = ['The Unread Tome', 'The Lost Lore', 'The Forgotten Pages', 'The Ravenous Shadow'];
+      
+      curseTypes.forEach(curseType => {
+        cursePenaltySelect.value = curseType;
+        curseBookTitle.value = `Test Book for ${curseType}`;
+        addCurseButton.click();
+
+        // Assert that the curse was added with correct requirement
+        const activeCursesBody = document.getElementById('active-curses-body');
+        const lastRow = activeCursesBody.querySelector('tr:last-child');
+        expect(lastRow.textContent).toContain(curseType);
+        expect(lastRow.textContent).toContain(curseTable[curseType].requirement);
+
+        // Clear for next iteration
+        characterState.activeCurses = [];
+        activeCursesBody.innerHTML = '';
+      });
+    });
+
+    it('should prevent adding a curse without selecting a penalty', () => {
+      const curseBookTitle = document.getElementById('curse-book-title');
+      const addCurseButton = document.getElementById('add-curse-button');
+
+      // Try to add a curse without selecting a penalty
+      curseBookTitle.value = 'Test Book';
+      addCurseButton.click();
+
+      // Assert that no curse was added
+      expect(characterState.activeCurses.length).toBe(0);
+      expect(document.getElementById('active-curses-body').innerHTML).toBe('');
+    });
+
+    it('should reset the curse form after adding a curse', () => {
+      const cursePenaltySelect = document.getElementById('curse-penalty-select');
+      const curseBookTitle = document.getElementById('curse-book-title');
+      const addCurseButton = document.getElementById('add-curse-button');
+
+      // Add a curse
+      cursePenaltySelect.value = 'The Lost Lore';
+      curseBookTitle.value = 'Test Book';
+      addCurseButton.click();
+
+      // Assert that the form is reset
+      expect(cursePenaltySelect.value).toBe('');
+      expect(curseBookTitle.value).toBe('');
+      expect(addCurseButton.textContent).toBe('Add Curse');
+    });
+
+    it('should reset the curse form after editing a curse', () => {
+      // First, add a curse
+      document.getElementById('curse-penalty-select').value = 'The Forgotten Pages';
+      document.getElementById('curse-book-title').value = 'Original Book';
+      document.getElementById('add-curse-button').click();
+
+      // Edit the curse
+      document.querySelector('#active-curses-body .edit-curse-btn').click();
+      document.getElementById('curse-book-title').value = 'Updated Book';
+      document.getElementById('add-curse-button').click();
+
+      // Assert that the form is reset after editing
+      expect(document.getElementById('curse-penalty-select').value).toBe('');
+      expect(document.getElementById('curse-book-title').value).toBe('');
+      expect(document.getElementById('add-curse-button').textContent).toBe('Add Curse');
+    });
+
+    it('should update curse summary counts correctly', () => {
+      // Add a curse
+      document.getElementById('curse-penalty-select').value = 'The Unread Tome';
+      document.getElementById('curse-book-title').value = 'Test Book';
+      document.getElementById('add-curse-button').click();
+
+      // Check that the state was updated
+      expect(characterState.activeCurses.length).toBe(1);
+
+      // Complete the curse
+      document.querySelector('#active-curses-body .complete-curse-btn').click();
+
+      // Check that the state was updated correctly
+      expect(characterState.activeCurses.length).toBe(0);
+      expect(characterState.completedCurses.length).toBe(1);
     });
   });
 });

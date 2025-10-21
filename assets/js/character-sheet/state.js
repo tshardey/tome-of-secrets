@@ -5,7 +5,9 @@ export let characterState = {
     activeAssignments: [],
     completedQuests: [],
     discardedQuests: [],
-    atmosphericBuffs: {}
+    atmosphericBuffs: {},
+    activeCurses: [],
+    completedCurses: []
 };
 
 export function loadState(form) {
@@ -22,6 +24,8 @@ export function loadState(form) {
     characterState.inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
     characterState.learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];
     characterState.atmosphericBuffs = JSON.parse(localStorage.getItem('atmosphericBuffs')) || {};
+    characterState.activeCurses = JSON.parse(localStorage.getItem('activeCurses')) || [];
+    characterState.completedCurses = JSON.parse(localStorage.getItem('completedCurses')) || [];
 }
 
 export function saveState(form) {

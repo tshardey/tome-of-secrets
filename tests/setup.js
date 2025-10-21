@@ -7,6 +7,7 @@ import path from 'path';
  */
 Element.prototype.scrollIntoView = () => {};
 window.alert = () => {}; // Mock the alert function
+window.confirm = () => true; // Mock the confirm function to always return true
 
 /**
  * A global helper function to load HTML content from a file into the JSDOM body.
