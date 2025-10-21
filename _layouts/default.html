@@ -18,13 +18,50 @@
     <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <main>
-            <article>
-                {{ content }}
-            </article>
-        </main>
+    <div class="hero">
+        <div class="hero-content">
+            {% if page.url == "/" %}
+            <h1 class="hero-title">{{ site.title }}</h1>
+            <p class="hero-description">{{ site.description }}</p>
+            {% else %}
+            <h1 class="hero-title">{{ page.title }}</h1>
+            {% endif %}
+        </div>
     </div>
+
+    <div class="container">
+        <div class="main-content">
+            <aside class="sidebar no-print">
+            <nav>
+                <ul>
+                    <li><a href="{{ site.baseurl }}/">Introduction</a></li>
+                    <li><a href="{{ site.baseurl }}/keeper.html">The Keeper</a></li>
+                    <li><a href="{{ site.baseurl }}/sanctum.html">The Sanctum</a></li>
+                    <li><a href="{{ site.baseurl }}/core-mechanics.html">Core Mechanics</a></li>
+                    <li><a href="{{ site.baseurl }}/quests.html">Quests</a></li>
+                    <li><a href="{{ site.baseurl }}/dungeons.html">Dungeons</a></li>
+                    <li><a href="{{ site.baseurl }}/rewards.html">Rewards</a></li>
+                    <li><a href="{{ site.baseurl }}/shroud.html">The Shroud</a></li>
+                    <li><a href="{{ site.baseurl }}/shopping.html">Shopping</a></li>
+                    <li><a href="{{ site.baseurl }}/leveling.html">Level Up</a></li>
+                    <li><a href="{{ site.baseurl }}/character-sheet.html">Character Sheet</a></li>
+                </ul>
+            </nav>
+            </aside>
+            <main>
+                <article>
+                    {% if page.url == "/" %}
+                        <h2 class="page-title">{{ page.title }}</h2>
+                    {% endif %}
+                    {{ content }}
+                </article>
+            </main>
+        </div>
+        <footer>
+            <p>&copy; 2024 tshardey. Built with Jekyll.</p>
+        </footer>
+    </div>
+    <script src="{{ site.baseurl }}/assets/js/anchor.js"></script>
     <script src="{{ site.baseurl }}/assets/js/main.js" type="module"></script>
 </body>
 </html>

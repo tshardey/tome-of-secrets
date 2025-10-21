@@ -466,4 +466,4 @@ export function initializeCharacterSheet() {
 }
 
 // Run the initialization when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initializeCharacterSheet);
+// document.addEventListener('DOMContentLoaded', initializeCharacterSheet);
