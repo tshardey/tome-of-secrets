@@ -84,9 +84,35 @@ export const masteryAbilities = {
     "Philosopher's Stone": { school: "Transmutation", cost: 2, benefit: "Once per month, you may sacrifice 50 XP to instantly gain 50 Ink Drops and 10 Paper Scraps." }
 };
 
+export const dungeonRewards = {
+    bookCompletion: { reward: "+25 XP", penalty: "-" },
+    monster: { reward: "+50 XP", penalty: "-5 Ink Drops & -10 XP" },
+    friendlyCreature: { reward: "+10 Ink Drops", penalty: "-" },
+    familiar: { reward: "+5 Page Scraps", penalty: "-" }
+};
+
 export const dungeonRooms = {
     "1": {
+        name: "The Hall of Whispers",
+        description: "Echoes of unread tales drift endlessly through this vaulted chamber. The walls hum with voices too faint to catch, yet heavy with longing.",
         challenge: "The Hall of Whispers: Read in a quiet space without music.",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Librarian's Spirit",
+                type: "Friendly Creature",
+                description: "A gentle ghost flickering with lantern light.",
+                befriend: "Read a book with a ghost-like being or a mystery."
+            },
+            {
+                roll: "[3-4]",
+                name: "Will-o-wisps",
+                type: "Monster",
+                description: "Glittering lights that lure you astray.",
+                defeat: "Read a book that involves fated destiny or a newly revealed path."
+            }
+        ],
         encounters: {
             "Librarian's Spirit": {
                 befriend: "Librarian's Spirit: Read a book with a ghost-like being or a mystery."
@@ -97,10 +123,31 @@ export const dungeonRooms = {
         }
     },
     "2": {
-        challenge: "The Glimmering Pools: Read a book with a beautiful or unique cover.",
+        name: "The Glimmering Pools",
+        description: "Shallow pools glow like liquid starlight, each ripple whispering a forgotten secret. Step wrong, and the ink clings like chains.",
+        challenge: "The Glimmering Pools: Read a book with a beautiful or unique cover (+10 Ink Drops).",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Mysterious Nymph",
+                type: "Friendly Creature",
+                description: "Her laughter shimmers across the water.",
+                befriend: "Read a book that explores allure or transformation. Roll even for Amulet of Duality, odd for Worn Page curse.",
+                hasLink: true,
+                link: { text: "Amulet of Duality", url: "{{ site.baseurl }}/rewards.html#amulet-of-duality" }
+            },
+            {
+                roll: "[3-4]",
+                name: "Mischievous Pixie",
+                type: "Friendly Creature",
+                description: "Flitting overhead, scattering glowing droplets.",
+                befriend: "Read a book where a character discovers unexpected magic or hidden talents."
+            }
+        ],
         encounters: {
             "Mysterious Nymph": {
-                befriend: "Mysterious Nymph: Read a book that explores allure or transformation."
+                befriend: "Mysterious Nymph: Read a book that explores allure or transformation. Roll even for Amulet of Duality, odd for Worn Page curse."
             },
             "Mischievous Pixie": {
                 befriend: "Mischievous Pixie: Read a book where a character discovers unexpected magic or hidden talents."
@@ -108,18 +155,58 @@ export const dungeonRooms = {
         }
     },
     "3": {
+        name: "The Lost Garden",
+        description: "Trees and vines reclaim toppled shelves, their blossoms glowing faintly in the dark. Forgotten statues weep with moss.",
         challenge: "The Lost Garden: Read a book with a magical garden or a hidden realm.",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Dryad",
+                type: "Friendly Creature",
+                description: "Whispers secrets of roots and rivers.",
+                befriend: "Read a book with a natural or wilderness setting."
+            },
+            {
+                roll: "[3-4]",
+                name: "Treant",
+                type: "Friendly Creature",
+                description: "Slow and steady, branches heavy with books as fruit.",
+                befriend: "Read a book where things aren't what they seem, or the setting is much more than it appears to be."
+            }
+        ],
         encounters: {
             "Dryad": {
                 befriend: "Dryad: Read a book with a natural or wilderness setting."
             },
             "Treant": {
-                befriend: "Treant: Read a book where things aren't what they seem."
+                befriend: "Treant: Read a book where things aren't what they seem, or the setting is much more than it appears to be."
             }
         }
     },
     "4": {
+        name: "The Cursed Tome",
+        description: "A massive volume chained to a pedestal, its pages leaking mist and sorrow. The air grows cold with each breath.",
         challenge: "The Cursed Tome: Read a book with a curse or a dark theme.",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Zombies",
+                type: "Monster",
+                description: "Clawing free from the ink, groaning for stories unfinished.",
+                defeat: "Read a book that deals with themes of death, rebirth, or the afterlife.",
+                befriend: "Read a book where a character finds hope or humanity in a dark, hopeless situation."
+            },
+            {
+                roll: "[3-4]",
+                name: "Banshee",
+                type: "Monster",
+                description: "Wails through the halls, scattering loose pages like autumn leaves.",
+                defeat: "Read a book with a ghost-like being or a death theme.",
+                befriend: "Read a book with a character that finds a way to move on from a tragic event."
+            }
+        ],
         encounters: {
             "Zombies": {
                 defeat: "Zombies: Read a book that deals with themes of death, rebirth, or the afterlife.",
@@ -132,7 +219,28 @@ export const dungeonRooms = {
         }
     },
     "5": {
-        challenge: "The Archivist's Riddle: Read a book that has a mystery or secret at its core.",
+        name: "The Archivist's Riddle",
+        description: "A spectral figure waits, quill in hand, offering only riddles for passage. Its eyes gleam with the weight of endless catalogues.",
+        challenge: "The Archivist's Riddle: Read a book that has a mystery or secret at its core (+5 XP).",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Tome-Bound Cat",
+                type: "Familiar",
+                description: "Purrs wisdom between riddles.",
+                befriend: "Read a book with a cozy or comforting vibe.",
+                hasLink: true,
+                link: { text: "Tome-Bound Cat", url: "{{ site.baseurl }}/rewards.html#tome-bound-cat" }
+            },
+            {
+                roll: "[3-4]",
+                name: "Guardian Owl",
+                type: "Friendly Creature",
+                description: "Its feathers ink-black, gazing knowingly.",
+                befriend: "Read a book that teaches you something new."
+            }
+        ],
         encounters: {
             "Tome-Bound Cat": {
                 befriend: "Tome-Bound Cat: Read a book with a cozy or comforting vibe."
@@ -143,7 +251,29 @@ export const dungeonRooms = {
         }
     },
     "6": {
-        challenge: "The Starlit Observatory: Read a book with a cosmic or future setting.",
+        name: "The Starlit Observatory",
+        description: "A domed chamber where stars drift across the ceiling like a living sky. Telescopes of brass and crystal point toward unknown worlds.",
+        challenge: "The Starlit Observatory: Read a book with a cosmic or future setting (+10 Ink Drops).",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Pocket Dragon",
+                type: "Familiar",
+                description: "Tiny but fierce, curling around an astrolabe.",
+                befriend: "Read a book with a dragon or a fire element.",
+                hasLink: true,
+                link: { text: "Pocket Dragon", url: "{{ site.baseurl }}/rewards.html#pocket-dragon" }
+            },
+            {
+                roll: "[3-4]",
+                name: "Glabrezu",
+                type: "Monster",
+                description: "Towering and terrible, offering honeyed bargains.",
+                defeat: "Read a book with a morally gray love interest or a deceptive character.",
+                befriend: "Read a book where power is the main theme."
+            }
+        ],
         encounters: {
             "Pocket Dragon": {
                 befriend: "Pocket Dragon: Read a book with a dragon or a fire element."
@@ -155,7 +285,28 @@ export const dungeonRooms = {
         }
     },
     "7": {
+        name: "The Neglected Archives",
+        description: "Stacks of dust-caked scrolls sag in forgotten alcoves, watched by shadowy eyes.",
         challenge: "The Neglected Archives: Read a book with a ghost-like being or a death theme.",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Banshee",
+                type: "Monster",
+                description: "Lingering over half-burned records.",
+                defeat: "Read a book with a ghost-like being or a death theme.",
+                befriend: "Read a book where a character finds a way to move on from a tragic event."
+            },
+            {
+                roll: "[3-4]",
+                name: "Vampire",
+                type: "Monster",
+                description: "Rising from the dust with hunger and grace.",
+                defeat: "Read a book with an immortal or night-dwelling creature.",
+                befriend: "Read a book where desire or temptation plays a major role."
+            }
+        ],
         encounters: {
             "Banshee": {
                 defeat: "Banshee: Read a book with a ghost-like being or a death theme.",
@@ -168,11 +319,34 @@ export const dungeonRooms = {
         }
     },
     "8": {
-        challenge: "The Author's Study: Read a book by the author you think used this study.",
-        encounters: {} // This room has no sub-encounter
+        name: "The Author's Study",
+        description: "Candles gutter beside ink-stained desks, their wax frozen mid-drip. Drafts lie unfinished, quills snapped in haste.",
+        challenge: "The Author's Study: Read a book by the author you think used this study. Optional journaling: describe whose study this might be.",
+        reward: "+10 Paper Scraps.",
+        encountersDetailed: [],
+        encounters: {}
     },
     "9": {
+        name: "The Endless Corridor",
+        description: "Door after door stretches into eternity, each pulsing with unread stories. The echo of your steps threatens to never end.",
         challenge: "The Endless Corridor: Read a book that is part of a series you have not started.",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Cheerful Sprite",
+                type: "Friendly Creature",
+                description: "Darting from door to door.",
+                befriend: "Read a book you've been putting off for a fun, easy-to-read, or relaxing read."
+            },
+            {
+                roll: "[3-4]",
+                name: "Ooze",
+                type: "Monster",
+                description: "Slithering down the walls, devouring titles whole.",
+                defeat: "Read a book with a character who overcomes a seemingly impossible obstacle."
+            }
+        ],
         encounters: {
             "Cheerful Sprite": {
                 befriend: "Cheerful Sprite: Read a book you've been putting off for a fun, easy-to-read, or relaxing read."
@@ -183,7 +357,29 @@ export const dungeonRooms = {
         }
     },
     "10": {
+        name: "The Grand Gallery",
+        description: "Oil paintings leer from gilded frames, their subjects shifting when you look away.",
         challenge: "The Grand Gallery: Read a book you've had on your TBR for over a year.",
+        reward: "Gilded Painting (+1 Ink Drop when reading in an ornate location).",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Mystical Moth",
+                type: "Familiar",
+                description: "Wings glowing faintly like painted glass.",
+                befriend: "Read a book with something hidden or nocturnal.",
+                hasLink: true,
+                link: { text: "Mystical Moth", url: "{{ site.baseurl }}/rewards.html#mystical-moth" }
+            },
+            {
+                roll: "[3-4]",
+                name: "Animated Armor",
+                type: "Monster",
+                description: "Clattering from its frame. (Cannot be befriended).",
+                defeat: "Read a book with a foiled cover."
+            }
+        ],
         encounters: {
             "Mystical Moth": {
                 befriend: "Mystical Moth: Read a book with something hidden or nocturnal."
@@ -194,7 +390,29 @@ export const dungeonRooms = {
         }
     },
     "11": {
-        challenge: "The Shroud's Heart: Read a book you believe will be 5 stars.",
+        name: "The Shroud's Heart",
+        description: "Here the air is thick, trembling with the Shroud's presence. Shadows twist like ink smoke.",
+        challenge: "The Shroud's Heart: Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty.",
+        rollInstruction: "Roll a d4 to determine the encounter:",
+        encountersDetailed: [
+            {
+                roll: "[1-2]",
+                name: "Fomorian",
+                type: "Monster",
+                description: "Hulking, its voice a storm of curses.",
+                defeat: "Read a book containing a curse or a monster-like being.",
+                befriend: "Read a book where the main character must accept a tragic flaw."
+            },
+            {
+                roll: "[3-4]",
+                name: "Page Sprite",
+                type: "Familiar",
+                description: "Flitting nervously, clutching half-burned parchment.",
+                befriend: "Read a book that is 300 pages or less.",
+                hasLink: true,
+                link: { text: "Page Sprite", url: "{{ site.baseurl }}/rewards.html#page-sprite" }
+            }
+        ],
         encounters: {
             "Fomorian": {
                 defeat: "Fomorian: Read a book containing a curse or a monster-like being.",
@@ -206,7 +424,17 @@ export const dungeonRooms = {
         }
     },
     "12": {
+        name: "The Mimic's Lair",
+        description: "Shelves and chairs twitch with hidden hunger, waiting for you to turn your back.",
         challenge: "The Mimic's Lair: Read a book that subverts a common trope.",
+        encountersDetailed: [
+            {
+                name: "Mimic",
+                type: "Monster",
+                description: "Lunging from false bindings. (Cannot be befriended).",
+                defeat: "Read a book that feels deceptive or has a major twist."
+            }
+        ],
         encounters: {
             "Mimic": {
                 defeat: "Mimic: Read a book that feels deceptive or has a major twist."
@@ -215,15 +443,91 @@ export const dungeonRooms = {
     }
 };
 
-export const genreQuests = {
-    "1": "Historical Fiction: Read a book set in the past or with a historical figure as a character.",
-    "2": "Fantasy: Read a book with magical creatures, settings, or a non-human protagonist.",
-    "3": "Romantasy: Read a book with a magical system and/or a romantic plot.",
-    "4": "Sci-Fi: Read a book set in the future or one with a morally gray main character.",
-    "5": "Thriller: Read a book with a plot twist, deception, or hidden identity.",
-    "6": "Classic: Read a classic novel you have not yet read."
+export const dungeonCompletionRewards = {
+    "1": { name: "The Librarian's Hoard", reward: "Gain +150 Ink Drops and +20 Paper Scraps." },
+    "2": { name: "Chalice of Restoration", reward: "You find a Chalice of Restoration.", hasLink: true, link: { text: "Chalice of Restoration", url: "{{ site.baseurl }}/rewards.html#chalice-of-restoration" } },
+    "3": { name: "Librarian's Blessing", reward: "You may remove up to two Worn Page penalties." },
+    "4": { name: "Librarian's Quill", reward: "You find a Librarian's Quill.", hasLink: true, link: { text: "Librarian's Quill", url: "{{ site.baseurl }}/rewards.html#librarians-quill" } },
+    "5": { name: "Enchanted Focus", reward: "The next three books you complete grant a x1.5 Ink Drop bonus." },
+    "6": { name: "Lantern of Foresight", reward: "You find a Lantern of Foresight.", hasLink: true, link: { text: "Lantern of Foresight", url: "{{ site.baseurl }}/rewards.html#lantern-of-foresight" } },
+    "7": { name: "Unwavering Resolve", reward: "for the next month, you are immune to Worn Page penalties." },
+    "8": { name: "Cloak of the Story-Weaver", reward: "You find a Cloak of the Story-Weaver.", hasLink: true, link: { text: "Cloak of the Story-Weaver", url: "{{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver" } },
+    "9": { name: "The Archivist's Favor", reward: "Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off." },
+    "10": { name: "The Grand Key", reward: "You find a master key for a special, rare quest." }
 };
 
+export const genreQuests = {
+    "1": { genre: "Historical Fiction", description: "Read a book set in the past or with a historical figure as a character." },
+    "2": { genre: "Fantasy", description: "Read a book with magical creatures, settings, or a non-human protagonist." },
+    "3": { genre: "Romantasy", description: "Read a book with a magical system and/or a romantic plot." },
+    "4": { genre: "Sci-Fi", description: "Read a book set in the future or one with a morally gray main character." },
+    "5": { genre: "Thriller", description: "Read a book with a plot twist, deception, or hidden identity." },
+    "6": { genre: "Classic", description: "Read a classic novel you have not yet read." }
+};
+
+// Detailed side quests data for table rendering
+export const sideQuestsDetailed = {
+    "1": { 
+        name: "The Arcane Grimoire",
+        description: "An ancient spellbook writes a new page.",
+        prompt: "Read the book on your TBR the longest.",
+        reward: "Temp buff: Long Read Focus (+2 Ink Drops per 100 pages over 300)."
+    },
+    "2": { 
+        name: "The Blood Fury Tattoo",
+        description: "Inked markings blaze across your skin.",
+        prompt: "Read a book featuring a counter culture rebellion.",
+        reward: "Bloodline Affinity buff (+15 Ink Drops for your next book in a series)."
+    },
+    "3": { 
+        name: "The Bag of Holding",
+        description: "A battered satchel yawns impossibly wide.",
+        prompt: "Read a story with multiple POVs.",
+        reward: "Receive a Scatter Brain Scarab.",
+        hasLink: true,
+        link: { text: "Scatter Brain Scarab", url: "{{ site.baseurl }}/rewards.html#scatter-brain-scarab" }
+    },
+    "4": { 
+        name: "The Wandering Merchant's Request",
+        description: "A traveler draped in scarves greets you.",
+        prompt: "Read a book featuring a journey.",
+        reward: "Receive a Librarian's Compass.",
+        hasLink: true,
+        link: { text: "Librarian's Compass", url: "{{ site.baseurl }}/rewards.html#librarians-compass" }
+    },
+    "5": { 
+        name: "The Glimmering Pools' Gift",
+        description: "A nymph rises from glowing waters.",
+        prompt: "Read a book about transformation.",
+        reward: "Roll a die: on even gain an Amulet of Duality; on odd gain one Worn Page curse.",
+        hasLink: true,
+        link: { text: "Amulet of Duality", url: "{{ site.baseurl }}/rewards.html#amulet-of-duality" }
+    },
+    "6": { 
+        name: "The Chime of Opening",
+        description: "A silver chime hums with anticipation.",
+        prompt: "Read a book where a long-hidden truth is revealed.",
+        reward: "Receive a Key of the Archive.",
+        hasLink: true,
+        link: { text: "Key of the Archive", url: "{{ site.baseurl }}/rewards.html#key-of-the-archive" }
+    },
+    "7": { 
+        name: "The Scarecrow's Cornfield",
+        description: "Rustling stalks and a grim figure loom.",
+        prompt: "Read a book with an unreliable narrator.",
+        reward: "Temp buff: Disjointed Perception (+10 Ink Drops, +5 Page Scraps)."
+    },
+    "8": { 
+        name: "The Empty Shelf",
+        description: "A hollow space on the stacks calls out.",
+        prompt: "Choose a book from your TBR you are most excited for.",
+        reward: "Receive a Tome of Potential.",
+        hasLink: true,
+        link: { text: "Tome of Potential", url: "{{ site.baseurl }}/rewards.html#tome-of-potential" }
+    }
+};
+
+// Backward compatible format for character sheet
 export const sideQuests = {
     "1": "The Arcane Grimoire: Read the book on your TBR the longest.",
     "2": "The Blood Fury Tattoo: Read a book featuring a counter culture rebellion.",
@@ -235,6 +539,31 @@ export const sideQuests = {
     "8": "The Empty Shelf: Choose a book from your TBR you are most excited for."
 };
 
+// Detailed curse table for rendering
+export const curseTableDetailed = [
+    {
+        number: 1,
+        name: "The Unread Tome",
+        description: "A neglected book groans from your shelf. You must read a book from your DNF list or one you have been putting off."
+    },
+    {
+        number: 2,
+        name: "The Lost Lore", 
+        description: "Pages crumble to dust before your eyes. You must read or listen to a non-fiction book or podcast related to science, tech, or nature."
+    },
+    {
+        number: 3,
+        name: "The Forgotten Pages",
+        description: "Dusty shelves collapse, scattering volumes into chaos. You must reorganize a section of your physical books or digital library."
+    },
+    {
+        number: 4,
+        name: "The Ravenous Shadow",
+        description: "The Shroud claws hungrily at your stack. You must take on one additional quest for your monthly pool."
+    }
+];
+
+// Backward compatible format for character sheet
 export const curseTable = {
     "The Unread Tome": {
         name: "The Unread Tome",
