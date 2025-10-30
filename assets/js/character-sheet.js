@@ -41,14 +41,84 @@ export function initializeCharacterSheet() {
     let editingCurseInfo = null; // { index: 0 }
 
     // --- HELPER FUNCTIONS ---
-    // Initialize the completed books set from saved quests
+    // Initialize the completed books set from saved monthly tracking
+    // This should NOT include all historical completed quests, only books completed this month
     function initializeCompletedBooksSet() {
         completedBooksSet.clear();
-        characterState.completedQuests.forEach(quest => {
-            if (quest.book && quest.book.trim()) {
-                completedBooksSet.add(quest.book.trim());
+        // Load the monthly books set from localStorage
+        const monthlyBooks = JSON.parse(localStorage.getItem('monthlyCompletedBooks')) || [];
+        monthlyBooks.forEach(bookName => completedBooksSet.add(bookName));
+    }
+    
+    // Save the monthly completed books set to localStorage
+    function saveCompletedBooksSet() {
+        const booksArray = Array.from(completedBooksSet);
+        localStorage.setItem('monthlyCompletedBooks', JSON.stringify(booksArray));
+    }
+    
+    // Calculate modified rewards based on applied buffs and items
+    function calculateModifiedRewards(baseRewards, appliedBuffs) {
+        if (!appliedBuffs || appliedBuffs.length === 0) {
+            return { ...baseRewards, modifiedBy: [] };
+        }
+        
+        let modifiedRewards = { ...baseRewards };
+        let appliedModifiers = [];
+        
+        appliedBuffs.forEach(buffName => {
+            // Remove [Buff] or [Item] prefix
+            const cleanName = buffName.replace(/^\[(Buff|Item)\] /, '');
+            const isItem = buffName.startsWith('[Item]');
+            
+            let modifier = null;
+            
+            // Get the modifier from either items or temp buffs
+            if (isItem && data.allItems[cleanName]) {
+                modifier = data.allItems[cleanName].rewardModifier;
+            } else if (data.temporaryBuffsFromRewards[cleanName]) {
+                modifier = data.temporaryBuffsFromRewards[cleanName].rewardModifier;
+            }
+            
+            // Apply the modifier if it exists
+            if (modifier) {
+                // Apply additive bonuses first
+                if (modifier.xp) {
+                    modifiedRewards.xp = (modifiedRewards.xp || 0) + modifier.xp;
+                }
+                if (modifier.inkDrops) {
+                    modifiedRewards.inkDrops = (modifiedRewards.inkDrops || 0) + modifier.inkDrops;
+                }
+                if (modifier.paperScraps) {
+                    modifiedRewards.paperScraps = (modifiedRewards.paperScraps || 0) + modifier.paperScraps;
+                }
+                
+                // Track what was applied
+                if (modifier.xp || modifier.inkDrops || modifier.paperScraps || modifier.inkDropsMultiplier) {
+                    appliedModifiers.push(cleanName);
+                }
             }
         });
+        
+        // Apply multipliers after all additive bonuses
+        appliedBuffs.forEach(buffName => {
+            const cleanName = buffName.replace(/^\[(Buff|Item)\] /, '');
+            const isItem = buffName.startsWith('[Item]');
+            
+            let modifier = null;
+            
+            if (isItem && data.allItems[cleanName]) {
+                modifier = data.allItems[cleanName].rewardModifier;
+            } else if (data.temporaryBuffsFromRewards[cleanName]) {
+                modifier = data.temporaryBuffsFromRewards[cleanName].rewardModifier;
+            }
+            
+            if (modifier && modifier.inkDropsMultiplier) {
+                modifiedRewards.inkDrops = Math.floor(modifiedRewards.inkDrops * modifier.inkDropsMultiplier);
+            }
+        });
+        
+        modifiedRewards.modifiedBy = appliedModifiers;
+        return modifiedRewards;
     }
 
     function getQuestRewards(type, prompt, isEncounter = false, roomNumber = null, encounterName = null, dungeonAction = 'defeat') {
@@ -135,10 +205,35 @@ export function initializeCharacterSheet() {
             paperScraps.value = currentPaper + rewards.paperScraps;
         }
 
-        // Handle items
+        // Handle items and temp buffs
         if (rewards.items && rewards.items.length > 0) {
             rewards.items.forEach(itemName => {
-                if (data.allItems[itemName]) {
+                // Check if this is a temp buff first
+                if (data.temporaryBuffsFromRewards[itemName]) {
+                    const buffData = data.temporaryBuffsFromRewards[itemName];
+                    
+                    // Calculate initial monthsRemaining based on duration
+                    let monthsRemaining = 0;
+                    if (buffData.duration === 'two-months') {
+                        monthsRemaining = 2;
+                    } else if (buffData.duration === 'until-end-month') {
+                        monthsRemaining = 1;
+                    }
+                    
+                    // Add to temporary buffs
+                    characterState.temporaryBuffs.push({
+                        name: itemName,
+                        description: buffData.description,
+                        duration: buffData.duration,
+                        monthsRemaining,
+                        status: 'active'
+                    });
+                    
+                    ui.renderTemporaryBuffs();
+                    ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                }
+                // Otherwise add as regular item
+                else if (data.allItems[itemName]) {
                     characterState.inventoryItems.push({ name: itemName, ...data.allItems[itemName] });
                 }
             });
@@ -159,7 +254,10 @@ export function initializeCharacterSheet() {
     librarySanctumSelect.addEventListener('change', onSanctumChange);
     smpInput.addEventListener('input', () => ui.renderMasteryAbilities(smpInput));
     
-    const renderLoadout = () => ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    const renderLoadout = () => {
+        ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+        ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    };
     wearableSlotsInput.addEventListener('change', renderLoadout);
     nonWearableSlotsInput.addEventListener('change', renderLoadout);
     familiarSlotsInput.addEventListener('change', renderLoadout);
@@ -184,6 +282,8 @@ export function initializeCharacterSheet() {
         if (itemName && data.allItems[itemName]) {
             characterState.inventoryItems.push({ name: itemName, ...data.allItems[itemName] });
             renderLoadout();
+            // Update quest buffs dropdown in case user wants to assign this new item
+            ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             saveState(form);
         }
     });
@@ -284,6 +384,12 @@ export function initializeCharacterSheet() {
         dungeonActionContainer.style.display = 'none';
         // document.getElementById('quest-year').value = '';
 
+        // Clear buff selection
+        const buffsSelect = document.getElementById('quest-buffs-select');
+        if (buffsSelect) {
+            Array.from(buffsSelect.options).forEach(option => option.selected = false);
+        }
+
         // Reset editing state
         editingQuestInfo = null;
         addQuestButton.textContent = 'Add Quest';
@@ -304,6 +410,11 @@ export function initializeCharacterSheet() {
         const notes = document.getElementById('new-quest-notes').value;
         const month = document.getElementById('quest-month').value;
         const year = document.getElementById('quest-year').value;
+        
+        // Get selected buffs from multi-select
+        const buffsSelect = document.getElementById('quest-buffs-select');
+        const selectedBuffs = Array.from(buffsSelect.selectedOptions).map(option => option.value);
+        
         let prompt = '';
 
         if (editingQuestInfo) {
@@ -338,7 +449,7 @@ export function initializeCharacterSheet() {
             }
 
             // Update the quest in the state
-            Object.assign(characterState[editingQuestInfo.list][editingQuestInfo.index], { month, year, type, prompt, book, notes });
+            Object.assign(characterState[editingQuestInfo.list][editingQuestInfo.index], { month, year, type, prompt, book, notes, buffs: selectedBuffs });
             
             // Re-render the correct list
             if (editingQuestInfo.list === 'activeAssignments') ui.renderActiveAssignments();
@@ -371,11 +482,48 @@ export function initializeCharacterSheet() {
                 const roomRewards = getQuestRewards(type, roomData.challenge, false, roomNumber);
                 const encounterRewards = getQuestRewards(type, encounterPrompt, true, roomNumber, encounterName);
                 
-                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false, roomNumber, rewards: roomRewards };
-                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true, roomNumber, encounterName, rewards: encounterRewards };
+                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false, roomNumber, rewards: roomRewards, buffs: selectedBuffs };
+                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true, roomNumber, encounterName, rewards: encounterRewards, buffs: selectedBuffs };
 
-                characterState.activeAssignments.push(roomQuest, encounterQuest);
-                ui.renderActiveAssignments();
+                const status = document.getElementById('new-quest-status').value;
+                if (status === 'active') {
+                    characterState.activeAssignments.push(roomQuest, encounterQuest);
+                    ui.renderActiveAssignments();
+                } else if (status === 'completed') {
+                    // Check if this is a new book for monthly tracking
+                    const bookName = book ? book.trim() : '';
+                    const isNewBook = bookName && !completedBooksSet.has(bookName);
+                    
+                    // Calculate modified rewards if buffs are applied
+                    let finalRoomRewards = roomRewards;
+                    let finalEncounterRewards = encounterRewards;
+                    if (selectedBuffs.length > 0) {
+                        finalRoomRewards = calculateModifiedRewards(roomRewards, selectedBuffs);
+                        finalEncounterRewards = calculateModifiedRewards(encounterRewards, selectedBuffs);
+                        roomQuest.rewards = finalRoomRewards;
+                        encounterQuest.rewards = finalEncounterRewards;
+                    }
+                    
+                    characterState.completedQuests.push(roomQuest, encounterQuest);
+                    updateCurrency(finalRoomRewards);
+                    updateCurrency(finalEncounterRewards);
+                    
+                    // Add to completed books set and update counter if it's a new book
+                    // Both room and encounter use the same book, so only count once
+                    if (isNewBook) {
+                        completedBooksSet.add(bookName);
+                        saveCompletedBooksSet();
+                        
+                        const booksCompleted = document.getElementById('books-completed-month');
+                        if (booksCompleted) {
+                            const currentBooks = parseInt(booksCompleted.value, 10) || 0;
+                            booksCompleted.value = currentBooks + 1;
+                        }
+                    }
+                    
+                    ui.renderCompletedQuests();
+                    ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                }
                 saveState(form);
                 resetQuestForm();
                 return; // Exit after handling dungeon
@@ -398,15 +546,39 @@ export function initializeCharacterSheet() {
             const rewards = getQuestRewards(type, prompt);
             
             // For dropdowns, the prompt is already the full text. For standard, it's just the input value.
-            const questData = { month, year, type, prompt, book, notes, rewards };
+            const questData = { month, year, type, prompt, book, notes, rewards, buffs: selectedBuffs };
             // Add new quest
             const status = document.getElementById('new-quest-status').value;
             if (status === 'active') {
                 characterState.activeAssignments.push(questData); 
                 ui.renderActiveAssignments();
             } else if (status === 'completed') {
+                // Check if this is a new book for monthly tracking
+                const bookName = book ? book.trim() : '';
+                const isNewBook = bookName && !completedBooksSet.has(bookName);
+                
+                // Calculate modified rewards if buffs are applied
+                let finalRewards = rewards;
+                if (selectedBuffs.length > 0) {
+                    finalRewards = calculateModifiedRewards(rewards, selectedBuffs);
+                    questData.rewards = finalRewards;
+                }
+                
                 characterState.completedQuests.push(questData);
-                updateCurrency(rewards);
+                updateCurrency(finalRewards);
+                
+                // Add to completed books set and update counter if it's a new book
+                if (isNewBook) {
+                    completedBooksSet.add(bookName);
+                    saveCompletedBooksSet();
+                    
+                    const booksCompleted = document.getElementById('books-completed-month');
+                    if (booksCompleted) {
+                        const currentBooks = parseInt(booksCompleted.value, 10) || 0;
+                        booksCompleted.value = currentBooks + 1;
+                    }
+                }
+                
                 ui.renderCompletedQuests();
                 ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             }
@@ -459,6 +631,51 @@ export function initializeCharacterSheet() {
             resetCurseForm();
         }
     });
+
+    // --- TEMPORARY BUFFS FUNCTIONALITY ---
+    const tempBuffNameInput = document.getElementById('temp-buff-name');
+    const tempBuffDescInput = document.getElementById('temp-buff-description');
+    const tempBuffDurationSelect = document.getElementById('temp-buff-duration');
+    const addTempBuffButton = document.getElementById('add-temp-buff-button');
+
+    // Add custom buff
+    if (addTempBuffButton) {
+        addTempBuffButton.addEventListener('click', () => {
+            const name = tempBuffNameInput.value.trim();
+            const description = tempBuffDescInput.value.trim();
+            const duration = tempBuffDurationSelect.value;
+
+            if (!name || !description) {
+                alert('Please enter both a name and description for the buff.');
+                return;
+            }
+
+            // Calculate initial monthsRemaining based on duration
+            let monthsRemaining = 0;
+            if (duration === 'two-months') {
+                monthsRemaining = 2;
+            } else if (duration === 'until-end-month') {
+                monthsRemaining = 1;
+            }
+
+            characterState.temporaryBuffs.push({
+                name,
+                description,
+                duration,
+                monthsRemaining,
+                status: 'active'
+            });
+
+            // Clear inputs
+            tempBuffNameInput.value = '';
+            tempBuffDescInput.value = '';
+            tempBuffDurationSelect.value = 'two-months';
+
+            ui.renderTemporaryBuffs();
+            ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+            saveState(form);
+        });
+    }
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
@@ -559,6 +776,7 @@ export function initializeCharacterSheet() {
             if (equippedCountForType < slotLimits[itemToEquip.type]) {
                 characterState.equippedItems.push(characterState.inventoryItems.splice(index, 1)[0]);
                 renderLoadout();
+                ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
                 saveState(form);
             } else {
                 alert(`No empty ${itemToEquip.type} slots available!`);
@@ -566,6 +784,7 @@ export function initializeCharacterSheet() {
         } else if (target.classList.contains('unequip-btn')) {
             characterState.inventoryItems.push(characterState.equippedItems.splice(index, 1)[0]);
             renderLoadout();
+            ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             saveState(form);
         } else if (target.classList.contains('delete-item-btn')) {
             if (confirm(`Are you sure you want to permanently delete ${characterState.inventoryItems[index].name}?`)) {
@@ -580,16 +799,25 @@ export function initializeCharacterSheet() {
             const bookName = questToMove.book ? questToMove.book.trim() : '';
             const isNewBook = bookName && !completedBooksSet.has(bookName);
             
+            // Calculate modified rewards based on applied buffs/items
+            let finalRewards = questToMove.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] };
+            if (questToMove.buffs && questToMove.buffs.length > 0) {
+                finalRewards = calculateModifiedRewards(questToMove.rewards, questToMove.buffs);
+                // Store the modified rewards back in the quest
+                questToMove.rewards = finalRewards;
+            }
+            
             characterState.completedQuests.push(questToMove);
             
             // Add to completed books set if it's a new book
             if (isNewBook) {
                 completedBooksSet.add(bookName);
+                saveCompletedBooksSet(); // Save the updated set
             }
             
-            // Update currency when completing a quest
-            if (questToMove.rewards) {
-                updateCurrency(questToMove.rewards);
+            // Update currency when completing a quest (using final modified rewards)
+            if (finalRewards) {
+                updateCurrency(finalRewards);
                 ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             }
             
@@ -631,6 +859,14 @@ export function initializeCharacterSheet() {
             document.getElementById('new-quest-prompt').value = quest.prompt;
             document.getElementById('new-quest-book').value = quest.book;
             document.getElementById('new-quest-notes').value = quest.notes;
+            
+            // Populate buffs selection
+            const buffsSelect = document.getElementById('quest-buffs-select');
+            if (buffsSelect && quest.buffs) {
+                Array.from(buffsSelect.options).forEach(option => {
+                    option.selected = quest.buffs.includes(option.value);
+                });
+            }
 
             // Trigger change to show correct prompt containers
             questTypeSelect.dispatchEvent(new Event('change'));
@@ -709,6 +945,22 @@ export function initializeCharacterSheet() {
                     saveState(form);
                 }
             }
+        } else if (target.classList.contains('mark-buff-used-btn')) {
+            const buffIndex = parseInt(target.dataset.index, 10);
+            if (characterState.temporaryBuffs[buffIndex]) {
+                characterState.temporaryBuffs[buffIndex].status = 'used';
+                ui.renderTemporaryBuffs();
+                ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                saveState(form);
+            }
+        } else if (target.classList.contains('remove-buff-btn')) {
+            const buffIndex = parseInt(target.dataset.index, 10);
+            if (confirm('Are you sure you want to remove this buff?')) {
+                characterState.temporaryBuffs.splice(buffIndex, 1);
+                ui.renderTemporaryBuffs();
+                ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                saveState(form);
+            }
         }
     }); // End of form event listener
 
@@ -770,11 +1022,61 @@ export function initializeCharacterSheet() {
                 booksCompletedInput.value = 0;
             }
             
+            // Calculate and add journal entries paper scraps (5 Paper Scraps per entry)
+            const journalEntriesInput = document.getElementById('journal-entries-completed');
+            if (journalEntriesInput) {
+                const journalEntries = parseInt(journalEntriesInput.value, 10) || 0;
+                const journalPaperScraps = journalEntries * 5;
+                
+                if (journalPaperScraps > 0) {
+                    const paperScrapsInput = document.getElementById('paperScraps');
+                    if (paperScrapsInput) {
+                        const currentPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+                        paperScrapsInput.value = currentPaperScraps + journalPaperScraps;
+                    }
+                }
+                
+                // Reset journal entries counter to 0
+                journalEntriesInput.value = 0;
+            }
+            
             // Clear the completed books set for the new month
             completedBooksSet.clear();
+            saveCompletedBooksSet(); // Save the cleared set
+            
+            // Process temporary buffs - decrement monthsRemaining and remove expired
+            if (characterState.temporaryBuffs) {
+                characterState.temporaryBuffs = characterState.temporaryBuffs.filter(buff => {
+                    // Remove one-time buffs that were used
+                    if (buff.duration === 'one-time' && buff.status === 'used') {
+                        return false;
+                    }
+                    
+                    // Remove end-of-month buffs
+                    if (buff.duration === 'until-end-month') {
+                        return false;
+                    }
+                    
+                    // Decrement two-month buffs
+                    if (buff.duration === 'two-months' && buff.monthsRemaining > 0) {
+                        buff.monthsRemaining--;
+                        // Remove if no months remaining
+                        if (buff.monthsRemaining === 0) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                });
+                
+                // Increment buff month counter
+                characterState.buffMonthCounter = (characterState.buffMonthCounter || 0) + 1;
+            }
             
             // Re-render the atmospheric buffs table to show 0 days used
             ui.renderAtmosphericBuffs(librarySanctumSelect);
+            ui.renderTemporaryBuffs();
+            ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             saveState(form);
         });
     }

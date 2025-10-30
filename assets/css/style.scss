@@ -725,6 +725,42 @@ input:checked + .slider:before {
     background-color: #cca352;
 }
 
+/* Temporary Buff Styling */
+.add-temp-buff-form button {
+    background-color: #b89f62;
+    color: #2a231d;
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.add-temp-buff-form button:hover {
+    background-color: #cca352;
+}
+
+.mark-buff-used-btn,
+.remove-buff-btn {
+    background-color: #b89f62;
+    color: #2a231d;
+    border: none;
+    padding: 8px 16px;
+    font-family: 'Lora', serif;
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    margin-right: 5px;
+}
+
+.mark-buff-used-btn:hover,
+.remove-buff-btn:hover {
+    background-color: #cca352;
+}
+
 .item-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

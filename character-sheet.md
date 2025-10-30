@@ -142,11 +142,50 @@ title: Keeper's Character Sheet
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
 
-        <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-row" style="margin-bottom: 20px; display: flex; gap: 20px;">
             <label for="books-completed-month" style="display: flex; align-items: center; gap: 10px;">
                 <strong>📚 Books Completed This Month:</strong>
                 <input type="number" id="books-completed-month" value="0" min="0" style="width: 80px;" />
             </label>
+            <label for="journal-entries-completed" style="display: flex; align-items: center; gap: 10px;">
+                <strong>📝 Journal Entries Completed:</strong>
+                <input type="number" id="journal-entries-completed" value="0" min="0" style="width: 80px;" />
+            </label>
+        </div>
+
+        <div id="temporary-buffs-container">
+            <h3>✨ Active Temporary Buffs</h3>
+            <p class="description">Temporary buffs are automatically added when earned from side quests and dungeon rewards. Buffs last for the remainder of the current month and the next month unless otherwise specified. One-time buffs are consumed when used.</p>
+            
+            <div class="add-temp-buff-form">
+                <h4>Add Custom Buff (Optional)</h4>
+                <div class="form-row">
+                    <input type="text" id="temp-buff-name" placeholder="Buff Name">
+                    <input type="text" id="temp-buff-description" placeholder="Buff Effect Description">
+                    <select id="temp-buff-duration">
+                        <option value="two-months">Two Months (Current + Next)</option>
+                        <option value="one-time">One-Time Use</option>
+                        <option value="until-end-month">Until End of Month</option>
+                    </select>
+                    <button type="button" id="add-temp-buff-button">Add Custom Buff</button>
+                </div>
+            </div>
+
+            <div id="active-temp-buffs-list">
+                <table class="tracker-table">
+                    <thead>
+                        <tr>
+                            <th>Buff Name</th>
+                            <th>Effect</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th class="no-print">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-temp-buffs-body">
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="atmospheric-buffs-container">
@@ -208,6 +247,12 @@ title: Keeper's Character Sheet
                 <input type="text" id="new-quest-notes" placeholder="Notes (optional)">
             </div>
             <div class="form-row">
+                <label for="quest-buffs-select" style="display: inline-block; margin-right: 10px;"><strong>Applicable Buffs & Items:</strong></label>
+                <select id="quest-buffs-select" multiple style="width: 100%; min-height: 60px;">
+                </select>
+                <small style="display: block; margin-top: 5px;">Hold Ctrl/Cmd to select multiple buffs/items. Shows active temp buffs and equipped items.</small>
+            </div>
+            <div class="form-row">
                 <button type="button" id="add-quest-button">Add Quest</button>
                 <button type="button" id="cancel-edit-quest-button" style="display: none;">Cancel</button>
             </div>
@@ -224,6 +269,7 @@ title: Keeper's Character Sheet
                         <th class="col-prompt">Prompt</th>
                         <th class="col-book-title">Book Title</th>
                         <th colspan="4" class="col-rewards-header">Rewards</th>
+                        <th class="col-buffs">Buffs/Items</th>
                         <th class="col-notes">Notes</th>
                         <th class="col-action no-print">Action</th>
                     </tr>
@@ -233,7 +279,7 @@ title: Keeper's Character Sheet
                         <th class="col-paper-scraps">📄</th>
                         <th class="col-ink-drops">💧</th>
                         <th class="col-items">Items</th>
-                        <th colspan="2"></th>
+                        <th colspan="3"></th>
                     </tr>
                 </thead>
                 <tbody id="active-assignments-body">
@@ -252,6 +298,7 @@ title: Keeper's Character Sheet
                         <th class="col-prompt">Prompt</th>
                         <th class="col-book-title">Book Title</th>
                         <th colspan="4" class="col-rewards-header">Rewards</th>
+                        <th class="col-buffs">Buffs/Items</th>
                         <th class="col-notes">Notes</th>
                         <th class="col-action no-print">Action</th>
                     </tr>
@@ -261,7 +308,7 @@ title: Keeper's Character Sheet
                         <th class="col-paper-scraps">📄</th>
                         <th class="col-ink-drops">💧</th>
                         <th class="col-items">Items</th>
-                        <th colspan="2"></th>
+                        <th colspan="3"></th>
                     </tr>
                 </thead>
                 <tbody id="completed-quests-body">
@@ -280,6 +327,7 @@ title: Keeper's Character Sheet
                         <th class="col-prompt">Prompt</th>
                         <th class="col-book-title">Book Title</th>
                         <th colspan="4" class="col-rewards-header">Rewards</th>
+                        <th class="col-buffs">Buffs/Items</th>
                         <th class="col-notes">Notes</th>
                         <th class="col-action no-print">Action</th>
                     </tr>
@@ -289,7 +337,7 @@ title: Keeper's Character Sheet
                         <th class="col-paper-scraps">📄</th>
                         <th class="col-ink-drops">💧</th>
                         <th class="col-items">Items</th>
-                        <th colspan="2"></th>
+                        <th colspan="3"></th>
                     </tr>
                 </thead>
                 <tbody id="discarded-quests-body">

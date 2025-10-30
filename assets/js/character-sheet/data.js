@@ -12,26 +12,108 @@ export const permanentBonuses = {
 };
 
 export const allItems = {
-    "Long Read Focus": { type: "Non-Wearable", img: "assets/images/rewards/tome-of-potential.png", bonus: "Temp buff: +2 Ink Drops per 100 pages over 300." },
-    "Bloodline Affinity": { type: "Non-Wearable", img: "assets/images/rewards/cloak-of-the-story-weaver.png", bonus: "Temp buff: +15 Ink Drops for your next book in a series." },
-    "Gilded Painting": { type: "Non-Wearable", img: "assets/images/rewards/tome-of-potential.png", bonus: "Temp buff: +1 Ink Drop when reading in an ornate location." },
-    "Librarian's Compass": { type: "Wearable", img: "assets/images/rewards/librarians-compass.png", bonus: "Earn a +20 Ink Drop bonus for any book by a new-to-you author." },
-    "Amulet of Duality": { type: "Wearable", img: "assets/images/rewards/amulet-of-duality.png", bonus: "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators." },
-    "Scatter Brain Scarab": { type: "Wearable", img: "assets/images/rewards/scatter-brain-scarab.png", bonus: "When equipped, gain a x3 Ink Drop bonus for reading three books at the same time." },
-    "Cloak of the Story-Weaver": { type: "Wearable", img: "assets/images/rewards/cloak-of-the-story-weaver.png", bonus: "Earn a permanent +10 Ink Drop bonus for books that are part of a series." },
-    "The Bookwyrm's Scale": { type: "Wearable", img: "assets/images/rewards/bookwyrms-scale.png", bonus: "For every book over 500 pages, gain a +10 Ink Drop bonus." },
-    "Key of the Archive": { type: "Non-Wearable", img: "assets/images/rewards/key-of-the-archive.png", bonus: "Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively." },
-    "Tome of Potential": { type: "Non-Wearable", img: "assets/images/rewards/tome-of-potential.png", bonus: "Earn a x3 Ink Drop bonus for books over 400 pages." },
-    "Librarian's Quill": { type: "Non-Wearable", img: "assets/images/rewards/librarians-quill.png", bonus: "Earn a permanent +2 Paper Scraps bonus for every book you journal about after finishing." },
-    "Chalice of Restoration": { type: "Non-Wearable", img: "assets/images/rewards/chalice-of-restoration.png", bonus: "Once per month, you may use this item to remove a Worn Page penalty." },
-    "Lantern of Foresight": { type: "Non-Wearable", img: "assets/images/rewards/lantern-of-foresight.png", bonus: "Once per month, you may re-roll a prompt or a die roll to get a new result, and you must keep the new result." },
-    "The Scepter of Knowledge": { type: "Non-Wearable", img: "assets/images/rewards/scepter-of-knowledge.png", bonus: "Once per month, you may switch the genre of any quest you roll to Non-Fiction." },
-    "Celestial Koi Fish": { type: "Familiar", img: "assets/images/rewards/celestial-koi-fish.png", bonus: "Once per month, you may use this familiar's insight to switch a genre-based quest (d6) to its opposing genre." },
-    "Tome-Bound Cat": { type: "Familiar", img: "assets/images/rewards/tome-bound-cat.png", bonus: "When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect." },
-    "Pocket Dragon": { type: "Familiar", img: "assets/images/rewards/pocket-dragon.png", bonus: "Earn a +20 Ink Drop bonus for books in a fantasy series." },
-    "Garden Gnome": { type: "Familiar", img: "assets/images/rewards/garden-gnome.png", bonus: "Earn +1 Ink Drop on any day where you read outside in nature or in a plant filled room." },
-    "Mystical Moth": { type: "Familiar", img: "assets/images/rewards/mystical-moth.png", bonus: "Earn +1 Ink Drop on nights when you read by lamplight." },
-    "Page Sprite": { type: "Familiar", img: "assets/images/rewards/page-sprite.png", bonus: "Earn a x2 Ink Drop bonus on any book under 300 pages." }
+    "Librarian's Compass": { 
+        type: "Wearable", 
+        img: "assets/images/rewards/librarians-compass.png", 
+        bonus: "Earn a +20 Ink Drop bonus for any book by a new-to-you author.",
+        rewardModifier: { inkDrops: 20 }
+    },
+    "Amulet of Duality": { 
+        type: "Wearable", 
+        img: "assets/images/rewards/amulet-of-duality.png", 
+        bonus: "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators.",
+        rewardModifier: { inkDrops: 15 }
+    },
+    "Scatter Brain Scarab": { 
+        type: "Wearable", 
+        img: "assets/images/rewards/scatter-brain-scarab.png", 
+        bonus: "When equipped, gain a x3 Ink Drop bonus for reading three books at the same time.",
+        rewardModifier: { inkDropsMultiplier: 3 }
+    },
+    "Cloak of the Story-Weaver": { 
+        type: "Wearable", 
+        img: "assets/images/rewards/cloak-of-the-story-weaver.png", 
+        bonus: "Earn a permanent +10 Ink Drop bonus for books that are part of a series.",
+        rewardModifier: { inkDrops: 10 }
+    },
+    "The Bookwyrm's Scale": { 
+        type: "Wearable", 
+        img: "assets/images/rewards/bookwyrms-scale.png", 
+        bonus: "For every book over 500 pages, gain a +10 Ink Drop bonus.",
+        rewardModifier: { inkDrops: 10 }
+    },
+    "Key of the Archive": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/key-of-the-archive.png", 
+        bonus: "Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively.",
+        rewardModifier: { inkDrops: 15 }
+    },
+    "Tome of Potential": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/tome-of-potential.png", 
+        bonus: "Earn a x3 Ink Drop bonus for books over 400 pages.",
+        rewardModifier: { inkDropsMultiplier: 3 }
+    },
+    "Librarian's Quill": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/librarians-quill.png", 
+        bonus: "Earn a permanent +2 Paper Scraps bonus for every book you journal about after finishing.",
+        rewardModifier: { paperScraps: 2 }
+    },
+    "Chalice of Restoration": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/chalice-of-restoration.png", 
+        bonus: "Once per month, you may use this item to remove a Worn Page penalty.",
+        rewardModifier: {} // Utility item, no direct reward modifier
+    },
+    "Lantern of Foresight": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/lantern-of-foresight.png", 
+        bonus: "Once per month, you may re-roll a prompt or a die roll to get a new result, and you must keep the new result.",
+        rewardModifier: {} // Utility item, no direct reward modifier
+    },
+    "The Scepter of Knowledge": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/scepter-of-knowledge.png", 
+        bonus: "Once per month, you may switch the genre of any quest you roll to Non-Fiction.",
+        rewardModifier: {} // Utility item, no direct reward modifier
+    },
+    "Celestial Koi Fish": { 
+        type: "Familiar", 
+        img: "assets/images/rewards/celestial-koi-fish.png", 
+        bonus: "Once per month, you may use this familiar's insight to switch a genre-based quest (d6) to its opposing genre.",
+        rewardModifier: {} // Utility item, no direct reward modifier
+    },
+    "Tome-Bound Cat": { 
+        type: "Familiar", 
+        img: "assets/images/rewards/tome-bound-cat.png", 
+        bonus: "When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect.",
+        rewardModifier: {} // Applied to atmospheric buffs, not quests
+    },
+    "Pocket Dragon": { 
+        type: "Familiar", 
+        img: "assets/images/rewards/pocket-dragon.png", 
+        bonus: "Earn a +20 Ink Drop bonus for books in a fantasy series.",
+        rewardModifier: { inkDrops: 20 }
+    },
+    "Garden Gnome": { 
+        type: "Familiar", 
+        img: "assets/images/rewards/garden-gnome.png", 
+        bonus: "Earn +1 Ink Drop on any day where you read outside in nature or in a plant filled room.",
+        rewardModifier: { inkDrops: 1 }
+    },
+    "Mystical Moth": { 
+        type: "Familiar", 
+        img: "assets/images/rewards/mystical-moth.png", 
+        bonus: "Earn +1 Ink Drop on nights when you read by lamplight.",
+        rewardModifier: { inkDrops: 1 }
+    },
+    "Page Sprite": { 
+        type: "Familiar", 
+        img: "assets/images/rewards/page-sprite.png", 
+        bonus: "Earn a x2 Ink Drop bonus on any book under 300 pages.",
+        rewardModifier: { inkDropsMultiplier: 2 }
+    }
 };
 
 export const schoolBenefits = {
@@ -621,6 +703,28 @@ export const curseTableDetailed = [
         description: "The Shroud claws hungrily at your stack. You must take on one additional quest for your monthly pool."
     }
 ];
+
+// Temporary buffs from side quests and dungeon rewards
+export const temporaryBuffsFromRewards = {
+    "Long Read Focus": {
+        description: "+2 Ink Drops per 100 pages over 300",
+        duration: "one-time",
+        source: "Side Quest: The Arcane Grimoire",
+        rewardModifier: { inkDrops: 2 } // Per 100 pages over 300 - calculated manually
+    },
+    "Bloodline Affinity": {
+        description: "+15 Ink Drops for your next book in a series",
+        duration: "one-time",
+        source: "Side Quest: The Blood Fury Tattoo",
+        rewardModifier: { inkDrops: 15 }
+    },
+    "Gilded Painting": {
+        description: "+1 Ink Drop when reading in an ornate location",
+        duration: "two-months",
+        source: "Dungeon: The Grand Gallery",
+        rewardModifier: { inkDrops: 1 }
+    }
+};
 
 // Backward compatible format for character sheet
 export const curseTable = {

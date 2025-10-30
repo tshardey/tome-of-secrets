@@ -7,7 +7,9 @@ export let characterState = {
     discardedQuests: [],
     atmosphericBuffs: {},
     activeCurses: [],
-    completedCurses: []
+    completedCurses: [],
+    temporaryBuffs: [], // { name, description, duration, monthsRemaining, status: 'active'/'used' }
+    buffMonthCounter: 0 // Increments each end of month to track buff expiration
 };
 
 function getQuestRewardsLegacy(type, prompt, isEncounter = false) {
@@ -54,6 +56,8 @@ export function loadState(form) {
     characterState.atmosphericBuffs = JSON.parse(localStorage.getItem('atmosphericBuffs')) || {};
     characterState.activeCurses = JSON.parse(localStorage.getItem('activeCurses')) || [];
     characterState.completedCurses = JSON.parse(localStorage.getItem('completedCurses')) || [];
+    characterState.temporaryBuffs = JSON.parse(localStorage.getItem('temporaryBuffs')) || [];
+    characterState.buffMonthCounter = JSON.parse(localStorage.getItem('buffMonthCounter')) || 0;
 }
 
 export function saveState(form) {
