@@ -456,6 +456,23 @@ export const dungeonCompletionRewards = {
     "10": { name: "The Grand Key", reward: "You find a master key for a special, rare quest." }
 };
 
+// All available genres for selection
+export const allGenres = {
+    "Historical Fiction": "Read a book set in the past or with a historical figure as a character.",
+    "Fantasy": "Read a book with magical creatures, settings, or a non-human protagonist.",
+    "Romantasy": "Read a book with a magical system and/or a romantic plot.",
+    "Sci-Fi": "Read a book set in the future or one with a morally gray main character.",
+    "Thriller": "Read a book with a plot twist, deception, or hidden identity.",
+    "Classic": "Read a classic novel you have not yet read.",
+    "Literary Fiction": "Read a book that focuses on character development and literary merit.",
+    "Speculative Fiction": "Read a book that explores 'what if' scenarios across any genre.",
+    "Romance": "Read a book where the central plot revolves around a romantic relationship.",
+    "Memoirs/Biographies": "Read a book about someone's life story or personal experiences.",
+    "Non-Fiction": "Read a book that presents factual information or real-world topics.",
+    "Crime": "Read a book involving criminal activities, investigations, or mysteries."
+};
+
+// Default genre quests (for backward compatibility and initial setup)
 export const genreQuests = {
     "1": { genre: "Historical Fiction", description: "Read a book set in the past or with a historical figure as a character." },
     "2": { genre: "Fantasy", description: "Read a book with magical creatures, settings, or a non-human protagonist." },

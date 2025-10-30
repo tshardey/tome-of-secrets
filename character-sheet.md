@@ -53,6 +53,15 @@ title: Keeper's Character Sheet
         </ul>
     </div>
 
+
+    <div class="form-section">
+        <h2>📚 Selected Genres</h2>
+        <p class="description">Your selected genres for "Organize the Stacks" quests. <a href="{{ site.baseurl }}/quests.html">Change your selection here</a>.</p>
+        <div id="selected-genres-display" class="selected-genres-display">
+            <!-- Selected genres will be displayed here -->
+        </div>
+    </div>
+
     <div class="form-section">
     <h2>🔮 Abilities & Benefits</h2>
 
@@ -94,7 +103,7 @@ title: Keeper's Character Sheet
         </ul>
     </div>
 </div>
-    
+
 <div class="form-section">
     <h2>🎒 Keeper's Loadout & Inventory</h2>
 
@@ -162,7 +171,7 @@ title: Keeper's Character Sheet
                 </select>
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
-                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Genre Quest">♥ Genre Quest</option> </select>
+                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Organize the Stacks">♥ Organize the Stacks</option> </select>
                 <div id="standard-prompt-container" class="prompt-container">
                     <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
                 </div>

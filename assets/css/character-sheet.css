@@ -30,3 +30,184 @@
     background-color: #b89f62 !important;
     font-weight: bold !important;
 }
+
+/* Genre Selection Styling */
+.genre-selection-container {
+    margin: 20px 0;
+    padding: 20px;
+    border: 2px solid #8b7355;
+    border-radius: 8px;
+    background-color: rgba(139, 115, 85, 0.1);
+}
+
+/* Override for quests page to match character sheet styling */
+.genre-selection-container h3 {
+    color: #d4c4a8;
+    margin-bottom: 10px;
+}
+
+.genre-selection-container .description {
+    color: #b89f62;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.selected-genres-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.selected-genre-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: rgba(139, 115, 85, 0.2);
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+}
+
+.genre-name {
+    font-weight: bold;
+    color: #d4c4a8;
+}
+
+.remove-genre-btn {
+    background: #8b4513;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-genre-btn:hover {
+    background: #a0522d;
+}
+
+.genre-selection-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.genre-selection-controls select {
+    flex: 1;
+    max-width: 300px;
+    background-color: #2d2d2d;
+    color: #d4c4a8;
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4c4a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px;
+}
+
+.genre-selection-controls select:focus {
+    outline: none;
+    border-color: #b89f62;
+    box-shadow: 0 0 0 2px rgba(184, 159, 98, 0.2);
+}
+
+.genre-selection-controls select option {
+    background-color: #2d2d2d;
+    color: #d4c4a8;
+    padding: 8px;
+}
+
+.genre-selection-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.genre-selection-controls button:not(:disabled) {
+    background-color: #8b4513;
+    color: white;
+    border: 1px solid #8b7355;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.genre-selection-controls button:not(:disabled):hover {
+    background-color: #a0522d;
+}
+
+.no-genres, .no-quests {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+.custom-quests-table {
+    width: 100%;
+    margin-top: 15px;
+    border-collapse: collapse;
+}
+
+.custom-quests-table th,
+.custom-quests-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #8b7355;
+}
+
+.custom-quests-table th {
+    background-color: rgba(139, 115, 85, 0.2);
+    font-weight: bold;
+    color: #d4c4a8;
+}
+
+/* Selected Genres Display in Character Sheet */
+.selected-genres-display {
+    margin: 15px 0;
+}
+
+.selected-genres-list {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 10px 0;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.selected-genres-display .selected-genre-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: rgba(139, 115, 85, 0.15);
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.genre-number {
+    font-weight: bold;
+    color: #d4c4a8;
+    margin-right: 8px;
+    min-width: 20px;
+}
+
+.selected-genres-display .genre-name {
+    font-weight: bold;
+    color: #d4c4a8;
+}

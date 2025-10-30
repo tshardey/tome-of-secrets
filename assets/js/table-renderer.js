@@ -3,6 +3,7 @@ import {
     dungeonRooms, 
     dungeonCompletionRewards,
     genreQuests,
+    allGenres,
     atmosphericBuffs,
     sideQuestsDetailed,
     curseTableDetailed 
@@ -186,12 +187,14 @@ export function renderGenreQuestsTable() {
   </thead>
   <tbody>`;
 
-    for (let i = 1; i <= 6; i++) {
-        const quest = genreQuests[i.toString()];
+    // Show all available genres for reference
+    const genreList = Object.keys(allGenres);
+    for (let i = 0; i < genreList.length; i++) {
+        const genre = genreList[i];
         html += `
     <tr>
-      <td><strong>${i}</strong></td>
-      <td><strong>${quest.genre}:</strong> ${quest.description}</td>
+      <td><strong>${i + 1}</strong></td>
+      <td><strong>${genre}:</strong> ${allGenres[genre]}</td>
     </tr>`;
     }
 

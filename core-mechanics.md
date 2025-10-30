@@ -29,7 +29,7 @@ Once your pool is set, you will draw that many cards from a standard playing car
 ## The Card Draw
 Each card suit corresponds to a specific type of challenge or quest.
 
-* **Hearts ♥ (d6):** Roll a d6 for a Genre Quest.
+* **Hearts ♥ (d6):** Roll a d6 for an Organize the Stacks quest.
 * **Diamonds ♦ (d8):** Roll a d8 for an Atmospheric Buff.
 * **Clubs ♣ (d8):** Roll a d8 for a Side Quest.
 * **Spades ♠ (d12):** Roll a d12 for a Dungeon Crawl.
@@ -42,14 +42,14 @@ There are two primary currencies that define your progress, plus a third for cha
 * **XP (Experience Points):** Your XP is for character progression and leveling up.
 
     **Earn XP for:**
-    *  Completing a *Genre Quest* (+15 XP)
+    *  Completing an *Organize the Stacks* quest (+15 XP)
     *  Each book you complete in a *Dungeon Room* (base of 25 XP)
     *  Defeating monsters in a *Dungeon Room* 
 * **Ink Drops:** The primary currency for in-game rewards and essential for creating books.  Use them to purchase in-game items, buffs, and to help create new books.
 
     **Earn Ink Drops by:**
     *  Completing any book (base of 10 *Ink Drops*)
-    *  Completing a *Genre Quest* (+10 *Ink Drops*)
+    *  Completing an *Organize the Stacks* quest (+10 *Ink Drops*)
     *  Triggering *Atmospheric Buffs*
     *  Completing *Side Quests*
     *  Coming across *Friendly Creatures* in a *Dungeon Room*

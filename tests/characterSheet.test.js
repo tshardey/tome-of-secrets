@@ -480,6 +480,54 @@ describe('Character Sheet', () => {
       expect(activeAssignmentsBody.textContent).toContain("Librarian's Spirit");
     });
 
+    it('should handle Organize the Stacks quest type correctly', () => {
+      // Set up some genres in localStorage
+      const genres = ['Fantasy', 'Sci-Fi', 'Romance'];
+      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      
+      // Re-initialize to load the genres
+      initializeCharacterSheet();
+      
+      // Fill out the quest form
+      document.getElementById('quest-month').value = 'December';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Test Book';
+
+      // Select the Organize the Stacks quest type
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♥ Organize the Stacks';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      // Check that the genre quest dropdown is populated with custom genres
+      const genreQuestSelect = document.getElementById('genre-quest-select');
+      const options = Array.from(genreQuestSelect.options).map(option => option.textContent);
+      
+      expect(options).toContain('1: Fantasy');
+      expect(options).toContain('2: Sci-Fi');
+      expect(options).toContain('3: Romance');
+    });
+
+    it('should fall back to default genres when no custom genres are selected', () => {
+      // Clear localStorage to ensure no custom genres
+      localStorage.clear();
+      
+      // Re-initialize
+      initializeCharacterSheet();
+      
+      // Select the Organize the Stacks quest type
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♥ Organize the Stacks';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      // Check that the genre quest dropdown falls back to default genres
+      const genreQuestSelect = document.getElementById('genre-quest-select');
+      const options = Array.from(genreQuestSelect.options).map(option => option.textContent);
+      
+      expect(options).toContain('1: Historical Fiction');
+      expect(options).toContain('2: Fantasy');
+      expect(options).toContain('3: Romantasy');
+    });
+
     it('should add the correct dungeon encounter prompt based on the fight/befriend toggle', () => {
         // --- 1. Setup for Defeat (default) ---
         document.getElementById('quest-month').value = 'January';
@@ -584,6 +632,77 @@ describe('Character Sheet', () => {
         expect(encounterQuest.notes).toBe('Encounter notes added.'); // The notes are updated
         expect(encounterQuest.prompt).toBe(dungeonRooms['2'].encounters['Mysterious Nymph'].befriend); // Prompt should not change
         expect(roomQuest.notes).toBe(''); // Room quest notes should be untouched
+    });
+  });
+
+  describe('Selected Genres Display', () => {
+    it('should display placeholder text when no genres are selected', () => {
+      // Clear localStorage to ensure no genres are selected
+      localStorage.clear();
+      
+      // Re-initialize to load the empty state
+      initializeCharacterSheet();
+      
+      const display = document.getElementById('selected-genres-display');
+      expect(display.textContent).toContain('No genres selected yet');
+      expect(display.innerHTML).toContain('Choose your genres here');
+    });
+
+    it('should display selected genres from localStorage', () => {
+      // Set up some genres in localStorage
+      const genres = ['Fantasy', 'Sci-Fi', 'Romance', 'Mystery', 'Thriller', 'Classic'];
+      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      
+      // Re-initialize to load the genres
+      initializeCharacterSheet();
+      
+      const display = document.getElementById('selected-genres-display');
+      
+      // Should display all selected genres
+      genres.forEach(genre => {
+        expect(display.textContent).toContain(genre);
+      });
+      
+      // Should have numbered items
+      expect(display.textContent).toContain('1.');
+      expect(display.textContent).toContain('2.');
+      expect(display.textContent).toContain('3.');
+    });
+
+    it('should update when localStorage changes', () => {
+      // Start with no genres
+      localStorage.clear();
+      initializeCharacterSheet();
+      
+      let display = document.getElementById('selected-genres-display');
+      expect(display.textContent).toContain('No genres selected yet');
+      
+      // Add genres to localStorage
+      const genres = ['Fantasy', 'Sci-Fi'];
+      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      
+      // Re-initialize to pick up the changes
+      initializeCharacterSheet();
+      
+      display = document.getElementById('selected-genres-display');
+      expect(display.textContent).toContain('Fantasy');
+      expect(display.textContent).toContain('Sci-Fi');
+    });
+
+    it('should handle empty localStorage gracefully', () => {
+      localStorage.clear();
+      initializeCharacterSheet();
+      
+      const display = document.getElementById('selected-genres-display');
+      expect(display.textContent).toContain('No genres selected yet');
+    });
+
+    it('should handle invalid JSON in localStorage gracefully', () => {
+      localStorage.setItem('selectedGenres', 'invalid json');
+      initializeCharacterSheet();
+      
+      const display = document.getElementById('selected-genres-display');
+      expect(display.textContent).toContain('No genres selected yet');
     });
   });
 

@@ -105,15 +105,9 @@ export function initializeCharacterSheet() {
                 option.textContent = `${roomNumber}: ${data.dungeonRooms[roomNumber].challenge.split(':')[0]}`;
                 dungeonRoomSelect.appendChild(option);
             }
-        } else if (selectedType === '♥ Genre Quest') {
+        } else if (selectedType === '♥ Organize the Stacks') {
             genreContainer.style.display = 'flex';
-            genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
-            for (const key in data.genreQuests) {
-                const option = document.createElement('option');
-                option.value = data.genreQuests[key];
-                option.textContent = `${key}: ${data.genreQuests[key].split(':')[0]}`;
-                genreQuestSelect.appendChild(option);
-            }
+            updateGenreQuestDropdown();
         } else if (selectedType === '♣ Side Quest') {
             sideContainer.style.display = 'flex';
             sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
@@ -227,7 +221,7 @@ export function initializeCharacterSheet() {
                     prompt = data.dungeonRooms[roomNumber].challenge;
                 }
             }
-            else if (type === '♥ Genre Quest') {
+            else if (type === '♥ Organize the Stacks') {
                 prompt = genreQuestSelect.value;
             } else if (type === '♣ Side Quest') {
                 prompt = sideQuestSelect.value;
@@ -276,7 +270,7 @@ export function initializeCharacterSheet() {
                 return; // Exit after handling dungeon
             }
 
-            if (type === '♥ Genre Quest') {
+            if (type === '♥ Organize the Stacks') {
                 prompt = genreQuestSelect.value;
             } else if (type === '♣ Side Quest') {
                 prompt = sideQuestSelect.value;
@@ -349,6 +343,69 @@ export function initializeCharacterSheet() {
             resetCurseForm();
         }
     });
+
+    // --- GENRE SELECTION FUNCTIONALITY ---
+    function initializeGenreSelection() {
+        // Load selected genres from localStorage (set by quests page)
+        let selectedGenres = [];
+        try {
+            selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
+        } catch (e) {
+            selectedGenres = [];
+        }
+        characterState.selectedGenres = selectedGenres;
+        
+        updateGenreQuestDropdown();
+        displaySelectedGenres();
+    }
+
+    function displaySelectedGenres() {
+        const display = document.getElementById('selected-genres-display');
+        if (!display) return;
+        
+        if (characterState.selectedGenres.length === 0) {
+            display.innerHTML = '<p class="no-genres">No genres selected yet. <a href="{{ site.baseurl }}/quests.html">Choose your genres here</a>.</p>';
+            return;
+        }
+        
+        let html = '<div class="selected-genres-list">';
+        characterState.selectedGenres.forEach((genre, index) => {
+            html += `
+                <div class="selected-genre-item">
+                    <span class="genre-number">${index + 1}.</span>
+                    <span class="genre-name">${genre}</span>
+                </div>
+            `;
+        });
+        html += '</div>';
+        display.innerHTML = html;
+    }
+
+
+    function updateGenreQuestDropdown() {
+        if (!genreQuestSelect) return;
+        
+        genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
+        
+        if (characterState.selectedGenres.length > 0) {
+            characterState.selectedGenres.forEach((genre, index) => {
+                const option = document.createElement('option');
+                option.value = `${genre}: ${data.allGenres[genre]}`;
+                option.textContent = `${index + 1}: ${genre}`;
+                genreQuestSelect.appendChild(option);
+            });
+        } else {
+            // Fallback to default genres
+            for (const key in data.genreQuests) {
+                const option = document.createElement('option');
+                option.value = `${data.genreQuests[key].genre}: ${data.genreQuests[key].description}`;
+                option.textContent = `${key}: ${data.genreQuests[key].genre}`;
+                genreQuestSelect.appendChild(option);
+            }
+        }
+    }
+
+
 
     form.addEventListener('submit', (e) => { e.preventDefault(); saveState(form); alert('Character sheet saved!'); });
     printButton.addEventListener('click', () => window.print());
@@ -464,7 +521,7 @@ export function initializeCharacterSheet() {
                         dungeonEncounterSelect.dispatchEvent(new Event('change'));
                     }
                 }
-            } else if (quest.type === '♥ Genre Quest') {
+            } else if (quest.type === '♥ Organize the Stacks') {
                 genreQuestSelect.value = quest.prompt;
             } else if (quest.type === '♣ Side Quest') {
                 sideQuestSelect.value = quest.prompt;
@@ -537,6 +594,7 @@ export function initializeCharacterSheet() {
     // Initial Load
     loadState(form);
     ui.renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    initializeGenreSelection();
 }
 
 // Run the initialization when the DOM is fully loaded
