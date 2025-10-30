@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms, curseTable } from '../assets/js/character-sheet/data.js';
+import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms, curseTable, genreQuests } from '../assets/js/character-sheet/data.js';
 
 // We will create the main character sheet script in a later step.
 // For now, we can import it, assuming it will exist at this path.
@@ -403,6 +403,42 @@ describe('Character Sheet', () => {
       // And the row should be highlighted
       expect(soundscapeRow.classList.contains('highlight')).toBe(true);
     });
+
+    it('should process end of month correctly', () => {
+      // Need to manually add atmospheric buff data to characterState
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      characterState.atmosphericBuffs = {
+        'The Candlight Study': { daysUsed: 10 }
+      };
+
+      // Set up books completed counter
+      const booksCompletedInput = document.getElementById('books-completed-month');
+      booksCompletedInput.value = '3'; // 3 unique books
+
+      // Get initial values
+      const xpInput = document.getElementById('xp-current');
+      const inkDropsInput = document.getElementById('inkDrops');
+      const initialXP = parseInt(xpInput.value, 10) || 0;
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+
+      // Click End of Month button
+      const endOfMonthButton = document.getElementById('end-of-month-button');
+      endOfMonthButton.click();
+
+      // Verify XP was added (15 XP per book = 45 XP)
+      const finalXP = parseInt(xpInput.value, 10) || 0;
+      expect(finalXP).toBe(initialXP + 45);
+
+      // Verify ink drops were added (10 days * 1 ink drop per day = 10 ink drops)
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      expect(finalInkDrops).toBe(initialInkDrops + 10);
+
+      // Verify books completed counter was reset
+      expect(parseInt(booksCompletedInput.value, 10)).toBe(0);
+
+      // Verify atmospheric buff days were reset
+      expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
+    });
   });
 
   describe('Monthly Tracker', () => {
@@ -454,6 +490,97 @@ describe('Character Sheet', () => {
       // Assert that the quest is now in the completed table and the active table is empty
       expect(document.getElementById('completed-quests-body').textContent).toContain('A Finished Story');
       expect(document.getElementById('active-assignments-body').innerHTML).toBe('');
+    });
+
+    it('should add rewards property to quests when created', () => {
+      // Add a Side Quest instead since genre quests require setup
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Test Book';
+
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♣ Side Quest';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      document.getElementById('side-quest-select').value = sideQuests['1'];
+      document.getElementById('add-quest-button').click();
+
+      // Check that the quest has rewards
+      const addedQuest = characterState.activeAssignments[0];
+      expect(addedQuest).toHaveProperty('rewards');
+      expect(addedQuest.rewards).toHaveProperty('xp');
+      expect(addedQuest.rewards).toHaveProperty('inkDrops');
+      expect(addedQuest.rewards).toHaveProperty('paperScraps');
+      expect(addedQuest.rewards).toHaveProperty('items');
+    });
+
+    it('should update currency when completing a quest', () => {
+      // Add a quest
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Test Book';
+
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♣ Side Quest';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      // Use side quest #7 which grants ink drops and paper scraps
+      document.getElementById('side-quest-select').value = sideQuests['7'];
+      document.getElementById('add-quest-button').click();
+
+      // Get initial currency values
+      const inkDropsInput = document.getElementById('inkDrops');
+      const paperScrapsInput = document.getElementById('paperScraps');
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+
+      // Complete the quest
+      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+
+      // Check that currency was updated
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+
+      expect(finalInkDrops).toBeGreaterThan(initialInkDrops);
+      expect(finalPaperScraps).toBeGreaterThan(initialPaperScraps);
+    });
+
+    it('should track unique books in completedBooksSet', () => {
+      // Add and complete a quest with a specific book
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Unique Book Title';
+
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♣ Side Quest';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      document.getElementById('side-quest-select').value = sideQuests['1'];
+      document.getElementById('add-quest-button').click();
+
+      // Complete the quest
+      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+
+      // Check books completed counter
+      const booksCompletedInput = document.getElementById('books-completed-month');
+      expect(parseInt(booksCompletedInput.value, 10)).toBe(1);
+
+      // Add another quest with the same book
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Unique Book Title';
+
+      questTypeSelect.value = '♣ Side Quest';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      document.getElementById('side-quest-select').value = sideQuests['2'];
+      document.getElementById('add-quest-button').click();
+
+      // Complete the second quest
+      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+
+      // Books completed should still be 1 (same book)
+      expect(parseInt(booksCompletedInput.value, 10)).toBe(1);
     });
 
     it('should add two quests for a dungeon crawl with an encounter', () => {

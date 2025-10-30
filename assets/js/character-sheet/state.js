@@ -10,6 +10,28 @@ export let characterState = {
     completedCurses: []
 };
 
+function getQuestRewardsLegacy(type, prompt, isEncounter = false) {
+    // Default reward for any quest completion
+    let rewards = { xp: 25, inkDrops: 10, paperScraps: 0, items: [] };
+
+    if (type === '♥ Organize the Stacks') {
+        rewards = { xp: 15, inkDrops: 10, paperScraps: 0, items: [] };
+    }
+    // Side quests and dungeon encounters will default to basic rewards for now
+    // They'll be calculated properly when edited or completed
+
+    return rewards;
+}
+
+function migrateOldQuests(quests) {
+    return quests.map(quest => {
+        if (!quest.rewards) {
+            quest.rewards = getQuestRewardsLegacy(quest.type, quest.prompt, quest.isEncounter);
+        }
+        return quest;
+    });
+}
+
 export function loadState(form) {
     const characterData = JSON.parse(localStorage.getItem('characterSheet'));
     if (characterData) {
@@ -17,9 +39,15 @@ export function loadState(form) {
             if (form.elements[key]) form.elements[key].value = characterData[key];
         }
     }
-    characterState.activeAssignments = JSON.parse(localStorage.getItem('activeAssignments')) || [];
-    characterState.completedQuests = JSON.parse(localStorage.getItem('completedQuests')) || [];
-    characterState.discardedQuests = JSON.parse(localStorage.getItem('discardedQuests')) || [];
+    const activeAssignments = JSON.parse(localStorage.getItem('activeAssignments')) || [];
+    const completedQuests = JSON.parse(localStorage.getItem('completedQuests')) || [];
+    const discardedQuests = JSON.parse(localStorage.getItem('discardedQuests')) || [];
+    
+    // Migrate old quests to include reward data
+    characterState.activeAssignments = migrateOldQuests(activeAssignments);
+    characterState.completedQuests = migrateOldQuests(completedQuests);
+    characterState.discardedQuests = migrateOldQuests(discardedQuests);
+    
     characterState.equippedItems = JSON.parse(localStorage.getItem('equippedItems')) || [];
     characterState.inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
     characterState.learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];

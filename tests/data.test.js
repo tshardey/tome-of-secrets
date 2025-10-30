@@ -1,4 +1,4 @@
-import { allItems, xpLevels, permanentBonuses, curseTable } from './../assets/js/character-sheet/data.js';
+import { allItems, xpLevels, permanentBonuses, curseTable, genreQuests, sideQuestsDetailed, dungeonRooms } from './../assets/js/character-sheet/data.js';
 
 describe('Game Data Integrity', () => {
 
@@ -38,5 +38,52 @@ describe('Game Data Integrity', () => {
         const requirements = Object.values(curseTable).map(curse => curse.requirement);
         const uniqueRequirements = [...new Set(requirements)];
         expect(requirements.length).toBe(uniqueRequirements.length);
+    });
+
+    test('curseTable should NOT have rewards property (completing removes penalty)', () => {
+        Object.values(curseTable).forEach(curse => {
+            // Curses should not have rewards - the reward is removing the penalty
+            expect(curse).not.toHaveProperty('rewards');
+            expect(curse).toHaveProperty('name');
+            expect(curse).toHaveProperty('requirement');
+            expect(curse).toHaveProperty('description');
+        });
+    });
+
+    test('genreQuests should have rewards property with correct structure', () => {
+        Object.values(genreQuests).forEach(quest => {
+            expect(quest).toHaveProperty('rewards');
+            expect(quest.rewards).toHaveProperty('xp');
+            expect(quest.rewards).toHaveProperty('inkDrops');
+            expect(quest.rewards).toHaveProperty('paperScraps');
+            expect(quest.rewards).toHaveProperty('items');
+            expect(Array.isArray(quest.rewards.items)).toBe(true);
+        });
+    });
+
+    test('sideQuestsDetailed should have rewards property with correct structure', () => {
+        Object.values(sideQuestsDetailed).forEach(quest => {
+            expect(quest).toHaveProperty('rewards');
+            expect(quest.rewards).toHaveProperty('xp');
+            expect(quest.rewards).toHaveProperty('inkDrops');
+            expect(quest.rewards).toHaveProperty('paperScraps');
+            expect(quest.rewards).toHaveProperty('items');
+            expect(Array.isArray(quest.rewards.items)).toBe(true);
+        });
+    });
+
+    test('dungeonRooms should have encountersDetailed with rewards', () => {
+        Object.values(dungeonRooms).forEach(room => {
+            if (room.encountersDetailed && room.encountersDetailed.length > 0) {
+                room.encountersDetailed.forEach(encounter => {
+                    expect(encounter).toHaveProperty('rewards');
+                    expect(encounter.rewards).toHaveProperty('xp');
+                    expect(encounter.rewards).toHaveProperty('inkDrops');
+                    expect(encounter.rewards).toHaveProperty('paperScraps');
+                    expect(encounter.rewards).toHaveProperty('items');
+                    expect(Array.isArray(encounter.rewards.items)).toBe(true);
+                });
+            }
+        });
     });
 });

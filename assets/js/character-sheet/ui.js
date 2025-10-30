@@ -152,11 +152,16 @@ export function renderActiveAssignments() {
     tbody.innerHTML = '';
     characterState.activeAssignments.forEach((quest, index) => {
         const row = tbody.insertRow();
+        const rewards = quest.rewards || {};
         row.innerHTML = `<td>${quest.month}</td>
                          <td>${quest.year}</td>
                          <td>${quest.type}</td>
                          <td>${quest.prompt}</td>
                          <td>${quest.book}</td>
+                         <td>${rewards.xp > 0 ? `+${rewards.xp}` : '-'}</td>
+                         <td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '-'}</td>
+                         <td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '-'}</td>
+                         <td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td>
                          <td>${quest.notes || ''}</td>
                          <td class="no-print action-cell"><button class="complete-quest-btn" data-index="${index}">Complete</button><button class="discard-quest-btn" data-index="${index}">Discard</button><button class="delete-btn" data-index="${index}" data-list="active">Delete</button></td>`;
         row.querySelector('.action-cell').prepend(createEditButton(index, 'activeAssignments'));
@@ -169,7 +174,8 @@ export function renderCompletedQuests() {
     tbody.innerHTML = '';
     characterState.completedQuests.forEach((quest, index) => {
         const row = tbody.insertRow();
-        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
+        const rewards = quest.rewards || {};
+        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
         row.querySelector('.action-cell').prepend(createEditButton(index, 'completedQuests'));
     });
     document.getElementById('completed-summary').innerText = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
@@ -180,7 +186,8 @@ export function renderDiscardedQuests() {
     tbody.innerHTML = '';
     characterState.discardedQuests.forEach((quest, index) => {
         const row = tbody.insertRow();
-        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
+        const rewards = quest.rewards || {};
+        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
         row.querySelector('.action-cell').prepend(createEditButton(index, 'discardedQuests'));
     });
     document.getElementById('discarded-summary').innerText = `Discarded Quests (${characterState.discardedQuests.length})`;

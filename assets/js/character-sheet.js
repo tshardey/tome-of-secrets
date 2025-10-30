@@ -2,6 +2,9 @@ import * as data from './character-sheet/data.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 
+// Track unique books completed for XP calculation
+let completedBooksSet = new Set();
+
 export function initializeCharacterSheet() {
     // --- FORM ELEMENTS ---
     const form = document.getElementById('character-sheet');
@@ -36,6 +39,111 @@ export function initializeCharacterSheet() {
     // --- STATE FOR EDITING ---
     let editingQuestInfo = null; // { list: 'activeAssignments', index: 0 }
     let editingCurseInfo = null; // { index: 0 }
+
+    // --- HELPER FUNCTIONS ---
+    // Initialize the completed books set from saved quests
+    function initializeCompletedBooksSet() {
+        completedBooksSet.clear();
+        characterState.completedQuests.forEach(quest => {
+            if (quest.book && quest.book.trim()) {
+                completedBooksSet.add(quest.book.trim());
+            }
+        });
+    }
+
+    function getQuestRewards(type, prompt, isEncounter = false, roomNumber = null, encounterName = null, dungeonAction = 'defeat') {
+        // Default reward - XP will be calculated monthly, only currency here
+        let rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
+
+        if (type === '♥ Organize the Stacks') {
+            rewards = { xp: 15, inkDrops: 10, paperScraps: 0, items: [] };
+        } else if (type === '♣ Side Quest') {
+            // Find matching side quest
+            for (const key in data.sideQuestsDetailed) {
+                const sideQuest = data.sideQuestsDetailed[key];
+                if (prompt.includes(sideQuest.prompt) || prompt.includes(sideQuest.name)) {
+                    rewards = sideQuest.rewards || rewards;
+                    break;
+                }
+            }
+        } else if (type === '♠ Dungeon Crawl') {
+            if (isEncounter && roomNumber && encounterName) {
+                // Find the encounter in encountersDetailed
+                const room = data.dungeonRooms[roomNumber];
+                if (room && room.encountersDetailed) {
+                    const encounter = room.encountersDetailed.find(e => e.name === encounterName);
+                    if (encounter && encounter.rewards) {
+                        // Use encounter rewards directly (Monsters grant XP immediately)
+                        rewards = { 
+                            xp: encounter.rewards.xp, 
+                            inkDrops: encounter.rewards.inkDrops, 
+                            paperScraps: encounter.rewards.paperScraps, 
+                            items: encounter.rewards.items 
+                        };
+                    } else {
+                        // Fallback based on encounter type
+                        if (encounter?.type === 'Monster') {
+                            rewards = { xp: 30, inkDrops: 0, paperScraps: 0, items: [] };
+                        } else if (encounter?.type === 'Friendly Creature') {
+                            rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
+                        } else if (encounter?.type === 'Familiar') {
+                            rewards = { xp: 0, inkDrops: 0, paperScraps: 5, items: [] };
+                        }
+                    }
+                }
+            } else if (roomNumber) {
+                // Room challenge completion - use roomRewards if available
+                const room = data.dungeonRooms[roomNumber];
+                if (room && room.roomRewards) {
+                    rewards = { 
+                        xp: room.roomRewards.xp, 
+                        inkDrops: room.roomRewards.inkDrops, 
+                        paperScraps: room.roomRewards.paperScraps, 
+                        items: room.roomRewards.items || [] 
+                    };
+                } else {
+                    // Fallback for rooms without roomRewards defined
+                    rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
+                }
+            } else {
+                // Default dungeon reward if no room specified
+                rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
+            }
+        }
+
+        return rewards;
+    }
+
+    function updateCurrency(rewards) {
+        if (!rewards) return;
+        const xpCurrent = document.getElementById('xp-current');
+        const inkDrops = document.getElementById('inkDrops');
+        const paperScraps = document.getElementById('paperScraps');
+        
+        if (xpCurrent && rewards.xp > 0) {
+            const currentXP = parseInt(xpCurrent.value, 10) || 0;
+            xpCurrent.value = currentXP + rewards.xp;
+        }
+        
+        if (inkDrops && rewards.inkDrops > 0) {
+            const currentInk = parseInt(inkDrops.value, 10) || 0;
+            inkDrops.value = currentInk + rewards.inkDrops;
+        }
+        
+        if (paperScraps && rewards.paperScraps > 0) {
+            const currentPaper = parseInt(paperScraps.value, 10) || 0;
+            paperScraps.value = currentPaper + rewards.paperScraps;
+        }
+
+        // Handle items
+        if (rewards.items && rewards.items.length > 0) {
+            rewards.items.forEach(itemName => {
+                if (data.allItems[itemName]) {
+                    characterState.inventoryItems.push({ name: itemName, ...data.allItems[itemName] });
+                }
+            });
+        }
+    }
 
     // --- EVENT LISTENERS ---
     levelInput.addEventListener('change', () => {
@@ -260,8 +368,11 @@ export function initializeCharacterSheet() {
                     encounterPrompt = (isBefriend && encounterData.befriend) ? encounterData.befriend : (encounterData.defeat || encounterData.befriend);
                 }
 
-                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false };
-                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true };
+                const roomRewards = getQuestRewards(type, roomData.challenge, false, roomNumber);
+                const encounterRewards = getQuestRewards(type, encounterPrompt, true, roomNumber, encounterName);
+                
+                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false, roomNumber, rewards: roomRewards };
+                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true, roomNumber, encounterName, rewards: encounterRewards };
 
                 characterState.activeAssignments.push(roomQuest, encounterQuest);
                 ui.renderActiveAssignments();
@@ -283,16 +394,21 @@ export function initializeCharacterSheet() {
                 return;
             }
 
+            // Calculate rewards
+            const rewards = getQuestRewards(type, prompt);
+            
             // For dropdowns, the prompt is already the full text. For standard, it's just the input value.
-            const questData = { month, year, type, prompt, book, notes };
+            const questData = { month, year, type, prompt, book, notes, rewards };
             // Add new quest
             const status = document.getElementById('new-quest-status').value;
             if (status === 'active') {
                 characterState.activeAssignments.push(questData); 
                 ui.renderActiveAssignments();
             } else if (status === 'completed') {
-                characterState.completedQuests.push(questData); 
+                characterState.completedQuests.push(questData);
+                updateCurrency(rewards);
                 ui.renderCompletedQuests();
+                ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             }
         }
 
@@ -459,7 +575,31 @@ export function initializeCharacterSheet() {
             }
         } else if (target.classList.contains('complete-quest-btn')) {
             const questToMove = characterState.activeAssignments.splice(index, 1)[0];
+            
+            // Check if this is a new book
+            const bookName = questToMove.book ? questToMove.book.trim() : '';
+            const isNewBook = bookName && !completedBooksSet.has(bookName);
+            
             characterState.completedQuests.push(questToMove);
+            
+            // Add to completed books set if it's a new book
+            if (isNewBook) {
+                completedBooksSet.add(bookName);
+            }
+            
+            // Update currency when completing a quest
+            if (questToMove.rewards) {
+                updateCurrency(questToMove.rewards);
+                ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+            }
+            
+            // Increment books completed counter only if this is a new book
+            const booksCompleted = document.getElementById('books-completed-month');
+            if (booksCompleted && isNewBook) {
+                const currentBooks = parseInt(booksCompleted.value, 10) || 0;
+                booksCompleted.value = currentBooks + 1;
+            }
+            
             ui.renderActiveAssignments();
             ui.renderCompletedQuests();
             saveState(form);
@@ -541,6 +681,9 @@ export function initializeCharacterSheet() {
         } else if (target.classList.contains('complete-curse-btn')) {
             const curseToMove = characterState.activeCurses.splice(index, 1)[0];
             characterState.completedCurses.push(curseToMove);
+            
+            // Completing a curse removes the penalty - no rewards are granted
+
             ui.renderActiveCurses();
             ui.renderCompletedCurses();
             saveState(form);
@@ -582,6 +725,60 @@ export function initializeCharacterSheet() {
         }
     });
 
+    // End of Month button - processes atmospheric buffs and book completion XP
+    const endOfMonthButton = document.getElementById('end-of-month-button');
+    if (endOfMonthButton) {
+        endOfMonthButton.addEventListener('click', () => {
+            // Process atmospheric buffs to ink drops
+            let totalInkDrops = 0;
+            const selectedSanctum = librarySanctumSelect.value;
+            const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+            
+            for (const buffName in characterState.atmosphericBuffs) {
+                const buff = characterState.atmosphericBuffs[buffName];
+                const isAssociated = associatedBuffs.includes(buffName);
+                const dailyValue = isAssociated ? 2 : 1;
+                const buffTotal = buff.daysUsed * dailyValue;
+                totalInkDrops += buffTotal;
+                
+                // Reset the days used
+                buff.daysUsed = 0;
+            }
+            
+            // Add atmospheric buff ink drops
+            const inkDropsInput = document.getElementById('inkDrops');
+            if (inkDropsInput && totalInkDrops > 0) {
+                const currentInk = parseInt(inkDropsInput.value, 10) || 0;
+                inkDropsInput.value = currentInk + totalInkDrops;
+            }
+            
+            // Calculate and add book completion XP (15 XP per unique book)
+            const booksCompletedInput = document.getElementById('books-completed-month');
+            if (booksCompletedInput) {
+                const booksCompleted = parseInt(booksCompletedInput.value, 10) || 0;
+                const bookCompletionXP = booksCompleted * 15;
+                
+                if (bookCompletionXP > 0) {
+                    const xpCurrent = document.getElementById('xp-current');
+                    if (xpCurrent) {
+                        const currentXP = parseInt(xpCurrent.value, 10) || 0;
+                        xpCurrent.value = currentXP + bookCompletionXP;
+                    }
+                }
+                
+                // Reset books completed counter to 0
+                booksCompletedInput.value = 0;
+            }
+            
+            // Clear the completed books set for the new month
+            completedBooksSet.clear();
+            
+            // Re-render the atmospheric buffs table to show 0 days used
+            ui.renderAtmosphericBuffs(librarySanctumSelect);
+            saveState(form);
+        });
+    }
+
     if(itemSelect) {
         for (const name in data.allItems) {
             const option = document.createElement('option');
@@ -593,6 +790,7 @@ export function initializeCharacterSheet() {
     
     // Initial Load
     loadState(form);
+    initializeCompletedBooksSet();
     ui.renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     initializeGenreSelection();
 }

@@ -71,9 +71,21 @@ export function renderDungeonRoomsTable() {
         <strong>${room.name}:</strong> ${room.description}
         <br><strong>Challenge:</strong> ${room.challenge}`;
         
-        if (room.reward) {
-            html += `
-        <br><strong>Reward:</strong> ${room.reward}`;
+        // Display room rewards
+        if (room.roomRewards) {
+            const rewards = [];
+            if (room.roomRewards.xp > 0) rewards.push(`+${room.roomRewards.xp} XP`);
+            if (room.roomRewards.inkDrops > 0) rewards.push(`+${room.roomRewards.inkDrops} Ink Drops`);
+            if (room.roomRewards.paperScraps > 0) rewards.push(`+${room.roomRewards.paperScraps} Paper Scraps`);
+            if (room.roomRewards.items && room.roomRewards.items.length > 0) {
+                room.roomRewards.items.forEach(item => rewards.push(item));
+            }
+            if (room.roomRewards.special) rewards.push(room.roomRewards.special);
+            
+            if (rewards.length > 0) {
+                html += `
+        <br><strong>Room Reward:</strong> ${rewards.join(', ')}`;
+            }
         }
         
         if (room.encountersDetailed && room.encountersDetailed.length > 0) {

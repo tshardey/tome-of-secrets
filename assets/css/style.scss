@@ -428,13 +428,40 @@ article th:first-child {
 }
 
 /* --- Column Widths for Tracker Tables --- */
-.tracker-table .col-month      { width: 8%; }
-.tracker-table .col-year       { width: 8%; }
-.tracker-table .col-quest-type { width: 12%; }
-.tracker-table .col-prompt     { width: 15%; }
-.tracker-table .col-book-title { width: 15%; }
-.tracker-table .col-notes      { width: 34%; }
-.tracker-table .col-action     { width: 8%; }
+.tracker-table .col-month      { width: 6%; }
+.tracker-table .col-year       { width: 6%; }
+.tracker-table .col-quest-type { width: 9%; }
+.tracker-table .col-prompt     { width: 17%; }
+.tracker-table .col-book-title { width: 13%; }
+.tracker-table .col-xp         { width: 6%; }
+.tracker-table .col-paper-scraps { width: 6%; }
+.tracker-table .col-ink-drops  { width: 6%; }
+.tracker-table .col-items      { width: 12%; }
+.tracker-table .col-notes      { width: 14%; }
+.tracker-table .col-action     { width: 5%; }
+
+/* Rewards subheader row styling */
+.tracker-table .rewards-subheader th {
+    font-size: 0.9em;
+    padding: 8px 5px;
+}
+
+/* Button styles for end of month */
+#end-of-month-button {
+    background-color: #b89f62; /* Muted gold */
+    color: #2a231d; /* Deep brown text */
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+#end-of-month-button:hover {
+    background-color: #cca352; /* Brighter gold on hover */
+}
 
 /* --- Column Widths for Atmospheric Buffs Table --- */
 #atmospheric-buffs-container .tracker-table {

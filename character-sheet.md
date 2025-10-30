@@ -142,6 +142,13 @@ title: Keeper's Character Sheet
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
 
+        <div class="form-row" style="margin-bottom: 20px;">
+            <label for="books-completed-month" style="display: flex; align-items: center; gap: 10px;">
+                <strong>📚 Books Completed This Month:</strong>
+                <input type="number" id="books-completed-month" value="0" min="0" style="width: 80px;" />
+            </label>
+        </div>
+
         <div id="atmospheric-buffs-container">
             <h3>♦️ Atmospheric Buffs</h3>
             <table class="tracker-table" style="width: 50%; margin-left: auto; margin-right: auto;">
@@ -157,6 +164,9 @@ title: Keeper's Character Sheet
                 <tbody id="atmospheric-buffs-body">
                 </tbody>
             </table>
+            <div class="form-row" style="margin-top: 10px;">
+                <button type="button" id="end-of-month-button" class="no-print">End of Month</button>
+            </div>
         </div>
 
         <div class="add-quest-form">
@@ -195,7 +205,7 @@ title: Keeper's Character Sheet
             </div>
             <div class="form-row">
                 <input type="text" id="new-quest-book" placeholder="Book Title">
-                <input type="text" id="new-quest-notes" placeholder="Notes / Reward Earned">
+                <input type="text" id="new-quest-notes" placeholder="Notes (optional)">
             </div>
             <div class="form-row">
                 <button type="button" id="add-quest-button">Add Quest</button>
@@ -213,12 +223,21 @@ title: Keeper's Character Sheet
                         <th class="col-quest-type">Quest Type</th>
                         <th class="col-prompt">Prompt</th>
                         <th class="col-book-title">Book Title</th>
-                        <th class="col-notes">Notes / Rewards</th>
+                        <th colspan="4" class="col-rewards-header">Rewards</th>
+                        <th class="col-notes">Notes</th>
                         <th class="col-action no-print">Action</th>
+                    </tr>
+                    <tr class="rewards-subheader">
+                        <th colspan="5"></th>
+                        <th class="col-xp">XP</th>
+                        <th class="col-paper-scraps">📄</th>
+                        <th class="col-ink-drops">💧</th>
+                        <th class="col-items">Items</th>
+                        <th colspan="2"></th>
                     </tr>
                 </thead>
                 <tbody id="active-assignments-body">
-                    </tbody>
+</tbody>
             </table>
         </div>
 
@@ -232,8 +251,17 @@ title: Keeper's Character Sheet
                         <th class="col-quest-type">Quest Type</th>
                         <th class="col-prompt">Prompt</th>
                         <th class="col-book-title">Book Title</th>
-                        <th class="col-notes">Notes / Rewards</th>
+                        <th colspan="4" class="col-rewards-header">Rewards</th>
+                        <th class="col-notes">Notes</th>
                         <th class="col-action no-print">Action</th>
+                    </tr>
+                    <tr class="rewards-subheader">
+                        <th colspan="5"></th>
+                        <th class="col-xp">XP</th>
+                        <th class="col-paper-scraps">📄</th>
+                        <th class="col-ink-drops">💧</th>
+                        <th class="col-items">Items</th>
+                        <th colspan="2"></th>
                     </tr>
                 </thead>
                 <tbody id="completed-quests-body">
@@ -251,8 +279,17 @@ title: Keeper's Character Sheet
                         <th class="col-quest-type">Quest Type</th>
                         <th class="col-prompt">Prompt</th>
                         <th class="col-book-title">Book Title</th>
-                        <th class="col-notes">Notes / Rewards</th>
+                        <th colspan="4" class="col-rewards-header">Rewards</th>
+                        <th class="col-notes">Notes</th>
                         <th class="col-action no-print">Action</th>
+                    </tr>
+                    <tr class="rewards-subheader">
+                        <th colspan="5"></th>
+                        <th class="col-xp">XP</th>
+                        <th class="col-paper-scraps">📄</th>
+                        <th class="col-ink-drops">💧</th>
+                        <th class="col-items">Items</th>
+                        <th colspan="2"></th>
                     </tr>
                 </thead>
                 <tbody id="discarded-quests-body">
