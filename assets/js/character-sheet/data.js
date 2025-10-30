@@ -598,6 +598,12 @@ export const genreQuests = {
     "6": { genre: "Classic", description: "Read a classic novel you have not yet read.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } }
 };
 
+// Extra Credit quest rewards (books read outside of quest pool)
+export const extraCreditRewards = {
+    description: "Read a book outside of your monthly quest pool",
+    rewards: { xp: 15, inkDrops: 10, paperScraps: 10, items: [] }
+};
+
 // Detailed side quests data for table rendering
 export const sideQuestsDetailed = {
     "1": { 

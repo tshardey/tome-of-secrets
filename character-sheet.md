@@ -220,7 +220,7 @@ title: Keeper's Character Sheet
                 </select>
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
-                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Organize the Stacks">♥ Organize the Stacks</option> </select>
+                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Organize the Stacks">♥ Organize the Stacks</option> <option value="⭐ Extra Credit">⭐ Extra Credit</option> </select>
                 <div id="standard-prompt-container" class="prompt-container">
                     <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
                 </div>

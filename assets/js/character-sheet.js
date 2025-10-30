@@ -125,7 +125,10 @@ export function initializeCharacterSheet() {
         // Default reward - XP will be calculated monthly, only currency here
         let rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
 
-        if (type === '♥ Organize the Stacks') {
+        if (type === '⭐ Extra Credit') {
+            // Extra Credit only grants paper scraps (books outside quest pool)
+            rewards = { xp: 0, inkDrops: 0, paperScraps: 10, items: [] };
+        } else if (type === '♥ Organize the Stacks') {
             rewards = { xp: 15, inkDrops: 10, paperScraps: 0, items: [] };
         } else if (type === '♣ Side Quest') {
             // Find matching side quest
@@ -325,6 +328,9 @@ export function initializeCharacterSheet() {
                 option.textContent = `${key}: ${data.sideQuests[key].split(':')[0]}`;
                 sideQuestSelect.appendChild(option);
             }
+        } else if (selectedType === '⭐ Extra Credit') {
+            // Extra Credit doesn't need a prompt - hide all prompt containers
+            // standardContainer remains hidden
         } else {
             // Show standard text input for empty or other types
             standardContainer.style.display = 'flex';
@@ -440,7 +446,9 @@ export function initializeCharacterSheet() {
                     prompt = data.dungeonRooms[roomNumber].challenge;
                 }
             }
-            else if (type === '♥ Organize the Stacks') {
+            else if (type === '⭐ Extra Credit') {
+                prompt = 'Book read outside of quest pool';
+            } else if (type === '♥ Organize the Stacks') {
                 prompt = genreQuestSelect.value;
             } else if (type === '♣ Side Quest') {
                 prompt = sideQuestSelect.value;
@@ -529,7 +537,9 @@ export function initializeCharacterSheet() {
                 return; // Exit after handling dungeon
             }
 
-            if (type === '♥ Organize the Stacks') {
+            if (type === '⭐ Extra Credit') {
+                prompt = 'Book read outside of quest pool';
+            } else if (type === '♥ Organize the Stacks') {
                 prompt = genreQuestSelect.value;
             } else if (type === '♣ Side Quest') {
                 prompt = sideQuestSelect.value;
@@ -537,7 +547,13 @@ export function initializeCharacterSheet() {
                 prompt = document.getElementById('new-quest-prompt').value;
             }
 
-            if (!prompt || !book || !month || !year) {
+            // For Extra Credit, prompt is not required
+            if (type === '⭐ Extra Credit') {
+                if (!book || !month || !year) {
+                    alert('Please fill in the Month, Year, and Book Title.');
+                    return;
+                }
+            } else if (!prompt || !book || !month || !year) {
                 alert('Please fill in the Month, Year, Prompt, and Book Title.');
                 return;
             }

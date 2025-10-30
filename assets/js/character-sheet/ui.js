@@ -161,10 +161,13 @@ export function renderActiveAssignments() {
         // Add indicator if quest will receive buffs
         const buffIndicator = (quest.buffs && quest.buffs.length > 0) ? ' <span style="color: #b89f62;">*</span>' : '';
         
+        // For Extra Credit, don't show prompt
+        const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : quest.prompt;
+        
         row.innerHTML = `<td>${quest.month}</td>
                          <td>${quest.year}</td>
                          <td>${quest.type}</td>
-                         <td>${quest.prompt}</td>
+                         <td>${promptDisplay}</td>
                          <td>${quest.book}</td>
                          <td>${rewards.xp > 0 ? `+${rewards.xp}${buffIndicator}` : '-'}</td>
                          <td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}${buffIndicator}` : '-'}</td>
@@ -194,7 +197,10 @@ export function renderCompletedQuests() {
             ? ` <span style="color: #b89f62;" title="Modified by: ${rewards.modifiedBy.join(', ')}">✓</span>` 
             : '';
         
-        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}${modifiedIndicator}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}${modifiedIndicator}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}${modifiedIndicator}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${buffs}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
+        // For Extra Credit, don't show prompt
+        const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : quest.prompt;
+        
+        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${promptDisplay}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}${modifiedIndicator}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}${modifiedIndicator}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}${modifiedIndicator}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${buffs}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
         row.querySelector('.action-cell').prepend(createEditButton(index, 'completedQuests'));
     });
     document.getElementById('completed-summary').innerText = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
@@ -210,7 +216,11 @@ export function renderDiscardedQuests() {
         const buffs = quest.buffs && quest.buffs.length > 0 
             ? quest.buffs.map(b => b.replace(/^\[(Buff|Item)\] /, '')).join(', ') 
             : '-';
-        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${quest.prompt}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${buffs}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
+        
+        // For Extra Credit, don't show prompt
+        const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : quest.prompt;
+        
+        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${promptDisplay}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${buffs}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
         row.querySelector('.action-cell').prepend(createEditButton(index, 'discardedQuests'));
     });
     document.getElementById('discarded-summary').innerText = `Discarded Quests (${characterState.discardedQuests.length})`;

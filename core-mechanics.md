@@ -55,10 +55,10 @@ There are two primary currencies that define your progress, plus a third for cha
     *  Coming across *Friendly Creatures* in a *Dungeon Room*
 * **Paper Scraps:** Earned from specific quests and activities, such as journaling about a book or your adventures in the library. Use them, in conjunction with Ink Drops, to "create" a new book to add to your collection.
 
-    **Earn 5 Paper Scraps for all of the following:**
-    *  Reading books outside of your quest pool 
-    *  Completing adventure journal entries 
-    *  Taming a *Familiar* in a *Dungeon Room*
+    **Earn Paper Scraps for the following:**
+    *  Reading books outside of your quest pool (+10 *Paper Scraps*)
+    *  Completing adventure journal entries (+5 *Paper Scraps*)
+    *  Taming a *Familiar* in a *Dungeon Room* (+5 *Paper Scraps*)
 
 *Note: See the [Shopping Episode]({{ site.baseurl }}/shopping.html) section for more details on creating books.*
 

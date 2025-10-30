@@ -655,6 +655,79 @@ describe('Character Sheet', () => {
       expect(options).toContain('3: Romantasy');
     });
 
+    it('should handle Extra Credit quest type correctly', () => {
+      // Fill out the quest form
+      document.getElementById('quest-month').value = 'November';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Extra Reading Book';
+
+      // Select the Extra Credit quest type
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '⭐ Extra Credit';
+      questTypeSelect.dispatchEvent(new Event('change'));
+
+      // Verify that no prompt input is shown
+      const standardPromptContainer = document.getElementById('standard-prompt-container');
+      const dungeonContainer = document.getElementById('dungeon-prompt-container');
+      const genreContainer = document.getElementById('genre-prompt-container');
+      const sideContainer = document.getElementById('side-prompt-container');
+      
+      expect(standardPromptContainer.style.display).toBe('none');
+      expect(dungeonContainer.style.display).toBe('none');
+      expect(genreContainer.style.display).toBe('none');
+      expect(sideContainer.style.display).toBe('none');
+
+      // Add the quest
+      document.getElementById('add-quest-button').click();
+
+      // Check that the quest was added with correct properties
+      const addedQuest = characterState.activeAssignments[0];
+      expect(addedQuest.type).toBe('⭐ Extra Credit');
+      expect(addedQuest.prompt).toBe('Book read outside of quest pool');
+      expect(addedQuest.book).toBe('Extra Reading Book');
+      
+      // Check that rewards are correct (0 XP, 0 Ink Drops, 10 Paper Scraps)
+      expect(addedQuest.rewards).toEqual({
+        xp: 0,
+        inkDrops: 0,
+        paperScraps: 10,
+        items: []
+      });
+    });
+
+    it('should update paper scraps when completing an Extra Credit quest', () => {
+      // Add an Extra Credit quest
+      document.getElementById('quest-month').value = 'November';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Extra Book';
+
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '⭐ Extra Credit';
+      questTypeSelect.dispatchEvent(new Event('change'));
+      document.getElementById('add-quest-button').click();
+
+      // Get initial currency values
+      const paperScrapsInput = document.getElementById('paperScraps');
+      const inkDropsInput = document.getElementById('inkDrops');
+      const xpInput = document.getElementById('xp-current');
+      
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const initialXP = parseInt(xpInput.value, 10) || 0;
+
+      // Complete the quest
+      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+
+      // Check that only paper scraps were updated (+10)
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const finalXP = parseInt(xpInput.value, 10) || 0;
+
+      expect(finalPaperScraps).toBe(initialPaperScraps + 10);
+      expect(finalInkDrops).toBe(initialInkDrops); // Should not change
+      expect(finalXP).toBe(initialXP); // Should not change
+    });
+
     it('should add the correct dungeon encounter prompt based on the fight/befriend toggle', () => {
         // --- 1. Setup for Defeat (default) ---
         document.getElementById('quest-month').value = 'January';
