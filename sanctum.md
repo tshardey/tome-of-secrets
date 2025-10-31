@@ -6,6 +6,8 @@ title: The Grand Library
 ## Your Library Sanctum
 The heart of your adventure is your library, which is also your home. Choosing a type of library grants you a permanent ability that enhances certain Atmospheric Buffs. For any buff listed in your chosen library's description, you now earn x2 Ink Drops whenever that buff would normally provide an Ink Drop bonus.
 
+> **Journaling Prompt:** What does your sanctum look, feel, and smell like? Is it a place of comfort and refuge, or one of mystery and ancient dust?
+
 ### The Spire of Whispers
 Rising endlessly into the clouds, this vast tower is filled with spiral staircases and high, arched windows. Whispers of half-read stories drift through the air, a chorus of encouragement and warning. It is a place of quiet study, candlelight, and the comfort of hearthfire.
 **Associated Buffs:** Candle-lit Study, Cozy Hearth, Head in the Clouds

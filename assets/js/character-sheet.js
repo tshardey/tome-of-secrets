@@ -16,6 +16,7 @@ export function initializeCharacterSheet() {
     const printButton = document.getElementById('print-button');
     const levelInput = document.getElementById('level');
     const xpNeededInput = document.getElementById('xp-needed');
+    const keeperBackgroundSelect = document.getElementById('keeperBackground');
     const wizardSchoolSelect = document.getElementById('wizardSchool');
     const librarySanctumSelect = document.getElementById('librarySanctum');
     const smpInput = document.getElementById('smp');
@@ -66,14 +67,22 @@ export function initializeCharacterSheet() {
         let appliedModifiers = [];
         
         appliedBuffs.forEach(buffName => {
-            // Remove [Buff] or [Item] prefix
-            const cleanName = buffName.replace(/^\[(Buff|Item)\] /, '');
+            // Remove [Buff], [Item], or [Background] prefix
+            const cleanName = buffName.replace(/^\[(Buff|Item|Background)\] /, '');
             const isItem = buffName.startsWith('[Item]');
+            const isBackground = buffName.startsWith('[Background]');
             
             let modifier = null;
             
+            // Handle background bonuses
+            if (isBackground) {
+                // Archivist Bonus, Prophet Bonus, and Cartographer Bonus all give +10 Ink Drops
+                if (cleanName === 'Archivist Bonus' || cleanName === 'Prophet Bonus' || cleanName === 'Cartographer Bonus') {
+                    modifier = { inkDrops: 10 };
+                }
+            }
             // Get the modifier from either items or temp buffs
-            if (isItem && data.allItems[cleanName]) {
+            else if (isItem && data.allItems[cleanName]) {
                 modifier = data.allItems[cleanName].rewardModifier;
             } else if (data.temporaryBuffsFromRewards[cleanName]) {
                 modifier = data.temporaryBuffsFromRewards[cleanName].rewardModifier;
@@ -101,8 +110,12 @@ export function initializeCharacterSheet() {
         
         // Apply multipliers after all additive bonuses
         appliedBuffs.forEach(buffName => {
-            const cleanName = buffName.replace(/^\[(Buff|Item)\] /, '');
+            const cleanName = buffName.replace(/^\[(Buff|Item|Background)\] /, '');
             const isItem = buffName.startsWith('[Item]');
+            const isBackground = buffName.startsWith('[Background]');
+            
+            // Background bonuses don't have multipliers, skip them
+            if (isBackground) return;
             
             let modifier = null;
             
@@ -118,6 +131,31 @@ export function initializeCharacterSheet() {
         });
         
         modifiedRewards.modifiedBy = appliedModifiers;
+        return modifiedRewards;
+    }
+
+    // Apply keeper background bonuses to quest rewards
+    function applyBackgroundBonuses(rewards, quest) {
+        const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+        if (!background) return rewards;
+        
+        let modifiedRewards = { ...rewards };
+        const modifiers = modifiedRewards.modifiedBy || [];
+        
+        // Grove Tender: Always has "The Soaking in Nature" buff active (handled by atmospheric buff system)
+        // No automatic quest completion bonus
+        
+        // Biblioslinker: +3 Paper Scraps for completing Dungeon Crawls
+        if (background === 'biblioslinker' && quest.type === '♠ Dungeon Crawl') {
+            modifiedRewards.paperScraps = (modifiedRewards.paperScraps || 0) + 3;
+            modifiers.push('Biblioslinker');
+        }
+        
+        // Cartographer: +10 Ink Drops for first Dungeon Crawl each month
+        // Note: This requires manual tracking - would need to check if it's the first dungeon this month
+        // For now, we'll leave this for the player to manually claim
+        
+        modifiedRewards.modifiedBy = modifiers;
         return modifiedRewards;
     }
 
@@ -250,11 +288,23 @@ export function initializeCharacterSheet() {
     });
 
     const onSanctumChange = () => {
-        ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect);
+        ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect);
         ui.renderAtmosphericBuffs(librarySanctumSelect);
     };
-    wizardSchoolSelect.addEventListener('change', () => ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect));
-    librarySanctumSelect.addEventListener('change', onSanctumChange);
+    keeperBackgroundSelect.addEventListener('change', () => {
+        ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect);
+        ui.renderAtmosphericBuffs(librarySanctumSelect); // Re-render to show Grove Tender's automatic buff
+        ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput); // Update dropdown with new background bonuses
+        saveState(form);
+    });
+    wizardSchoolSelect.addEventListener('change', () => {
+        ui.renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect);
+        saveState(form);
+    });
+    librarySanctumSelect.addEventListener('change', () => {
+        onSanctumChange();
+        saveState(form);
+    });
     smpInput.addEventListener('input', () => ui.renderMasteryAbilities(smpInput));
     
     const renderLoadout = () => {
@@ -763,6 +813,14 @@ export function initializeCharacterSheet() {
         // Handle buff active checkbox clicks
         if (e.target.classList.contains('buff-active-check')) {
             const buffName = e.target.dataset.buffName;
+            
+            // Grove Tender's "Soaking in Nature" is always active and can't be toggled
+            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+            if (background === 'groveTender' && buffName === 'The Soaking in Nature') {
+                e.target.checked = true; // Keep it checked
+                return;
+            }
+            
             if (!characterState.atmosphericBuffs[buffName]) {
                 characterState.atmosphericBuffs[buffName] = { daysUsed: 0, isActive: false };
             }
@@ -819,9 +877,13 @@ export function initializeCharacterSheet() {
             let finalRewards = questToMove.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] };
             if (questToMove.buffs && questToMove.buffs.length > 0) {
                 finalRewards = calculateModifiedRewards(questToMove.rewards, questToMove.buffs);
-                // Store the modified rewards back in the quest
-                questToMove.rewards = finalRewards;
             }
+            
+            // Apply keeper background bonuses
+            finalRewards = applyBackgroundBonuses(finalRewards, questToMove);
+            
+            // Store the modified rewards back in the quest
+            questToMove.rewards = finalRewards;
             
             characterState.completedQuests.push(questToMove);
             
@@ -1004,13 +1066,24 @@ export function initializeCharacterSheet() {
             
             for (const buffName in characterState.atmosphericBuffs) {
                 const buff = characterState.atmosphericBuffs[buffName];
-                const isAssociated = associatedBuffs.includes(buffName);
-                const dailyValue = isAssociated ? 2 : 1;
-                const buffTotal = buff.daysUsed * dailyValue;
-                totalInkDrops += buffTotal;
                 
-                // Reset the days used
+                // Only process buffs that were marked as active
+                if (buff.isActive) {
+                    const isAssociated = associatedBuffs.includes(buffName);
+                    const dailyValue = isAssociated ? 2 : 1;
+                    const buffTotal = buff.daysUsed * dailyValue;
+                    totalInkDrops += buffTotal;
+                }
+                
+                // Reset the days used and active status for all buffs
                 buff.daysUsed = 0;
+                
+                // Keep Grove Tender's "Soaking in Nature" active, reset others
+                const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+                const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
+                if (!isGroveTenderBuff) {
+                    buff.isActive = false;
+                }
             }
             
             // Add atmospheric buff ink drops
@@ -1038,17 +1111,30 @@ export function initializeCharacterSheet() {
                 booksCompletedInput.value = 0;
             }
             
-            // Calculate and add journal entries paper scraps (5 Paper Scraps per entry)
+            // Calculate and add journal entries paper scraps (5 Paper Scraps per entry, +3 for Scribe's Acolyte)
             const journalEntriesInput = document.getElementById('journal-entries-completed');
             if (journalEntriesInput) {
                 const journalEntries = parseInt(journalEntriesInput.value, 10) || 0;
-                const journalPaperScraps = journalEntries * 5;
+                const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+                
+                // Base 5 Paper Scraps per entry, +3 if Scribe's Acolyte
+                let papersPerEntry = 5;
+                if (background === 'scribe') {
+                    papersPerEntry += 3;
+                }
+                
+                const journalPaperScraps = journalEntries * papersPerEntry;
                 
                 if (journalPaperScraps > 0) {
                     const paperScrapsInput = document.getElementById('paperScraps');
                     if (paperScrapsInput) {
                         const currentPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
                         paperScrapsInput.value = currentPaperScraps + journalPaperScraps;
+                    }
+                    
+                    // Show notification of bonus if applicable
+                    if (background === 'scribe') {
+                        alert(`Journal entries rewarded: ${journalPaperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
                     }
                 }
                 
@@ -1105,6 +1191,9 @@ export function initializeCharacterSheet() {
             itemSelect.appendChild(option);
         }
     }
+    
+    // Populate keeper background dropdown
+    ui.populateBackgroundDropdown();
     
     // Initial Load
     loadState(form);

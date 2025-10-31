@@ -1,5 +1,6 @@
 import * as data from './data.js';
 import { characterState } from './state.js';
+import { keeperBackgrounds } from './data.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
     const currentLevel = parseInt(levelInput.value, 10) || 1;
@@ -26,11 +27,23 @@ export function renderPermanentBonuses(levelInput) {
     }
 }
 
-export function renderBenefits(wizardSchoolSelect, librarySanctumSelect) {
+export function renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect) {
+    // Render Keeper Background
+    const backgroundDescriptionDisplay = document.getElementById('keeperBackgroundDescriptionDisplay');
+    const backgroundBenefitDisplay = document.getElementById('keeperBackgroundBenefitDisplay');
+    
+    const selectedBackground = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+    if (selectedBackground && keeperBackgrounds[selectedBackground]) {
+        backgroundDescriptionDisplay.innerHTML = keeperBackgrounds[selectedBackground].description;
+        backgroundBenefitDisplay.innerHTML = keeperBackgrounds[selectedBackground].benefit;
+    } else {
+        backgroundDescriptionDisplay.innerHTML = '-- Select a background to see its description --';
+        backgroundBenefitDisplay.innerHTML = '-- Select a background to see its benefit --';
+    }
+
+    // Render School Benefits
     const schoolDescriptionDisplay = document.getElementById('magicalSchoolDescriptionDisplay');
     const schoolBenefitDisplay = document.getElementById('magicalSchoolBenefitDisplay');
-    const sanctumDescriptionDisplay = document.getElementById('librarySanctumDescriptionDisplay');
-    const sanctumBenefitDisplay = document.getElementById('librarySanctumBenefitDisplay');
 
     const selectedSchool = wizardSchoolSelect.value;
     if (selectedSchool && data.schoolBenefits[selectedSchool]) {
@@ -41,6 +54,10 @@ export function renderBenefits(wizardSchoolSelect, librarySanctumSelect) {
         schoolBenefitDisplay.innerHTML = '-- Select a school to see its benefit --';
     }
 
+    // Render Sanctum Benefits
+    const sanctumDescriptionDisplay = document.getElementById('librarySanctumDescriptionDisplay');
+    const sanctumBenefitDisplay = document.getElementById('librarySanctumBenefitDisplay');
+    
     const selectedSanctum = librarySanctumSelect.value;
     if (selectedSanctum && data.sanctumBenefits[selectedSanctum]) {
         sanctumDescriptionDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].description;
@@ -118,22 +135,36 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
 
     const selectedSanctum = librarySanctumSelect.value;
     const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+    
+    // Check if Grove Tender background is selected
+    const keeperBackgroundSelect = document.getElementById('keeperBackground');
+    const isGroveTender = keeperBackgroundSelect && keeperBackgroundSelect.value === 'groveTender';
 
     for (const buffName in data.atmosphericBuffs) {
         const isAssociated = associatedBuffs.includes(buffName);
         const dailyValue = isAssociated ? 2 : 1;
         const daysUsed = characterState.atmosphericBuffs[buffName]?.daysUsed || 0;
-        const isActive = characterState.atmosphericBuffs[buffName]?.isActive || false;
+        let isActive = characterState.atmosphericBuffs[buffName]?.isActive || false;
+        
+        // Grove Tender always has "The Soaking in Nature" active
+        const isGroveBuffActive = isGroveTender && buffName === 'The Soaking in Nature';
+        if (isGroveBuffActive) {
+            isActive = true;
+        }
 
         const row = tbody.insertRow();
-        if (isAssociated) {
+        if (isAssociated || isGroveBuffActive) {
             row.classList.add('highlight');
         }
 
+        // Disable checkbox for Grove Tender's automatic buff
+        const checkboxDisabled = isGroveBuffActive ? 'disabled' : '';
+        const checkboxTitle = isGroveBuffActive ? 'title="Always active (Grove Tender)"' : '';
+
         row.innerHTML = `
-            <td>${buffName}</td>
+            <td>${buffName}${isGroveBuffActive ? ' <span style="color: #b89f62;">★</span>' : ''}</td>
             <td>${dailyValue}</td>
-            <td><input type="checkbox" class="buff-active-check" data-buff-name="${buffName}" ${isActive ? 'checked' : ''}></td>
+            <td><input type="checkbox" class="buff-active-check" data-buff-name="${buffName}" ${isActive ? 'checked' : ''} ${checkboxDisabled} ${checkboxTitle}></td>
             <td><input type="number" class="buff-days-input" value="${daysUsed}" min="0" data-buff-name="${buffName}" data-daily-value="${dailyValue}"></td>
             <td id="total-${buffName.replace(/\s+/g, '')}">${daysUsed * dailyValue}</td>
         `;
@@ -153,9 +184,9 @@ export function renderActiveAssignments() {
     characterState.activeAssignments.forEach((quest, index) => {
         const row = tbody.insertRow();
         const rewards = quest.rewards || {};
-        // Format buffs to remove [Buff] and [Item] prefixes for display
+        // Format buffs to remove [Buff], [Item], and [Background] prefixes for display
         const buffs = quest.buffs && quest.buffs.length > 0 
-            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item)\] /, '')).join(', ') 
+            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item|Background)\] /, '')).join(', ') 
             : '-';
         
         // Add indicator if quest will receive buffs
@@ -187,9 +218,9 @@ export function renderCompletedQuests() {
     characterState.completedQuests.forEach((quest, index) => {
         const row = tbody.insertRow();
         const rewards = quest.rewards || {};
-        // Format buffs to remove [Buff] and [Item] prefixes for display
+        // Format buffs to remove [Buff], [Item], and [Background] prefixes for display
         const buffs = quest.buffs && quest.buffs.length > 0 
-            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item)\] /, '')).join(', ') 
+            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item|Background)\] /, '')).join(', ') 
             : '-';
         
         // Show modified rewards with indicator if they were modified
@@ -212,9 +243,9 @@ export function renderDiscardedQuests() {
     characterState.discardedQuests.forEach((quest, index) => {
         const row = tbody.insertRow();
         const rewards = quest.rewards || {};
-        // Format buffs to remove [Buff] and [Item] prefixes for display
+        // Format buffs to remove [Buff], [Item], and [Background] prefixes for display
         const buffs = quest.buffs && quest.buffs.length > 0 
-            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item)\] /, '')).join(', ') 
+            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item|Background)\] /, '')).join(', ') 
             : '-';
         
         // For Extra Credit, don't show prompt
@@ -313,6 +344,48 @@ export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInp
     
     let hasOptions = false;
     
+    // Add keeper background bonuses (for manual application)
+    const keeperBackgroundSelect = document.getElementById('keeperBackground');
+    const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+    
+    if (background) {
+        const backgroundBonuses = [];
+        
+        if (background === 'archivist') {
+            backgroundBonuses.push({
+                name: 'Archivist Bonus',
+                description: '+10 Ink Drops (Non-Fiction/Historical Fiction)'
+            });
+        }
+        
+        if (background === 'prophet') {
+            backgroundBonuses.push({
+                name: 'Prophet Bonus',
+                description: '+10 Ink Drops (Religious/Spiritual/Mythological)'
+            });
+        }
+        
+        if (background === 'cartographer') {
+            backgroundBonuses.push({
+                name: 'Cartographer Bonus',
+                description: '+10 Ink Drops (First Dungeon Crawl this month)'
+            });
+        }
+        
+        if (backgroundBonuses.length > 0) {
+            const bgGroup = document.createElement('optgroup');
+            bgGroup.label = 'Background Bonuses (Apply if Eligible)';
+            backgroundBonuses.forEach((bonus) => {
+                const option = document.createElement('option');
+                option.value = `[Background] ${bonus.name}`;
+                option.textContent = `${bonus.name} - ${bonus.description}`;
+                bgGroup.appendChild(option);
+                hasOptions = true;
+            });
+            select.appendChild(bgGroup);
+        }
+    }
+    
     // Add active temporary buffs
     const activeBuffs = characterState.temporaryBuffs.filter(buff => buff.status === 'active');
     if (activeBuffs.length > 0) {
@@ -353,10 +426,27 @@ export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInp
     }
 }
 
+export function populateBackgroundDropdown() {
+    const backgroundSelect = document.getElementById('keeperBackground');
+    if (!backgroundSelect) return;
+
+    // Keep the default "-- Select a Background --" option
+    backgroundSelect.innerHTML = '<option value="">-- Select a Background --</option>';
+    
+    for (const [key, background] of Object.entries(keeperBackgrounds)) {
+        if (key === '') continue; // Skip the 'None' entry, it's the default
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = background.name;
+        backgroundSelect.appendChild(option);
+    }
+}
+
 export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
+    const keeperBackgroundSelect = document.getElementById('keeperBackground');
     updateXpNeeded(levelInput, xpNeededInput);
     renderPermanentBonuses(levelInput);
-    renderBenefits(wizardSchoolSelect, librarySanctumSelect);
+    renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect);
     renderMasteryAbilities(smpInput);
     renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     renderAtmosphericBuffs(librarySanctumSelect);

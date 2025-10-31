@@ -10,6 +10,12 @@ title: Keeper's Character Sheet
             <li><label for="keeperName"><strong>Keeper Name:</strong></label> <input type="text" id="keeperName" /></li>
             <li><label for="level"><strong>🌟 Level:</strong></label> <input type="number" id="level" /></li>
             <li>
+                <label for="keeperBackground"><strong>📖 Keeper Background:</strong></label>
+                <select id="keeperBackground">
+                    <option value="">-- Select a Background --</option>
+                </select>
+            </li>
+            <li>
                 <label for="wizardSchool"><strong>✨ Wizard School:</strong></label>
                 <select id="wizardSchool">
                     <option value="">-- Select a School --</option>
@@ -64,6 +70,13 @@ title: Keeper's Character Sheet
 
     <div class="form-section">
     <h2>🔮 Abilities & Benefits</h2>
+
+    <div class="benefit-display">
+        <h3>📖 Keeper Background</h3>
+        <p id="keeperBackgroundDescriptionDisplay" class="description">-- Select a background to see its description --</p>
+        <strong>Benefit:</strong>
+        <p id="keeperBackgroundBenefitDisplay">-- Select a background to see its benefit --</p>
+    </div>
 
     <div class="benefit-display">
         <h3>✨ Magical School</h3>

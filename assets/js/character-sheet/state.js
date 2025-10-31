@@ -67,6 +67,11 @@ export function saveState(form) {
             characterData[element.id] = element.value;
         }
     }
+    // Explicitly save keeperBackground to ensure it persists
+    const keeperBackgroundElement = document.getElementById('keeperBackground');
+    if (keeperBackgroundElement) {
+        characterData.keeperBackground = keeperBackgroundElement.value;
+    }
     localStorage.setItem('characterSheet', JSON.stringify(characterData));
     Object.keys(characterState).forEach(key => localStorage.setItem(key, JSON.stringify(characterState[key])));
 }

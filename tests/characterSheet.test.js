@@ -408,7 +408,7 @@ describe('Character Sheet', () => {
       // Need to manually add atmospheric buff data to characterState
       const { characterState } = require('../assets/js/character-sheet/state.js');
       characterState.atmosphericBuffs = {
-        'The Candlight Study': { daysUsed: 10 }
+        'The Candlight Study': { daysUsed: 10, isActive: true }
       };
 
       // Set up books completed counter
@@ -1091,6 +1091,307 @@ describe('Character Sheet', () => {
       // Check that the state was updated correctly
       expect(characterState.activeCurses.length).toBe(0);
       expect(characterState.completedCurses.length).toBe(1);
+    });
+  });
+
+  describe('Keeper Backgrounds', () => {
+    it('should populate keeper background dropdown with all backgrounds', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      
+      // Should have 7 options (1 default + 6 backgrounds)
+      expect(backgroundSelect.options.length).toBe(7);
+      expect(backgroundSelect.options[0].value).toBe('');
+      expect(backgroundSelect.options[0].textContent).toBe('-- Select a Background --');
+      
+      // Check all backgrounds are present
+      const backgroundNames = Array.from(backgroundSelect.options).map(opt => opt.textContent);
+      expect(backgroundNames).toContain("The Scribe's Acolyte");
+      expect(backgroundNames).toContain("The Archivist's Apprentice");
+      expect(backgroundNames).toContain("The Cartographer's Guild");
+      expect(backgroundNames).toContain("The Cloistered Prophet");
+      expect(backgroundNames).toContain("The Biblioslinker");
+      expect(backgroundNames).toContain("The Grove Tender");
+    });
+
+    it('should display background benefit when selected', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      const benefitDisplay = document.getElementById('keeperBackgroundBenefitDisplay');
+      
+      // Select Scribe's Acolyte
+      backgroundSelect.value = 'scribe';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      expect(benefitDisplay.textContent).toContain('+3 Paper Scrap bonus');
+      expect(benefitDisplay.textContent).toContain('Adventure Journal entry');
+    });
+
+    it('should show background bonuses in quest buffs dropdown for Archivist', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      
+      // Select Archivist background
+      backgroundSelect.value = 'archivist';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Check that Archivist Bonus appears in dropdown
+      const options = Array.from(questBuffsSelect.options);
+      const archivistOption = options.find(opt => opt.textContent.includes('Archivist Bonus'));
+      
+      expect(archivistOption).toBeTruthy();
+      expect(archivistOption.textContent).toContain('+10 Ink Drops');
+      expect(archivistOption.textContent).toContain('Non-Fiction/Historical Fiction');
+    });
+
+    it('should show background bonuses in quest buffs dropdown for Prophet', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      
+      // Select Prophet background
+      backgroundSelect.value = 'prophet';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Check that Prophet Bonus appears in dropdown
+      const options = Array.from(questBuffsSelect.options);
+      const prophetOption = options.find(opt => opt.textContent.includes('Prophet Bonus'));
+      
+      expect(prophetOption).toBeTruthy();
+      expect(prophetOption.textContent).toContain('+10 Ink Drops');
+      expect(prophetOption.textContent).toContain('Religious/Spiritual/Mythological');
+    });
+
+    it('should show background bonuses in quest buffs dropdown for Cartographer', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      
+      // Select Cartographer background
+      backgroundSelect.value = 'cartographer';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Check that Cartographer Bonus appears in dropdown
+      const options = Array.from(questBuffsSelect.options);
+      const cartographerOption = options.find(opt => opt.textContent.includes('Cartographer Bonus'));
+      
+      expect(cartographerOption).toBeTruthy();
+      expect(cartographerOption.textContent).toContain('+10 Ink Drops');
+      expect(cartographerOption.textContent).toContain('First Dungeon Crawl');
+    });
+
+    it('should apply Archivist bonus when selected for a quest', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const backgroundSelect = document.getElementById('keeperBackground');
+      
+      // Select Archivist background
+      backgroundSelect.value = 'archivist';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Add a quest with Archivist bonus
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-type').value = '♥ Organize the Stacks';
+      document.getElementById('new-quest-type').dispatchEvent(new Event('change'));
+      
+      // Select genre quest
+      const genreSelect = document.getElementById('genre-quest-select');
+      genreSelect.value = 'Historical Fiction: Read a book set in the past or with a historical figure as a character.';
+      
+      document.getElementById('new-quest-book').value = 'Test Book';
+      
+      // Select Archivist Bonus in buffs dropdown
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const archivistOption = Array.from(questBuffsSelect.options).find(opt => 
+        opt.value === '[Background] Archivist Bonus'
+      );
+      archivistOption.selected = true;
+      
+      // Add quest as completed
+      document.getElementById('new-quest-status').value = 'completed';
+      document.getElementById('add-quest-button').click();
+      
+      // Check that quest was added with bonus
+      const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
+      expect(completedQuest.rewards.inkDrops).toBe(20); // 10 base + 10 bonus
+      expect(completedQuest.buffs).toContain('[Background] Archivist Bonus');
+    });
+
+    it('should automatically apply Biblioslinker bonus for Dungeon Crawls', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const backgroundSelect = document.getElementById('keeperBackground');
+      
+      // Select Biblioslinker background
+      backgroundSelect.value = 'biblioslinker';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Create a dungeon crawl quest
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-type').value = '♠ Dungeon Crawl';
+      document.getElementById('new-quest-type').dispatchEvent(new Event('change'));
+      
+      const dungeonRoomSelect = document.getElementById('dungeon-room-select');
+      dungeonRoomSelect.value = '1';
+      dungeonRoomSelect.dispatchEvent(new Event('change'));
+      
+      const dungeonEncounterSelect = document.getElementById('dungeon-encounter-select');
+      dungeonEncounterSelect.value = "Librarian's Spirit";
+      
+      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      
+      // Add quest as active
+      document.getElementById('new-quest-status').value = 'active';
+      document.getElementById('add-quest-button').click();
+      
+      // Complete the quest
+      const completeButton = document.querySelector('.complete-quest-btn');
+      if (completeButton) {
+        completeButton.click();
+        
+        // Check that Biblioslinker bonus was applied
+        const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
+        expect(completedQuest.rewards.paperScraps).toBe(8); // 5 from room + 3 Biblioslinker bonus
+        expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
+      }
+    });
+
+    it('should apply Scribe bonus to journal entries at end of month', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      const journalEntriesInput = document.getElementById('journal-entries-completed');
+      const paperScrapsInput = document.getElementById('paperScraps');
+      
+      // Select Scribe's Acolyte background
+      backgroundSelect.value = 'scribe';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Set journal entries
+      journalEntriesInput.value = '5';
+      
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      
+      // Click End of Month
+      const endOfMonthButton = document.getElementById('end-of-month-button');
+      endOfMonthButton.click();
+      
+      // Should get 8 paper scraps per entry (5 base + 3 Scribe bonus) = 40 total
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      expect(finalPaperScraps).toBe(initialPaperScraps + 40);
+      
+      // Journal entries should be reset
+      expect(parseInt(journalEntriesInput.value, 10)).toBe(0);
+    });
+
+    it('should automatically activate Soaking in Nature buff for Grove Tender', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      
+      // Select Grove Tender background
+      backgroundSelect.value = 'groveTender';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Check that "The Soaking in Nature" buff is automatically checked and disabled
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      const soakingRow = rows.find(row => 
+        row.textContent.includes('The Soaking in Nature')
+      );
+      
+      expect(soakingRow).toBeTruthy();
+      
+      // Should have star indicator
+      expect(soakingRow.textContent).toContain('★');
+      
+      // Checkbox should be checked and disabled
+      const checkbox = soakingRow.querySelector('.buff-active-check');
+      expect(checkbox.checked).toBe(true);
+      expect(checkbox.disabled).toBe(true);
+      
+      // Row should be highlighted
+      expect(soakingRow.classList.contains('highlight')).toBe(true);
+    });
+
+    it('should keep Grove Tender buff active after end of month', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const backgroundSelect = document.getElementById('keeperBackground');
+      
+      // Select Grove Tender background
+      backgroundSelect.value = 'groveTender';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Set up atmospheric buff with days used
+      characterState.atmosphericBuffs = {
+        'The Soaking in Nature': { daysUsed: 10, isActive: true },
+        'The Candlight Study': { daysUsed: 5, isActive: true }
+      };
+      
+      // Click End of Month
+      const endOfMonthButton = document.getElementById('end-of-month-button');
+      endOfMonthButton.click();
+      
+      // Grove Tender's buff should still be active
+      expect(characterState.atmosphericBuffs['The Soaking in Nature'].isActive).toBe(true);
+      expect(characterState.atmosphericBuffs['The Soaking in Nature'].daysUsed).toBe(0);
+      
+      // Other buffs should be reset
+      expect(characterState.atmosphericBuffs['The Candlight Study'].isActive).toBe(false);
+      expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
+    });
+
+    it('should prevent unchecking Grove Tender buff by disabling checkbox', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      
+      // Select Grove Tender background
+      backgroundSelect.value = 'groveTender';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Check the Soaking in Nature buff checkbox
+      const tbody = document.getElementById('atmospheric-buffs-body');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const soakingRow = rows.find(row => 
+        row.textContent.includes('The Soaking in Nature')
+      );
+      
+      const checkbox = soakingRow.querySelector('.buff-active-check');
+      
+      // Checkbox should be disabled (this prevents user interaction)
+      expect(checkbox.disabled).toBe(true);
+      
+      // And it should be checked
+      expect(checkbox.checked).toBe(true);
+    });
+
+    it('should persist background selection in localStorage', () => {
+      const backgroundSelect = document.getElementById('keeperBackground');
+      const form = document.getElementById('character-sheet');
+      
+      // Select a background
+      backgroundSelect.value = 'prophet';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      // Get saved data
+      const savedData = JSON.parse(localStorage.getItem('characterSheet'));
+      
+      // Should be persisted
+      expect(savedData.keeperBackground).toBe('prophet');
+    });
+
+    it('should only process active atmospheric buffs at end of month', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const inkDropsInput = document.getElementById('inkDrops');
+      
+      // Set up mixed active/inactive buffs
+      characterState.atmosphericBuffs = {
+        'The Candlight Study': { daysUsed: 10, isActive: true },
+        'The Herbalist\'s Nook': { daysUsed: 5, isActive: false }, // Not active
+        'The Cozy Hearth': { daysUsed: 8, isActive: true }
+      };
+      
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      
+      // Click End of Month
+      const endOfMonthButton = document.getElementById('end-of-month-button');
+      endOfMonthButton.click();
+      
+      // Should only get ink drops from active buffs: 10 + 8 = 18
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      expect(finalInkDrops).toBe(initialInkDrops + 18);
     });
   });
 });

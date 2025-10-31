@@ -31,7 +31,7 @@ Completing an Organize the Stacks quest rewards you with **+15 XP** and **+10 In
 </div>
 
 ## ♦️ Atmospheric Buffs (Roll a d8)
-These buffs are daily bonuses. Once per day, when you set a mood for reading, you can earn +1 Ink Drop. You can earn a bonus of +2 Ink Drops if the atmosphere you choose reflects the book or your library.
+These buffs are daily bonuses. Once per day, when you set a mood for reading, you can earn +1 Ink Drop.
 
 <div id="atmospheric-buffs-table"></div>
 

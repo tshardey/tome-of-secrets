@@ -154,6 +154,44 @@ export const sanctumBenefits = {
     }
 };
 
+export const keeperBackgrounds = {
+    '': {
+        name: 'None',
+        description: 'No background selected.',
+        benefit: 'None.'
+    },
+    'scribe': {
+        name: "The Scribe's Acolyte",
+        description: 'You spent your formative years copying manuscripts and illuminating texts. Your fingers are permanently stained with ink, but your understanding of the written word is profound.',
+        benefit: 'Gain a permanent +3 Paper Scrap bonus every time you complete an Adventure Journal entry.'
+    },
+    'archivist': {
+        name: "The Archivist's Apprentice",
+        description: 'You were raised in the dust of history, cataloging artifacts and sorting brittle scrolls. You have an innate sense for separating fact from fiction and finding the truth in old lore.',
+        benefit: 'Gain a +10 Ink Drop bonus any time you complete a quest by reading a book from the Non-Fiction or Historical Fiction genres.'
+    },
+    'cartographer': {
+        name: "The Cartographer's Guild",
+        description: 'You were trained to map the unknown, to chart the stars, and to find paths where none existed. The twisting, shifting halls of the Grand Library feel like a challenge, not a threat.',
+        benefit: 'The first time you begin a Dungeon Crawl (draw a ♠) each month, you automatically gain +10 Ink Drops for mapping the territory.'
+    },
+    'prophet': {
+        name: 'The Cloistered Prophet',
+        description: 'You lived a life of quiet contemplation, dedicated to the old gods of knowledge and narrative. You see omens in the Shroud and hear whispers from the lost stories.',
+        benefit: 'Gain a +10 Ink Drop bonus any time you complete a quest by reading a book with a religious, spiritual, or mythological premise.'
+    },
+    'biblioslinker': {
+        name: 'The Biblioslinker',
+        description: 'You used to "liberate" rare books from private collections. You know how to get into places you\'re not supposed to be and find things that are meant to stay hidden.',
+        benefit: 'You know how to find the good stuff. Gain a permanent +3 Paper Scrap bonus every time you successfully complete a Dungeon Crawl (♠).'
+    },
+    'groveTender': {
+        name: 'The Grove Tender',
+        description: 'You tended one of the last living gardens, cultivating stories from seeds and roots. You understand the natural, creeping decay of the Shroud and how life persists.',
+        benefit: 'Your connection to the natural world is constant. You always have The Soaking in Nature atmospheric buff active, earning +1 Ink Drop per day you read (or +2 Ink Drops per day if you chose The Verdant Athenaeum as your sanctum).'
+    }
+};
+
 export const masteryAbilities = {
     "Ward Against the Shroud": { school: "Abjuration", cost: 1, benefit: "Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it." },
     "Grand Dispelling": { school: "Abjuration", cost: 2, benefit: "Once per month, you may perform a powerful cleansing ritual. Remove all active Worn Page penalties you currently have." },
