@@ -607,6 +607,68 @@ describe('Character Sheet', () => {
       expect(activeAssignmentsBody.textContent).toContain("Librarian's Spirit");
     });
 
+    it('should add only ONE quest for a dungeon room without encounters', () => {
+      const activeAssignmentsBody = document.getElementById('active-assignments-body');
+
+      // Fill out the quest form for a dungeon crawl
+      document.getElementById('quest-month').value = 'November';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Author Book';
+
+      // Simulate selecting Room 8 (The Author's Study) which has NO encounters
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♠ Dungeon Crawl';
+      questTypeSelect.dispatchEvent(new Event('change'));
+      document.getElementById('dungeon-room-select').value = '8';
+      document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
+
+      // Click add quest
+      document.getElementById('add-quest-button').click();
+
+      // Assert that only ONE row was added (room only, no encounter)
+      expect(activeAssignmentsBody.querySelectorAll('tr').length).toBe(1);
+      expect(activeAssignmentsBody.textContent).toContain("The Author's Study");
+      
+      // Verify the quest was added properly
+      expect(characterState.activeAssignments.length).toBe(1);
+      expect(characterState.activeAssignments[0].isEncounter).toBe(false);
+      expect(characterState.activeAssignments[0].roomNumber).toBe('8');
+    });
+
+    it('should apply Biblioslinker background bonus to completed dungeon quest even without buffs', () => {
+      // Set Biblioslinker background
+      const backgroundSelect = document.getElementById('keeperBackground');
+      backgroundSelect.value = 'biblioslinker';
+
+      // Add a dungeon quest and mark it as completed (no buffs selected)
+      document.getElementById('quest-month').value = 'November';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-status').value = 'completed';
+
+      const questTypeSelect = document.getElementById('new-quest-type');
+      questTypeSelect.value = '♠ Dungeon Crawl';
+      questTypeSelect.dispatchEvent(new Event('change'));
+      document.getElementById('dungeon-room-select').value = '1'; // Room 1 gives 5 paper scraps
+      document.getElementById('dungeon-room-select').dispatchEvent(new Event('change'));
+      document.getElementById('dungeon-encounter-select').value = "Librarian's Spirit";
+
+      document.getElementById('add-quest-button').click();
+
+      // Check that both quests were added to completed
+      expect(characterState.completedQuests.length).toBe(2);
+      
+      // Room quest should have 8 paper scraps (5 base + 3 from Biblioslinker)
+      const roomQuest = characterState.completedQuests.find(q => !q.isEncounter);
+      expect(roomQuest.rewards.paperScraps).toBe(8);
+      expect(roomQuest.rewards.modifiedBy).toContain('Biblioslinker');
+      
+      // Encounter quest should also have +3 paper scraps applied
+      const encounterQuest = characterState.completedQuests.find(q => q.isEncounter);
+      expect(encounterQuest.rewards.paperScraps).toBe(3); // 0 base + 3 from Biblioslinker
+      expect(encounterQuest.rewards.modifiedBy).toContain('Biblioslinker');
+    });
+
     it('should handle Organize the Stacks quest type correctly', () => {
       // Set up some genres in localStorage
       const genres = ['Fantasy', 'Sci-Fi', 'Romance'];
@@ -691,7 +753,8 @@ describe('Character Sheet', () => {
         xp: 0,
         inkDrops: 0,
         paperScraps: 10,
-        items: []
+        items: [],
+        modifiedBy: []
       });
     });
 

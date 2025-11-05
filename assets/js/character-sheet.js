@@ -1,6 +1,7 @@
 import * as data from './character-sheet/data.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
+import { RewardCalculator, Reward } from './services/RewardCalculator.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -55,174 +56,6 @@ export function initializeCharacterSheet() {
     function saveCompletedBooksSet() {
         const booksArray = Array.from(completedBooksSet);
         localStorage.setItem('monthlyCompletedBooks', JSON.stringify(booksArray));
-    }
-    
-    // Calculate modified rewards based on applied buffs and items
-    function calculateModifiedRewards(baseRewards, appliedBuffs) {
-        if (!appliedBuffs || appliedBuffs.length === 0) {
-            return { ...baseRewards, modifiedBy: [] };
-        }
-        
-        let modifiedRewards = { ...baseRewards };
-        let appliedModifiers = [];
-        
-        appliedBuffs.forEach(buffName => {
-            // Remove [Buff], [Item], or [Background] prefix
-            const cleanName = buffName.replace(/^\[(Buff|Item|Background)\] /, '');
-            const isItem = buffName.startsWith('[Item]');
-            const isBackground = buffName.startsWith('[Background]');
-            
-            let modifier = null;
-            
-            // Handle background bonuses
-            if (isBackground) {
-                // Archivist Bonus, Prophet Bonus, and Cartographer Bonus all give +10 Ink Drops
-                if (cleanName === 'Archivist Bonus' || cleanName === 'Prophet Bonus' || cleanName === 'Cartographer Bonus') {
-                    modifier = { inkDrops: 10 };
-                }
-            }
-            // Get the modifier from either items or temp buffs
-            else if (isItem && data.allItems[cleanName]) {
-                modifier = data.allItems[cleanName].rewardModifier;
-            } else if (data.temporaryBuffsFromRewards[cleanName]) {
-                modifier = data.temporaryBuffsFromRewards[cleanName].rewardModifier;
-            }
-            
-            // Apply the modifier if it exists
-            if (modifier) {
-                // Apply additive bonuses first
-                if (modifier.xp) {
-                    modifiedRewards.xp = (modifiedRewards.xp || 0) + modifier.xp;
-                }
-                if (modifier.inkDrops) {
-                    modifiedRewards.inkDrops = (modifiedRewards.inkDrops || 0) + modifier.inkDrops;
-                }
-                if (modifier.paperScraps) {
-                    modifiedRewards.paperScraps = (modifiedRewards.paperScraps || 0) + modifier.paperScraps;
-                }
-                
-                // Track what was applied
-                if (modifier.xp || modifier.inkDrops || modifier.paperScraps || modifier.inkDropsMultiplier) {
-                    appliedModifiers.push(cleanName);
-                }
-            }
-        });
-        
-        // Apply multipliers after all additive bonuses
-        appliedBuffs.forEach(buffName => {
-            const cleanName = buffName.replace(/^\[(Buff|Item|Background)\] /, '');
-            const isItem = buffName.startsWith('[Item]');
-            const isBackground = buffName.startsWith('[Background]');
-            
-            // Background bonuses don't have multipliers, skip them
-            if (isBackground) return;
-            
-            let modifier = null;
-            
-            if (isItem && data.allItems[cleanName]) {
-                modifier = data.allItems[cleanName].rewardModifier;
-            } else if (data.temporaryBuffsFromRewards[cleanName]) {
-                modifier = data.temporaryBuffsFromRewards[cleanName].rewardModifier;
-            }
-            
-            if (modifier && modifier.inkDropsMultiplier) {
-                modifiedRewards.inkDrops = Math.floor(modifiedRewards.inkDrops * modifier.inkDropsMultiplier);
-            }
-        });
-        
-        modifiedRewards.modifiedBy = appliedModifiers;
-        return modifiedRewards;
-    }
-
-    // Apply keeper background bonuses to quest rewards
-    function applyBackgroundBonuses(rewards, quest) {
-        const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-        if (!background) return rewards;
-        
-        let modifiedRewards = { ...rewards };
-        const modifiers = modifiedRewards.modifiedBy || [];
-        
-        // Grove Tender: Always has "The Soaking in Nature" buff active (handled by atmospheric buff system)
-        // No automatic quest completion bonus
-        
-        // Biblioslinker: +3 Paper Scraps for completing Dungeon Crawls
-        if (background === 'biblioslinker' && quest.type === '♠ Dungeon Crawl') {
-            modifiedRewards.paperScraps = (modifiedRewards.paperScraps || 0) + 3;
-            modifiers.push('Biblioslinker');
-        }
-        
-        // Cartographer: +10 Ink Drops for first Dungeon Crawl each month
-        // Note: This requires manual tracking - would need to check if it's the first dungeon this month
-        // For now, we'll leave this for the player to manually claim
-        
-        modifiedRewards.modifiedBy = modifiers;
-        return modifiedRewards;
-    }
-
-    function getQuestRewards(type, prompt, isEncounter = false, roomNumber = null, encounterName = null, dungeonAction = 'defeat') {
-        // Default reward - XP will be calculated monthly, only currency here
-        let rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
-
-        if (type === '⭐ Extra Credit') {
-            // Extra Credit only grants paper scraps (books outside quest pool)
-            rewards = { xp: 0, inkDrops: 0, paperScraps: 10, items: [] };
-        } else if (type === '♥ Organize the Stacks') {
-            rewards = { xp: 15, inkDrops: 10, paperScraps: 0, items: [] };
-        } else if (type === '♣ Side Quest') {
-            // Find matching side quest
-            for (const key in data.sideQuestsDetailed) {
-                const sideQuest = data.sideQuestsDetailed[key];
-                if (prompt.includes(sideQuest.prompt) || prompt.includes(sideQuest.name)) {
-                    rewards = sideQuest.rewards || rewards;
-                    break;
-                }
-            }
-        } else if (type === '♠ Dungeon Crawl') {
-            if (isEncounter && roomNumber && encounterName) {
-                // Find the encounter in encountersDetailed
-                const room = data.dungeonRooms[roomNumber];
-                if (room && room.encountersDetailed) {
-                    const encounter = room.encountersDetailed.find(e => e.name === encounterName);
-                    if (encounter && encounter.rewards) {
-                        // Use encounter rewards directly (Monsters grant XP immediately)
-                        rewards = { 
-                            xp: encounter.rewards.xp, 
-                            inkDrops: encounter.rewards.inkDrops, 
-                            paperScraps: encounter.rewards.paperScraps, 
-                            items: encounter.rewards.items 
-                        };
-                    } else {
-                        // Fallback based on encounter type
-                        if (encounter?.type === 'Monster') {
-                            rewards = { xp: 30, inkDrops: 0, paperScraps: 0, items: [] };
-                        } else if (encounter?.type === 'Friendly Creature') {
-                            rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
-                        } else if (encounter?.type === 'Familiar') {
-                            rewards = { xp: 0, inkDrops: 0, paperScraps: 5, items: [] };
-                        }
-                    }
-                }
-            } else if (roomNumber) {
-                // Room challenge completion - use roomRewards if available
-                const room = data.dungeonRooms[roomNumber];
-                if (room && room.roomRewards) {
-                    rewards = { 
-                        xp: room.roomRewards.xp, 
-                        inkDrops: room.roomRewards.inkDrops, 
-                        paperScraps: room.roomRewards.paperScraps, 
-                        items: room.roomRewards.items || [] 
-                    };
-                } else {
-                    // Fallback for rooms without roomRewards defined
-                    rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
-                }
-            } else {
-                // Default dungeon reward if no room specified
-                rewards = { xp: 0, inkDrops: 10, paperScraps: 0, items: [] };
-            }
-        }
-
-        return rewards;
     }
 
     function updateCurrency(rewards) {
@@ -537,34 +370,64 @@ export function initializeCharacterSheet() {
                     encounterPrompt = (isBefriend && encounterData.befriend) ? encounterData.befriend : (encounterData.defeat || encounterData.befriend);
                 }
 
-                const roomRewards = getQuestRewards(type, roomData.challenge, false, roomNumber);
-                const encounterRewards = getQuestRewards(type, encounterPrompt, true, roomNumber, encounterName);
+                const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
                 
-                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false, roomNumber, rewards: roomRewards, buffs: selectedBuffs };
-                const encounterQuest = { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true, roomNumber, encounterName, rewards: encounterRewards, buffs: selectedBuffs };
+                // Calculate rewards using RewardCalculator
+                const roomRewards = RewardCalculator.getBaseRewards(type, roomData.challenge, { 
+                    isEncounter: false, 
+                    roomNumber 
+                });
+                const encounterRewards = RewardCalculator.getBaseRewards(type, encounterPrompt, { 
+                    isEncounter: true, 
+                    roomNumber, 
+                    encounterName 
+                });
+                
+                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false, roomNumber, rewards: roomRewards.toJSON(), buffs: selectedBuffs };
+                const encounterQuest = encounterName ? { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true, roomNumber, encounterName, rewards: encounterRewards.toJSON(), buffs: selectedBuffs } : null;
 
                 const status = document.getElementById('new-quest-status').value;
                 if (status === 'active') {
-                    characterState.activeAssignments.push(roomQuest, encounterQuest);
+                    characterState.activeAssignments.push(roomQuest);
+                    if (encounterQuest) {
+                        characterState.activeAssignments.push(encounterQuest);
+                    }
                     ui.renderActiveAssignments();
                 } else if (status === 'completed') {
                     // Check if this is a new book for monthly tracking
                     const bookName = book ? book.trim() : '';
                     const isNewBook = bookName && !completedBooksSet.has(bookName);
                     
-                    // Calculate modified rewards if buffs are applied
+                    // Calculate final rewards with modifiers
                     let finalRoomRewards = roomRewards;
                     let finalEncounterRewards = encounterRewards;
+                    
+                    // Apply buff modifiers if any buffs are selected
                     if (selectedBuffs.length > 0) {
-                        finalRoomRewards = calculateModifiedRewards(roomRewards, selectedBuffs);
-                        finalEncounterRewards = calculateModifiedRewards(encounterRewards, selectedBuffs);
-                        roomQuest.rewards = finalRoomRewards;
-                        encounterQuest.rewards = finalEncounterRewards;
+                        finalRoomRewards = RewardCalculator.applyModifiers(roomRewards, selectedBuffs);
+                        
+                        if (encounterQuest) {
+                            finalEncounterRewards = RewardCalculator.applyModifiers(encounterRewards, selectedBuffs);
+                        }
                     }
                     
-                    characterState.completedQuests.push(roomQuest, encounterQuest);
+                    // Always apply background bonuses (independent of buffs)
+                    finalRoomRewards = RewardCalculator.applyBackgroundBonuses(finalRoomRewards, roomQuest, background);
+                    roomQuest.rewards = finalRoomRewards.toJSON();
+                    
+                    if (encounterQuest) {
+                        finalEncounterRewards = RewardCalculator.applyBackgroundBonuses(finalEncounterRewards, encounterQuest, background);
+                        encounterQuest.rewards = finalEncounterRewards.toJSON();
+                    }
+                    
+                    characterState.completedQuests.push(roomQuest);
+                    if (encounterQuest) {
+                        characterState.completedQuests.push(encounterQuest);
+                    }
                     updateCurrency(finalRoomRewards);
-                    updateCurrency(finalEncounterRewards);
+                    if (encounterQuest) {
+                        updateCurrency(finalEncounterRewards);
+                    }
                     
                     // Add to completed books set and update counter if it's a new book
                     // Both room and encounter use the same book, so only count once
@@ -608,11 +471,12 @@ export function initializeCharacterSheet() {
                 return;
             }
 
-            // Calculate rewards
-            const rewards = getQuestRewards(type, prompt);
+            // Calculate rewards using RewardCalculator
+            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+            const rewards = RewardCalculator.getBaseRewards(type, prompt);
             
             // For dropdowns, the prompt is already the full text. For standard, it's just the input value.
-            const questData = { month, year, type, prompt, book, notes, rewards, buffs: selectedBuffs };
+            const questData = { month, year, type, prompt, book, notes, rewards: rewards.toJSON(), buffs: selectedBuffs };
             // Add new quest
             const status = document.getElementById('new-quest-status').value;
             if (status === 'active') {
@@ -623,12 +487,17 @@ export function initializeCharacterSheet() {
                 const bookName = book ? book.trim() : '';
                 const isNewBook = bookName && !completedBooksSet.has(bookName);
                 
-                // Calculate modified rewards if buffs are applied
+                // Calculate final rewards with modifiers
                 let finalRewards = rewards;
+                
+                // Apply buff modifiers if any buffs are selected
                 if (selectedBuffs.length > 0) {
-                    finalRewards = calculateModifiedRewards(rewards, selectedBuffs);
-                    questData.rewards = finalRewards;
+                    finalRewards = RewardCalculator.applyModifiers(rewards, selectedBuffs);
                 }
+                
+                // Always apply background bonuses (independent of buffs)
+                finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, questData, background);
+                questData.rewards = finalRewards.toJSON();
                 
                 characterState.completedQuests.push(questData);
                 updateCurrency(finalRewards);
@@ -873,17 +742,20 @@ export function initializeCharacterSheet() {
             const bookName = questToMove.book ? questToMove.book.trim() : '';
             const isNewBook = bookName && !completedBooksSet.has(bookName);
             
-            // Calculate modified rewards based on applied buffs/items
-            let finalRewards = questToMove.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] };
+            // Calculate modified rewards using RewardCalculator
+            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+            const baseRewards = new Reward(questToMove.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
+            
+            let finalRewards = baseRewards;
             if (questToMove.buffs && questToMove.buffs.length > 0) {
-                finalRewards = calculateModifiedRewards(questToMove.rewards, questToMove.buffs);
+                finalRewards = RewardCalculator.applyModifiers(baseRewards, questToMove.buffs);
             }
             
             // Apply keeper background bonuses
-            finalRewards = applyBackgroundBonuses(finalRewards, questToMove);
+            finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, questToMove, background);
             
             // Store the modified rewards back in the quest
-            questToMove.rewards = finalRewards;
+            questToMove.rewards = finalRewards.toJSON();
             
             characterState.completedQuests.push(questToMove);
             
