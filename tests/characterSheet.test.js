@@ -422,7 +422,7 @@ describe('Character Sheet', () => {
       const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
 
       // Click End of Month button
-      const endOfMonthButton = document.getElementById('end-of-month-button');
+      const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
 
       // Verify XP was added (15 XP per book = 45 XP)
@@ -1330,7 +1330,7 @@ describe('Character Sheet', () => {
       const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
       
       // Click End of Month
-      const endOfMonthButton = document.getElementById('end-of-month-button');
+      const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
       
       // Should get 8 paper scraps per entry (5 base + 3 Scribe bonus) = 40 total
@@ -1385,7 +1385,7 @@ describe('Character Sheet', () => {
       };
       
       // Click End of Month
-      const endOfMonthButton = document.getElementById('end-of-month-button');
+      const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
       
       // Grove Tender's buff should still be active
@@ -1449,7 +1449,7 @@ describe('Character Sheet', () => {
       const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
       
       // Click End of Month
-      const endOfMonthButton = document.getElementById('end-of-month-button');
+      const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
       
       // Should only get ink drops from active buffs: 10 + 8 = 18

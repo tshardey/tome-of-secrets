@@ -17,6 +17,9 @@ title: Keeper's Character Sheet
         <button type="button" data-tab-target="inventory" role="tab" aria-selected="false">
             <span>🎒</span> Inventory
         </button>
+        <button type="button" data-tab-target="environment" role="tab" aria-selected="false">
+            <span>🌿</span> Environment
+        </button>
         <button type="button" data-tab-target="quests" role="tab" aria-selected="false">
             <span>📅</span> Quests
         </button>
@@ -188,21 +191,11 @@ title: Keeper's Character Sheet
 </div>
 <!-- END TAB 3: INVENTORY -->
 
-<!-- TAB 4: QUESTS -->
-<div class="tab-panel" data-tab-panel="quests" role="tabpanel">
+<!-- TAB 4: ENVIRONMENT -->
+<div class="tab-panel" data-tab-panel="environment" role="tabpanel">
     <div class="form-section">
-        <h2>📅 Monthly Tracker</h2>
-
-        <div class="form-row" style="margin-bottom: 20px; display: flex; gap: 20px;">
-            <label for="books-completed-month" style="display: flex; align-items: center; gap: 10px;">
-                <strong>📚 Books Completed This Month:</strong>
-                <input type="number" id="books-completed-month" value="0" min="0" style="width: 80px;" />
-            </label>
-            <label for="journal-entries-completed" style="display: flex; align-items: center; gap: 10px;">
-                <strong>📝 Journal Entries Completed:</strong>
-                <input type="number" id="journal-entries-completed" value="0" min="0" style="width: 80px;" />
-            </label>
-        </div>
+        <h2>🌿 Reading Environment</h2>
+        <p class="description">Manage your temporary buffs and atmospheric conditions to enhance your reading experience. Future: Decorate your study to unlock permanent bonuses!</p>
 
         <div id="temporary-buffs-container">
             <h3>✨ Active Temporary Buffs</h3>
@@ -255,9 +248,32 @@ title: Keeper's Character Sheet
                 </tbody>
             </table>
             <div class="form-row" style="margin-top: 10px;">
-                <button type="button" id="end-of-month-button" class="no-print">End of Month</button>
+                <button type="button" class="end-of-month-button no-print">End of Month</button>
             </div>
         </div>
+    </div>
+</div>
+<!-- END TAB 4: ENVIRONMENT -->
+
+<!-- TAB 5: QUESTS -->
+<div class="tab-panel" data-tab-panel="quests" role="tabpanel">
+    <div class="form-section">
+        <h2>📅 Monthly Tracker</h2>
+
+        <div class="form-row" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <label for="books-completed-month" style="display: flex; align-items: center; gap: 10px;">
+                <strong>📚 Books Completed This Month:</strong>
+                <input type="number" id="books-completed-month" value="0" min="0" style="width: 80px;" />
+            </label>
+            <label for="journal-entries-completed" style="display: flex; align-items: center; gap: 10px;">
+                <strong>📝 Journal Entries Completed:</strong>
+                <input type="number" id="journal-entries-completed" value="0" min="0" style="width: 80px;" />
+            </label>
+            <button type="button" class="end-of-month-button no-print" style="margin-left: auto;">End of Month</button>
+        </div>
+        <p class="description" style="margin-top: -10px; margin-bottom: 20px;">
+            <strong>End of Month:</strong> Awards 15 XP per book completed, 5 Paper Scraps per journal entry (+3 for Scribe's Acolyte), processes atmospheric buffs, and resets all monthly counters.
+        </p>
 
         <div class="add-quest-form">
             <div class="form-row">
@@ -339,9 +355,9 @@ title: Keeper's Character Sheet
         </div>
     </div>
 </div>
-<!-- END TAB 4: QUESTS -->
+<!-- END TAB 5: QUESTS -->
 
-<!-- TAB 5: ARCHIVED QUESTS -->
+<!-- TAB 6: ARCHIVED QUESTS -->
 <div class="tab-panel" data-tab-panel="archived" role="tabpanel">
     <div class="form-section">
         <h2>📦 Archived Quests</h2>
@@ -406,9 +422,9 @@ title: Keeper's Character Sheet
         </div>
     </div>
 </div>
-<!-- END TAB 5: ARCHIVED QUESTS -->
+<!-- END TAB 6: ARCHIVED QUESTS -->
 
-<!-- TAB 6: CURSES -->
+<!-- TAB 7: CURSES -->
 <div class="tab-panel" data-tab-panel="curses" role="tabpanel">
     <div class="form-section">
         <h2>📜 The Shroud's Curse</h2>
@@ -465,7 +481,7 @@ title: Keeper's Character Sheet
 
     </div>
 </div>
-<!-- END TAB 6: CURSES -->
+<!-- END TAB 7: CURSES -->
 
 </div>
 <!-- END TAB CONTAINER -->

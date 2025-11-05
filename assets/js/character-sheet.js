@@ -819,132 +819,138 @@ export function initializeCharacterSheet() {
     });
 
     // End of Month button - processes atmospheric buffs and book completion XP
-    const endOfMonthButton = document.getElementById('end-of-month-button');
-    if (endOfMonthButton) {
-        endOfMonthButton.addEventListener('click', () => {
-            // Process atmospheric buffs to ink drops
-            let totalInkDrops = 0;
-            const selectedSanctum = librarySanctumSelect.value;
-            const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+    // Centralized End of Month handler function
+    const handleEndOfMonth = () => {
+        // Process atmospheric buffs to ink drops
+        let totalInkDrops = 0;
+        const selectedSanctum = librarySanctumSelect.value;
+        const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+        
+        for (const buffName in characterState.atmosphericBuffs) {
+            const buff = characterState.atmosphericBuffs[buffName];
             
-            for (const buffName in characterState.atmosphericBuffs) {
-                const buff = characterState.atmosphericBuffs[buffName];
-                
-                // Only process buffs that were marked as active
-                if (buff.isActive) {
-                    const isAssociated = associatedBuffs.includes(buffName);
-                    const dailyValue = isAssociated ? 2 : 1;
-                    const buffTotal = buff.daysUsed * dailyValue;
-                    totalInkDrops += buffTotal;
-                }
-                
-                // Reset the days used and active status for all buffs
-                buff.daysUsed = 0;
-                
-                // Keep Grove Tender's "Soaking in Nature" active, reset others
-                const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-                const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
-                if (!isGroveTenderBuff) {
-                    buff.isActive = false;
+            // Only process buffs that were marked as active
+            if (buff.isActive) {
+                const isAssociated = associatedBuffs.includes(buffName);
+                const dailyValue = isAssociated ? 2 : 1;
+                const buffTotal = buff.daysUsed * dailyValue;
+                totalInkDrops += buffTotal;
+            }
+            
+            // Reset the days used and active status for all buffs
+            buff.daysUsed = 0;
+            
+            // Keep Grove Tender's "Soaking in Nature" active, reset others
+            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+            const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
+            if (!isGroveTenderBuff) {
+                buff.isActive = false;
+            }
+        }
+        
+        // Add atmospheric buff ink drops
+        const inkDropsInput = document.getElementById('inkDrops');
+        if (inkDropsInput && totalInkDrops > 0) {
+            const currentInk = parseInt(inkDropsInput.value, 10) || 0;
+            inkDropsInput.value = currentInk + totalInkDrops;
+        }
+        
+        // Calculate and add book completion XP (15 XP per unique book)
+        const booksCompletedInput = document.getElementById('books-completed-month');
+        if (booksCompletedInput) {
+            const booksCompleted = parseInt(booksCompletedInput.value, 10) || 0;
+            const bookCompletionXP = booksCompleted * 15;
+            
+            if (bookCompletionXP > 0) {
+                const xpCurrent = document.getElementById('xp-current');
+                if (xpCurrent) {
+                    const currentXP = parseInt(xpCurrent.value, 10) || 0;
+                    xpCurrent.value = currentXP + bookCompletionXP;
                 }
             }
             
-            // Add atmospheric buff ink drops
-            const inkDropsInput = document.getElementById('inkDrops');
-            if (inkDropsInput && totalInkDrops > 0) {
-                const currentInk = parseInt(inkDropsInput.value, 10) || 0;
-                inkDropsInput.value = currentInk + totalInkDrops;
+            // Reset books completed counter to 0
+            booksCompletedInput.value = 0;
+        }
+        
+        // Calculate and add journal entries paper scraps (5 Paper Scraps per entry, +3 for Scribe's Acolyte)
+        const journalEntriesInput = document.getElementById('journal-entries-completed');
+        if (journalEntriesInput) {
+            const journalEntries = parseInt(journalEntriesInput.value, 10) || 0;
+            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+            
+            // Base 5 Paper Scraps per entry, +3 if Scribe's Acolyte
+            let papersPerEntry = 5;
+            if (background === 'scribe') {
+                papersPerEntry += 3;
             }
             
-            // Calculate and add book completion XP (15 XP per unique book)
-            const booksCompletedInput = document.getElementById('books-completed-month');
-            if (booksCompletedInput) {
-                const booksCompleted = parseInt(booksCompletedInput.value, 10) || 0;
-                const bookCompletionXP = booksCompleted * 15;
-                
-                if (bookCompletionXP > 0) {
-                    const xpCurrent = document.getElementById('xp-current');
-                    if (xpCurrent) {
-                        const currentXP = parseInt(xpCurrent.value, 10) || 0;
-                        xpCurrent.value = currentXP + bookCompletionXP;
-                    }
+            const journalPaperScraps = journalEntries * papersPerEntry;
+            
+            if (journalPaperScraps > 0) {
+                const paperScrapsInput = document.getElementById('paperScraps');
+                if (paperScrapsInput) {
+                    const currentPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+                    paperScrapsInput.value = currentPaperScraps + journalPaperScraps;
                 }
                 
-                // Reset books completed counter to 0
-                booksCompletedInput.value = 0;
-            }
-            
-            // Calculate and add journal entries paper scraps (5 Paper Scraps per entry, +3 for Scribe's Acolyte)
-            const journalEntriesInput = document.getElementById('journal-entries-completed');
-            if (journalEntriesInput) {
-                const journalEntries = parseInt(journalEntriesInput.value, 10) || 0;
-                const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-                
-                // Base 5 Paper Scraps per entry, +3 if Scribe's Acolyte
-                let papersPerEntry = 5;
+                // Show notification of bonus if applicable
                 if (background === 'scribe') {
-                    papersPerEntry += 3;
+                    alert(`Journal entries rewarded: ${journalPaperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
                 }
-                
-                const journalPaperScraps = journalEntries * papersPerEntry;
-                
-                if (journalPaperScraps > 0) {
-                    const paperScrapsInput = document.getElementById('paperScraps');
-                    if (paperScrapsInput) {
-                        const currentPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-                        paperScrapsInput.value = currentPaperScraps + journalPaperScraps;
-                    }
-                    
-                    // Show notification of bonus if applicable
-                    if (background === 'scribe') {
-                        alert(`Journal entries rewarded: ${journalPaperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
-                    }
-                }
-                
-                // Reset journal entries counter to 0
-                journalEntriesInput.value = 0;
             }
             
-            // Clear the completed books set for the new month
-            completedBooksSet.clear();
-            saveCompletedBooksSet(); // Save the cleared set
-            
-            // Process temporary buffs - decrement monthsRemaining and remove expired
-            if (characterState.temporaryBuffs) {
-                characterState.temporaryBuffs = characterState.temporaryBuffs.filter(buff => {
-                    // Remove one-time buffs that were used
-                    if (buff.duration === 'one-time' && buff.status === 'used') {
-                        return false;
-                    }
-                    
-                    // Remove end-of-month buffs
-                    if (buff.duration === 'until-end-month') {
-                        return false;
-                    }
-                    
-                    // Decrement two-month buffs
-                    if (buff.duration === 'two-months' && buff.monthsRemaining > 0) {
-                        buff.monthsRemaining--;
-                        // Remove if no months remaining
-                        if (buff.monthsRemaining === 0) {
-                            return false;
-                        }
-                    }
-                    
-                    return true;
-                });
+            // Reset journal entries counter to 0
+            journalEntriesInput.value = 0;
+        }
+        
+        // Clear the completed books set for the new month
+        completedBooksSet.clear();
+        saveCompletedBooksSet(); // Save the cleared set
+        
+        // Process temporary buffs - decrement monthsRemaining and remove expired
+        if (characterState.temporaryBuffs) {
+            characterState.temporaryBuffs = characterState.temporaryBuffs.filter(buff => {
+                // Remove one-time buffs that were used
+                if (buff.duration === 'one-time' && buff.status === 'used') {
+                    return false;
+                }
                 
-                // Increment buff month counter
-                characterState.buffMonthCounter = (characterState.buffMonthCounter || 0) + 1;
-            }
+                // Remove end-of-month buffs
+                if (buff.duration === 'until-end-month') {
+                    return false;
+                }
+                
+                // Decrement two-month buffs
+                if (buff.duration === 'two-months' && buff.monthsRemaining > 0) {
+                    buff.monthsRemaining--;
+                    // Remove if no months remaining
+                    if (buff.monthsRemaining === 0) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
             
-            // Re-render the atmospheric buffs table to show 0 days used
-            ui.renderAtmosphericBuffs(librarySanctumSelect);
-            ui.renderTemporaryBuffs();
-            ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-            saveState(form);
-        });
-    }
+            // Increment buff month counter
+            characterState.buffMonthCounter = (characterState.buffMonthCounter || 0) + 1;
+        }
+        
+        // Re-render the atmospheric buffs table to show 0 days used
+        ui.renderAtmosphericBuffs(librarySanctumSelect);
+        ui.renderTemporaryBuffs();
+        ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+        saveState(form);
+        
+        alert('End of Month processed! Rewards distributed and counters reset.');
+    };
+    
+    // Attach the handler to all "End of Month" buttons
+    const endOfMonthButtons = document.querySelectorAll('.end-of-month-button');
+    endOfMonthButtons.forEach(button => {
+        button.addEventListener('click', handleEndOfMonth);
+    });
 
     if(itemSelect) {
         for (const name in data.allItems) {
