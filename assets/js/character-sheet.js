@@ -3,6 +3,7 @@ import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { RewardCalculator, Reward } from './services/RewardCalculator.js';
 import { QuestHandlerFactory } from './quest-handlers/QuestHandlerFactory.js';
+import { BaseQuestHandler } from './quest-handlers/BaseQuestHandler.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -308,45 +309,42 @@ export function initializeCharacterSheet() {
         let prompt = '';
 
         if (editingQuestInfo) {
-            // Determine the prompt source based on the quest type
+            // Update quest using helper method for prompt determination
             const originalQuest = characterState[editingQuestInfo.list][editingQuestInfo.index];
-            prompt = originalQuest.prompt; // Default to the original prompt
-
-            if (type === '♠ Dungeon Crawl' && originalQuest.isEncounter && dungeonEncounterSelect.value) {
-                const roomNumber = dungeonRoomSelect.value;
-                const encounterName = dungeonEncounterSelect.value;
-                const encounterData = data.dungeonRooms[roomNumber].encounters[encounterName];
-                
-                if (encounterData.defeat && encounterData.befriend) {
-                    prompt = dungeonActionToggle.checked ? encounterData.befriend : encounterData.defeat;
-                } else {
-                    prompt = encounterData.defeat || encounterData.befriend;
-                }
-
-            } else if (type === '♠ Dungeon Crawl') {
-                const roomNumber = dungeonRoomSelect.value;
-                if (roomNumber) {
-                    // If a new room was selected, update the prompt
-                    prompt = data.dungeonRooms[roomNumber].challenge;
-                }
-            }
-            else if (type === '⭐ Extra Credit') {
-                prompt = 'Book read outside of quest pool';
-            } else if (type === '♥ Organize the Stacks') {
-                prompt = genreQuestSelect.value;
-            } else if (type === '♣ Side Quest') {
-                prompt = sideQuestSelect.value;
-            } else {
-                prompt = document.getElementById('new-quest-prompt').value;
-            }
+            
+            const formElements = {
+                dungeonRoomSelect,
+                dungeonEncounterSelect,
+                dungeonActionToggle,
+                genreQuestSelect,
+                sideQuestSelect,
+                promptInput: document.getElementById('new-quest-prompt')
+            };
+            
+            // Use BaseQuestHandler to determine the correct prompt
+            prompt = BaseQuestHandler.determinePromptForEdit(type, originalQuest, formElements, data);
 
             // Update the quest in the state
-            Object.assign(characterState[editingQuestInfo.list][editingQuestInfo.index], { month, year, type, prompt, book, notes, buffs: selectedBuffs });
+            Object.assign(originalQuest, { 
+                month, 
+                year, 
+                type, 
+                prompt, 
+                book, 
+                notes, 
+                buffs: selectedBuffs 
+            });
             
-            // Re-render the correct list
-            if (editingQuestInfo.list === 'activeAssignments') ui.renderActiveAssignments();
-            else if (editingQuestInfo.list === 'completedQuests') ui.renderCompletedQuests();
-            else if (editingQuestInfo.list === 'discardedQuests') ui.renderDiscardedQuests();
+            // Re-render the appropriate list
+            const renderMap = {
+                activeAssignments: () => ui.renderActiveAssignments(),
+                completedQuests: () => ui.renderCompletedQuests(),
+                discardedQuests: () => ui.renderDiscardedQuests()
+            };
+            
+            if (renderMap[editingQuestInfo.list]) {
+                renderMap[editingQuestInfo.list]();
+            }
 
             resetQuestForm();
         } else {
@@ -645,40 +643,30 @@ export function initializeCharacterSheet() {
             const bookName = questToMove.book ? questToMove.book.trim() : '';
             const isNewBook = bookName && !completedBooksSet.has(bookName);
             
-            // Calculate modified rewards using RewardCalculator
+            // Use the BaseQuestHandler helper to finalize rewards
             const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-            const baseRewards = new Reward(questToMove.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
+            const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background);
             
-            let finalRewards = baseRewards;
-            if (questToMove.buffs && questToMove.buffs.length > 0) {
-                finalRewards = RewardCalculator.applyModifiers(baseRewards, questToMove.buffs);
-            }
-            
-            // Apply keeper background bonuses
-            finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, questToMove, background);
-            
-            // Store the modified rewards back in the quest
-            questToMove.rewards = finalRewards.toJSON();
-            
-            characterState.completedQuests.push(questToMove);
+            // Add to completed quests
+            characterState.completedQuests.push(completedQuest);
             
             // Add to completed books set if it's a new book
             if (isNewBook) {
                 completedBooksSet.add(bookName);
-                saveCompletedBooksSet(); // Save the updated set
+                saveCompletedBooksSet();
             }
             
-            // Update currency when completing a quest (using final modified rewards)
-            if (finalRewards) {
-                updateCurrency(finalRewards);
-                ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-            }
+            // Update currency with finalized rewards
+            updateCurrency(completedQuest.rewards);
+            ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
             
             // Increment books completed counter only if this is a new book
-            const booksCompleted = document.getElementById('books-completed-month');
-            if (booksCompleted && isNewBook) {
-                const currentBooks = parseInt(booksCompleted.value, 10) || 0;
-                booksCompleted.value = currentBooks + 1;
+            if (isNewBook) {
+                const booksCompleted = document.getElementById('books-completed-month');
+                if (booksCompleted) {
+                    const currentBooks = parseInt(booksCompleted.value, 10) || 0;
+                    booksCompleted.value = currentBooks + 1;
+                }
             }
             
             ui.renderActiveAssignments();

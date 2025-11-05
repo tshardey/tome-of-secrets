@@ -9,12 +9,12 @@ import * as data from '../character-sheet/data.js';
  * Represents a reward package with XP, currency, and items
  */
 export class Reward {
-    constructor({ xp = 0, inkDrops = 0, paperScraps = 0, items = [] } = {}) {
+    constructor({ xp = 0, inkDrops = 0, paperScraps = 0, items = [], modifiedBy = [] } = {}) {
         this.xp = xp;
         this.inkDrops = inkDrops;
         this.paperScraps = paperScraps;
         this.items = Array.isArray(items) ? items : [];
-        this.modifiedBy = []; // Track what modifiers were applied
+        this.modifiedBy = Array.isArray(modifiedBy) ? modifiedBy : []; // Track what modifiers were applied
     }
 
     /**
