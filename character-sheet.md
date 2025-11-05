@@ -4,6 +4,32 @@ title: Keeper's Character Sheet
 ---
 
 <form id="character-sheet">
+
+<!-- Tab Navigation -->
+<div class="tab-container">
+    <nav class="tab-nav" role="tablist">
+        <button type="button" data-tab-target="character" class="active" role="tab" aria-selected="true">
+            <span>📊</span> Character
+        </button>
+        <button type="button" data-tab-target="abilities" role="tab" aria-selected="false">
+            <span>⚡</span> Abilities
+        </button>
+        <button type="button" data-tab-target="inventory" role="tab" aria-selected="false">
+            <span>🎒</span> Inventory
+        </button>
+        <button type="button" data-tab-target="quests" role="tab" aria-selected="false">
+            <span>📅</span> Quests
+        </button>
+        <button type="button" data-tab-target="archived" role="tab" aria-selected="false">
+            <span>📦</span> Archived
+        </button>
+        <button type="button" data-tab-target="curses" role="tab" aria-selected="false">
+            <span>💀</span> Curses
+        </button>
+    </nav>
+
+<!-- TAB 1: CHARACTER INFO & RESOURCES -->
+<div class="tab-panel active" data-tab-panel="character" role="tabpanel">
     <div class="form-section">
         <h2>👤 Character Information</h2>
         <ul class="form-list">
@@ -67,7 +93,11 @@ title: Keeper's Character Sheet
             <!-- Selected genres will be displayed here -->
         </div>
     </div>
+</div>
+<!-- END TAB 1: CHARACTER -->
 
+<!-- TAB 2: ABILITIES -->
+<div class="tab-panel" data-tab-panel="abilities" role="tabpanel">
     <div class="form-section">
     <h2>🔮 Abilities & Benefits</h2>
 
@@ -116,7 +146,11 @@ title: Keeper's Character Sheet
         </ul>
     </div>
 </div>
+</div>
+<!-- END TAB 2: ABILITIES -->
 
+<!-- TAB 3: INVENTORY -->
+<div class="tab-panel" data-tab-panel="inventory" role="tabpanel">
 <div class="form-section">
     <h2>🎒 Keeper's Loadout & Inventory</h2>
 
@@ -151,7 +185,11 @@ title: Keeper's Character Sheet
             </div>
     </div>
 </div>
+</div>
+<!-- END TAB 3: INVENTORY -->
 
+<!-- TAB 4: QUESTS -->
+<div class="tab-panel" data-tab-panel="quests" role="tabpanel">
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
 
@@ -299,6 +337,15 @@ title: Keeper's Character Sheet
 </tbody>
             </table>
         </div>
+    </div>
+</div>
+<!-- END TAB 4: QUESTS -->
+
+<!-- TAB 5: ARCHIVED QUESTS -->
+<div class="tab-panel" data-tab-panel="archived" role="tabpanel">
+    <div class="form-section">
+        <h2>📦 Archived Quests</h2>
+        <p class="description">View your quest history - completed books and discarded quests.</p>
 
         <div id="completed-quests-container">
             <h3 id="completed-summary">Completed Quests</h3>
@@ -358,11 +405,15 @@ title: Keeper's Character Sheet
             </table>
         </div>
     </div>
+</div>
+<!-- END TAB 5: ARCHIVED QUESTS -->
 
+<!-- TAB 6: CURSES -->
+<div class="tab-panel" data-tab-panel="curses" role="tabpanel">
     <div class="form-section">
         <h2>📜 The Shroud's Curse</h2>
         <p class="description">When you fail to complete your monthly quest pool, the Shroud advances and you receive a Worn Page penalty for each book you missed. For each Worn Page you have, roll on the Curse Table at the start of your next month's quest.</p>
-        
+
         <div class="add-curse-form">
             <h3>Add Curse Penalty</h3>
             <div class="form-row">
@@ -413,6 +464,11 @@ title: Keeper's Character Sheet
         </div>
 
     </div>
+</div>
+<!-- END TAB 6: CURSES -->
+
+</div>
+<!-- END TAB CONTAINER -->
 
     <div class="form-buttons no-print">
     <button type="submit">Save Character Info</button>
