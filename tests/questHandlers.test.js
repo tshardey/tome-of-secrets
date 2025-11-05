@@ -38,7 +38,7 @@ describe('Quest Handlers', () => {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
                     rewards: { xp: 10, inkDrops: 5, paperScraps: 5, items: [], modifiedBy: [] },
-                    buffs: ['Bloodline Affinity'], // +15 Ink Drops
+                    buffs: ['Long Read Focus'], // +2 Ink Drops
                     month: 'January',
                     year: '2024',
                     book: 'Test Book',
@@ -48,10 +48,10 @@ describe('Quest Handlers', () => {
                 const completedQuest = BaseQuestHandler.completeActiveQuest(quest, 'biblioslinker');
 
                 // Should have buff modifier applied
-                expect(completedQuest.rewards.modifiedBy).toContain('Bloodline Affinity');
+                expect(completedQuest.rewards.modifiedBy).toContain('Long Read Focus');
                 // Should have Biblioslinker bonus (+3 Paper Scraps for dungeons)
                 expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
-                expect(completedQuest.rewards.inkDrops).toBe(20); // 5 base + 15 from Bloodline Affinity
+                expect(completedQuest.rewards.inkDrops).toBe(7); // 5 base + 2 from Long Read Focus
                 expect(completedQuest.rewards.paperScraps).toBe(8); // 5 base + 3 from Biblioslinker
             });
 
@@ -369,22 +369,22 @@ describe('Quest Handlers', () => {
     describe('Quest Creation with Buffs', () => {
         it('should apply buffs to dungeon quest rewards', () => {
             formElements.dungeonRoomSelect.value = '1';
-            formElements.buffsSelect.selectedOptions = [{ value: 'Bloodline Affinity' }];
+            formElements.buffsSelect.selectedOptions = [{ value: 'Long Read Focus' }];
             
             const handler = new DungeonQuestHandler(formElements, data);
             const quests = handler.createQuests();
 
-            expect(quests[0].buffs).toContain('Bloodline Affinity');
+            expect(quests[0].buffs).toContain('Long Read Focus');
         });
 
         it('should apply buffs to genre quest rewards', () => {
             formElements.genreQuestSelect.value = 'Fantasy';
-            formElements.buffsSelect.selectedOptions = [{ value: 'Bloodline Affinity' }];
+            formElements.buffsSelect.selectedOptions = [{ value: 'Long Read Focus' }];
             
             const handler = new GenreQuestHandler(formElements, data);
             const quests = handler.createQuests();
 
-            expect(quests[0].buffs).toContain('Bloodline Affinity');
+            expect(quests[0].buffs).toContain('Long Read Focus');
         });
     });
 });

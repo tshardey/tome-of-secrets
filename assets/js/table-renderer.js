@@ -6,7 +6,8 @@ import {
     allGenres,
     atmosphericBuffs,
     sideQuestsDetailed,
-    curseTableDetailed 
+    curseTableDetailed,
+    allItems
 } from './character-sheet/data.js';
 
 /**
@@ -78,7 +79,20 @@ export function renderDungeonRoomsTable() {
             if (room.roomRewards.inkDrops > 0) rewards.push(`+${room.roomRewards.inkDrops} Ink Drops`);
             if (room.roomRewards.paperScraps > 0) rewards.push(`+${room.roomRewards.paperScraps} Paper Scraps`);
             if (room.roomRewards.items && room.roomRewards.items.length > 0) {
-                room.roomRewards.items.forEach(item => rewards.push(item));
+                room.roomRewards.items.forEach(item => {
+                    // Check if item exists in allItems and create a link
+                    if (allItems[item]) {
+                        // Convert item name to anchor ID (e.g., "Gilded Painting" -> "gilded-painting")
+                        const anchorId = item.toLowerCase()
+                            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+                            .replace(/\s+/g, '-') // Replace spaces with hyphens
+                            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+                        const link = `<a href="{{ site.baseurl }}/rewards.html#${anchorId}">${item}</a>`;
+                        rewards.push(link);
+                    } else {
+                        rewards.push(item);
+                    }
+                });
             }
             if (room.roomRewards.special) rewards.push(room.roomRewards.special);
             

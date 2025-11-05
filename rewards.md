@@ -54,6 +54,19 @@ This document serves as a guide to the magical items and familiars you can disco
 
 <div class="reward-item">
   <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/blood-fury-tattoo.png" alt="Blood Fury Tattoo">
+  </div>
+  <div class="reward-description">
+    <h4 id="blood-fury-tattoo">Blood Fury Tattoo</h4>
+    <p>Inked markings blaze across your skin, binding you to stories of rebellion and counter-culture.</p>
+    <p><strong>Bonus:</strong> Earn a +15 Ink Drop bonus for your next book in a series.</p>
+  </div>
+</div>
+
+### Non-Wearable
+
+<div class="reward-item">
+  <div class="reward-image">
     <img src="{{ site.baseurl }}/assets/images/rewards/bookwyrms-scale.png" alt="The Bookwyrm's Scale">
   </div>
   <div class="reward-description">
@@ -62,8 +75,6 @@ This document serves as a guide to the magical items and familiars you can disco
     <p><strong>Bonus:</strong> For every book over 500 pages, gain a +10 Ink Drop bonus.</p>
   </div>
 </div>
-
-### Non-Wearable
 
 <div class="reward-item">
   <div class="reward-image">
@@ -128,6 +139,17 @@ This document serves as a guide to the magical items and familiars you can disco
     <h4 id="the-scepter-of-knowledge">The Scepter of Knowledge</h4>
     <p>A staff capped with a crystal that hums with forgotten lore.</p>
     <p><strong>Bonus:</strong> Once per month, you may switch the genre of any quest you roll to Non-Fiction.</p>
+  </div>
+</div>
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/gilded-painting.png" alt="Gilded Painting">
+  </div>
+  <div class="reward-description">
+    <h4 id="gilded-painting">Gilded Painting</h4>
+    <p>Oil paintings leer from gilded frames, their subjects shifting when you look away.</p>
+    <p><strong>Bonus:</strong> Earn +1 Ink Drop when reading in an ornate location.</p>
   </div>
 </div>
 
@@ -196,5 +218,18 @@ This document serves as a guide to the magical items and familiars you can disco
     <h4 id="page-sprite">Page Sprite</h4>
     <p>Found in The Shroud's Heart. This sprite zips through pages with infectious glee.</p>
     <p><strong>Bonus:</strong> Earn a x2 Ink Drop bonus on any book under 300 pages.</p>
+  </div>
+</div>
+
+### Temporary Buffs
+
+<div class="reward-item">
+  <div class="reward-image">
+    <img src="{{ site.baseurl }}/assets/images/rewards/long-read-focus.png" alt="Long Read Focus">
+  </div>
+  <div class="reward-description">
+    <h4 id="long-read-focus">Long Read Focus</h4>
+    <p>An ancient spellbook writes a new page, granting you focus for lengthy tomes.</p>
+    <p><strong>Bonus:</strong> Earn +2 Ink Drops per 100 pages over 300. (One-time use)</p>
   </div>
 </div>

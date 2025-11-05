@@ -36,8 +36,14 @@ export const allItems = {
         bonus: "Earn a permanent +10 Ink Drop bonus for books that are part of a series.",
         rewardModifier: { inkDrops: 10 }
     },
-    "The Bookwyrm's Scale": { 
+    "Blood Fury Tattoo": { 
         type: "Wearable", 
+        img: "assets/images/rewards/blood-fury-tattoo.png", 
+        bonus: "Earn a +15 Ink Drop bonus for your next book in a series.",
+        rewardModifier: { inkDrops: 15 }
+    },
+    "The Bookwyrm's Scale": { 
+        type: "Non-Wearable", 
         img: "assets/images/rewards/bookwyrms-scale.png", 
         bonus: "For every book over 500 pages, gain a +10 Ink Drop bonus.",
         rewardModifier: { inkDrops: 10 }
@@ -77,6 +83,12 @@ export const allItems = {
         img: "assets/images/rewards/scepter-of-knowledge.png", 
         bonus: "Once per month, you may switch the genre of any quest you roll to Non-Fiction.",
         rewardModifier: {} // Utility item, no direct reward modifier
+    },
+    "Gilded Painting": { 
+        type: "Non-Wearable", 
+        img: "assets/images/rewards/gilded-painting.png", 
+        bonus: "Earn +1 Ink Drop when reading in an ornate location.",
+        rewardModifier: { inkDrops: 1 }
     },
     "Celestial Koi Fish": { 
         type: "Familiar", 
@@ -655,8 +667,10 @@ export const sideQuestsDetailed = {
         name: "The Blood Fury Tattoo",
         description: "Inked markings blaze across your skin.",
         prompt: "Read a book featuring a counter culture rebellion.",
-        reward: "Bloodline Affinity buff (+15 Ink Drops for your next book in a series).",
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Bloodline Affinity"] }
+        reward: "Receive a Blood Fury Tattoo.",
+        hasLink: true,
+        link: { text: "Blood Fury Tattoo", url: "{{ site.baseurl }}/rewards.html#blood-fury-tattoo" },
+        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Blood Fury Tattoo"] }
     },
     "3": { 
         name: "The Bag of Holding",
@@ -755,18 +769,6 @@ export const temporaryBuffsFromRewards = {
         duration: "one-time",
         source: "Side Quest: The Arcane Grimoire",
         rewardModifier: { inkDrops: 2 } // Per 100 pages over 300 - calculated manually
-    },
-    "Bloodline Affinity": {
-        description: "+15 Ink Drops for your next book in a series",
-        duration: "one-time",
-        source: "Side Quest: The Blood Fury Tattoo",
-        rewardModifier: { inkDrops: 15 }
-    },
-    "Gilded Painting": {
-        description: "+1 Ink Drop when reading in an ornate location",
-        duration: "two-months",
-        source: "Dungeon: The Grand Gallery",
-        rewardModifier: { inkDrops: 1 }
     }
 };
 
