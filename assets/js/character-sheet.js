@@ -2,6 +2,7 @@ import * as data from './character-sheet/data.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { RewardCalculator, Reward } from './services/RewardCalculator.js';
+import { QuestHandlerFactory } from './quest-handlers/QuestHandlerFactory.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -349,88 +350,55 @@ export function initializeCharacterSheet() {
 
             resetQuestForm();
         } else {
-            // Handle special case for adding a new Dungeon Crawl
-            if (type === '♠ Dungeon Crawl') {
-                const roomNumber = dungeonRoomSelect.value;
-                const roomData = data.dungeonRooms[roomNumber];
-                const encounterName = dungeonEncounterSelect.value;
-                let encounterPrompt = '';
+            // Add new quest using handler pattern
+            try {
+                // Create form elements object for handler
+                const formElements = {
+                    monthInput: document.getElementById('quest-month'),
+                    yearInput: document.getElementById('quest-year'),
+                    bookInput: document.getElementById('new-quest-book'),
+                    notesInput: document.getElementById('new-quest-notes'),
+                    statusSelect: document.getElementById('new-quest-status'),
+                    buffsSelect: document.getElementById('quest-buffs-select'),
+                    backgroundSelect: keeperBackgroundSelect,
+                    dungeonRoomSelect,
+                    dungeonEncounterSelect,
+                    dungeonActionToggle,
+                    genreQuestSelect,
+                    sideQuestSelect
+                };
 
-                if (!roomNumber || !book || !month || !year) {
-                    alert('Please fill in Month, Year, Book, and select a Room.');
+                // Get handler for quest type
+                const handler = QuestHandlerFactory.getHandler(type, formElements, data);
+
+                // Validate form
+                const validation = handler.validate();
+                if (!validation.valid) {
+                    alert(validation.error);
                     return;
                 }
-                if (Object.keys(roomData.encounters).length > 0 && !encounterName) {
-                    alert('Please select an Encounter for this room.');
-                    return;
-                }
-                if (encounterName) {
-                    const encounterData = roomData.encounters[encounterName];
-                    const isBefriend = dungeonActionToggle.checked;
-                    encounterPrompt = (isBefriend && encounterData.befriend) ? encounterData.befriend : (encounterData.defeat || encounterData.befriend);
-                }
 
-                const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-                
-                // Calculate rewards using RewardCalculator
-                const roomRewards = RewardCalculator.getBaseRewards(type, roomData.challenge, { 
-                    isEncounter: false, 
-                    roomNumber 
-                });
-                const encounterRewards = RewardCalculator.getBaseRewards(type, encounterPrompt, { 
-                    isEncounter: true, 
-                    roomNumber, 
-                    encounterName 
-                });
-                
-                const roomQuest = { month, year, type, prompt: roomData.challenge, book, notes, isEncounter: false, roomNumber, rewards: roomRewards.toJSON(), buffs: selectedBuffs };
-                const encounterQuest = encounterName ? { month, year, type, prompt: encounterPrompt, book, notes, isEncounter: true, roomNumber, encounterName, rewards: encounterRewards.toJSON(), buffs: selectedBuffs } : null;
+                // Create quests
+                const quests = handler.createQuests();
+                const status = formElements.statusSelect.value;
 
-                const status = document.getElementById('new-quest-status').value;
+                // Add quests to appropriate list
                 if (status === 'active') {
-                    characterState.activeAssignments.push(roomQuest);
-                    if (encounterQuest) {
-                        characterState.activeAssignments.push(encounterQuest);
-                    }
+                    quests.forEach(quest => characterState.activeAssignments.push(quest));
                     ui.renderActiveAssignments();
                 } else if (status === 'completed') {
-                    // Check if this is a new book for monthly tracking
+                    // Track if this is a new book
                     const bookName = book ? book.trim() : '';
                     const isNewBook = bookName && !completedBooksSet.has(bookName);
-                    
-                    // Calculate final rewards with modifiers
-                    let finalRoomRewards = roomRewards;
-                    let finalEncounterRewards = encounterRewards;
-                    
-                    // Apply buff modifiers if any buffs are selected
-                    if (selectedBuffs.length > 0) {
-                        finalRoomRewards = RewardCalculator.applyModifiers(roomRewards, selectedBuffs);
-                        
-                        if (encounterQuest) {
-                            finalEncounterRewards = RewardCalculator.applyModifiers(encounterRewards, selectedBuffs);
-                        }
-                    }
-                    
-                    // Always apply background bonuses (independent of buffs)
-                    finalRoomRewards = RewardCalculator.applyBackgroundBonuses(finalRoomRewards, roomQuest, background);
-                    roomQuest.rewards = finalRoomRewards.toJSON();
-                    
-                    if (encounterQuest) {
-                        finalEncounterRewards = RewardCalculator.applyBackgroundBonuses(finalEncounterRewards, encounterQuest, background);
-                        encounterQuest.rewards = finalEncounterRewards.toJSON();
-                    }
-                    
-                    characterState.completedQuests.push(roomQuest);
-                    if (encounterQuest) {
-                        characterState.completedQuests.push(encounterQuest);
-                    }
-                    updateCurrency(finalRoomRewards);
-                    if (encounterQuest) {
-                        updateCurrency(finalEncounterRewards);
-                    }
-                    
-                    // Add to completed books set and update counter if it's a new book
-                    // Both room and encounter use the same book, so only count once
+
+                    // Add to completed quests
+                    quests.forEach(quest => {
+                        characterState.completedQuests.push(quest);
+                        // Update currency with the quest's rewards
+                        updateCurrency(quest.rewards);
+                    });
+
+                    // Update book counter if new book
                     if (isNewBook) {
                         completedBooksSet.add(bookName);
                         saveCompletedBooksSet();
@@ -441,81 +409,16 @@ export function initializeCharacterSheet() {
                             booksCompleted.value = currentBooks + 1;
                         }
                     }
-                    
+
                     ui.renderCompletedQuests();
                     ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
                 }
+
                 saveState(form);
                 resetQuestForm();
-                return; // Exit after handling dungeon
-            }
-
-            if (type === '⭐ Extra Credit') {
-                prompt = 'Book read outside of quest pool';
-            } else if (type === '♥ Organize the Stacks') {
-                prompt = genreQuestSelect.value;
-            } else if (type === '♣ Side Quest') {
-                prompt = sideQuestSelect.value;
-            } else {
-                prompt = document.getElementById('new-quest-prompt').value;
-            }
-
-            // For Extra Credit, prompt is not required
-            if (type === '⭐ Extra Credit') {
-                if (!book || !month || !year) {
-                    alert('Please fill in the Month, Year, and Book Title.');
-                    return;
-                }
-            } else if (!prompt || !book || !month || !year) {
-                alert('Please fill in the Month, Year, Prompt, and Book Title.');
-                return;
-            }
-
-            // Calculate rewards using RewardCalculator
-            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-            const rewards = RewardCalculator.getBaseRewards(type, prompt);
-            
-            // For dropdowns, the prompt is already the full text. For standard, it's just the input value.
-            const questData = { month, year, type, prompt, book, notes, rewards: rewards.toJSON(), buffs: selectedBuffs };
-            // Add new quest
-            const status = document.getElementById('new-quest-status').value;
-            if (status === 'active') {
-                characterState.activeAssignments.push(questData); 
-                ui.renderActiveAssignments();
-            } else if (status === 'completed') {
-                // Check if this is a new book for monthly tracking
-                const bookName = book ? book.trim() : '';
-                const isNewBook = bookName && !completedBooksSet.has(bookName);
-                
-                // Calculate final rewards with modifiers
-                let finalRewards = rewards;
-                
-                // Apply buff modifiers if any buffs are selected
-                if (selectedBuffs.length > 0) {
-                    finalRewards = RewardCalculator.applyModifiers(rewards, selectedBuffs);
-                }
-                
-                // Always apply background bonuses (independent of buffs)
-                finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, questData, background);
-                questData.rewards = finalRewards.toJSON();
-                
-                characterState.completedQuests.push(questData);
-                updateCurrency(finalRewards);
-                
-                // Add to completed books set and update counter if it's a new book
-                if (isNewBook) {
-                    completedBooksSet.add(bookName);
-                    saveCompletedBooksSet();
-                    
-                    const booksCompleted = document.getElementById('books-completed-month');
-                    if (booksCompleted) {
-                        const currentBooks = parseInt(booksCompleted.value, 10) || 0;
-                        booksCompleted.value = currentBooks + 1;
-                    }
-                }
-                
-                ui.renderCompletedQuests();
-                ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+            } catch (error) {
+                console.error('Error adding quest:', error);
+                alert(`Error adding quest: ${error.message}`);
             }
         }
 
