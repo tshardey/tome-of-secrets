@@ -1,4 +1,5 @@
 import * as data from './character-sheet/data.js';
+import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 
 export function initializeQuestsPage() {
     // Check if we're on the quests page
@@ -35,7 +36,7 @@ function initializeGenreSelection() {
     // Load saved genre selection
     let selectedGenres = [];
     try {
-        selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
+        selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
     } catch (e) {
         selectedGenres = [];
     }
@@ -92,7 +93,7 @@ function renderCustomGenreQuests(selectedGenres = null) {
     
     if (!selectedGenres) {
         try {
-            selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
+            selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
         } catch (e) {
             selectedGenres = [];
         }
@@ -130,7 +131,7 @@ function setupEventListeners() {
             
             let selectedGenres = [];
             try {
-                selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
+                selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
             } catch (e) {
                 selectedGenres = [];
             }
@@ -146,7 +147,7 @@ function setupEventListeners() {
             }
             
             selectedGenres.push(selectedGenre);
-            localStorage.setItem('selectedGenres', JSON.stringify(selectedGenres));
+            localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(selectedGenres));
             
             renderSelectedGenres(selectedGenres);
             updateGenreQuestDropdown(selectedGenres);
@@ -163,12 +164,12 @@ function setupEventListeners() {
             const index = parseInt(e.target.dataset.index, 10);
             let selectedGenres = [];
             try {
-                selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
+            selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
             } catch (e) {
                 selectedGenres = [];
             }
             selectedGenres.splice(index, 1);
-            localStorage.setItem('selectedGenres', JSON.stringify(selectedGenres));
+            localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(selectedGenres));
             
             renderSelectedGenres(selectedGenres);
             updateGenreQuestDropdown(selectedGenres);
