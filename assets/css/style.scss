@@ -447,7 +447,7 @@ article th:first-child {
 }
 
 /* Button styles for end of month */
-#end-of-month-button {
+.end-of-month-button {
     background-color: #b89f62; /* Muted gold */
     color: #2a231d; /* Deep brown text */
     border: none;
@@ -459,7 +459,7 @@ article th:first-child {
     transition: background-color 0.2s;
 }
 
-#end-of-month-button:hover {
+.end-of-month-button:hover {
     background-color: #cca352; /* Brighter gold on hover */
 }
 
