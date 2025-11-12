@@ -779,6 +779,7 @@ These recommendations represent opportunities for improvement rather than critic
 **Consider for later:**
 - TypeScript migration (only if team grows)
 - Advanced state management (only if complexity increases significantly)
+- Add in-sheet genre editing powered by `StateAdapter` so players can adjust favorites without leaving the character sheet
 
 Remember: **Perfect is the enemy of good.** Focus refactoring efforts on areas that are actively causing pain or blocking new features.
 

@@ -19,6 +19,15 @@ export function initializeCharacterSheet() {
         return;
     }
     const stateAdapter = new StateAdapter(characterState);
+    const QUEST_LIST_KEY_MAP = {
+        active: STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+        activeAssignments: STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+        completed: STORAGE_KEYS.COMPLETED_QUESTS,
+        completedQuests: STORAGE_KEYS.COMPLETED_QUESTS,
+        discarded: STORAGE_KEYS.DISCARDED_QUESTS,
+        discardedQuests: STORAGE_KEYS.DISCARDED_QUESTS
+    };
+    const resolveQuestListKey = (key) => QUEST_LIST_KEY_MAP[key] || key;
     const printButton = document.getElementById('print-button');
     const levelInput = document.getElementById('level');
     const xpNeededInput = document.getElementById('xp-needed');
@@ -113,7 +122,7 @@ export function initializeCharacterSheet() {
                 }
                 // Otherwise add as regular item
                 else if (data.allItems[itemName]) {
-                    characterState.inventoryItems.push({ name: itemName, ...data.allItems[itemName] });
+                    stateAdapter.addInventoryItem({ name: itemName, ...data.allItems[itemName] });
                 }
             });
         }
@@ -171,7 +180,7 @@ export function initializeCharacterSheet() {
     document.getElementById('add-item-button').addEventListener('click', () => {
         const itemName = itemSelect.value;
         if (itemName && data.allItems[itemName]) {
-            characterState.inventoryItems.push({ name: itemName, ...data.allItems[itemName] });
+            stateAdapter.addInventoryItem({ name: itemName, ...data.allItems[itemName] });
             renderLoadout();
             // Update quest buffs dropdown in case user wants to assign this new item
             ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
@@ -313,7 +322,12 @@ export function initializeCharacterSheet() {
 
         if (editingQuestInfo) {
             // Update quest using helper method for prompt determination
-            const originalQuest = characterState[editingQuestInfo.list][editingQuestInfo.index];
+            const originalQuestList = characterState[resolveQuestListKey(editingQuestInfo.list)] || [];
+            const originalQuest = originalQuestList[editingQuestInfo.index];
+            if (!originalQuest) {
+                resetQuestForm();
+                return;
+            }
             
             const formElements = {
                 dungeonRoomSelect,
@@ -328,15 +342,19 @@ export function initializeCharacterSheet() {
             prompt = BaseQuestHandler.determinePromptForEdit(type, originalQuest, formElements, data);
 
             // Update the quest in the state
-            Object.assign(originalQuest, { 
-                month, 
-                year, 
-                type, 
-                prompt, 
-                book, 
-                notes, 
-                buffs: selectedBuffs 
-            });
+            stateAdapter.updateQuest(
+                resolveQuestListKey(editingQuestInfo.list),
+                editingQuestInfo.index,
+                {
+                    month,
+                    year,
+                    type,
+                    prompt,
+                    book,
+                    notes,
+                    buffs: selectedBuffs
+                }
+            );
             
             // Re-render the appropriate list
             const renderMap = {
@@ -385,7 +403,7 @@ export function initializeCharacterSheet() {
 
                 // Add quests to appropriate list
                 if (status === 'active') {
-                    quests.forEach(quest => characterState.activeAssignments.push(quest));
+                    stateAdapter.addActiveQuests(quests);
                     ui.renderActiveAssignments();
                 } else if (status === 'completed') {
                     // Track if this is a new book
@@ -393,9 +411,8 @@ export function initializeCharacterSheet() {
                     const isNewBook = bookName && !completedBooksSet.has(bookName);
 
                     // Add to completed quests
+                    stateAdapter.addCompletedQuests(quests);
                     quests.forEach(quest => {
-                        characterState.completedQuests.push(quest);
-                        // Update currency with the quest's rewards
                         updateCurrency(quest.rewards);
                     });
 
@@ -619,30 +636,37 @@ export function initializeCharacterSheet() {
                 saveState(form);
             }
         } else if (target.classList.contains('equip-btn')) {
-            const itemToEquip = characterState.inventoryItems[index];
+            const inventoryItems = stateAdapter.getInventoryItems();
+            const itemToEquip = inventoryItems[index];
+            if (!itemToEquip) return;
             const slotLimits = ui.getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-            const equippedCountForType = characterState.equippedItems.filter(item => item.type === itemToEquip.type).length;
+            const equippedCountForType = stateAdapter.getEquippedItems().filter(item => item.type === itemToEquip.type).length;
             if (equippedCountForType < slotLimits[itemToEquip.type]) {
-                characterState.equippedItems.push(characterState.inventoryItems.splice(index, 1)[0]);
-                renderLoadout();
-                ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-                saveState(form);
+                if (stateAdapter.moveInventoryItemToEquipped(index)) {
+                    renderLoadout();
+                    ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                    saveState(form);
+                }
             } else {
                 alert(`No empty ${itemToEquip.type} slots available!`);
             }
         } else if (target.classList.contains('unequip-btn')) {
-            characterState.inventoryItems.push(characterState.equippedItems.splice(index, 1)[0]);
-            renderLoadout();
-            ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-            saveState(form);
+            if (stateAdapter.moveEquippedItemToInventory(index)) {
+                renderLoadout();
+                ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                saveState(form);
+            }
         } else if (target.classList.contains('delete-item-btn')) {
-            if (confirm(`Are you sure you want to permanently delete ${characterState.inventoryItems[index].name}?`)) {
-                characterState.inventoryItems.splice(index, 1);
+            const inventoryItems = stateAdapter.getInventoryItems();
+            const itemName = inventoryItems[index] ? inventoryItems[index].name : 'this item';
+            if (confirm(`Are you sure you want to permanently delete ${itemName}?`)) {
+                stateAdapter.removeInventoryItem(index);
                 renderLoadout();
                 saveState(form);
             }
         } else if (target.classList.contains('complete-quest-btn')) {
-            const questToMove = characterState.activeAssignments.splice(index, 1)[0];
+            const questToMove = stateAdapter.removeQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, index);
+            if (!questToMove) return;
             
             // Check if this is a new book
             const bookName = questToMove.book ? questToMove.book.trim() : '';
@@ -653,7 +677,7 @@ export function initializeCharacterSheet() {
             const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background);
             
             // Add to completed quests
-            characterState.completedQuests.push(completedQuest);
+            stateAdapter.addCompletedQuests(completedQuest);
             
             // Add to completed books set if it's a new book
             if (isNewBook) {
@@ -678,25 +702,30 @@ export function initializeCharacterSheet() {
             ui.renderCompletedQuests();
             saveState(form);
         } else if (target.classList.contains('discard-quest-btn')) {
-            const questToMove = characterState.activeAssignments.splice(index, 1)[0];
-            characterState.discardedQuests.push(questToMove);
+            const questToMove = stateAdapter.removeQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, index);
+            if (!questToMove) return;
+            stateAdapter.addDiscardedQuests(questToMove);
             ui.renderActiveAssignments();
             ui.renderDiscardedQuests();
             saveState(form);
         } else if (target.classList.contains('delete-btn')) {
             const list = target.dataset.list;
-            if (list === 'active') {
-                characterState.activeAssignments.splice(index, 1); ui.renderActiveAssignments();
-            } else if (list === 'completed') {
-                characterState.completedQuests.splice(index, 1); ui.renderCompletedQuests();
-            } else if (list === 'discarded') {
-                characterState.discardedQuests.splice(index, 1); ui.renderDiscardedQuests();
+            const storageKey = resolveQuestListKey(list);
+            if (storageKey === STORAGE_KEYS.ACTIVE_ASSIGNMENTS) {
+                stateAdapter.removeQuest(storageKey, index); ui.renderActiveAssignments();
+            } else if (storageKey === STORAGE_KEYS.COMPLETED_QUESTS) {
+                stateAdapter.removeQuest(storageKey, index); ui.renderCompletedQuests();
+            } else if (storageKey === STORAGE_KEYS.DISCARDED_QUESTS) {
+                stateAdapter.removeQuest(storageKey, index); ui.renderDiscardedQuests();
             }
             saveState(form);
         } else if (target.classList.contains('edit-quest-btn')) {
             const list = target.dataset.list;
             const index = parseInt(target.dataset.index, 10);
-            const quest = characterState[list][index];
+            const storageKey = resolveQuestListKey(list);
+            const questList = characterState[storageKey] || [];
+            const quest = questList[index];
+            if (!quest) return;
 
             // Populate form
             document.getElementById('quest-month').value = quest.month;
