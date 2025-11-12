@@ -55,5 +55,52 @@ describe('StateAdapter', () => {
     expect(state[STORAGE_KEYS.SELECTED_GENRES]).toEqual([]);
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES))).toEqual([]);
   });
+
+  it('addActiveQuests emits change events and stores quests', () => {
+    const handler = jest.fn();
+    adapter.on(STATE_EVENTS.ACTIVE_ASSIGNMENTS_CHANGED, handler);
+
+    const quests = [{ id: 1, type: 'Test Quest' }];
+    adapter.addActiveQuests(quests);
+
+    expect(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]).toHaveLength(1);
+    expect(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0]).toEqual(quests[0]);
+    expect(handler).toHaveBeenCalledWith(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
+  });
+
+  it('moveQuest transfers quest between lists', () => {
+    const quest = { id: 42, type: 'Dungeon' };
+    adapter.addActiveQuests(quest);
+    const handlerCompleted = jest.fn();
+    adapter.on(STATE_EVENTS.COMPLETED_QUESTS_CHANGED, handlerCompleted);
+
+    const transformed = adapter.moveQuest(
+      STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+      0,
+      STORAGE_KEYS.COMPLETED_QUESTS,
+      (q) => ({ ...q, completed: true })
+    );
+
+    expect(transformed).toEqual({ id: 42, type: 'Dungeon', completed: true });
+    expect(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]).toHaveLength(0);
+    expect(state[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
+    expect(handlerCompleted).toHaveBeenCalledWith(state[STORAGE_KEYS.COMPLETED_QUESTS]);
+  });
+
+  it('moveInventoryItemToEquipped moves items between lists', () => {
+    const invHandler = jest.fn();
+    const equipHandler = jest.fn();
+    adapter.on(STATE_EVENTS.INVENTORY_ITEMS_CHANGED, invHandler);
+    adapter.on(STATE_EVENTS.EQUIPPED_ITEMS_CHANGED, equipHandler);
+
+    adapter.addInventoryItem({ name: 'Lens of Clarity', type: 'wearable' });
+    const moved = adapter.moveInventoryItemToEquipped(0);
+
+    expect(moved).toEqual({ name: 'Lens of Clarity', type: 'wearable' });
+    expect(state[STORAGE_KEYS.INVENTORY_ITEMS]).toHaveLength(0);
+    expect(state[STORAGE_KEYS.EQUIPPED_ITEMS]).toHaveLength(1);
+    expect(invHandler).toHaveBeenCalled();
+    expect(equipHandler).toHaveBeenCalled();
+  });
 });
 
