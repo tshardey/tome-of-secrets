@@ -4,6 +4,7 @@
  */
 
 import * as data from '../character-sheet/data.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 
 /**
  * Represents a reward package with XP, currency, and items
@@ -61,12 +62,15 @@ export class RewardCalculator {
 
         // Extra Credit - only paper scraps
         if (type === '⭐ Extra Credit') {
-            return new Reward({ paperScraps: 10 });
+            return new Reward({ paperScraps: GAME_CONFIG.rewards.extraCredit.paperScraps });
         }
 
         // Organize the Stacks (Genre quests)
         if (type === '♥ Organize the Stacks') {
-            return new Reward({ xp: 15, inkDrops: 10 });
+            return new Reward({
+                xp: GAME_CONFIG.rewards.organizeTheStacks.xp,
+                inkDrops: GAME_CONFIG.rewards.organizeTheStacks.inkDrops
+            });
         }
 
         // Side Quests
@@ -80,7 +84,7 @@ export class RewardCalculator {
         }
 
         // Default fallback
-        return new Reward({ inkDrops: 10 });
+        return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
     }
 
     /**
@@ -94,7 +98,7 @@ export class RewardCalculator {
                 return new Reward(sideQuest.rewards);
             }
         }
-        return new Reward({ inkDrops: 10 });
+        return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
     }
 
     /**
@@ -103,12 +107,12 @@ export class RewardCalculator {
      */
     static _getDungeonRewards(isEncounter, roomNumber, encounterName) {
         if (!roomNumber) {
-            return new Reward({ inkDrops: 10 });
+            return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
         }
 
         const room = data.dungeonRooms[roomNumber];
         if (!room) {
-            return new Reward({ inkDrops: 10 });
+            return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
         }
 
         // Encounter rewards
@@ -120,11 +124,11 @@ export class RewardCalculator {
 
             // Fallback based on encounter type
             if (encounter?.type === 'Monster') {
-                return new Reward({ xp: 30 });
+                return new Reward({ xp: GAME_CONFIG.rewards.encounter.monster.xp });
             } else if (encounter?.type === 'Friendly Creature') {
-                return new Reward({ inkDrops: 10 });
+                return new Reward({ inkDrops: GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops });
             } else if (encounter?.type === 'Familiar') {
-                return new Reward({ paperScraps: 5 });
+                return new Reward({ paperScraps: GAME_CONFIG.rewards.encounter.familiar.paperScraps });
             }
         }
 
@@ -133,7 +137,7 @@ export class RewardCalculator {
             return new Reward(room.roomRewards);
         }
 
-        return new Reward({ inkDrops: 10 });
+        return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
     }
 
     /**
@@ -201,9 +205,9 @@ export class RewardCalculator {
 
         const modified = rewards.clone();
 
-        // Biblioslinker: +3 Paper Scraps for Dungeon Crawls
+        // Biblioslinker: Bonus Paper Scraps for Dungeon Crawls
         if (background === 'biblioslinker' && quest.type === '♠ Dungeon Crawl') {
-            modified.paperScraps += 3;
+            modified.paperScraps += GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps;
             modified.modifiedBy.push('Biblioslinker');
         }
 
@@ -232,7 +236,7 @@ export class RewardCalculator {
         // Background bonuses
         if (isBackground) {
             if (cleanName === 'Archivist Bonus' || cleanName === 'Prophet Bonus' || cleanName === 'Cartographer Bonus') {
-                return { inkDrops: 10 };
+                return { inkDrops: GAME_CONFIG.backgrounds.backgroundBonus.inkDrops };
             }
             return null;
         }

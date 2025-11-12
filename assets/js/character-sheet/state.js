@@ -1,13 +1,24 @@
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from './storageKeys.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 
 export const characterState = createEmptyCharacterState();
 
 function getQuestRewardsLegacy(type, prompt, isEncounter = false) {
     // Default reward for any quest completion
-    let rewards = { xp: 25, inkDrops: 10, paperScraps: 0, items: [] };
+    let rewards = {
+        xp: GAME_CONFIG.rewards.defaultQuestCompletion.xp,
+        inkDrops: GAME_CONFIG.rewards.defaultQuestCompletion.inkDrops,
+        paperScraps: GAME_CONFIG.rewards.defaultQuestCompletion.paperScraps,
+        items: []
+    };
 
     if (type === '♥ Organize the Stacks') {
-        rewards = { xp: 15, inkDrops: 10, paperScraps: 0, items: [] };
+        rewards = {
+            xp: GAME_CONFIG.rewards.organizeTheStacks.xp,
+            inkDrops: GAME_CONFIG.rewards.organizeTheStacks.inkDrops,
+            paperScraps: 0,
+            items: []
+        };
     }
     // Side quests and dungeon encounters will default to basic rewards for now
     // They'll be calculated properly when edited or completed

@@ -1,9 +1,45 @@
 # Refactoring Recommendations for Tome of Secrets
 
-**Last Updated:** 2025-11-05  
-**Status:** Recommendations for Future Work
+**Last Updated:** 2025-11-11  
+**Status:** Active Refactoring in Progress
 
 This document outlines potential refactoring opportunities for the Tome of Secrets codebase. These are not critical issues but rather opportunities to improve code quality, maintainability, and extensibility.
+
+## ✅ Recently Completed
+
+### Storage Keys Centralization
+- **Status:** ✅ Complete
+- **Implementation:** Created `/assets/js/character-sheet/storageKeys.js` with centralized constants for all localStorage keys
+- **Benefits:** Eliminated magic strings, improved maintainability, easier to track state schema
+- **Files Changed:** `state.js`, `character-sheet.js`, `quests.js`
+
+### StateAdapter Pattern (Partial)
+- **Status:** ✅ Partial Implementation
+- **Implementation:** Created `/assets/js/character-sheet/stateAdapter.js` with event-driven state management
+- **Features Implemented:**
+  - Centralized state mutations for genres, quests, and inventory
+  - Change event system for reactive UI updates
+  - Automatic localStorage synchronization
+  - Sanitization and validation helpers
+- **Benefits:** Reduced direct state mutations, improved testability, foundation for future features
+- **Files Changed:** `character-sheet.js`, `quests.js`, `stateAdapter.js`
+- **Tests Added:** `stateAdapter.test.js`, `statePersistence.test.js` (177 total tests, up from 168)
+
+### State Persistence Improvements
+- **Status:** ✅ Complete
+- **Implementation:** Fixed `selectedGenres` persistence issue, added comprehensive persistence tests
+- **Benefits:** Ensures all state mutations are properly persisted, prevents data loss
+
+### Configuration Management
+- **Status:** ✅ Complete
+- **Implementation:** Created `/assets/js/config/gameConfig.js` with centralized reward values and game constants
+- **Features:**
+  - All reward values (quest types, encounters, end of month)
+  - Background bonuses
+  - UI and atmospheric configuration
+- **Benefits:** Single source of truth for game balance, easy to adjust values, self-documenting code
+- **Files Changed:** `RewardCalculator.js`, `character-sheet.js`, `state.js`
+- **Tests Added:** `gameConfig.test.js` (187 total tests, up from 177)
 
 ## Priority Levels
 
@@ -17,6 +53,8 @@ This document outlines potential refactoring opportunities for the Tome of Secre
 
 ### Current State
 Game data (items, quests, rewards, etc.) is currently in `/assets/js/character-sheet/data.js` as JavaScript exports. This file is 750+ lines and growing.
+
+**Note:** Storage keys have been centralized in `storageKeys.js` (✅ Complete), but game content data extraction to JSON is still pending.
 
 ### Problem
 - Difficult to edit game content (requires JavaScript knowledge)
@@ -121,18 +159,27 @@ function createQuestRow(quest) {
 ## 🔴 3. State Management Improvements
 
 ### Current State
-State is managed through the `characterState` object with manual `saveState()` calls scattered throughout the codebase.
+**Status:** 🟡 Partially Implemented
 
-### Problem
-- Easy to forget `saveState()` after mutations
-- No state change tracking
+A `StateAdapter` class has been introduced (`/assets/js/character-sheet/stateAdapter.js`) that provides:
+- ✅ Centralized state mutations for genres, quests, and inventory
+- ✅ Change event system for reactive UI updates
+- ✅ Automatic localStorage synchronization for mutations
+- ✅ Sanitization and validation helpers
+- ❌ Undo/redo capability (not yet implemented)
+- ❌ Full state change history tracking (not yet implemented)
+
+State is still managed through the `characterState` object, but mutations are now routed through `StateAdapter` methods. Manual `saveState()` calls are still required for form data persistence.
+
+### Remaining Problems
+- Manual `saveState()` calls still needed for form data
 - No undo/redo capability
-- No state validation
-- Direct mutation can lead to bugs
+- Limited state change history tracking
+- Some direct state mutations may still exist in legacy code
 
 ### Recommendation
 
-**Implement Observable State Pattern**
+**Complete Observable State Pattern Implementation**
 ```javascript
 class ObservableState {
     constructor(initialState) {
@@ -500,7 +547,12 @@ try {
 ## 🟢 8. Test Coverage Improvements
 
 ### Current State
-Good test coverage (168 tests) but some areas could be expanded.
+Good test coverage (187 tests, up from 168) with recent additions:
+- ✅ `stateAdapter.test.js` - Comprehensive StateAdapter unit tests
+- ✅ `statePersistence.test.js` - State persistence and backward compatibility tests
+- ✅ `gameConfig.test.js` - Game configuration structure and values
+
+Some areas could still be expanded.
 
 ### Recommendations
 
@@ -722,40 +774,30 @@ Performance is generally good, but could be improved for edge cases.
 ### Recommended Order
 
 1. **Phase 1: Low-Hanging Fruit** (1-2 weeks)
-   - Configuration management
-   - Utility functions library
-   - Documentation improvements
-   - Validation service
+   - ✅ Storage keys centralization (Complete)
+   - ✅ StateAdapter foundation (Partial - genres, quests, inventory done)
+   - ✅ Configuration management (Complete)
+   - Utility functions library (Pending)
+   - Documentation improvements (Pending)
+   - Validation service (Pending)
 
 2. **Phase 2: Medium Priority** (2-3 weeks)
+   - Complete StateAdapter migration (curses, buffs, etc.)
    - Data management strategy (JSON extraction)
    - Form validation
    - Error handling
    - UI rendering improvements
 
 3. **Phase 3: Architectural** (3-4 weeks, as needed)
-   - State management improvements
+   - ✅ State management improvements (Partial - StateAdapter in place)
    - Event handler refactoring
-   - Test coverage expansion
+   - ✅ Test coverage expansion (In progress - 187 tests)
 
 4. **Phase 4: Optional Enhancements**
    - TypeScript migration (if needed)
    - Performance optimizations
-   - Advanced features
+   - Advanced features (undo/redo, full Observable State Pattern)
 
-### When to Refactor
-
-- ✅ **Do refactor when:**
-  - Adding a new feature in the same area
-  - Fixing a bug caused by unclear code
-  - Code is touched for other reasons
-  - Technical debt is blocking new features
-
-- ❌ **Don't refactor when:**
-  - Code is working and not being changed
-  - Just because it "could be better"
-  - Under time pressure for feature delivery
-  - No tests exist for the area
 
 ### Success Metrics
 
@@ -769,17 +811,26 @@ Performance is generally good, but could be improved for edge cases.
 
 ## Conclusion
 
-These recommendations represent opportunities for improvement rather than critical issues. The codebase is currently in good shape after the Phase 2 refactoring (ADR-001). 
+These recommendations represent opportunities for improvement rather than critical issues. The codebase is in good shape and actively being improved through incremental refactoring.
 
-**Priority for immediate work:**
-1. Configuration management (quick win)
-2. Data extraction to JSON (enables easier content creation)
-3. Better error handling (improves UX)
+### Recent Progress
+- ✅ **Storage keys centralized** - All localStorage keys now managed through constants
+- ✅ **StateAdapter introduced** - Event-driven state management for genres, quests, and inventory
+- ✅ **State persistence fixed** - All state mutations now properly persisted
+- ✅ **Configuration management** - All reward values and game constants centralized in `gameConfig.js`
+- ✅ **Test coverage expanded** - 187 tests with comprehensive coverage of StateAdapter, persistence, and configuration
 
-**Consider for later:**
+### Priority for immediate work:
+1. **Complete StateAdapter migration** - Extend adapter to cover remaining state operations (curses, buffs, etc.)
+2. **Data extraction to JSON** (enables easier content creation) - Move game content from `data.js` to JSON files
+3. **Better error handling** (improves UX) - Replace alerts with user-friendly notifications
+4. **Utility functions library** - Extract common helper functions for reusability
+
+### Consider for later:
 - TypeScript migration (only if team grows)
-- Advanced state management (only if complexity increases significantly)
+- Undo/redo functionality (extend StateAdapter with history tracking)
 - Add in-sheet genre editing powered by `StateAdapter` so players can adjust favorites without leaving the character sheet
+- Full Observable State Pattern with automatic persistence (if complexity increases significantly)
 
 Remember: **Perfect is the enemy of good.** Focus refactoring efforts on areas that are actively causing pain or blocking new features.
 
