@@ -1,16 +1,6 @@
-export let characterState = {
-    learnedAbilities: [],
-    equippedItems: [],
-    inventoryItems: [],
-    activeAssignments: [],
-    completedQuests: [],
-    discardedQuests: [],
-    atmosphericBuffs: {},
-    activeCurses: [],
-    completedCurses: [],
-    temporaryBuffs: [], // { name, description, duration, monthsRemaining, status: 'active'/'used' }
-    buffMonthCounter: 0 // Increments each end of month to track buff expiration
-};
+import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from './storageKeys.js';
+
+export const characterState = createEmptyCharacterState();
 
 function getQuestRewardsLegacy(type, prompt, isEncounter = false) {
     // Default reward for any quest completion
@@ -35,29 +25,40 @@ function migrateOldQuests(quests) {
 }
 
 export function loadState(form) {
-    const characterData = JSON.parse(localStorage.getItem('characterSheet'));
+    const characterData = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM));
     if (characterData) {
         for (const key in characterData) {
             if (form.elements[key]) form.elements[key].value = characterData[key];
         }
     }
-    const activeAssignments = JSON.parse(localStorage.getItem('activeAssignments')) || [];
-    const completedQuests = JSON.parse(localStorage.getItem('completedQuests')) || [];
-    const discardedQuests = JSON.parse(localStorage.getItem('discardedQuests')) || [];
+    const activeAssignments = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_ASSIGNMENTS)) || [];
+    const completedQuests = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTS)) || [];
+    const discardedQuests = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCARDED_QUESTS)) || [];
     
     // Migrate old quests to include reward data
-    characterState.activeAssignments = migrateOldQuests(activeAssignments);
-    characterState.completedQuests = migrateOldQuests(completedQuests);
-    characterState.discardedQuests = migrateOldQuests(discardedQuests);
+    characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = migrateOldQuests(activeAssignments);
+    characterState[STORAGE_KEYS.COMPLETED_QUESTS] = migrateOldQuests(completedQuests);
+    characterState[STORAGE_KEYS.DISCARDED_QUESTS] = migrateOldQuests(discardedQuests);
     
-    characterState.equippedItems = JSON.parse(localStorage.getItem('equippedItems')) || [];
-    characterState.inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || [];
-    characterState.learnedAbilities = JSON.parse(localStorage.getItem('learnedAbilities')) || [];
-    characterState.atmosphericBuffs = JSON.parse(localStorage.getItem('atmosphericBuffs')) || {};
-    characterState.activeCurses = JSON.parse(localStorage.getItem('activeCurses')) || [];
-    characterState.completedCurses = JSON.parse(localStorage.getItem('completedCurses')) || [];
-    characterState.temporaryBuffs = JSON.parse(localStorage.getItem('temporaryBuffs')) || [];
-    characterState.buffMonthCounter = JSON.parse(localStorage.getItem('buffMonthCounter')) || 0;
+    characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.EQUIPPED_ITEMS)) || [];
+    characterState[STORAGE_KEYS.INVENTORY_ITEMS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVENTORY_ITEMS)) || [];
+    characterState[STORAGE_KEYS.LEARNED_ABILITIES] = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEARNED_ABILITIES)) || [];
+    characterState[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATMOSPHERIC_BUFFS)) || {};
+    characterState[STORAGE_KEYS.ACTIVE_CURSES] = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_CURSES)) || [];
+    characterState[STORAGE_KEYS.COMPLETED_CURSES] = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_CURSES)) || [];
+    characterState[STORAGE_KEYS.TEMPORARY_BUFFS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TEMPORARY_BUFFS)) || [];
+    characterState[STORAGE_KEYS.BUFF_MONTH_COUNTER] = JSON.parse(localStorage.getItem(STORAGE_KEYS.BUFF_MONTH_COUNTER)) || 0;
+
+    let selectedGenres = [];
+    try {
+        selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES)) || [];
+        if (!Array.isArray(selectedGenres)) {
+            selectedGenres = [];
+        }
+    } catch (error) {
+        selectedGenres = [];
+    }
+    characterState[STORAGE_KEYS.SELECTED_GENRES] = selectedGenres;
 }
 
 export function saveState(form) {
@@ -72,6 +73,8 @@ export function saveState(form) {
     if (keeperBackgroundElement) {
         characterData.keeperBackground = keeperBackgroundElement.value;
     }
-    localStorage.setItem('characterSheet', JSON.stringify(characterData));
-    Object.keys(characterState).forEach(key => localStorage.setItem(key, JSON.stringify(characterState[key])));
+    localStorage.setItem(STORAGE_KEYS.CHARACTER_SHEET_FORM, JSON.stringify(characterData));
+    CHARACTER_STATE_KEYS.forEach(key => {
+        localStorage.setItem(key, JSON.stringify(characterState[key]));
+    });
 }

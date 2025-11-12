@@ -1,6 +1,7 @@
 import * as data from './character-sheet/data.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
+import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { RewardCalculator, Reward } from './services/RewardCalculator.js';
 import { QuestHandlerFactory } from './quest-handlers/QuestHandlerFactory.js';
 import { BaseQuestHandler } from './quest-handlers/BaseQuestHandler.js';
@@ -50,14 +51,14 @@ export function initializeCharacterSheet() {
     function initializeCompletedBooksSet() {
         completedBooksSet.clear();
         // Load the monthly books set from localStorage
-        const monthlyBooks = JSON.parse(localStorage.getItem('monthlyCompletedBooks')) || [];
+        const monthlyBooks = JSON.parse(localStorage.getItem(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS)) || [];
         monthlyBooks.forEach(bookName => completedBooksSet.add(bookName));
     }
     
     // Save the monthly completed books set to localStorage
     function saveCompletedBooksSet() {
         const booksArray = Array.from(completedBooksSet);
-        localStorage.setItem('monthlyCompletedBooks', JSON.stringify(booksArray));
+        localStorage.setItem(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, JSON.stringify(booksArray));
     }
 
     function updateCurrency(rewards) {
@@ -516,13 +517,18 @@ export function initializeCharacterSheet() {
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
         // Load selected genres from localStorage (set by quests page)
-        let selectedGenres = [];
-        try {
-            selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
-        } catch (e) {
-            selectedGenres = [];
+        let selectedGenres = Array.isArray(characterState[STORAGE_KEYS.SELECTED_GENRES])
+            ? characterState[STORAGE_KEYS.SELECTED_GENRES]
+            : [];
+
+        if (selectedGenres.length === 0) {
+            try {
+                selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
+            } catch (e) {
+                selectedGenres = [];
+            }
+            characterState[STORAGE_KEYS.SELECTED_GENRES] = selectedGenres;
         }
-        characterState.selectedGenres = selectedGenres;
         
         updateGenreQuestDropdown();
         displaySelectedGenres();
