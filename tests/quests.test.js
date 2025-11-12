@@ -44,24 +44,15 @@ describe('Quests Page - Genre Selection', () => {
     it('should populate the genre selector dropdown with all available genres', () => {
       const genreSelector = document.getElementById('genre-selector');
       const options = Array.from(genreSelector.options).map(option => option.value);
-      
-      // Should have the default empty option plus all 12 genres
+      const expectedGenres = Object.keys(data.allGenres);
+
+      // Should have the default empty option plus all available genres
       expect(options).toContain('');
-      expect(options).toContain('Historical Fiction');
-      expect(options).toContain('Fantasy');
-      expect(options).toContain('Romantasy');
-      expect(options).toContain('Sci-Fi');
-      expect(options).toContain('Thriller');
-      expect(options).toContain('Classic');
-      expect(options).toContain('Literary Fiction');
-      expect(options).toContain('Speculative Fiction');
-      expect(options).toContain('Romance');
-      expect(options).toContain('Memoirs/Biographies');
-      expect(options).toContain('Non-Fiction');
-      expect(options).toContain('Crime');
+      expectedGenres.forEach(genre => {
+        expect(options).toContain(genre);
+      });
       
-      // Should have exactly 13 options (1 empty + 12 genres)
-      expect(options.length).toBe(13);
+      expect(options.length).toBe(expectedGenres.length + 1);
     });
 
     it('should display placeholder text when no genres are selected', () => {
