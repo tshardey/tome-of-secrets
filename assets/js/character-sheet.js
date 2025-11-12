@@ -2,6 +2,7 @@ import * as data from './character-sheet/data.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
+import { StateAdapter, STATE_EVENTS } from './character-sheet/stateAdapter.js';
 import { RewardCalculator, Reward } from './services/RewardCalculator.js';
 import { QuestHandlerFactory } from './quest-handlers/QuestHandlerFactory.js';
 import { BaseQuestHandler } from './quest-handlers/BaseQuestHandler.js';
@@ -17,6 +18,7 @@ export function initializeCharacterSheet() {
         // This is important for testing and for other pages on the site.
         return;
     }
+    const stateAdapter = new StateAdapter(characterState);
     const printButton = document.getElementById('print-button');
     const levelInput = document.getElementById('level');
     const xpNeededInput = document.getElementById('xp-needed');
@@ -516,35 +518,30 @@ export function initializeCharacterSheet() {
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
-        // Load selected genres from localStorage (set by quests page)
-        let selectedGenres = Array.isArray(characterState[STORAGE_KEYS.SELECTED_GENRES])
-            ? characterState[STORAGE_KEYS.SELECTED_GENRES]
-            : [];
+        stateAdapter.syncSelectedGenresFromStorage();
 
-        if (selectedGenres.length === 0) {
-            try {
-                selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
-            } catch (e) {
-                selectedGenres = [];
-            }
-            characterState[STORAGE_KEYS.SELECTED_GENRES] = selectedGenres;
-        }
-        
-        updateGenreQuestDropdown();
-        displaySelectedGenres();
+        const handleGenresChanged = () => {
+            updateGenreQuestDropdown();
+            displaySelectedGenres();
+        };
+
+        handleGenresChanged();
+        stateAdapter.on(STATE_EVENTS.SELECTED_GENRES_CHANGED, handleGenresChanged);
     }
 
     function displaySelectedGenres() {
         const display = document.getElementById('selected-genres-display');
         if (!display) return;
         
-        if (characterState.selectedGenres.length === 0) {
+        const selectedGenres = stateAdapter.getSelectedGenres();
+
+        if (selectedGenres.length === 0) {
             display.innerHTML = '<p class="no-genres">No genres selected yet. <a href="{{ site.baseurl }}/quests.html">Choose your genres here</a>.</p>';
             return;
         }
         
         let html = '<div class="selected-genres-list">';
-        characterState.selectedGenres.forEach((genre, index) => {
+        selectedGenres.forEach((genre, index) => {
             html += `
                 <div class="selected-genre-item">
                     <span class="genre-number">${index + 1}.</span>
@@ -562,8 +559,10 @@ export function initializeCharacterSheet() {
         
         genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
         
-        if (characterState.selectedGenres.length > 0) {
-            characterState.selectedGenres.forEach((genre, index) => {
+        const selectedGenres = stateAdapter.getSelectedGenres();
+
+        if (selectedGenres.length > 0) {
+            selectedGenres.forEach((genre, index) => {
                 const option = document.createElement('option');
                 option.value = `${genre}: ${data.allGenres[genre]}`;
                 option.textContent = `${index + 1}: ${genre}`;

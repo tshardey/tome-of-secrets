@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms, curseTable, genreQuests } from '../assets/js/character-sheet/data.js';
+import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
 // We will create the main character sheet script in a later step.
 // For now, we can import it, assuming it will exist at this path.
@@ -672,7 +673,7 @@ describe('Character Sheet', () => {
     it('should handle Organize the Stacks quest type correctly', () => {
       // Set up some genres in localStorage
       const genres = ['Fantasy', 'Sci-Fi', 'Romance'];
-      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to load the genres
       initializeCharacterSheet();
@@ -914,7 +915,7 @@ describe('Character Sheet', () => {
     it('should display selected genres from localStorage', () => {
       // Set up some genres in localStorage
       const genres = ['Fantasy', 'Sci-Fi', 'Romance', 'Mystery', 'Thriller', 'Classic'];
-      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to load the genres
       initializeCharacterSheet();
@@ -942,7 +943,7 @@ describe('Character Sheet', () => {
       
       // Add genres to localStorage
       const genres = ['Fantasy', 'Sci-Fi'];
-      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to pick up the changes
       initializeCharacterSheet();
@@ -961,7 +962,7 @@ describe('Character Sheet', () => {
     });
 
     it('should handle invalid JSON in localStorage gracefully', () => {
-      localStorage.setItem('selectedGenres', 'invalid json');
+      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, 'invalid json');
       initializeCharacterSheet();
       
       const display = document.getElementById('selected-genres-display');

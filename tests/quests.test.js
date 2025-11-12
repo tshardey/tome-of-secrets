@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import { initializeQuestsPage } from '../assets/js/quests.js';
+import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import * as data from '../assets/js/character-sheet/data.js';
 
 describe('Quests Page - Genre Selection', () => {
@@ -80,7 +81,7 @@ describe('Quests Page - Genre Selection', () => {
       addButton.click();
       
       // Check that the genre was added to localStorage
-      const selectedGenres = JSON.parse(localStorage.getItem('selectedGenres') || '[]');
+      const selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
       expect(selectedGenres).toContain('Fantasy');
       
       // Check that the display was updated
@@ -102,7 +103,7 @@ describe('Quests Page - Genre Selection', () => {
     beforeEach(() => {
       // Pre-populate with some genres
       const genres = ['Fantasy', 'Sci-Fi', 'Romance'];
-      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to load the pre-populated genres
       initializeQuestsPage();
@@ -129,7 +130,7 @@ describe('Quests Page - Genre Selection', () => {
     it('should load previously selected genres from localStorage', () => {
       // Set up some genres in localStorage
       const genres = ['Fantasy', 'Sci-Fi', 'Romance'];
-      localStorage.setItem('selectedGenres', JSON.stringify(genres));
+      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize
       initializeQuestsPage();
