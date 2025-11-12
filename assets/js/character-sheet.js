@@ -6,6 +6,7 @@ import { StateAdapter, STATE_EVENTS } from './character-sheet/stateAdapter.js';
 import { RewardCalculator, Reward } from './services/RewardCalculator.js';
 import { QuestHandlerFactory } from './quest-handlers/QuestHandlerFactory.js';
 import { BaseQuestHandler } from './quest-handlers/BaseQuestHandler.js';
+import { GAME_CONFIG } from './config/gameConfig.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -889,11 +890,11 @@ export function initializeCharacterSheet() {
             inkDropsInput.value = currentInk + totalInkDrops;
         }
         
-        // Calculate and add book completion XP (15 XP per unique book)
+        // Calculate and add book completion XP
         const booksCompletedInput = document.getElementById('books-completed-month');
         if (booksCompletedInput) {
             const booksCompleted = parseInt(booksCompletedInput.value, 10) || 0;
-            const bookCompletionXP = booksCompleted * 15;
+            const bookCompletionXP = booksCompleted * GAME_CONFIG.endOfMonth.bookCompletionXP;
             
             if (bookCompletionXP > 0) {
                 const xpCurrent = document.getElementById('xp-current');
@@ -907,16 +908,16 @@ export function initializeCharacterSheet() {
             booksCompletedInput.value = 0;
         }
         
-        // Calculate and add journal entries paper scraps (5 Paper Scraps per entry, +3 for Scribe's Acolyte)
+        // Calculate and add journal entries paper scraps
         const journalEntriesInput = document.getElementById('journal-entries-completed');
         if (journalEntriesInput) {
             const journalEntries = parseInt(journalEntriesInput.value, 10) || 0;
             const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
             
-            // Base 5 Paper Scraps per entry, +3 if Scribe's Acolyte
-            let papersPerEntry = 5;
+            // Base paper scraps per entry, with Scribe's Acolyte bonus
+            let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
             if (background === 'scribe') {
-                papersPerEntry += 3;
+                papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
             }
             
             const journalPaperScraps = journalEntries * papersPerEntry;
