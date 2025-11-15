@@ -8,3 +8,11 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - tests/
+  - vendor/
+  - .bundle/
+  - scripts/
+  - docs/
+  - node_modules/
+  - package-lock.json
+  - agents.MD
+  - README.md
