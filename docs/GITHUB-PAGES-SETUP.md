@@ -1,8 +1,17 @@
 # GitHub Pages Deployment Setup
 
-## Important: Configure GitHub Pages to Use GitHub Actions
+## ⚠️ Important: Prevent Dual Deployment
 
-Since `data.json-exports.js` is auto-generated (and should NOT be committed to git), you must configure GitHub Pages to use GitHub Actions for building and deployment.
+**You can only use ONE deployment method at a time:**
+
+1. **Native Jekyll Build** (simpler, but requires committing `data.json-exports.js`)
+2. **GitHub Actions Workflow** (more control, generates file automatically)
+
+**If you currently see the site deployed and working**, check which method is active in Repository Settings → Pages → Source.
+
+## Option 1: Use GitHub Actions (Current Setup)
+
+Since `data.json-exports.js` is auto-generated (and is in `.gitignore`), you must configure GitHub Pages to use GitHub Actions for building and deployment.
 
 ### Setup Steps
 
@@ -37,4 +46,21 @@ After configuring GitHub Pages to use Actions:
 - **404 error for data.json-exports.js**: Ensure GitHub Pages is set to use "GitHub Actions" not "Deploy from a branch"
 - **Workflow not running**: Check that the workflow file is in `.github/workflows/` and committed to `main`
 - **Build failing**: Check Actions logs to see if Node.js or Jekyll build is failing
+- **Two deployments happening**: If you see duplicate builds, ensure GitHub Pages Source is set to "GitHub Actions" (not a branch)
+
+## Option 2: Use Native Jekyll Build (Simpler Alternative)
+
+If you prefer to use GitHub Pages' native Jekyll build (simpler, no workflow needed):
+
+1. **Remove the GitHub Actions workflow**: Delete `.github/workflows/jekyll.yml`
+2. **Remove from .gitignore**: Remove `assets/js/character-sheet/data.json-exports.js` from `.gitignore`
+3. **Generate and commit the file**:
+   ```bash
+   node scripts/generate-data.js
+   git add assets/js/character-sheet/data.json-exports.js
+   git commit -m "Add generated data exports file"
+   ```
+4. **Configure GitHub Pages**: In Repository Settings → Pages → Source, select your branch (e.g., `main` or `gh-pages`)
+
+**Note:** You'll need to manually regenerate and commit `data.json-exports.js` whenever you edit JSON files in `assets/data/`.
 

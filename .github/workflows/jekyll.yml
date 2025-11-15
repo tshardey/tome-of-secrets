@@ -1,7 +1,14 @@
 name: Build and Deploy Jekyll Site
 
 # This workflow generates data.json-exports.js during build and deploys to GitHub Pages
-# IMPORTANT: Configure GitHub Pages to use "GitHub Actions" as the source in repository settings
+# 
+# IMPORTANT: To avoid conflicts with native GitHub Pages Jekyll build, you MUST configure
+# GitHub Pages to use "GitHub Actions" as the source:
+# 1. Go to Repository Settings → Pages
+# 2. Under "Source", select "GitHub Actions" (NOT "Deploy from a branch")
+# 3. Save changes
+#
+# This will disable the native Jekyll build and use only this workflow for deployment.
 
 on:
   push:
@@ -38,7 +45,13 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-          bundler-cache: true
+          bundler: '2.4'
+      
+      - name: Update RubyGems
+        run: gem update --system || true
+      
+      - name: Install dependencies
+        run: bundle install
       
       - name: Build Jekyll site
         run: bundle exec jekyll build
