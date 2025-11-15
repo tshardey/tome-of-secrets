@@ -1,6 +1,6 @@
 import * as data from './character-sheet/data.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
-import { safeGetJSON } from './utils/storage.js';
+import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr } from './utils/helpers.js';
 
 export function initializeQuestsPage() {
@@ -135,7 +135,7 @@ function setupEventListeners() {
             }
             
             selectedGenres.push(selectedGenre);
-            localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(selectedGenres));
+            safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
             
             renderSelectedGenres(selectedGenres);
             updateGenreQuestDropdown(selectedGenres);
@@ -152,7 +152,7 @@ function setupEventListeners() {
             const index = parseIntOr(e.target.dataset.index, 0);
             const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
             selectedGenres.splice(index, 1);
-            localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(selectedGenres));
+            safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
             
             renderSelectedGenres(selectedGenres);
             updateGenreQuestDropdown(selectedGenres);

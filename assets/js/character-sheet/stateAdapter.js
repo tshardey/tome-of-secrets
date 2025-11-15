@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './storageKeys.js';
-import { safeGetJSON } from '../utils/storage.js';
+import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -102,7 +102,7 @@ export class StateAdapter {
         const previous = this.getSelectedGenres();
 
         this.state[STORAGE_KEYS.SELECTED_GENRES] = sanitized;
-        localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(sanitized));
+        safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, sanitized);
 
         if (!arraysEqual(previous, sanitized)) {
             this.emit(EVENTS.SELECTED_GENRES_CHANGED, this.getSelectedGenres());
