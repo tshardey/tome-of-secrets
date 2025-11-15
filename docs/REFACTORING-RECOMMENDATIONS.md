@@ -65,45 +65,53 @@ This document outlines potential refactoring opportunities for the Tome of Secre
 ## 🟡 1. Data Management Strategy
 
 ### Current State
-Game data (items, quests, rewards, etc.) is currently in `/assets/js/character-sheet/data.js` as JavaScript exports. This file is 750+ lines and growing.
+**Status:** ✅ Phase 1 Complete - Incremental Migration Started
 
-**Note:** Storage keys have been centralized in `storageKeys.js` (✅ Complete), but game content data extraction to JSON is still pending.
+Game data (items, quests, rewards, etc.) is currently in `/assets/js/character-sheet/data.js` as JavaScript exports. This file is 801 lines with 19 exports.
 
-### Problem
-- Difficult to edit game content (requires JavaScript knowledge)
-- Potential for syntax errors when adding content
-- Data is tightly coupled with code
-- Hard to version control content vs. code changes
-- No easy way for non-developers to contribute content
+**Completed:**
+- ✅ Created `assets/data/` directory structure
+- ✅ Created JSON source files for: `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`
+- ✅ Created `scripts/generate-data.js` - Simple build script to convert JSON → JS exports
+- ✅ Updated `data.js` to import from generated JSON exports (backward compatible)
+- ✅ All tests passing (65 tests in characterSheet.test.js)
+- ✅ Added `data.json-exports.js` to `.gitignore` (auto-generated file)
 
-### Recommendation
+**Implementation Approach:**
+- Using a simple, synchronous approach perfect for solo dev
+- JSON files are source of truth (easy to edit)
+- Build script (`node scripts/generate-data.js`) generates JS exports
+- No async complexity, no runtime loading - simple and maintainable
+- Backward compatible during migration
 
-**Option A: Extract to JSON files** (Recommended)
-```
-assets/data/
-  ├── items.json
-  ├── quests.json
-  ├── rewards.json
-  ├── backgrounds.json
-  ├── schools.json
-  ├── dungeons.json
-  └── curses.json
-```
+**Next Steps (Phase 2):**
+- Extract remaining data types incrementally:
+  - `schoolBenefits.json`
+  - `sanctumBenefits.json`
+  - `keeperBackgrounds.json`
+  - `allItems.json`
+  - `dungeonRooms.json`
+  - `sideQuests.json`
+  - `curseTable.json`
+  - etc.
 
 **Benefits:**
-- Content editable without JavaScript knowledge
-- Schema validation possible
-- Easier git diffs for content changes
-- Could enable future content editor tool
-- Separation of concerns
+- ✅ Content editable without JavaScript knowledge (JSON)
+- ✅ Cleaner git diffs for content changes
+- ✅ Separation of content vs. code
+- ✅ Foundation for future content editor tools
+- ✅ Simple workflow: Edit JSON → Run script → Done
 
-**Implementation:**
-1. Create JSON schema for each data type
-2. Extract data from `data.js` to individual JSON files
-3. Create a `DataLoader` service to fetch and cache JSON
-4. Update tests to use test fixtures
+**Files Changed:**
+- `assets/data/xpLevels.json` (new)
+- `assets/data/permanentBonuses.json` (new)
+- `assets/data/atmosphericBuffs.json` (new)
+- `assets/data/README.md` (new)
+- `scripts/generate-data.js` (new)
+- `assets/js/character-sheet/data.js` (updated to import from JSON exports)
+- `assets/js/character-sheet/data.json-exports.js` (auto-generated)
 
-**Effort:** Medium (2-3 hours)
+**Effort:** Phase 1 complete (1.5 hours). Remaining: ~1-2 hours to migrate remaining data types.
 
 ---
 
@@ -808,7 +816,8 @@ Performance is generally good, but could be improved for edge cases.
 
 2. **Phase 2: Medium Priority** (2-3 weeks)
    - ✅ StateAdapter migration complete (All state operations covered)
-   - Data management strategy (JSON extraction) - **NEXT PRIORITY**
+   - ✅ Data management strategy (JSON extraction) - **Phase 1 Complete** (3 simple data types migrated, pattern proven)
+   - Continue incremental JSON extraction (remaining 16 data types)
    - Form validation
    - Error handling
    - UI rendering improvements
@@ -845,9 +854,10 @@ These recommendations represent opportunities for improvement rather than critic
 - ✅ **Configuration management** - All reward values and game constants centralized in `gameConfig.js`
 - ✅ **Utility functions library** - Common helpers (`parseIntOr`, `trimOrEmpty`, `safeGetJSON`, etc.) extracted and tested
 - ✅ **Test coverage expanded** - 245 tests with comprehensive coverage of StateAdapter, utilities, persistence, and configuration
+- ✅ **JSON data extraction (Phase 1)** - Migrated 3 data types to JSON (xpLevels, permanentBonuses, atmosphericBuffs) with simple build script workflow
 
 ### Priority for immediate work:
-1. **Data extraction to JSON** (enables easier content creation) - Move game content from `data.js` to JSON files
+1. **Continue JSON extraction** (Phase 1 complete) - Migrate remaining 16 data types from `data.js` to JSON files using the proven pattern
 2. **Better error handling** (improves UX) - Replace alerts with user-friendly notifications
 3. **Form validation service** - Extract validation logic for consistency and better UX
 

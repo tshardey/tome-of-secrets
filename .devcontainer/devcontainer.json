@@ -22,7 +22,7 @@
 
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bundle install",
+	"postCreateCommand": "bundle install && node scripts/generate-data.js",
 
 	// Configure tool-specific properties.
 	"customizations": {
