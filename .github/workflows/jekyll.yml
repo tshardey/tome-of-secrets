@@ -45,10 +45,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-          bundler: '2.4'
-      
-      - name: Update RubyGems
-        run: gem update --system || true
+          bundler: '2.7.1'
       
       - name: Install dependencies
         run: bundle install
