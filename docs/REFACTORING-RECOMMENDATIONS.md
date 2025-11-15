@@ -7,23 +7,36 @@ This document outlines potential refactoring opportunities for the Tome of Secre
 
 ## ✅ Recently Completed
 
+### Utility Functions Library
+- **Status:** ✅ Complete
+- **Implementation:** Created `/assets/js/utils/` with centralized utility functions
+- **Features:**
+  - Helper functions (`parseIntOr`, `trimOrEmpty`, `capitalize`, `debounce`, `groupBy`)
+  - Safe storage operations (`safeGetJSON`, `safeSetJSON`, `safeRemoveJSON`)
+  - Sanitization utilities (`escapeHtml`, `sanitizeString`)
+  - Central export via `index.js`
+- **Benefits:** DRY code, consistent implementations, safer operations, easier testing
+- **Files Changed:** `state.js`, `stateAdapter.js`, `quests.js`, `character-sheet.js`, `ui.js`
+- **Tests Added:** `utils.test.js` (40 comprehensive tests)
+
 ### Storage Keys Centralization
 - **Status:** ✅ Complete
 - **Implementation:** Created `/assets/js/character-sheet/storageKeys.js` with centralized constants for all localStorage keys
 - **Benefits:** Eliminated magic strings, improved maintainability, easier to track state schema
 - **Files Changed:** `state.js`, `character-sheet.js`, `quests.js`
 
-### StateAdapter Pattern (Partial)
-- **Status:** ✅ Partial Implementation
+### StateAdapter Pattern
+- **Status:** ✅ Complete
 - **Implementation:** Created `/assets/js/character-sheet/stateAdapter.js` with event-driven state management
 - **Features Implemented:**
-  - Centralized state mutations for genres, quests, and inventory
-  - Change event system for reactive UI updates
-  - Automatic localStorage synchronization
-  - Sanitization and validation helpers
-- **Benefits:** Reduced direct state mutations, improved testability, foundation for future features
+  - ✅ Centralized state mutations for genres, quests, inventory, curses, buffs, abilities, and atmospheric buffs
+  - ✅ Change event system for reactive UI updates
+  - ✅ Automatic localStorage synchronization for all mutations via `safeSetJSON`
+  - ✅ Sanitization and validation helpers
+  - ✅ Batch list replacement via `_replaceList()` for complex operations
+- **Benefits:** All state mutations centralized, improved testability, automatic persistence, event-driven UI updates
 - **Files Changed:** `character-sheet.js`, `quests.js`, `stateAdapter.js`
-- **Tests Added:** `stateAdapter.test.js`, `statePersistence.test.js` (177 total tests, up from 168)
+- **Tests Added:** `stateAdapter.test.js`, `statePersistence.test.js` (245 total tests, up from 227)
 
 ### State Persistence Improvements
 - **Status:** ✅ Complete
@@ -156,28 +169,29 @@ function createQuestRow(quest) {
 
 ---
 
-## 🔴 3. State Management Improvements
+## ✅ 3. State Management Improvements
 
 ### Current State
-**Status:** 🟡 Partially Implemented
+**Status:** ✅ Complete
 
-A `StateAdapter` class has been introduced (`/assets/js/character-sheet/stateAdapter.js`) that provides:
-- ✅ Centralized state mutations for genres, quests, and inventory
+A `StateAdapter` class has been implemented (`/assets/js/character-sheet/stateAdapter.js`) that provides:
+- ✅ Centralized state mutations for **all** state operations (genres, quests, inventory, curses, buffs, abilities, atmospheric buffs)
 - ✅ Change event system for reactive UI updates
-- ✅ Automatic localStorage synchronization for mutations
+- ✅ Automatic localStorage synchronization via `safeSetJSON` for all mutations
 - ✅ Sanitization and validation helpers
-- ❌ Undo/redo capability (not yet implemented)
-- ❌ Full state change history tracking (not yet implemented)
+- ✅ Batch operations via `_replaceList()` for complex updates
+- ❌ Undo/redo capability (optional future enhancement)
+- ❌ Full state change history tracking (optional future enhancement)
 
-State is still managed through the `characterState` object, but mutations are now routed through `StateAdapter` methods. Manual `saveState()` calls are still required for form data persistence.
+All state mutations are now routed through `StateAdapter` methods. The adapter automatically persists changes to localStorage and emits events for UI reactivity. Manual `saveState()` calls are still required for form data persistence (form inputs are separate from state mutations).
 
-### Remaining Problems
-- Manual `saveState()` calls still needed for form data
-- No undo/redo capability
-- Limited state change history tracking
-- Some direct state mutations may still exist in legacy code
+### Completed
+- All direct state mutations replaced with StateAdapter methods
+- Curses, temporary buffs, learned abilities, and atmospheric buffs fully integrated
+- Automatic persistence for all state changes
+- Event-driven architecture for reactive UI updates
 
-### Recommendation
+### Optional Future Enhancements
 
 **Complete Observable State Pattern Implementation**
 ```javascript
@@ -392,17 +406,28 @@ questController.attachEventListeners();
 
 ---
 
-## 🟢 6. Utility Functions Library
+## ✅ 6. Utility Functions Library
 
 ### Current State
-Helper functions are scattered throughout various files or duplicated.
+**Status:** ✅ Complete
 
-### Problem
-- Code duplication (e.g., `parseInt` with fallback appears many times)
+Utility functions have been extracted to centralized modules in `/assets/js/utils/`:
+- ✅ `helpers.js` - `parseIntOr`, `trimOrEmpty`, `capitalize`, `debounce`, `groupBy`
+- ✅ `storage.js` - `safeGetJSON`, `safeSetJSON`, `safeRemoveJSON`
+- ✅ `sanitize.js` - `escapeHtml`, `sanitizeString`
+- ✅ `index.js` - Central export point for all utilities
+
+All duplicate patterns across the codebase have been replaced with these utilities. Comprehensive tests added in `tests/utils.test.js`.
+
+### Previously
+
+**Problem:**
+- Code duplication (e.g., `parseInt` with fallback appeared many times)
 - No centralized utilities
 - Reinventing the wheel
+- Unsafe localStorage operations
 
-### Recommendation
+**Solution:**
 
 **Create Utility Library**
 ```javascript
@@ -775,23 +800,23 @@ Performance is generally good, but could be improved for edge cases.
 
 1. **Phase 1: Low-Hanging Fruit** (1-2 weeks)
    - ✅ Storage keys centralization (Complete)
-   - ✅ StateAdapter foundation (Partial - genres, quests, inventory done)
+   - ✅ StateAdapter complete (All state operations centralized)
    - ✅ Configuration management (Complete)
-   - Utility functions library (Pending)
-   - Documentation improvements (Pending)
+   - ✅ Utility functions library (Complete)
+   - Documentation improvements (In progress)
    - Validation service (Pending)
 
 2. **Phase 2: Medium Priority** (2-3 weeks)
-   - Complete StateAdapter migration (curses, buffs, etc.)
-   - Data management strategy (JSON extraction)
+   - ✅ StateAdapter migration complete (All state operations covered)
+   - Data management strategy (JSON extraction) - **NEXT PRIORITY**
    - Form validation
    - Error handling
    - UI rendering improvements
 
 3. **Phase 3: Architectural** (3-4 weeks, as needed)
-   - ✅ State management improvements (Partial - StateAdapter in place)
+   - ✅ State management improvements (Complete - StateAdapter fully implemented)
    - Event handler refactoring
-   - ✅ Test coverage expansion (In progress - 187 tests)
+   - ✅ Test coverage expansion (245 tests with comprehensive coverage)
 
 4. **Phase 4: Optional Enhancements**
    - TypeScript migration (if needed)
@@ -815,16 +840,16 @@ These recommendations represent opportunities for improvement rather than critic
 
 ### Recent Progress
 - ✅ **Storage keys centralized** - All localStorage keys now managed through constants
-- ✅ **StateAdapter introduced** - Event-driven state management for genres, quests, and inventory
-- ✅ **State persistence fixed** - All state mutations now properly persisted
+- ✅ **StateAdapter complete** - Event-driven state management for all state operations (genres, quests, inventory, curses, buffs, abilities, atmospheric buffs)
+- ✅ **State persistence complete** - All state mutations automatically persisted via `safeSetJSON`
 - ✅ **Configuration management** - All reward values and game constants centralized in `gameConfig.js`
-- ✅ **Test coverage expanded** - 187 tests with comprehensive coverage of StateAdapter, persistence, and configuration
+- ✅ **Utility functions library** - Common helpers (`parseIntOr`, `trimOrEmpty`, `safeGetJSON`, etc.) extracted and tested
+- ✅ **Test coverage expanded** - 245 tests with comprehensive coverage of StateAdapter, utilities, persistence, and configuration
 
 ### Priority for immediate work:
-1. **Complete StateAdapter migration** - Extend adapter to cover remaining state operations (curses, buffs, etc.)
-2. **Data extraction to JSON** (enables easier content creation) - Move game content from `data.js` to JSON files
-3. **Better error handling** (improves UX) - Replace alerts with user-friendly notifications
-4. **Utility functions library** - Extract common helper functions for reusability
+1. **Data extraction to JSON** (enables easier content creation) - Move game content from `data.js` to JSON files
+2. **Better error handling** (improves UX) - Replace alerts with user-friendly notifications
+3. **Form validation service** - Extract validation logic for consistency and better UX
 
 ### Consider for later:
 - TypeScript migration (only if team grows)
