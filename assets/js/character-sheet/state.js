@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 
 export const characterState = createEmptyCharacterState();
 
@@ -36,40 +37,33 @@ function migrateOldQuests(quests) {
 }
 
 export function loadState(form) {
-    const characterData = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM));
+    const characterData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
     if (characterData) {
         for (const key in characterData) {
             if (form.elements[key]) form.elements[key].value = characterData[key];
         }
     }
-    const activeAssignments = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_ASSIGNMENTS)) || [];
-    const completedQuests = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTS)) || [];
-    const discardedQuests = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCARDED_QUESTS)) || [];
+    const activeAssignments = safeGetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, []);
+    const completedQuests = safeGetJSON(STORAGE_KEYS.COMPLETED_QUESTS, []);
+    const discardedQuests = safeGetJSON(STORAGE_KEYS.DISCARDED_QUESTS, []);
     
     // Migrate old quests to include reward data
     characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = migrateOldQuests(activeAssignments);
     characterState[STORAGE_KEYS.COMPLETED_QUESTS] = migrateOldQuests(completedQuests);
     characterState[STORAGE_KEYS.DISCARDED_QUESTS] = migrateOldQuests(discardedQuests);
     
-    characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.EQUIPPED_ITEMS)) || [];
-    characterState[STORAGE_KEYS.INVENTORY_ITEMS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVENTORY_ITEMS)) || [];
-    characterState[STORAGE_KEYS.LEARNED_ABILITIES] = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEARNED_ABILITIES)) || [];
-    characterState[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATMOSPHERIC_BUFFS)) || {};
-    characterState[STORAGE_KEYS.ACTIVE_CURSES] = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_CURSES)) || [];
-    characterState[STORAGE_KEYS.COMPLETED_CURSES] = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_CURSES)) || [];
-    characterState[STORAGE_KEYS.TEMPORARY_BUFFS] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TEMPORARY_BUFFS)) || [];
-    characterState[STORAGE_KEYS.BUFF_MONTH_COUNTER] = JSON.parse(localStorage.getItem(STORAGE_KEYS.BUFF_MONTH_COUNTER)) || 0;
+    characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = safeGetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
+    characterState[STORAGE_KEYS.INVENTORY_ITEMS] = safeGetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
+    characterState[STORAGE_KEYS.LEARNED_ABILITIES] = safeGetJSON(STORAGE_KEYS.LEARNED_ABILITIES, []);
+    characterState[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = safeGetJSON(STORAGE_KEYS.ATMOSPHERIC_BUFFS, {});
+    characterState[STORAGE_KEYS.ACTIVE_CURSES] = safeGetJSON(STORAGE_KEYS.ACTIVE_CURSES, []);
+    characterState[STORAGE_KEYS.COMPLETED_CURSES] = safeGetJSON(STORAGE_KEYS.COMPLETED_CURSES, []);
+    characterState[STORAGE_KEYS.TEMPORARY_BUFFS] = safeGetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, []);
+    characterState[STORAGE_KEYS.BUFF_MONTH_COUNTER] = safeGetJSON(STORAGE_KEYS.BUFF_MONTH_COUNTER, 0);
 
-    let selectedGenres = [];
-    try {
-        selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES)) || [];
-        if (!Array.isArray(selectedGenres)) {
-            selectedGenres = [];
-        }
-    } catch (error) {
-        selectedGenres = [];
-    }
-    characterState[STORAGE_KEYS.SELECTED_GENRES] = selectedGenres;
+    const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
+    // Ensure it's an array (safeGetJSON already handles this, but being explicit for safety)
+    characterState[STORAGE_KEYS.SELECTED_GENRES] = Array.isArray(selectedGenres) ? selectedGenres : [];
 }
 
 export function saveState(form) {
@@ -84,8 +78,8 @@ export function saveState(form) {
     if (keeperBackgroundElement) {
         characterData.keeperBackground = keeperBackgroundElement.value;
     }
-    localStorage.setItem(STORAGE_KEYS.CHARACTER_SHEET_FORM, JSON.stringify(characterData));
+    safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData);
     CHARACTER_STATE_KEYS.forEach(key => {
-        localStorage.setItem(key, JSON.stringify(characterState[key]));
+        safeSetJSON(key, characterState[key]);
     });
 }

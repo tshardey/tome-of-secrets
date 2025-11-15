@@ -1,5 +1,7 @@
 import * as data from './character-sheet/data.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
+import { safeGetJSON, safeSetJSON } from './utils/storage.js';
+import { parseIntOr } from './utils/helpers.js';
 
 export function initializeQuestsPage() {
     // Check if we're on the quests page
@@ -34,12 +36,7 @@ function initializeGenreSelection() {
     }
     
     // Load saved genre selection
-    let selectedGenres = [];
-    try {
-        selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
-    } catch (e) {
-        selectedGenres = [];
-    }
+    const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
     
     renderSelectedGenres(selectedGenres);
     updateGenreQuestDropdown(selectedGenres);
@@ -92,11 +89,7 @@ function renderCustomGenreQuests(selectedGenres = null) {
     if (!display) return;
     
     if (!selectedGenres) {
-        try {
-            selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
-        } catch (e) {
-            selectedGenres = [];
-        }
+        selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
     }
     
     if (selectedGenres.length === 0) {
@@ -129,12 +122,7 @@ function setupEventListeners() {
             const selectedGenre = genreSelector.value;
             if (!selectedGenre) return;
             
-            let selectedGenres = [];
-            try {
-                selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
-            } catch (e) {
-                selectedGenres = [];
-            }
+            const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
             
             if (selectedGenres.length >= 6) {
                 alert('You can only select 6 genres maximum.');
@@ -147,7 +135,7 @@ function setupEventListeners() {
             }
             
             selectedGenres.push(selectedGenre);
-            localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(selectedGenres));
+            safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
             
             renderSelectedGenres(selectedGenres);
             updateGenreQuestDropdown(selectedGenres);
@@ -161,15 +149,10 @@ function setupEventListeners() {
     // Handle remove genre button clicks
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-genre-btn')) {
-            const index = parseInt(e.target.dataset.index, 10);
-            let selectedGenres = [];
-            try {
-            selectedGenres = JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_GENRES) || '[]');
-            } catch (e) {
-                selectedGenres = [];
-            }
+            const index = parseIntOr(e.target.dataset.index, 0);
+            const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
             selectedGenres.splice(index, 1);
-            localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(selectedGenres));
+            safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
             
             renderSelectedGenres(selectedGenres);
             updateGenreQuestDropdown(selectedGenres);
