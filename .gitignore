@@ -1,5 +1,6 @@
 .env/
 .troubleshoot/
+.devcontainer/
 
 _site/
 
