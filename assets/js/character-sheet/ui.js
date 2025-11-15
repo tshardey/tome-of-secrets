@@ -1,15 +1,16 @@
 import * as data from './data.js';
 import { characterState } from './state.js';
 import { keeperBackgrounds } from './data.js';
+import { parseIntOr } from '../utils/helpers.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
-    const currentLevel = parseInt(levelInput.value, 10) || 1;
+    const currentLevel = parseIntOr(levelInput.value, 1);
     xpNeededInput.value = data.xpLevels[currentLevel] || "Max";
 }
 
 export function renderPermanentBonuses(levelInput) {
     const bonusList = document.getElementById('permanentBonusesList');
-    const currentLevel = parseInt(levelInput.value, 10) || 1;
+    const currentLevel = parseIntOr(levelInput.value, 1);
     bonusList.innerHTML = '';
     let bonusesFound = false;
 
@@ -72,7 +73,7 @@ export function renderMasteryAbilities(smpInput) {
     const smpDisplay = document.getElementById('smp-display');
     const abilitySelect = document.getElementById('ability-select');
     const learnedList = document.getElementById('learned-abilities-list');
-    const currentSmp = parseInt(smpInput.value, 10) || 0;
+    const currentSmp = parseIntOr(smpInput.value, 0);
     
     smpDisplay.textContent = currentSmp;
     learnedList.innerHTML = '';
@@ -94,9 +95,9 @@ export function renderMasteryAbilities(smpInput) {
 }
 
 export function getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
-    const wearable = parseInt(wearableSlotsInput.value, 10) || 0;
-    const nonWearable = parseInt(nonWearableSlotsInput.value, 10) || 0;
-    const familiar = parseInt(familiarSlotsInput.value, 10) || 0;
+    const wearable = parseIntOr(wearableSlotsInput.value, 0);
+    const nonWearable = parseIntOr(nonWearableSlotsInput.value, 0);
+    const familiar = parseIntOr(familiarSlotsInput.value, 0);
     return { 'Wearable': wearable, 'Non-Wearable': nonWearable, 'Familiar': familiar, 'total': wearable + nonWearable + familiar };
 }
 
@@ -173,8 +174,8 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
 
 export function updateBuffTotal(inputElement) {
     const buffName = inputElement.dataset.buffName;
-    const daysUsed = parseInt(inputElement.value, 10) || 0;
-    const dailyValue = parseInt(inputElement.dataset.dailyValue, 10);
+    const daysUsed = parseIntOr(inputElement.value, 0);
+    const dailyValue = parseIntOr(inputElement.dataset.dailyValue, 0);
     document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * dailyValue;
 }
 

@@ -7,6 +7,8 @@ import { RewardCalculator, Reward } from './services/RewardCalculator.js';
 import { QuestHandlerFactory } from './quest-handlers/QuestHandlerFactory.js';
 import { BaseQuestHandler } from './quest-handlers/BaseQuestHandler.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
+import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
+import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -63,14 +65,14 @@ export function initializeCharacterSheet() {
     function initializeCompletedBooksSet() {
         completedBooksSet.clear();
         // Load the monthly books set from localStorage
-        const monthlyBooks = JSON.parse(localStorage.getItem(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS)) || [];
+        const monthlyBooks = safeGetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, []);
         monthlyBooks.forEach(bookName => completedBooksSet.add(bookName));
     }
     
     // Save the monthly completed books set to localStorage
     function saveCompletedBooksSet() {
         const booksArray = Array.from(completedBooksSet);
-        localStorage.setItem(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, JSON.stringify(booksArray));
+        safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, booksArray);
     }
 
     function updateCurrency(rewards) {
@@ -80,17 +82,17 @@ export function initializeCharacterSheet() {
         const paperScraps = document.getElementById('paperScraps');
         
         if (xpCurrent && rewards.xp > 0) {
-            const currentXP = parseInt(xpCurrent.value, 10) || 0;
+            const currentXP = parseIntOr(xpCurrent.value, 0);
             xpCurrent.value = currentXP + rewards.xp;
         }
         
         if (inkDrops && rewards.inkDrops > 0) {
-            const currentInk = parseInt(inkDrops.value, 10) || 0;
+            const currentInk = parseIntOr(inkDrops.value, 0);
             inkDrops.value = currentInk + rewards.inkDrops;
         }
         
         if (paperScraps && rewards.paperScraps > 0) {
-            const currentPaper = parseInt(paperScraps.value, 10) || 0;
+            const currentPaper = parseIntOr(paperScraps.value, 0);
             paperScraps.value = currentPaper + rewards.paperScraps;
         }
 
@@ -167,7 +169,7 @@ export function initializeCharacterSheet() {
         const abilityName = document.getElementById('ability-select').value;
         if (!abilityName) return;
         const ability = data.masteryAbilities[abilityName];
-        let currentSmp = parseInt(smpInput.value, 10) || 0;
+        let currentSmp = parseIntOr(smpInput.value, 0);
         if (currentSmp >= ability.cost) {
             smpInput.value = currentSmp - ability.cost;
             characterState.learnedAbilities.push(abilityName);
@@ -408,7 +410,7 @@ export function initializeCharacterSheet() {
                     ui.renderActiveAssignments();
                 } else if (status === 'completed') {
                     // Track if this is a new book
-                    const bookName = book ? book.trim() : '';
+                    const bookName = trimOrEmpty(book);
                     const isNewBook = bookName && !completedBooksSet.has(bookName);
 
                     // Add to completed quests
@@ -424,7 +426,7 @@ export function initializeCharacterSheet() {
                         
                         const booksCompleted = document.getElementById('books-completed-month');
                         if (booksCompleted) {
-                            const currentBooks = parseInt(booksCompleted.value, 10) || 0;
+                            const currentBooks = parseIntOr(booksCompleted.value, 0);
                             booksCompleted.value = currentBooks + 1;
                         }
                     }
@@ -498,8 +500,8 @@ export function initializeCharacterSheet() {
     // Add custom buff
     if (addTempBuffButton) {
         addTempBuffButton.addEventListener('click', () => {
-            const name = tempBuffNameInput.value.trim();
-            const description = tempBuffDescInput.value.trim();
+            const name = trimOrEmpty(tempBuffNameInput.value);
+            const description = trimOrEmpty(tempBuffDescInput.value);
             const duration = tempBuffDurationSelect.value;
 
             if (!name || !description) {
@@ -625,12 +627,12 @@ export function initializeCharacterSheet() {
         // Handle other clicks
         const target = e.target;
         if (target.dataset.index === undefined) return;
-        const index = parseInt(target.dataset.index, 10);
+        const index = parseIntOr(target.dataset.index, 0);
 
         if (target.classList.contains('delete-ability-btn')) {
             const abilityName = characterState.learnedAbilities[index];
             if (confirm(`Are you sure you want to forget "${abilityName}"? This will refund ${data.masteryAbilities[abilityName].cost} SMP.`)) {
-                let currentSmp = parseInt(smpInput.value, 10) || 0;
+                let currentSmp = parseIntOr(smpInput.value, 0);
                 smpInput.value = currentSmp + data.masteryAbilities[abilityName].cost;
                 characterState.learnedAbilities.splice(index, 1);
                 ui.renderMasteryAbilities(smpInput);
@@ -670,7 +672,7 @@ export function initializeCharacterSheet() {
             if (!questToMove) return;
             
             // Check if this is a new book
-            const bookName = questToMove.book ? questToMove.book.trim() : '';
+            const bookName = trimOrEmpty(questToMove.book);
             const isNewBook = bookName && !completedBooksSet.has(bookName);
             
             // Use the BaseQuestHandler helper to finalize rewards
@@ -694,7 +696,7 @@ export function initializeCharacterSheet() {
             if (isNewBook) {
                 const booksCompleted = document.getElementById('books-completed-month');
                 if (booksCompleted) {
-                    const currentBooks = parseInt(booksCompleted.value, 10) || 0;
+                    const currentBooks = parseIntOr(booksCompleted.value, 0);
                     booksCompleted.value = currentBooks + 1;
                 }
             }
@@ -843,7 +845,7 @@ export function initializeCharacterSheet() {
     document.getElementById('atmospheric-buffs-body').addEventListener('input', (e) => {
         if (e.target.classList.contains('buff-days-input')) {
             const buffName = e.target.dataset.buffName;
-            const daysUsed = parseInt(e.target.value, 10) || 0;
+            const daysUsed = parseIntOr(e.target.value, 0);
 
             if (!characterState.atmosphericBuffs[buffName]) {
                 characterState.atmosphericBuffs[buffName] = { daysUsed: 0, isActive: false };
@@ -886,20 +888,20 @@ export function initializeCharacterSheet() {
         // Add atmospheric buff ink drops
         const inkDropsInput = document.getElementById('inkDrops');
         if (inkDropsInput && totalInkDrops > 0) {
-            const currentInk = parseInt(inkDropsInput.value, 10) || 0;
+            const currentInk = parseIntOr(inkDropsInput.value, 0);
             inkDropsInput.value = currentInk + totalInkDrops;
         }
         
         // Calculate and add book completion XP
         const booksCompletedInput = document.getElementById('books-completed-month');
         if (booksCompletedInput) {
-            const booksCompleted = parseInt(booksCompletedInput.value, 10) || 0;
+            const booksCompleted = parseIntOr(booksCompletedInput.value, 0);
             const bookCompletionXP = booksCompleted * GAME_CONFIG.endOfMonth.bookCompletionXP;
             
             if (bookCompletionXP > 0) {
                 const xpCurrent = document.getElementById('xp-current');
                 if (xpCurrent) {
-                    const currentXP = parseInt(xpCurrent.value, 10) || 0;
+                    const currentXP = parseIntOr(xpCurrent.value, 0);
                     xpCurrent.value = currentXP + bookCompletionXP;
                 }
             }
@@ -911,7 +913,7 @@ export function initializeCharacterSheet() {
         // Calculate and add journal entries paper scraps
         const journalEntriesInput = document.getElementById('journal-entries-completed');
         if (journalEntriesInput) {
-            const journalEntries = parseInt(journalEntriesInput.value, 10) || 0;
+            const journalEntries = parseIntOr(journalEntriesInput.value, 0);
             const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
             
             // Base paper scraps per entry, with Scribe's Acolyte bonus
@@ -925,7 +927,7 @@ export function initializeCharacterSheet() {
             if (journalPaperScraps > 0) {
                 const paperScrapsInput = document.getElementById('paperScraps');
                 if (paperScrapsInput) {
-                    const currentPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+                    const currentPaperScraps = parseIntOr(paperScrapsInput.value, 0);
                     paperScrapsInput.value = currentPaperScraps + journalPaperScraps;
                 }
                 
