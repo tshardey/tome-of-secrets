@@ -112,7 +112,7 @@ export function initializeCharacterSheet() {
                     }
                     
                     // Add to temporary buffs
-                    characterState.temporaryBuffs.push({
+                    stateAdapter.addTemporaryBuff({
                         name: itemName,
                         description: buffData.description,
                         duration: buffData.duration,
@@ -172,7 +172,7 @@ export function initializeCharacterSheet() {
         let currentSmp = parseIntOr(smpInput.value, 0);
         if (currentSmp >= ability.cost) {
             smpInput.value = currentSmp - ability.cost;
-            characterState.learnedAbilities.push(abilityName);
+            stateAdapter.addLearnedAbility(abilityName);
             ui.renderMasteryAbilities(smpInput);
             saveState(form);
         } else {
@@ -469,18 +469,18 @@ export function initializeCharacterSheet() {
         if (editingCurseInfo !== null) {
             // Editing existing curse
             const curseData = data.curseTable[curseName];
-            characterState.activeCurses[editingCurseInfo.index] = {
+            stateAdapter.updateActiveCurse(editingCurseInfo.index, {
                 name: curseName,
                 requirement: curseData.requirement,
                 book: bookTitle
-            };
+            });
             ui.renderActiveCurses();
             saveState(form);
             resetCurseForm();
         } else {
             // Adding new curse
             const curseData = data.curseTable[curseName];
-            characterState.activeCurses.push({
+            stateAdapter.addActiveCurse({
                 name: curseName,
                 requirement: curseData.requirement,
                 book: bookTitle
@@ -517,7 +517,7 @@ export function initializeCharacterSheet() {
                 monthsRemaining = 1;
             }
 
-            characterState.temporaryBuffs.push({
+            stateAdapter.addTemporaryBuff({
                 name,
                 description,
                 duration,
@@ -616,10 +616,7 @@ export function initializeCharacterSheet() {
                 return;
             }
             
-            if (!characterState.atmosphericBuffs[buffName]) {
-                characterState.atmosphericBuffs[buffName] = { daysUsed: 0, isActive: false };
-            }
-            characterState.atmosphericBuffs[buffName].isActive = e.target.checked;
+            stateAdapter.setAtmosphericBuffActive(buffName, e.target.checked);
             // No need to save state on every check, it's temporary for the day
             return; // prevent other handlers from firing
         }
@@ -630,11 +627,12 @@ export function initializeCharacterSheet() {
         const index = parseIntOr(target.dataset.index, 0);
 
         if (target.classList.contains('delete-ability-btn')) {
-            const abilityName = characterState.learnedAbilities[index];
+            const learnedAbilities = stateAdapter.getLearnedAbilities();
+            const abilityName = learnedAbilities[index];
             if (confirm(`Are you sure you want to forget "${abilityName}"? This will refund ${data.masteryAbilities[abilityName].cost} SMP.`)) {
                 let currentSmp = parseIntOr(smpInput.value, 0);
                 smpInput.value = currentSmp + data.masteryAbilities[abilityName].cost;
-                characterState.learnedAbilities.splice(index, 1);
+                stateAdapter.removeLearnedAbility(index);
                 ui.renderMasteryAbilities(smpInput);
                 saveState(form);
             }
@@ -793,8 +791,7 @@ export function initializeCharacterSheet() {
                 addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         } else if (target.classList.contains('complete-curse-btn')) {
-            const curseToMove = characterState.activeCurses.splice(index, 1)[0];
-            characterState.completedCurses.push(curseToMove);
+            stateAdapter.moveCurseToCompleted(index);
             
             // Completing a curse removes the penalty - no rewards are granted
 
@@ -802,7 +799,8 @@ export function initializeCharacterSheet() {
             ui.renderCompletedCurses();
             saveState(form);
         } else if (target.classList.contains('edit-curse-btn')) {
-            const curse = characterState.activeCurses[index];
+            const activeCurses = stateAdapter.getActiveCurses();
+            const curse = activeCurses[index];
             cursePenaltySelect.value = curse.name;
             curseBookTitle.value = curse.book || '';
             editingCurseInfo = { index };
@@ -812,29 +810,30 @@ export function initializeCharacterSheet() {
             const list = target.dataset.list;
             if (list === 'completed') {
                 if (confirm(`Are you sure you want to delete this completed curse penalty?`)) {
-                    characterState.completedCurses.splice(index, 1);
+                    stateAdapter.removeCompletedCurse(index);
                     ui.renderCompletedCurses();
                     saveState(form);
                 }
             } else {
                 if (confirm(`Are you sure you want to delete this curse penalty?`)) {
-                    characterState.activeCurses.splice(index, 1);
+                    stateAdapter.removeActiveCurse(index);
                     ui.renderActiveCurses();
                     saveState(form);
                 }
             }
         } else if (target.classList.contains('mark-buff-used-btn')) {
-            const buffIndex = parseInt(target.dataset.index, 10);
-            if (characterState.temporaryBuffs[buffIndex]) {
-                characterState.temporaryBuffs[buffIndex].status = 'used';
+            const buffIndex = parseIntOr(target.dataset.index, 0);
+            const temporaryBuffs = stateAdapter.getTemporaryBuffs();
+            if (temporaryBuffs[buffIndex]) {
+                stateAdapter.updateTemporaryBuff(buffIndex, { status: 'used' });
                 ui.renderTemporaryBuffs();
                 ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
                 saveState(form);
             }
         } else if (target.classList.contains('remove-buff-btn')) {
-            const buffIndex = parseInt(target.dataset.index, 10);
+            const buffIndex = parseIntOr(target.dataset.index, 0);
             if (confirm('Are you sure you want to remove this buff?')) {
-                characterState.temporaryBuffs.splice(buffIndex, 1);
+                stateAdapter.removeTemporaryBuff(buffIndex);
                 ui.renderTemporaryBuffs();
                 ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
                 saveState(form);
@@ -847,10 +846,7 @@ export function initializeCharacterSheet() {
             const buffName = e.target.dataset.buffName;
             const daysUsed = parseIntOr(e.target.value, 0);
 
-            if (!characterState.atmosphericBuffs[buffName]) {
-                characterState.atmosphericBuffs[buffName] = { daysUsed: 0, isActive: false };
-            }
-            characterState.atmosphericBuffs[buffName].daysUsed = daysUsed;
+            stateAdapter.setAtmosphericBuffDaysUsed(buffName, daysUsed);
             ui.updateBuffTotal(e.target);
         }
     });
@@ -863,8 +859,11 @@ export function initializeCharacterSheet() {
         const selectedSanctum = librarySanctumSelect.value;
         const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
         
-        for (const buffName in characterState.atmosphericBuffs) {
-            const buff = characterState.atmosphericBuffs[buffName];
+        const atmosphericBuffs = stateAdapter.getAtmosphericBuffs();
+        const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+        
+        for (const buffName in atmosphericBuffs) {
+            const buff = atmosphericBuffs[buffName];
             
             // Only process buffs that were marked as active
             if (buff.isActive) {
@@ -875,13 +874,13 @@ export function initializeCharacterSheet() {
             }
             
             // Reset the days used and active status for all buffs
-            buff.daysUsed = 0;
-            
             // Keep Grove Tender's "Soaking in Nature" active, reset others
-            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
             const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
-            if (!isGroveTenderBuff) {
-                buff.isActive = false;
+            if (isGroveTenderBuff) {
+                stateAdapter.setAtmosphericBuffDaysUsed(buffName, 0);
+                // Keep it active (already set)
+            } else {
+                stateAdapter.updateAtmosphericBuff(buffName, { daysUsed: 0, isActive: false });
             }
         }
         
@@ -946,32 +945,39 @@ export function initializeCharacterSheet() {
         saveCompletedBooksSet(); // Save the cleared set
         
         // Process temporary buffs - decrement monthsRemaining and remove expired
-        if (characterState.temporaryBuffs) {
-            characterState.temporaryBuffs = characterState.temporaryBuffs.filter(buff => {
-                // Remove one-time buffs that were used
-                if (buff.duration === 'one-time' && buff.status === 'used') {
-                    return false;
-                }
-                
-                // Remove end-of-month buffs
-                if (buff.duration === 'until-end-month') {
-                    return false;
-                }
-                
-                // Decrement two-month buffs
-                if (buff.duration === 'two-months' && buff.monthsRemaining > 0) {
-                    buff.monthsRemaining--;
-                    // Remove if no months remaining
-                    if (buff.monthsRemaining === 0) {
+        const temporaryBuffs = stateAdapter.getTemporaryBuffs();
+        if (temporaryBuffs && temporaryBuffs.length > 0) {
+            // Filter out expired buffs and update state
+            const activeBuffs = temporaryBuffs
+                .map(buff => ({ ...buff })) // Create a copy to avoid mutating the original
+                .filter(buff => {
+                    // Remove one-time buffs that were used
+                    if (buff.duration === 'one-time' && buff.status === 'used') {
                         return false;
                     }
-                }
-                
-                return true;
-            });
+                    
+                    // Remove end-of-month buffs
+                    if (buff.duration === 'until-end-month') {
+                        return false;
+                    }
+                    
+                    // Decrement two-month buffs
+                    if (buff.duration === 'two-months' && buff.monthsRemaining > 0) {
+                        buff.monthsRemaining--;
+                        // Remove if no months remaining
+                        if (buff.monthsRemaining === 0) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                });
+            
+            // Replace the entire list with the filtered/updated buffs
+            stateAdapter._replaceList(STORAGE_KEYS.TEMPORARY_BUFFS, activeBuffs);
             
             // Increment buff month counter
-            characterState.buffMonthCounter = (characterState.buffMonthCounter || 0) + 1;
+            stateAdapter.incrementBuffMonthCounter();
         }
         
         // Re-render the atmospheric buffs table to show 0 days used

@@ -87,19 +87,36 @@ If your new state needs to be mutated (added, removed, updated), add methods to 
 **Example:**
 ```javascript
 // In stateAdapter.js
+import { safeSetJSON } from '../utils/storage.js';
+
 const EVENTS = Object.freeze({
     // ... existing events
     NEW_FEATURE_CHANGED: 'newFeatureChanged'
 });
 
-// Add methods
+const LIST_EVENTS = Object.freeze({
+    // ... existing mappings
+    [STORAGE_KEYS.NEW_FEATURE_DATA]: EVENTS.NEW_FEATURE_CHANGED  // If it's an array
+});
+
+// For array-based state, use _mutateList pattern:
 getNewFeatureData() {
     return this.state[STORAGE_KEYS.NEW_FEATURE_DATA];
 }
 
+addNewFeatureData(item) {
+    const { value } = this._mutateList(STORAGE_KEYS.NEW_FEATURE_DATA, list => {
+        if (!item) return { changed: false };
+        list.push(item);
+        return { changed: true, value: item };
+    });
+    return value || null;
+}
+
+// For simple object/primitive state:
 setNewFeatureData(data) {
     this.state[STORAGE_KEYS.NEW_FEATURE_DATA] = data;
-    localStorage.setItem(STORAGE_KEYS.NEW_FEATURE_DATA, JSON.stringify(data));
+    safeSetJSON(STORAGE_KEYS.NEW_FEATURE_DATA, data);
     this.emit(EVENTS.NEW_FEATURE_CHANGED, data);
     return data;
 }
@@ -187,22 +204,48 @@ characterState.activeAssignments.push(newQuest);
 ```
 
 **If StateAdapter doesn't have a method yet:**
-1. Add it to StateAdapter (preferred)
-2. Or use direct mutation but ensure `saveState()` is called
+1. Add it to StateAdapter following existing patterns (preferred)
+2. Use `_mutateList()` for array operations or direct assignment for simple values
+3. Always use `safeSetJSON()` for localStorage persistence (never `localStorage.setItem` directly)
+4. Emit change events for UI reactivity
 
 ### Storage Keys
 
-**Always use STORAGE_KEYS constants.**
+**Always use STORAGE_KEYS constants and utility functions.**
 
 ✅ **Do:**
 ```javascript
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
-localStorage.getItem(STORAGE_KEYS.ACTIVE_ASSIGNMENTS);
+import { safeGetJSON } from './utils/storage.js';
+
+const data = safeGetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, []);
 ```
 
 ❌ **Don't:**
 ```javascript
 localStorage.getItem('activeAssignments'); // Magic string
+JSON.parse(localStorage.getItem('activeAssignments')) || []; // Unsafe parsing
+```
+
+### Utility Functions
+
+**Use utility functions from `/assets/js/utils/` instead of inline logic.**
+
+✅ **Do:**
+```javascript
+import { parseIntOr, trimOrEmpty, safeGetJSON } from './utils/helpers.js';
+import { safeGetJSON } from './utils/storage.js';
+
+const value = parseIntOr(input.value, 0);
+const name = trimOrEmpty(formInput.value);
+const data = safeGetJSON(STORAGE_KEYS.MY_DATA, []);
+```
+
+❌ **Don't:**
+```javascript
+const value = parseInt(input.value, 10) || 0; // Inline parsing
+const name = input.value.trim(); // No null check
+const data = JSON.parse(localStorage.getItem('myData')) || []; // Unsafe
 ```
 
 ---
