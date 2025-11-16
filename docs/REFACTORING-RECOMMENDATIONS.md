@@ -65,9 +65,9 @@ This document outlines potential refactoring opportunities for the Tome of Secre
 ## 🟡 1. Data Management Strategy
 
 ### Current State
-**Status:** ✅ Phase 1 Complete - Incremental Migration Expanded
+**Status:** ✅ Phase 2 In Progress - JSON is source of truth; hydration implemented across pages
 
-Game data is now sourced from JSON under `assets/data/` and converted to JS exports via `scripts/generate-data.js`. Backward-compatible re-exports remain in `assets/js/character-sheet/data.js`.
+Game data is now sourced from JSON under `assets/data/` and converted to JS exports via `scripts/generate-data.js`. Backward-compatible re-exports remain in `assets/js/character-sheet/data.js`. For legacy consumers, we derive minimal shapes (e.g., `sideQuests`, `curseTable`) from their detailed JSON counterparts to avoid duplication.
 
 **Completed:**
 - ✅ Created `assets/data/` directory structure
@@ -75,8 +75,14 @@ Game data is now sourced from JSON under `assets/data/` and converted to JS expo
 - ✅ Created `scripts/generate-data.js` - Simple build script to convert JSON → JS exports
 - ✅ Updated `data.js` to import from generated JSON exports (backward compatible)
 - ✅ Migrated additional data types: `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`
+- ✅ Migrated more data types: `masteryAbilities.json`, `dungeonRewards.json`, `dungeonCompletionRewards.json`, `allGenres.json`, `genreQuests.json`, `extraCreditRewards.json`, `sideQuestsDetailed.json`, `curseTableDetailed.json`, `temporaryBuffsFromRewards.json`
+- ✅ Removed non-detailed duplicates (`sideQuests.json`, `curseTable.json`) and now derive legacy shapes from detailed JSON within `data.js`
 - ✅ Rewards page (`rewards.md`) hydrated from JSON via `assets/js/page-renderers/rewardsRenderer.js`
 - ✅ Dungeon encounter text auto-linkifies item names (e.g., “Amulet of Duality”) while keeping encounter names unlinked when confusing
+- ✅ Sanctum page (`sanctum.md`) hydrated via `assets/js/page-renderers/sanctumRenderer.js`
+- ✅ Keeper page (`keeper.md`) hydrated via `assets/js/page-renderers/keeperRenderer.js` (backgrounds and schools)
+- ✅ Shroud page (`shroud.md`) renders from JSON via `assets/js/table-renderer.js` (`renderCurseTable`)
+- ✅ Character Sheet curse dropdown now populated from `curseTableDetailed` at runtime (no hardcoded options)
 - ✅ All tests passing
 - ✅ Added `data.json-exports.js` to `.gitignore` (auto-generated file)
 
@@ -87,11 +93,9 @@ Game data is now sourced from JSON under `assets/data/` and converted to JS expo
 - No async complexity, no runtime loading - simple and maintainable
 - Backward compatible during migration
 
-**Next Steps (Phase 2):**
-- Extract remaining data types incrementally:
-  - `sideQuests.json`
-  - `curseTable.json`
-  - etc.
+**Next Steps (Phase 2 wrap-up):**
+- Migrate any remaining inline content to JSON if discovered
+- Move more UI to dedicated renderers where helpful and ensure consistent slugification and link behavior across pages
 
 **Benefits:**
 - ✅ Content editable without JavaScript knowledge (JSON)
@@ -99,6 +103,7 @@ Game data is now sourced from JSON under `assets/data/` and converted to JS expo
 - ✅ Separation of content vs. code
 - ✅ Foundation for future content editor tools
 - ✅ Simple workflow: Edit JSON → Run script → Done
+- ✅ Single source of truth avoids drift (detailed JSON; legacy shapes derived programmatically)
 
 **Files Changed:**
 - `assets/data/xpLevels.json` (new)
@@ -108,8 +113,14 @@ Game data is now sourced from JSON under `assets/data/` and converted to JS expo
 - `scripts/generate-data.js` (new)
 - `assets/js/character-sheet/data.js` (updated to import from JSON exports)
 - `assets/js/character-sheet/data.json-exports.js` (auto-generated)
+- `assets/js/page-renderers/rewardsRenderer.js` (new)
+- `assets/js/page-renderers/sanctumRenderer.js` (new)
+- `assets/js/page-renderers/keeperRenderer.js` (new)
+- `assets/js/table-renderer.js` (linkify items, unified slugification, curse table render)
+- `character-sheet.md` (curse dropdown hydrated at runtime)
+- `sanctum.md`, `keeper.md`, `shroud.md` (hydrated sections)
 
-**Effort:** Phase 1 complete (1.5 hours). Remaining: ~1-2 hours to migrate remaining data types.
+**Effort:** Phase 1 complete; Phase 2 largely complete (hydration + JSON extraction). Future work ad hoc as new content is added.
 
 ---
 

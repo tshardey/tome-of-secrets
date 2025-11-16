@@ -18,8 +18,9 @@ This guide provides straightforward instructions for adding new features to the 
 
 ### Items, Rewards, Quests, etc.
 
-**Current Location (JSON source of truth):** `/assets/data/*.json`  
-`scripts/generate-data.js` converts JSON → JS exports consumed by the site (`assets/js/character-sheet/data.json-exports.js`) and re-exported via `assets/js/character-sheet/data.js`.
+**Current Location (JSON source of truth):** `/assets/data/*.json`
+
+`scripts/generate-data.js` converts JSON → JS exports consumed by the site (`assets/js/character-sheet/data.json-exports.js`) and re-exported via `assets/js/character-sheet/data.js`. Use detailed JSON as the single source of truth (e.g., `sideQuestsDetailed.json`, `curseTableDetailed.json`); legacy shapes are derived programmatically inside `data.js` for backward compatibility.
 
 **Steps (JSON-first workflow):**
 1. Edit the appropriate JSON file under `assets/data/` (e.g., add an item to `allItems.json`)
@@ -29,7 +30,10 @@ This guide provides straightforward instructions for adding new features to the 
    ```
 3. If UI needs to render new content, update the relevant renderer:
    - Character Sheet: `/assets/js/character-sheet/ui.js` and `/assets/js/character-sheet.js`
+     - Example: curses dropdown is populated from `curseTableDetailed` at runtime (no hardcoded options)
    - Rewards page: `/assets/js/page-renderers/rewardsRenderer.js`
+   - Sanctum page: `/assets/js/page-renderers/sanctumRenderer.js`
+   - Keeper page: `/assets/js/page-renderers/keeperRenderer.js`
    - Tables (Dungeons/Quests/Shroud): `/assets/js/table-renderer.js`
 4. Add tests in `/tests/*.test.js` as needed
 
@@ -145,6 +149,7 @@ setNewFeatureData(data) {
 3. Use StateAdapter for state mutations
 4. Call UI rendering functions from `/assets/js/character-sheet/ui.js`
 5. Call `saveState(form)` after mutations
+6. Populate dynamic dropdowns/tables from JSON data (avoid hardcoding options)
 
 **Example:**
 ```javascript
@@ -173,6 +178,11 @@ if (newFeatureButton) {
 - Use template literals for HTML generation
 - Access state through `characterState` or StateAdapter
 - Keep rendering logic separate from business logic
+- Prefer dedicated page renderers for content hydration:
+  - `assets/js/page-renderers/rewardsRenderer.js`
+  - `assets/js/page-renderers/sanctumRenderer.js`
+  - `assets/js/page-renderers/keeperRenderer.js`
+  - `assets/js/table-renderer.js` for rules tables across pages
 
 ---
 
@@ -197,6 +207,14 @@ const reward = 10; // Magic number
 1. Add to `/assets/js/config/gameConfig.js`
 2. Use the config value in your code
 3. Add tests in `/tests/gameConfig.test.js`
+
+### Data Shapes and Derivations
+
+- Keep detailed JSON as the source of truth (e.g., `sideQuestsDetailed.json`, `curseTableDetailed.json`).
+- If legacy/flattened shapes are needed by existing code, derive them in `assets/js/character-sheet/data.js` rather than duplicating JSON files.
+- Example derivations implemented:
+  - `sideQuests`: built from `sideQuestsDetailed` for dropdown labels
+  - `curseTable`: built from `curseTableDetailed` with normalized `requirement` values (strips “You must ” prefix and trailing period)
 
 ### State Mutations
 

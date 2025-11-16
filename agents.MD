@@ -19,8 +19,15 @@ The repository is organized as a standard Jekyll project.
 *   `assets/`: Contains all static assets.
     *   `css/`: Stylesheets for the website's "Dark Academia" theme.
     *   `js/`: JavaScript files for site interactivity.
-        *   `character-sheet/data.js`: **Crucial Data File.** This file exports JavaScript objects containing game data (items, quests, abilities, etc.) used by the interactive character sheet. **This data is a reflection of the content in the Markdown rule files. When updating game rules or adding new items/abilities in the `.md` files, this file MUST be updated to match.** Do not assume its contents; derive them from the corresponding Markdown files.
+        *   `character-sheet/data.js`: Re-exports auto-generated data from JSON (see `assets/data/`). Some legacy shapes (e.g., `sideQuests`, `curseTable`) are derived here from detailed JSON to maintain backward compatibility without duplicating data.
+        *   `page-renderers/`: Page hydration modules:
+            * `rewardsRenderer.js` (hydrates `rewards.md`)
+            * `sanctumRenderer.js` (hydrates `sanctum.md`)
+            * `keeperRenderer.js` (hydrates `keeper.md`)
+        *   `table-renderer.js`: Renders rules tables for `dungeons.md`, `quests.md`, `shroud.md`, and auto-linkifies item names.
     *   `images/`: All images used on the site.
+*   `assets/data/`: JSON source of truth for game data. Edit these files and run the generator to update the site data:
+    * `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`, `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`, `masteryAbilities.json`, `dungeonRewards.json`, `dungeonCompletionRewards.json`, `allGenres.json`, `genreQuests.json`, `extraCreditRewards.json`, `sideQuestsDetailed.json`, `curseTableDetailed.json`, `temporaryBuffsFromRewards.json`
 *   `.md` files (root directory): These are the core content files for the game rules (e.g., `core-mechanics.md`, `quests.md`, `rewards.md`). Some of these files contain a mix of Markdown and direct HTML for layout purposes.
 *   `character-sheet.html`: The HTML file for the interactive character sheet.
 *   `README.md`: Contains detailed instructions for setting up a local development environment and running tests.
@@ -38,7 +45,11 @@ You can perform the following tasks. Always use the local development environmen
 1.  Identify the relevant `.md` file in the root directory that corresponds to the page you need to edit.
 2.  Modify the content using standard Markdown syntax.
 3.  For pages with complex layouts like `dungeons.md` or `rewards.md`, you will be editing HTML directly within the file.
-4.  If the changes involve game data (e.g., adding a new reward, changing an ability), you **must** also update the corresponding object in `assets/js/character-sheet/data.js`.
+4.  If the changes involve game data (e.g., adding a new reward, changing an ability), update the corresponding JSON in `assets/data/` and run:
+    ```
+    node scripts/generate-data.js
+    ```
+    Then, if needed, adjust a renderer (`assets/js/page-renderers/*.js`) or table logic (`assets/js/table-renderer.js`) to reflect the new content.
 
 #### Adding a New Page
 1.  Create a new `.md` file in the root directory (e.g., `new-page.md`).
@@ -99,7 +110,7 @@ The project uses Jest for testing JavaScript functionality.
 
 ## Important Directives
 
-1.  **Data Consistency**: The data in `assets/js/character-sheet/data.js` MUST be kept in sync with the content in the Markdown rule files (`rewards.md`, `sanctum.md`, `keeper.md`, etc.). When you edit one, you must check if the other needs to be updated.
+1.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
 2.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
 3.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
 4.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
