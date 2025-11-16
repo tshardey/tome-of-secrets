@@ -48,13 +48,13 @@ title: Keeper's Character Sheet
                 <label for="wizardSchool"><strong>✨ Wizard School:</strong></label>
                 <select id="wizardSchool">
                     <option value="">-- Select a School --</option>
-                    <option value="Abjuration">Abjuration</option> <option value="Divination">Divination</option> <option value="Evocation">Evocation</option> <option value="Enchantment">Enchantment</option> <option value="Conjuration">Conjuration</option> <option value="Transmutation">Transmutation</option> </select>
+                </select>
             </li>
             <li>
                 <label for="librarySanctum"><strong>🏛️ Library Sanctum:</strong></label>
                 <select id="librarySanctum">
                     <option value="">-- Select a Sanctum --</option>
-                    <option value="The Spire of Whispers">The Spire of Whispers</option> <option value="The Verdant Athenaeum">The Verdant Athenaeum</option> <option value="The Sunken Archives">The Sunken Archives</option> </select>
+                </select>
             </li>
         </ul>
     </div>

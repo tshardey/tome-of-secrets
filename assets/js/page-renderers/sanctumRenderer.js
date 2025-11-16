@@ -1,12 +1,5 @@
 import { sanctumBenefits } from '../character-sheet/data.js';
-
-function slugifyId(name) {
-    return name
-        .toLowerCase()
-        .replace(/'/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-}
+import { slugifyId } from '../utils/slug.js';
 
 function createSanctumCard(name, data) {
     const wrapper = document.createElement('section');

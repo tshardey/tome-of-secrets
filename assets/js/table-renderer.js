@@ -9,22 +9,14 @@ import {
     curseTableDetailed,
     allItems
 } from './character-sheet/data.js';
+import { slugifyId } from './utils/slug.js';
 
 function escapeRegExp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function toAnchorId(name) {
-    // Match rewardsRenderer slugifyId behavior for cross-file consistency
-    // 1) lowercase
-    // 2) remove apostrophes
-    // 3) convert any non-alphanumeric sequence to single hyphen
-    // 4) trim leading/trailing hyphens
-    return name
-        .toLowerCase()
-        .replace(/'/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+    return slugifyId(name);
 }
 
 // Replace item names appearing in free-form text with links to rewards anchors
@@ -147,16 +139,14 @@ export function renderDungeonRoomsTable() {
                     html += `
               <td>${encounter.roll}</td>`;
                 }
-                html += `
-              <td><strong>`;
-                
-                if (encounter.hasLink && encounter.link) {
-                    html += `<a href="${encounter.link.url}">${encounter.name}</a>`;
-                } else {
-                    html += encounter.name;
+                // Build encounter name, linking familiars to rewards page
+                let encounterNameHtml = encounter.name;
+                if (encounter.type === 'Familiar' && allItems[encounter.name]) {
+                    const anchorId = toAnchorId(encounter.name);
+                    encounterNameHtml = `<a href="{{ site.baseurl }}/rewards.html#${anchorId}">${encounter.name}</a>`;
                 }
-                
-                html += ` (${encounter.type}):</strong> ${encounter.description}`;
+                html += `
+              <td><strong>${encounterNameHtml} (${encounter.type}):</strong> ${encounter.description}`;
                 
                 if (encounter.defeat) {
                     html += `

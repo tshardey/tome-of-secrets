@@ -54,73 +54,31 @@ This document outlines potential refactoring opportunities for the Tome of Secre
 - **Files Changed:** `RewardCalculator.js`, `character-sheet.js`, `state.js`
 - **Tests Added:** `gameConfig.test.js` (187 total tests, up from 177)
 
-## Priority Levels
+<!-- Priority levels removed to reduce noise and avoid staleness -->
 
-- 🔴 **High Priority:** Should be addressed before major feature additions
-- 🟡 **Medium Priority:** Worth addressing when working in related areas
-- 🟢 **Low Priority:** Nice-to-have improvements, consider when refactoring nearby code
+## 🟢 1. Data Management Strategy (Simplified)
 
----
+Status: ✅ Phase 2 Complete — JSON is the source of truth; pages and Character Sheet hydrated.
 
-## 🟡 1. Data Management Strategy
+What’s done:
+- JSON-first data under `assets/data/*`, generator runs locally and in CI.
+- Detailed JSON used everywhere; legacy shapes (`sideQuests`, `curseTable`) are derived in `data.js` (no duplication).
+- Hydration implemented:
+  - Rewards (`rewards.md`) via `rewardsRenderer.js`
+  - Sanctums (`sanctum.md`) via `sanctumRenderer.js`
+  - Keeper backgrounds and schools (`keeper.md`) via `keeperRenderer.js`
+  - Shroud (`shroud.md`) via `table-renderer.js`
+  - Character Sheet: dropdowns (backgrounds, schools, sanctums, curses) populate from JSON at runtime
+- Link consistency and slugification unified; encounter text linkifies items; familiars link to rewards.
+- Tests added for derived data and hydration; full suite passing.
 
-### Current State
-**Status:** ✅ Phase 2 In Progress - JSON is source of truth; hydration implemented across pages
+Remaining follow-ups (optional polish):
+- Central notifier to replace `alert()` UX.
+- Minor doc polish as new content types are added.
 
-Game data is now sourced from JSON under `assets/data/` and converted to JS exports via `scripts/generate-data.js`. Backward-compatible re-exports remain in `assets/js/character-sheet/data.js`. For legacy consumers, we derive minimal shapes (e.g., `sideQuests`, `curseTable`) from their detailed JSON counterparts to avoid duplication.
-
-**Completed:**
-- ✅ Created `assets/data/` directory structure
-- ✅ Created JSON source files for: `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`
-- ✅ Created `scripts/generate-data.js` - Simple build script to convert JSON → JS exports
-- ✅ Updated `data.js` to import from generated JSON exports (backward compatible)
-- ✅ Migrated additional data types: `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`
-- ✅ Migrated more data types: `masteryAbilities.json`, `dungeonRewards.json`, `dungeonCompletionRewards.json`, `allGenres.json`, `genreQuests.json`, `extraCreditRewards.json`, `sideQuestsDetailed.json`, `curseTableDetailed.json`, `temporaryBuffsFromRewards.json`
-- ✅ Removed non-detailed duplicates (`sideQuests.json`, `curseTable.json`) and now derive legacy shapes from detailed JSON within `data.js`
-- ✅ Rewards page (`rewards.md`) hydrated from JSON via `assets/js/page-renderers/rewardsRenderer.js`
-- ✅ Dungeon encounter text auto-linkifies item names (e.g., “Amulet of Duality”) while keeping encounter names unlinked when confusing
-- ✅ Sanctum page (`sanctum.md`) hydrated via `assets/js/page-renderers/sanctumRenderer.js`
-- ✅ Keeper page (`keeper.md`) hydrated via `assets/js/page-renderers/keeperRenderer.js` (backgrounds and schools)
-- ✅ Shroud page (`shroud.md`) renders from JSON via `assets/js/table-renderer.js` (`renderCurseTable`)
-- ✅ Character Sheet curse dropdown now populated from `curseTableDetailed` at runtime (no hardcoded options)
-- ✅ All tests passing
-- ✅ Added `data.json-exports.js` to `.gitignore` (auto-generated file)
-
-**Implementation Approach:**
-- Using a simple, synchronous approach perfect for solo dev
-- JSON files are source of truth (easy to edit)
-- Build script (`node scripts/generate-data.js`) generates JS exports
-- No async complexity, no runtime loading - simple and maintainable
-- Backward compatible during migration
-
-**Next Steps (Phase 2 wrap-up):**
-- Migrate any remaining inline content to JSON if discovered
-- Move more UI to dedicated renderers where helpful and ensure consistent slugification and link behavior across pages
-
-**Benefits:**
-- ✅ Content editable without JavaScript knowledge (JSON)
-- ✅ Cleaner git diffs for content changes
-- ✅ Separation of content vs. code
-- ✅ Foundation for future content editor tools
-- ✅ Simple workflow: Edit JSON → Run script → Done
-- ✅ Single source of truth avoids drift (detailed JSON; legacy shapes derived programmatically)
-
-**Files Changed:**
-- `assets/data/xpLevels.json` (new)
-- `assets/data/permanentBonuses.json` (new)
-- `assets/data/atmosphericBuffs.json` (new)
-- `assets/data/README.md` (new)
-- `scripts/generate-data.js` (new)
-- `assets/js/character-sheet/data.js` (updated to import from JSON exports)
-- `assets/js/character-sheet/data.json-exports.js` (auto-generated)
-- `assets/js/page-renderers/rewardsRenderer.js` (new)
-- `assets/js/page-renderers/sanctumRenderer.js` (new)
-- `assets/js/page-renderers/keeperRenderer.js` (new)
-- `assets/js/table-renderer.js` (linkify items, unified slugification, curse table render)
-- `character-sheet.md` (curse dropdown hydrated at runtime)
-- `sanctum.md`, `keeper.md`, `shroud.md` (hydrated sections)
-
-**Effort:** Phase 1 complete; Phase 2 largely complete (hydration + JSON extraction). Future work ad hoc as new content is added.
+Effort and risk (for remaining follow-ups):
+- Notifier utility and swaps: Effort 1.5–2.5h, Risk Low–Medium (touches several handlers).
+- Doc polish: Effort 15–30m, Risk Low.
 
 ---
 
@@ -186,7 +144,7 @@ function createQuestRow(quest) {
 
 ---
 
-## ✅ 3. State Management Improvements
+## ✅ 3. State Management Improvements (Complete)
 
 ### Current State
 **Status:** ✅ Complete
@@ -208,67 +166,7 @@ All state mutations are now routed through `StateAdapter` methods. The adapter a
 - Automatic persistence for all state changes
 - Event-driven architecture for reactive UI updates
 
-### Optional Future Enhancements
-
-**Complete Observable State Pattern Implementation**
-```javascript
-class ObservableState {
-    constructor(initialState) {
-        this._state = initialState;
-        this._listeners = [];
-        this._history = [];
-    }
-
-    get state() {
-        return this._state;
-    }
-
-    setState(updates) {
-        this._history.push(this._state);
-        this._state = { ...this._state, ...updates };
-        this._notify();
-        this._persist();
-    }
-
-    subscribe(listener) {
-        this._listeners.push(listener);
-    }
-
-    _notify() {
-        this._listeners.forEach(fn => fn(this._state));
-    }
-
-    _persist() {
-        localStorage.setItem('characterState', JSON.stringify(this._state));
-    }
-
-    undo() {
-        if (this._history.length > 0) {
-            this._state = this._history.pop();
-            this._notify();
-            this._persist();
-        }
-    }
-}
-
-// Usage
-const characterState = new ObservableState(loadState());
-characterState.subscribe((state) => {
-    // Auto-render on state changes
-    ui.render(state);
-});
-```
-
-**Benefits:**
-- Centralized state mutations
-- Automatic persistence
-- Undo/redo capability
-- Easier debugging (state change history)
-- Foundation for future features
-
-**Effort:** Medium-High (4-5 hours)
-
----
+<!-- Removed future feature proposals (undo/redo, full observable pattern) to keep this document focused on refactors -->
 
 ## 🟡 4. Form Validation Extraction
 
@@ -809,72 +707,11 @@ Performance is generally good, but could be improved for edge cases.
 
 **Effort:** Low-Medium per optimization (1-2 hours each)
 
----
-
-## Implementation Strategy
-
-### Recommended Order
-
-1. **Phase 1: Low-Hanging Fruit** (1-2 weeks)
-   - ✅ Storage keys centralization (Complete)
-   - ✅ StateAdapter complete (All state operations centralized)
-   - ✅ Configuration management (Complete)
-   - ✅ Utility functions library (Complete)
-   - Documentation improvements (In progress)
-   - Validation service (Pending)
-
-2. **Phase 2: Medium Priority** (2-3 weeks)
-   - ✅ StateAdapter migration complete (All state operations covered)
-   - ✅ Data management strategy (JSON extraction) - **Phase 1 Complete** (3 simple data types migrated, pattern proven)
-   - Continue incremental JSON extraction (remaining 16 data types)
-   - Form validation
-   - Error handling
-   - UI rendering improvements
-
-3. **Phase 3: Architectural** (3-4 weeks, as needed)
-   - ✅ State management improvements (Complete - StateAdapter fully implemented)
-   - Event handler refactoring
-   - ✅ Test coverage expansion (245 tests with comprehensive coverage)
-
-4. **Phase 4: Optional Enhancements**
-   - TypeScript migration (if needed)
-   - Performance optimizations
-   - Advanced features (undo/redo, full Observable State Pattern)
-
-
-### Success Metrics
-
-- ✅ All tests continue to pass
-- ✅ No regression bugs introduced
-- ✅ Code is more readable/maintainable
-- ✅ Easier to add new content/features
-- ✅ Improved performance (if that was a goal)
-
----
 
 ## Conclusion
 
-These recommendations represent opportunities for improvement rather than critical issues. The codebase is in good shape and actively being improved through incremental refactoring.
-
-### Recent Progress
-- ✅ **Storage keys centralized** - All localStorage keys now managed through constants
-- ✅ **StateAdapter complete** - Event-driven state management for all state operations (genres, quests, inventory, curses, buffs, abilities, atmospheric buffs)
-- ✅ **State persistence complete** - All state mutations automatically persisted via `safeSetJSON`
-- ✅ **Configuration management** - All reward values and game constants centralized in `gameConfig.js`
-- ✅ **Utility functions library** - Common helpers (`parseIntOr`, `trimOrEmpty`, `safeGetJSON`, etc.) extracted and tested
-- ✅ **Test coverage expanded** - 245 tests with comprehensive coverage of StateAdapter, utilities, persistence, and configuration
-- ✅ **JSON data extraction (Phase 1)** - Migrated 3 data types to JSON (xpLevels, permanentBonuses, atmosphericBuffs) with simple build script workflow
-
-### Priority for immediate work:
-1. **Continue JSON extraction** (Phase 1 complete) - Migrate remaining 16 data types from `data.js` to JSON files using the proven pattern
-2. **Better error handling** (improves UX) - Replace alerts with user-friendly notifications
-3. **Form validation service** - Extract validation logic for consistency and better UX
-
-### Consider for later:
-- TypeScript migration (only if team grows)
-- Undo/redo functionality (extend StateAdapter with history tracking)
-- Add in-sheet genre editing powered by `StateAdapter` so players can adjust favorites without leaving the character sheet
-- Full Observable State Pattern with automatic persistence (if complexity increases significantly)
-
-Remember: **Perfect is the enemy of good.** Focus refactoring efforts on areas that are actively causing pain or blocking new features.
-
+The JSON migration and page hydration are complete. Focused refactors that remain valuable:
+- UI rendering improvements (templating or safer DOM APIs) — Low–Medium effort.
+- Form validation extraction — Low–Medium effort.
+- Error handling/notification utility — Medium effort.
+- Optional: TypeScript migration and targeted performance optimizations — as needed.

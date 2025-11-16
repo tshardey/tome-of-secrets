@@ -1,12 +1,5 @@
 import { keeperBackgrounds, schoolBenefits } from '../character-sheet/data.js';
-
-function slugifyId(name) {
-    return name
-        .toLowerCase()
-        .replace(/'/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-}
+import { slugifyId } from '../utils/slug.js';
 
 function createBackgroundCard(bg) {
     const wrapper = document.createElement('section');
