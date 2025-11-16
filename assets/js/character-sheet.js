@@ -131,6 +131,25 @@ export function initializeCharacterSheet() {
         }
     }
 
+    // Populate Curse Penalty dropdown from JSON (ordered by number)
+    if (cursePenaltySelect && Array.isArray(data.curseTableDetailed)) {
+        cursePenaltySelect.innerHTML = '<option value="">-- Select Curse Penalty --</option>';
+        data.curseTableDetailed
+            .slice()
+            .sort((a, b) => (a.number || 0) - (b.number || 0))
+            .forEach(curse => {
+                if (!curse || !curse.name) return;
+                const opt = document.createElement('option');
+                opt.value = curse.name;
+                if (typeof curse.number === 'number') {
+                    opt.textContent = `${curse.number}. ${curse.name}`;
+                } else {
+                    opt.textContent = curse.name;
+                }
+                cursePenaltySelect.appendChild(opt);
+            });
+    }
+
     // --- EVENT LISTENERS ---
     levelInput.addEventListener('change', () => {
         ui.updateXpNeeded(levelInput, xpNeededInput);

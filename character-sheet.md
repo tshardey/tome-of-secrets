@@ -435,10 +435,6 @@ title: Keeper's Character Sheet
             <div class="form-row">
                 <select id="curse-penalty-select">
                     <option value="">-- Select Curse Penalty --</option>
-                    <option value="The Unread Tome">1. The Unread Tome</option>
-                    <option value="The Lost Lore">2. The Lost Lore</option>
-                    <option value="The Forgotten Pages">3. The Forgotten Pages</option>
-                    <option value="The Ravenous Shadow">4. The Ravenous Shadow</option>
                 </select>
                 <input type="text" id="curse-book-title" placeholder="Book/Activity Title">
                 <button type="button" id="add-curse-button">Add Curse</button>
