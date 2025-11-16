@@ -18,28 +18,37 @@ This guide provides straightforward instructions for adding new features to the 
 
 ### Items, Rewards, Quests, etc.
 
-**Current Location:** `/assets/js/character-sheet/data.js`
+**Current Location (JSON source of truth):** `/assets/data/*.json`  
+`scripts/generate-data.js` converts JSON → JS exports consumed by the site (`assets/js/character-sheet/data.json-exports.js`) and re-exported via `assets/js/character-sheet/data.js`.
 
-**Steps:**
-1. Add your content to the appropriate export in `data.js`
-2. If adding new reward values, add them to `/assets/js/config/gameConfig.js` instead of hardcoding
-3. Update any related UI rendering functions in `/assets/js/character-sheet/ui.js`
-4. Add tests in `/tests/data.test.js` or create a new test file
+**Steps (JSON-first workflow):**
+1. Edit the appropriate JSON file under `assets/data/` (e.g., add an item to `allItems.json`)
+2. Run the generator:
+   ```bash
+   node scripts/generate-data.js
+   ```
+3. If UI needs to render new content, update the relevant renderer:
+   - Character Sheet: `/assets/js/character-sheet/ui.js` and `/assets/js/character-sheet.js`
+   - Rewards page: `/assets/js/page-renderers/rewardsRenderer.js`
+   - Tables (Dungeons/Quests/Shroud): `/assets/js/table-renderer.js`
+4. Add tests in `/tests/*.test.js` as needed
 
 **Example - Adding a New Item:**
-```javascript
-// In data.js
-export const allItems = {
-    // ... existing items
-    "New Item Name": {
-        type: "wearable",
-        img: "/assets/images/rewards/new-item.png",
-        bonus: "Description of the item's bonus"
-    }
-};
+```json
+// In assets/data/allItems.json
+{
+  "New Item Name": {
+    "type": "Wearable",
+    "img": "assets/images/rewards/new-item-name.png",
+    "bonus": "Description of the item's bonus."
+  }
+}
 ```
 
-**Future:** When data extraction to JSON is complete, you'll add content to JSON files instead.
+Then run:
+```bash
+node scripts/generate-data.js
+```
 
 ---
 

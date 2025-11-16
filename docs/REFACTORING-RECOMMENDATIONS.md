@@ -65,16 +65,19 @@ This document outlines potential refactoring opportunities for the Tome of Secre
 ## 🟡 1. Data Management Strategy
 
 ### Current State
-**Status:** ✅ Phase 1 Complete - Incremental Migration Started
+**Status:** ✅ Phase 1 Complete - Incremental Migration Expanded
 
-Game data (items, quests, rewards, etc.) is currently in `/assets/js/character-sheet/data.js` as JavaScript exports. This file is 801 lines with 19 exports.
+Game data is now sourced from JSON under `assets/data/` and converted to JS exports via `scripts/generate-data.js`. Backward-compatible re-exports remain in `assets/js/character-sheet/data.js`.
 
 **Completed:**
 - ✅ Created `assets/data/` directory structure
 - ✅ Created JSON source files for: `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`
 - ✅ Created `scripts/generate-data.js` - Simple build script to convert JSON → JS exports
 - ✅ Updated `data.js` to import from generated JSON exports (backward compatible)
-- ✅ All tests passing (65 tests in characterSheet.test.js)
+- ✅ Migrated additional data types: `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`
+- ✅ Rewards page (`rewards.md`) hydrated from JSON via `assets/js/page-renderers/rewardsRenderer.js`
+- ✅ Dungeon encounter text auto-linkifies item names (e.g., “Amulet of Duality”) while keeping encounter names unlinked when confusing
+- ✅ All tests passing
 - ✅ Added `data.json-exports.js` to `.gitignore` (auto-generated file)
 
 **Implementation Approach:**
@@ -86,11 +89,6 @@ Game data (items, quests, rewards, etc.) is currently in `/assets/js/character-s
 
 **Next Steps (Phase 2):**
 - Extract remaining data types incrementally:
-  - `schoolBenefits.json`
-  - `sanctumBenefits.json`
-  - `keeperBackgrounds.json`
-  - `allItems.json`
-  - `dungeonRooms.json`
   - `sideQuests.json`
   - `curseTable.json`
   - etc.
