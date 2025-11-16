@@ -1025,6 +1025,26 @@ export function initializeCharacterSheet() {
     
     // Populate keeper background dropdown
     ui.populateBackgroundDropdown();
+    // Populate wizard school dropdown from JSON
+    if (wizardSchoolSelect && data.schoolBenefits) {
+        wizardSchoolSelect.innerHTML = '<option value="">-- Select a School --</option>';
+        Object.keys(data.schoolBenefits).forEach(schoolName => {
+            const opt = document.createElement('option');
+            opt.value = schoolName;
+            opt.textContent = schoolName;
+            wizardSchoolSelect.appendChild(opt);
+        });
+    }
+    // Populate library sanctum dropdown from JSON
+    if (librarySanctumSelect && data.sanctumBenefits) {
+        librarySanctumSelect.innerHTML = '<option value="">-- Select a Sanctum --</option>';
+        Object.keys(data.sanctumBenefits).forEach(sanctumName => {
+            const opt = document.createElement('option');
+            opt.value = sanctumName;
+            opt.textContent = sanctumName;
+            librarySanctumSelect.appendChild(opt);
+        });
+    }
     
     // Initial Load
     loadState(form);

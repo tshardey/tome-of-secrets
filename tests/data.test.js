@@ -1,4 +1,4 @@
-import { allItems, xpLevels, permanentBonuses, curseTable, genreQuests, sideQuestsDetailed, dungeonRooms } from './../assets/js/character-sheet/data.js';
+import { allItems, xpLevels, permanentBonuses, curseTable, genreQuests, sideQuestsDetailed, dungeonRooms, sideQuests } from './../assets/js/character-sheet/data.js';
 
 describe('Game Data Integrity', () => {
 
@@ -50,6 +50,13 @@ describe('Game Data Integrity', () => {
         });
     });
 
+    test('curseTable requirements normalized (no "You must " prefix, no trailing period)', () => {
+        Object.values(curseTable).forEach(curse => {
+            expect(curse.requirement.startsWith('You must ')).toBe(false);
+            expect(curse.requirement.endsWith('.')).toBe(false);
+        });
+    });
+
     test('genreQuests should have rewards property with correct structure', () => {
         Object.values(genreQuests).forEach(quest => {
             expect(quest).toHaveProperty('rewards');
@@ -70,6 +77,13 @@ describe('Game Data Integrity', () => {
             expect(quest.rewards).toHaveProperty('items');
             expect(Array.isArray(quest.rewards.items)).toBe(true);
         });
+    });
+
+    test('sideQuests derivation matches detailed JSON (label contains name and prompt)', () => {
+        const label = sideQuests['1'];
+        expect(typeof label).toBe('string');
+        expect(label).toContain('The Arcane Grimoire');
+        expect(label).toContain('Read the book on your TBR the longest.');
     });
 
     test('dungeonRooms should have encountersDetailed with rewards', () => {

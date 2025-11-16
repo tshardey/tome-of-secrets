@@ -1,13 +1,6 @@
 // Renders rewards (items and familiars) and temp buffs on rewards.md from JSON exports
 import { allItems, temporaryBuffsFromRewards } from '../character-sheet/data.js';
-
-function slugifyId(name) {
-    return name
-        .toLowerCase()
-        .replace(/'/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-}
+import { slugifyId } from '../utils/slug.js';
 
 function createRewardCard(baseurl, name, item) {
     const wrapper = document.createElement('div');
