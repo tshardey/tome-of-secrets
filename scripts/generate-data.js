@@ -21,7 +21,12 @@ const OUTPUT_FILE = path.join(__dirname, '../assets/js/character-sheet/data.json
 const JSON_EXPORTS = {
     'xpLevels.json': 'xpLevels',
     'permanentBonuses.json': 'permanentBonuses',
-    'atmosphericBuffs.json': 'atmosphericBuffs'
+    'atmosphericBuffs.json': 'atmosphericBuffs',
+    'schoolBenefits.json': 'schoolBenefits',
+    'sanctumBenefits.json': 'sanctumBenefits',
+    'keeperBackgrounds.json': 'keeperBackgrounds',
+    'allItems.json': 'allItems',
+    'dungeonRooms.json': 'dungeonRooms'
 };
 
 function generateExports() {
