@@ -26,7 +26,16 @@ const JSON_EXPORTS = {
     'sanctumBenefits.json': 'sanctumBenefits',
     'keeperBackgrounds.json': 'keeperBackgrounds',
     'allItems.json': 'allItems',
-    'dungeonRooms.json': 'dungeonRooms'
+    'dungeonRooms.json': 'dungeonRooms',
+    'masteryAbilities.json': 'masteryAbilities',
+    'dungeonRewards.json': 'dungeonRewards',
+    'dungeonCompletionRewards.json': 'dungeonCompletionRewards',
+    'allGenres.json': 'allGenres',
+    'genreQuests.json': 'genreQuests',
+    'extraCreditRewards.json': 'extraCreditRewards',
+    'sideQuestsDetailed.json': 'sideQuestsDetailed',
+    'curseTableDetailed.json': 'curseTableDetailed',
+    'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards'
 };
 
 function generateExports() {

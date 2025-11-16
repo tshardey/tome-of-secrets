@@ -1,0 +1,16 @@
+{
+    "Ward Against the Shroud": { "school": "Abjuration", "cost": 1, "benefit": "Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it." },
+    "Grand Dispelling": { "school": "Abjuration", "cost": 2, "benefit": "Once per month, you may perform a powerful cleansing ritual. Remove all active Worn Page penalties you currently have." },
+    "Flicker of Prophecy": { "school": "Divination", "cost": 1, "benefit": "When rolling a d6 for a Genre Quest, you may choose to treat the result as one number higher or lower (e.g., a 2 can become a 1 or a 3)." },
+    "Master of Fates": { "school": "Divination", "cost": 2, "benefit": "Once per month, when establishing your Monthly Quest Pool, you may draw two additional cards.  You then look at all the cards drawn and choose which ones to keep for your final quest pool, discarding the rest." },
+    "Quick Shot": { "school": "Evocation", "cost": 1, "benefit": "The benefit of Evocation may now be used to complete any single dungeon room challenge with a short story, not just a monster encounter." },
+    "Concussive Blast": { "school": "Evocation", "cost": 2, "benefit": "When you use your Evocation benefit to complete a dungeon room challenge, the blast of power also completes a second prompt in the same room (if one exists)." },
+    "Silver Tongue": { "school": "Enchantment", "cost": 1, "benefit": "When you complete a Side Quest, you gain an additional +5 Paper Scraps, representing your knack for getting a little extra out of every interaction.." },
+    "Irresistible Charm": { "school": "Enchantment", "cost": 2, "benefit": "Once per month, you may choose to automatically succeed at befriending a monster without needing to read a book for the 'befriend' prompt." },
+    "Empowered Bond": { "school": "Conjuration", "cost": 1, "benefit": "Your connection to your companions intensifies. The Ink Drop or Paper Scrap bonus granted by your equipped Familiar is permanently increased by +5." },
+    "Echo Chamber": { "school": "Conjuration", "cost": 2, "benefit": "You have mastered the art of magical connection. You permanently unlock an additional Familiar slot on top of any Familiar slots you have already unlocked." },
+    "Alchemic Focus": { "school": "Transmutation", "cost": 1, "benefit": "You gain an additional +5 XP for every book you read outside of your monthly quest pool." },
+    "Philosopher's Stone": { "school": "Transmutation", "cost": 2, "benefit": "Once per month, you may sacrifice 50 XP to instantly gain 50 Ink Drops and 10 Paper Scraps." }
+}
+
+
