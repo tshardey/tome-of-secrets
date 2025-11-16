@@ -1,0 +1,7 @@
+{
+    "bookCompletion": { "reward": "+15 XP", "penalty": "-" },
+    "monster": { "reward": "+30 XP", "penalty": "-5 Ink Drops & -10 XP" },
+    "friendlyCreature": { "reward": "+10 Ink Drops", "penalty": "-" },
+    "familiar": { "reward": "+5 Paper Scraps", "penalty": "-" }
+}
+

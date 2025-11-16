@@ -8,226 +8,64 @@ import {
     sanctumBenefits,
     keeperBackgrounds,
     allItems,
-    dungeonRooms
+    dungeonRooms,
+    masteryAbilities,
+    dungeonRewards,
+    dungeonCompletionRewards,
+    allGenres,
+    genreQuests,
+    extraCreditRewards,
+    sideQuestsDetailed,
+    curseTableDetailed,
+    temporaryBuffsFromRewards
 } from './data.json-exports.js';
 
 // Re-export JSON data for backward compatibility
-export { xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms };
+export { xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, allGenres, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards };
 
-// atmosphericBuffs is now imported from JSON exports above
+// atmosphericBuffs and other data are now imported from JSON exports above
 
-export const masteryAbilities = {
-    "Ward Against the Shroud": { school: "Abjuration", cost: 1, benefit: "Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it." },
-    "Grand Dispelling": { school: "Abjuration", cost: 2, benefit: "Once per month, you may perform a powerful cleansing ritual. Remove all active Worn Page penalties you currently have." },
-    "Flicker of Prophecy": { school: "Divination", cost: 1, benefit: "When rolling a d6 for a Genre Quest, you may choose to treat the result as one number higher or lower (e.g., a 2 can become a 1 or a 3)." },
-    "Master of Fates": { school: "Divination", cost: 2, benefit: "Once per month, when establishing your Monthly Quest Pool, you may draw two additional cards." },
-    "Quick Shot": { school: "Evocation", cost: 1, benefit: "The benefit of Evocation may now be used to complete any single dungeon room challenge with a short story, not just a monster encounter." },
-    "Concussive Blast": { school: "Evocation", cost: 2, benefit: "When you use your Evocation benefit to complete a dungeon room challenge, the blast of power also completes a second prompt in the same room (if one exists)." },
-    "Silver Tongue": { school: "Enchantment", cost: 1, benefit: "When you complete a Side Quest, you gain an additional +5 Paper Scraps." },
-    "Irresistible Charm": { school: "Enchantment", cost: 2, benefit: "Once per month, you may choose to automatically succeed at befriending a monster without needing to read a book for the 'befriend' prompt." },
-    "Empowered Bond": { school: "Conjuration", cost: 1, benefit: "The Ink Drop or Paper Scrap bonus granted by your equipped Familiar is permanently increased by +5." },
-    "Echo Chamber": { school: "Conjuration", cost: 2, benefit: "You permanently unlock an additional Familiar slot on top of any Familiar slots you have already unlocked." },
-    "Alchemic Focus": { school: "Transmutation", cost: 1, benefit: "You gain an additional +5 XP for every book you read outside of your monthly quest pool." },
-    "Philosopher's Stone": { school: "Transmutation", cost: 2, benefit: "Once per month, you may sacrifice 50 XP to instantly gain 50 Ink Drops and 10 Paper Scraps." }
-};
-
-export const dungeonRewards = {
-    bookCompletion: { reward: "+15 XP", penalty: "-" },
-    monster: { reward: "+30 XP", penalty: "-5 Ink Drops & -10 XP" },
-    friendlyCreature: { reward: "+10 Ink Drops", penalty: "-" },
-    familiar: { reward: "+5 Paper Scraps", penalty: "-" }
-};
-
-// dungeonRooms is now imported from JSON exports above
-
-export const dungeonCompletionRewards = {
-    "1": { name: "The Librarian's Hoard", reward: "Gain +150 Ink Drops and +20 Paper Scraps." },
-    "2": { name: "Chalice of Restoration", reward: "You find a Chalice of Restoration.", hasLink: true, link: { text: "Chalice of Restoration", url: "{{ site.baseurl }}/rewards.html#chalice-of-restoration" } },
-    "3": { name: "Librarian's Blessing", reward: "You may remove up to two Worn Page penalties." },
-    "4": { name: "Librarian's Quill", reward: "You find a Librarian's Quill.", hasLink: true, link: { text: "Librarian's Quill", url: "{{ site.baseurl }}/rewards.html#librarians-quill" } },
-    "5": { name: "Enchanted Focus", reward: "The next three books you complete grant a x1.5 Ink Drop bonus." },
-    "6": { name: "Lantern of Foresight", reward: "You find a Lantern of Foresight.", hasLink: true, link: { text: "Lantern of Foresight", url: "{{ site.baseurl }}/rewards.html#lantern-of-foresight" } },
-    "7": { name: "Unwavering Resolve", reward: "for the next month, you are immune to Worn Page penalties." },
-    "8": { name: "Cloak of the Story-Weaver", reward: "You find a Cloak of the Story-Weaver.", hasLink: true, link: { text: "Cloak of the Story-Weaver", url: "{{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver" } },
-    "9": { name: "The Archivist's Favor", reward: "Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off." },
-    "10": { name: "The Grand Key", reward: "You find a master key for a special, rare quest." }
-};
-
-// All available genres for selection
-export const allGenres = {
-    "Classic": "Read a classic novel you have not yet read.",
-    "Crime": "Read a book involving criminal activities, investigations, or mysteries.",
-    "Drama": "Read a story centered on emotional conflicts and character relationships.",
-    "Fantasy": "Read a book with magical creatures, settings, or a non-human protagonist.",
-    "Historical Fiction": "Read a book set in the past or with a historical figure as a character.",
-    "Horror": "Read a book intended to thrill, unsettle, or frighten you.",
-    "LitRPG": "Read a story where characters level up or interact with game mechanics.",
-    "Literary Fiction": "Read a book that focuses on character development and literary merit.",
-    "Memoirs/Biographies": "Read a book about someone's life story or personal experiences.",
-    "Non-Fiction": "Read a book that presents factual information or real-world topics.",
-    "Romance": "Read a book where the central plot revolves around a romantic relationship.",
-    "Romantasy": "Read a book with a magical system and/or a romantic plot.",
-    "Sci-Fi": "Read a book set in the future or one with a morally gray main character.",
-    "Speculative Fiction": "Read a book that explores 'what if' scenarios across any genre.",
-    "Thriller": "Read a book with a plot twist, deception, or hidden identity.",
-    "TTRPG / Solo RPG": "Play or read through a tabletop or solo roleplaying game adventure.",
-    "Young Adult": "Read a book featuring teen protagonists and coming-of-age themes."
-};
-
-// Default genre quests (for backward compatibility and initial setup)
-export const genreQuests = {
-    "1": { genre: "Historical Fiction", description: "Read a book set in the past or with a historical figure as a character.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
-    "2": { genre: "Fantasy", description: "Read a book with magical creatures, settings, or a non-human protagonist.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
-    "3": { genre: "Romantasy", description: "Read a book with a magical system and/or a romantic plot.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
-    "4": { genre: "Sci-Fi", description: "Read a book set in the future or one with a morally gray main character.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
-    "5": { genre: "Thriller", description: "Read a book with a plot twist, deception, or hidden identity.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
-    "6": { genre: "Classic", description: "Read a classic novel you have not yet read.", rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } }
-};
-
-// Extra Credit quest rewards (books read outside of quest pool)
-export const extraCreditRewards = {
-    description: "Read a book outside of your monthly quest pool",
-    rewards: { xp: 15, inkDrops: 10, paperScraps: 10, items: [] }
-};
-
-// Detailed side quests data for table rendering
-export const sideQuestsDetailed = {
-    "1": { 
-        name: "The Arcane Grimoire",
-        description: "An ancient spellbook writes a new page.",
-        prompt: "Read the book on your TBR the longest.",
-        reward: "Temp buff: Long Read Focus (+2 Ink Drops per 100 pages over 300).",
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Long Read Focus"] }
-    },
-    "2": { 
-        name: "The Blood Fury Tattoo",
-        description: "Inked markings blaze across your skin.",
-        prompt: "Read a book featuring a counter culture rebellion.",
-        reward: "Receive a Blood Fury Tattoo.",
-        hasLink: true,
-        link: { text: "Blood Fury Tattoo", url: "{{ site.baseurl }}/rewards.html#blood-fury-tattoo" },
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Blood Fury Tattoo"] }
-    },
-    "3": { 
-        name: "The Bag of Holding",
-        description: "A battered satchel yawns impossibly wide.",
-        prompt: "Read a story with multiple POVs.",
-        reward: "Receive a Scatter Brain Scarab.",
-        hasLink: true,
-        link: { text: "Scatter Brain Scarab", url: "{{ site.baseurl }}/rewards.html#scatter-brain-scarab" },
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Scatter Brain Scarab"] }
-    },
-    "4": { 
-        name: "The Wandering Merchant's Request",
-        description: "A traveler draped in scarves greets you.",
-        prompt: "Read a book featuring a journey.",
-        reward: "Receive a Librarian's Compass.",
-        hasLink: true,
-        link: { text: "Librarian's Compass", url: "{{ site.baseurl }}/rewards.html#librarians-compass" },
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Librarian's Compass"] }
-    },
-    "5": { 
-        name: "The Glimmering Pools' Gift",
-        description: "A nymph rises from glowing waters.",
-        prompt: "Read a book about transformation.",
-        reward: "Roll a die: on even gain an Amulet of Duality; on odd gain one Worn Page curse.",
-        hasLink: true,
-        link: { text: "Amulet of Duality", url: "{{ site.baseurl }}/rewards.html#amulet-of-duality" },
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Amulet of Duality"] }
-    },
-    "6": { 
-        name: "The Chime of Opening",
-        description: "A silver chime hums with anticipation.",
-        prompt: "Read a book where a long-hidden truth is revealed.",
-        reward: "Receive a Key of the Archive.",
-        hasLink: true,
-        link: { text: "Key of the Archive", url: "{{ site.baseurl }}/rewards.html#key-of-the-archive" },
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Key of the Archive"] }
-    },
-    "7": { 
-        name: "The Scarecrow's Cornfield",
-        description: "Rustling stalks and a grim figure loom.",
-        prompt: "Read a book with an unreliable narrator.",
-        reward: "Temp buff: Disjointed Perception (+10 Ink Drops, +5 Page Scraps).",
-        rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] }
-    },
-    "8": { 
-        name: "The Empty Shelf",
-        description: "A hollow space on the stacks calls out.",
-        prompt: "Choose a book from your TBR you are most excited for.",
-        reward: "Receive a Tome of Potential.",
-        hasLink: true,
-        link: { text: "Tome of Potential", url: "{{ site.baseurl }}/rewards.html#tome-of-potential" },
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: ["Tome of Potential"] }
+// Derived, backward-compatible shapes from detailed JSON (single source of truth)
+export const sideQuests = (() => {
+    const result = {};
+    for (const key of Object.keys(sideQuestsDetailed)) {
+        const sq = sideQuestsDetailed[key];
+        // "N: Name: prompt"
+        result[key] = `${sq.name}: ${sq.prompt}`;
     }
-};
+    return result;
+})();
 
-// Backward compatible format for character sheet
-export const sideQuests = {
-    "1": "The Arcane Grimoire: Read the book on your TBR the longest.",
-    "2": "The Blood Fury Tattoo: Read a book featuring a counter culture rebellion.",
-    "3": "The Bag of Holding: Read a story with multiple POVs.",
-    "4": "The Wandering Merchant's Request: Read a book featuring a journey.",
-    "5": "The Glimmering Pools' Gift: Read a book about transformation.",
-    "6": "The Chime of Opening: Read a book where a long-hidden truth is revealed.",
-    "7": "The Scarecrow's Cornfield: Read a book with an unreliable narrator.",
-    "8": "The Empty Shelf: Choose a book from your TBR you are most excited for."
-};
-
-// Detailed curse table for rendering
-export const curseTableDetailed = [
-    {
-        number: 1,
-        name: "The Unread Tome",
-        description: "A neglected book groans from your shelf. You must read a book from your DNF list or one you have been putting off."
-    },
-    {
-        number: 2,
-        name: "The Lost Lore", 
-        description: "Pages crumble to dust before your eyes. You must read or listen to a non-fiction book or podcast related to science, tech, or nature."
-    },
-    {
-        number: 3,
-        name: "The Forgotten Pages",
-        description: "Dusty shelves collapse, scattering volumes into chaos. You must reorganize a section of your physical books or digital library."
-    },
-    {
-        number: 4,
-        name: "The Ravenous Shadow",
-        description: "The Shroud claws hungrily at your stack. You must take on one additional quest for your monthly pool."
+export const curseTable = (() => {
+    // Convert detailed array into keyed object with requirement pulled from description semantics
+    // Our detailed format does not carry a separate "requirement" field, so we infer from description
+    // For backward compatibility, we map requirement to the sentence after the first period if present,
+    // and normalize it by removing a leading "You must " and trailing punctuation.
+    const result = {};
+    const normalizeRequirement = (text) => {
+        let req = (text || '').trim();
+        const lower = req.toLowerCase();
+        if (lower.startsWith('you must ')) {
+            req = req.substring(9);
+        }
+        if (req.endsWith('.')) {
+            req = req.substring(0, req.length - 1);
+        }
+        return req.trim();
+    };
+    for (const entry of curseTableDetailed) {
+        const { name, description } = entry;
+        let requirementText = description;
+        const periodIndex = description.indexOf('. ');
+        if (periodIndex !== -1) {
+            requirementText = description.substring(periodIndex + 2);
+        }
+        const requirement = normalizeRequirement(requirementText);
+        result[name] = {
+            name,
+            requirement,
+            description
+        };
     }
-];
-
-// Temporary buffs from side quests and dungeon rewards
-export const temporaryBuffsFromRewards = {
-    "Long Read Focus": {
-        description: "+2 Ink Drops per 100 pages over 300",
-        duration: "one-time",
-        source: "Side Quest: The Arcane Grimoire",
-        rewardModifier: { inkDrops: 2 } // Per 100 pages over 300 - calculated manually
-    }
-};
-
-// Backward compatible format for character sheet
-export const curseTable = {
-    "The Unread Tome": {
-        name: "The Unread Tome",
-        requirement: "Read a book from your DNF list or one you have been putting off",
-        description: "A neglected book groans from your shelf. You must read a book from your DNF list or one you have been putting off."
-    },
-    "The Lost Lore": {
-        name: "The Lost Lore", 
-        requirement: "Read or listen to a non-fiction book or podcast related to science, tech, or nature",
-        description: "Pages crumble to dust before your eyes. You must read or listen to a non-fiction book or podcast related to science, tech, or nature."
-    },
-    "The Forgotten Pages": {
-        name: "The Forgotten Pages",
-        requirement: "Reorganize a section of your physical books or digital library",
-        description: "Dusty shelves collapse, scattering volumes into chaos. You must reorganize a section of your physical books or digital library."
-    },
-    "The Ravenous Shadow": {
-        name: "The Ravenous Shadow",
-        requirement: "Take on one additional quest for your monthly pool",
-        description: "The Shroud claws hungrily at your stack. You must take on one additional quest for your monthly pool."
-    }
-};
+    return result;
+})();

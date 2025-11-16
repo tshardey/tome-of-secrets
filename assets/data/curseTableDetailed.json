@@ -1,0 +1,23 @@
+[
+    {
+        "number": 1,
+        "name": "The Unread Tome",
+        "description": "A neglected book groans from your shelf. You must read a book from your DNF list or one you have been putting off."
+    },
+    {
+        "number": 2,
+        "name": "The Lost Lore",
+        "description": "Pages crumble to dust before your eyes. You must read or listen to a non-fiction book or podcast related to science, tech, or nature."
+    },
+    {
+        "number": 3,
+        "name": "The Forgotten Pages",
+        "description": "Dusty shelves collapse, scattering volumes into chaos. You must reorganize a section of your physical books or digital library."
+    },
+    {
+        "number": 4,
+        "name": "The Ravenous Shadow",
+        "description": "The Shroud claws hungrily at your stack. You must take on one additional quest for your monthly pool."
+    }
+]
+

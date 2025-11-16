@@ -1,0 +1,9 @@
+{
+    "1": { "genre": "Historical Fiction", "description": "Read a book set in the past or with a historical figure as a character.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
+    "2": { "genre": "Fantasy", "description": "Read a book with magical creatures, settings, or a non-human protagonist.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
+    "3": { "genre": "Romantasy", "description": "Read a book with a magical system and/or a romantic plot.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
+    "4": { "genre": "Sci-Fi", "description": "Read a book set in the future or one with a morally gray main character.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
+    "5": { "genre": "Thriller", "description": "Read a book with a plot twist, deception, or hidden identity.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
+    "6": { "genre": "Classic", "description": "Read a classic novel you have not yet read.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } }
+}
+
