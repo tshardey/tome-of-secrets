@@ -86,6 +86,13 @@ To see your changes live on your own computer before pushing them to GitHub, thi
     ```
 5.  **View Your Site:** The terminal will show that the server is running. VS Code will automatically forward port 4000 from the container to your local machine. You can now open a web browser and navigate to **`http://localhost:4000`** to see your live site.
 
+#### Editing JSON data locally
+If you change any files under `assets/data/`, regenerate the JS exports before refreshing the site:
+```bash
+node scripts/generate-data.js
+```
+This keeps `assets/js/character-sheet/data.json-exports.js` in sync for the character sheet and tables.
+
 Any changes you save to the project files will automatically trigger a rebuild, and you can see the updates by simply refreshing your browser.
 
 ---

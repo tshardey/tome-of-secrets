@@ -10,6 +10,35 @@ import {
     allItems
 } from './character-sheet/data.js';
 
+function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function toAnchorId(name) {
+    // Match rewardsRenderer slugifyId behavior for cross-file consistency
+    // 1) lowercase
+    // 2) remove apostrophes
+    // 3) convert any non-alphanumeric sequence to single hyphen
+    // 4) trim leading/trailing hyphens
+    return name
+        .toLowerCase()
+        .replace(/'/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+// Replace item names appearing in free-form text with links to rewards anchors
+function linkifyItems(text) {
+    if (!text) return text;
+    let result = text;
+    for (const itemName of Object.keys(allItems)) {
+        const anchorId = toAnchorId(itemName);
+        const pattern = new RegExp(`\\b${escapeRegExp(itemName)}\\b`, 'g');
+        result = result.replace(pattern, `<a href="{{ site.baseurl }}/rewards.html#${anchorId}">${itemName}</a>`);
+    }
+    return result;
+}
+
 /**
  * Renders dungeon rewards table
  */
@@ -131,12 +160,12 @@ export function renderDungeonRoomsTable() {
                 
                 if (encounter.defeat) {
                     html += `
-                <br><strong>Defeat:</strong> ${encounter.defeat}`;
+                <br><strong>Defeat:</strong> ${linkifyItems(encounter.defeat)}`;
                 }
                 
                 if (encounter.befriend) {
                     html += `
-                <br><strong>Befriend:</strong> ${encounter.befriend}`;
+                <br><strong>Befriend:</strong> ${linkifyItems(encounter.befriend)}`;
                 }
                 
                 html += `</td>

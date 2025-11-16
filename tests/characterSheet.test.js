@@ -30,6 +30,31 @@ describe('Character Sheet', () => {
     initializeCharacterSheet();
   });
 
+  describe('JSON wiring smoke tests', () => {
+    it('should populate wizard school select with 6 schools from JSON', () => {
+      const schoolSelect = document.getElementById('wizardSchool');
+      // 1 default + 6 schools
+      expect(schoolSelect.options.length).toBe(7);
+      const labels = Array.from(schoolSelect.options).map(o => o.textContent);
+      expect(labels).toContain('Abjuration');
+      expect(labels).toContain('Divination');
+      expect(labels).toContain('Evocation');
+      expect(labels).toContain('Enchantment');
+      expect(labels).toContain('Conjuration');
+      expect(labels).toContain('Transmutation');
+    });
+
+    it('should populate library sanctum select with 3 sanctums from JSON', () => {
+      const sanctumSelect = document.getElementById('librarySanctum');
+      // 1 default + 3 sanctums
+      expect(sanctumSelect.options.length).toBe(4);
+      const labels = Array.from(sanctumSelect.options).map(o => o.textContent);
+      expect(labels).toContain('The Spire of Whispers');
+      expect(labels).toContain('The Verdant Athenaeum');
+      expect(labels).toContain('The Sunken Archives');
+    });
+  });
+
   describe('Abilities & Benefits Section', () => {
     it('should display placeholder text for school benefits initially', () => {
       const description = document.getElementById('magicalSchoolDescriptionDisplay');

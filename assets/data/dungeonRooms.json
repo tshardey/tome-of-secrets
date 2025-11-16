@@ -45,8 +45,6 @@
                 "type": "Friendly Creature",
                 "description": "Her laughter shimmers across the water.",
                 "befriend": "Read a book that explores allure or transformation. Roll even for Amulet of Duality, odd for Worn Page curse.",
-                "hasLink": true,
-                "link": { "text": "Amulet of Duality", "url": "{{ site.baseurl }}/rewards.html#amulet-of-duality" },
                 "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
             },
             {
