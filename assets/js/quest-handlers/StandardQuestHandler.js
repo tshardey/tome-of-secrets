@@ -1,15 +1,17 @@
 /**
- * SideQuestHandler - Handles Side Quest quests (♣)
+ * StandardQuestHandler - Handles standard quest types (Book Review, etc.)
+ * 
+ * Standard quests use a manual prompt input field.
  */
 
 import { BaseQuestHandler } from './BaseQuestHandler.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { selected } from '../services/Validator.js';
+import { required } from '../services/Validator.js';
 
-export class SideQuestHandler extends BaseQuestHandler {
+export class StandardQuestHandler extends BaseQuestHandler {
     constructor(formElements, data) {
         super(formElements, data);
-        this.type = '♣ Side Quest';
+        this.type = formElements.questType || '';
     }
 
     /**
@@ -19,20 +21,20 @@ export class SideQuestHandler extends BaseQuestHandler {
     getFieldMap() {
         return {
             ...super.getFieldMap(),
-            prompt: this.formElements.sideQuestSelect
+            prompt: this.formElements.promptInput
         };
     }
 
     validate() {
         const validator = this.getBaseValidator();
+        
+        // Prompt is required for standard quests
+        validator.addRule('prompt', required('Please enter a quest prompt.'));
+        
         const common = this.getCommonFormData();
-        
-        // Side quest prompt is required
-        validator.addRule('prompt', selected('Please select a Side Quest'));
-        
         const data = {
             ...common,
-            prompt: this.formElements.sideQuestSelect.value
+            prompt: this.formElements.promptInput ? this.formElements.promptInput.value : ''
         };
 
         const result = validator.validate(data);
@@ -51,7 +53,7 @@ export class SideQuestHandler extends BaseQuestHandler {
 
     createQuests() {
         const common = this.getCommonFormData();
-        const prompt = this.formElements.sideQuestSelect.value;
+        const prompt = this.formElements.promptInput ? this.formElements.promptInput.value : '';
 
         const rewards = RewardCalculator.getBaseRewards(this.type, prompt);
 

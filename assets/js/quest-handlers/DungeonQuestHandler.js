@@ -8,6 +8,7 @@
 
 import { BaseQuestHandler } from './BaseQuestHandler.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
+import { selected, conditional, custom } from '../services/Validator.js';
 
 export class DungeonQuestHandler extends BaseQuestHandler {
     constructor(formElements, data) {
@@ -16,31 +17,57 @@ export class DungeonQuestHandler extends BaseQuestHandler {
     }
 
     /**
+     * Get field map for error display
+     * @returns {Object} Object mapping field names to DOM elements
+     */
+    getFieldMap() {
+        return {
+            ...super.getFieldMap(),
+            room: this.formElements.dungeonRoomSelect,
+            encounter: this.formElements.dungeonEncounterSelect
+        };
+    }
+
+    /**
      * Validate dungeon quest form
+     * @returns {Object} { valid: boolean, error: string, errors: Object }
      */
     validate() {
+        const validator = this.getBaseValidator();
         const common = this.getCommonFormData();
-        const roomNumber = this.formElements.dungeonRoomSelect.value;
         
-        if (!roomNumber || !common.book || !common.month || !common.year) {
+        // Room is required
+        validator.addRule('room', selected('Please select a Room'));
+        
+        // Encounter is required if room has encounters
+        validator.addRule('encounter', conditional(
+            (data) => {
+                const roomNumber = this.formElements.dungeonRoomSelect.value;
+                if (!roomNumber) return false;
+                const roomData = this.data.dungeonRooms[roomNumber];
+                return roomData && Object.keys(roomData.encounters).length > 0;
+            },
+            selected('Please select an Encounter for this room.')
+        ));
+
+        const data = {
+            ...common,
+            room: this.formElements.dungeonRoomSelect.value,
+            encounter: this.formElements.dungeonEncounterSelect.value
+        };
+
+        const result = validator.validate(data);
+        
+        // For backwards compatibility, include error message
+        if (!result.valid) {
+            const firstError = Object.values(result.errors)[0];
             return {
-                valid: false,
-                error: 'Please fill in Month, Year, Book, and select a Room.'
+                ...result,
+                error: firstError
             };
         }
 
-        const roomData = this.data.dungeonRooms[roomNumber];
-        const encounterName = this.formElements.dungeonEncounterSelect.value;
-
-        // If room has encounters, one must be selected
-        if (Object.keys(roomData.encounters).length > 0 && !encounterName) {
-            return {
-                valid: false,
-                error: 'Please select an Encounter for this room.'
-            };
-        }
-
-        return { valid: true };
+        return { ...result, error: null };
     }
 
     /**

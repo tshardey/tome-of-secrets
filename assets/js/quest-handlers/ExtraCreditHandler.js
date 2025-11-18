@@ -14,17 +14,24 @@ export class ExtraCreditHandler extends BaseQuestHandler {
     }
 
     validate() {
+        const validator = this.getBaseValidator();
         const common = this.getCommonFormData();
 
         // Extra Credit doesn't require a prompt, just book, month, year
-        if (!common.book || !common.month || !common.year) {
+        // Base validator already has these rules
+
+        const result = validator.validate(common);
+        
+        // For backwards compatibility, include error message
+        if (!result.valid) {
+            const firstError = Object.values(result.errors)[0];
             return {
-                valid: false,
-                error: 'Please fill in the Month, Year, and Book Title.'
+                ...result,
+                error: firstError
             };
         }
 
-        return { valid: true };
+        return { ...result, error: null };
     }
 
     createQuests() {

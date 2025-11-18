@@ -6,6 +6,7 @@ import { DungeonQuestHandler } from './DungeonQuestHandler.js';
 import { GenreQuestHandler } from './GenreQuestHandler.js';
 import { SideQuestHandler } from './SideQuestHandler.js';
 import { ExtraCreditHandler } from './ExtraCreditHandler.js';
+import { StandardQuestHandler } from './StandardQuestHandler.js';
 
 export class QuestHandlerFactory {
     /**
@@ -30,7 +31,9 @@ export class QuestHandlerFactory {
                 return new ExtraCreditHandler(formElements, data);
             
             default:
-                throw new Error(`Unknown quest type: ${questType}`);
+                // Handle standard quest types (Book Review, etc.)
+                formElements.questType = questType;
+                return new StandardQuestHandler(formElements, data);
         }
     }
 }
