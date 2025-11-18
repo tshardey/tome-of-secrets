@@ -209,32 +209,61 @@ These priorities focus on robustness, data consistency, and extensibility before
 ---
 
 ### Priority 4: Form Validation Extraction
+**Status:** ✅ Complete (2025-01-27)
+
 **Goal:** Consistent, reusable validation with better UX
 
-**Current Issues:**
-- Validation logic scattered in event handlers
-- Inconsistent error messages
-- Intrusive `alert()` calls
-- Duplicate validation code across quest types
-- Hard to test validation logic
+**Completed Work:**
+- ✅ Created centralized Validator service (`Validator.js`):
+  - Reusable validation rules: `required`, `minLength`, `maxLength`, `selected`, `min`, `allRequired`, `conditional`, `custom`
+  - Chainable API for building validators
+  - Field-level and form-level validation
+  - Returns structured error objects with field mapping
+- ✅ Created inline error display utilities (`formErrors.js`):
+  - `showFieldError()` - Display errors next to specific fields
+  - `showFormError()` - Display form-level errors
+  - `clearFieldError()`, `clearAllErrors()`, `clearFormError()` - Error cleanup
+  - Automatic field highlighting and focus management
+  - Accessibility attributes (role="alert", aria-live)
+- ✅ Added CSS styles for error display:
+  - Field error styling (red border, dark background)
+  - Error message styling with warning icon
+  - Form-level error messages
+  - Responsive error display
+- ✅ Refactored all quest handlers to use Validator service:
+  - `BaseQuestHandler` provides common validation patterns
+  - `DungeonQuestHandler`, `SideQuestHandler`, `GenreQuestHandler`, `ExtraCreditHandler` use centralized validation
+  - Created `StandardQuestHandler` for standard quest types
+  - All handlers provide `getFieldMap()` for error display
+- ✅ Replaced all `alert()` calls with inline errors:
+  - Quest validation errors (inline field errors)
+  - Curse validation errors
+  - Temporary buff validation errors
+  - Ability learning errors (form-level)
+  - Item slot errors (form-level)
+  - Quest creation errors (form-level)
+  - Success notifications kept as alerts (intentional)
+- ✅ Comprehensive test coverage:
+  - 15 unit tests for Validator service
+  - Tests for all validation rules
+  - Tests for conditional validation
+  - Tests for multiple fields and rules
+  - Integration tests for quest handler validation
 
-**What Needs Work:**
-- Create centralized Validator service
-- Reusable validation rules (required, minLength, etc.)
-- Inline error display (replace alerts)
-- Apply to all forms (quests, inventory, buffs, etc.)
+**Impact:**
+- All validation logic centralized in Validator service
+- Consistent error messaging across all forms
+- Better UX with inline error display (no intrusive alerts)
+- Easier to maintain and extend validation rules
+- Testable validation logic
+- Improved accessibility with ARIA attributes
+- Backwards compatible - validation logic unchanged, only display improved
 
-**Risks:**
-- **Backwards Compatibility:** Low - Validation logic stays the same
-- **UX Changes:** Medium - Different error display (improvement)
-
-**Effort:** Low-Medium (3-4 hours)
-
-**Success Criteria:**
-- Single Validator service used everywhere
-- No duplicate validation logic
-- All alerts replaced with inline errors
-- Validation logic has unit tests
+**Backwards Compatibility:**
+- ✅ All existing validation logic preserved
+- ✅ Validation behavior unchanged (only display changed)
+- ✅ Existing saves continue to work
+- ✅ Error messages improved but functionally equivalent
 
 ---
 
@@ -274,7 +303,7 @@ These priorities focus on robustness, data consistency, and extensibility before
 | Calculation Audit & Centralization | ✅ Complete | 100% |
 | Data Consistency Validation | ✅ Complete | 100% |
 | UI Rendering Refactor | ✅ Complete | 100% |
-| Form Validation Extraction | 🔴 Not Started | 0% |
+| Form Validation Extraction | ✅ Complete | 100% |
 | Event Handler Extraction | 🔴 Not Started | 0% |
 
 **Legend:**

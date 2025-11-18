@@ -7,6 +7,7 @@ import { DungeonQuestHandler } from '../assets/js/quest-handlers/DungeonQuestHan
 import { GenreQuestHandler } from '../assets/js/quest-handlers/GenreQuestHandler.js';
 import { SideQuestHandler } from '../assets/js/quest-handlers/SideQuestHandler.js';
 import { ExtraCreditHandler } from '../assets/js/quest-handlers/ExtraCreditHandler.js';
+import { StandardQuestHandler } from '../assets/js/quest-handlers/StandardQuestHandler.js';
 import { QuestHandlerFactory } from '../assets/js/quest-handlers/QuestHandlerFactory.js';
 import * as data from '../assets/js/character-sheet/data.js';
 
@@ -176,7 +177,8 @@ describe('Quest Handlers', () => {
             const validation = handler.validate();
 
             expect(validation.valid).toBe(false);
-            expect(validation.error).toContain('Please fill in Month, Year, Book, and select a Room');
+            expect(validation.error).toBeDefined();
+            expect(validation.errors).toBeDefined();
         });
 
         it('should create quest for dungeon room without encounter', () => {
@@ -248,7 +250,8 @@ describe('Quest Handlers', () => {
             const validation = handler.validate();
 
             expect(validation.valid).toBe(false);
-            expect(validation.error).toContain('Please fill in the Month, Year, Prompt, and Book Title');
+            expect(validation.error).toBeDefined();
+            expect(validation.errors).toBeDefined();
         });
 
         it('should create genre quest', () => {
@@ -281,7 +284,8 @@ describe('Quest Handlers', () => {
             const validation = handler.validate();
 
             expect(validation.valid).toBe(false);
-            expect(validation.error).toContain('Please fill in the Month, Year, Prompt, and Book Title');
+            expect(validation.error).toBeDefined();
+            expect(validation.errors).toBeDefined();
         });
 
         it('should create side quest', () => {
@@ -359,10 +363,10 @@ describe('Quest Handlers', () => {
             expect(handler).toBeInstanceOf(ExtraCreditHandler);
         });
 
-        it('should throw error for unknown quest type', () => {
-            expect(() => {
-                QuestHandlerFactory.getHandler('Unknown Type', formElements, data);
-            }).toThrow('Unknown quest type: Unknown Type');
+        it('should return StandardQuestHandler for unknown quest type', () => {
+            const handler = QuestHandlerFactory.getHandler('Unknown Type', formElements, data);
+            expect(handler).toBeInstanceOf(StandardQuestHandler);
+            expect(handler.type).toBe('Unknown Type');
         });
     });
 

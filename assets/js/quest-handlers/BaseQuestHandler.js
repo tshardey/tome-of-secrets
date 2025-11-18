@@ -6,6 +6,7 @@
  */
 
 import { RewardCalculator, Reward } from '../services/RewardCalculator.js';
+import { Validator, required, selected, conditional } from '../services/Validator.js';
 
 export class BaseQuestHandler {
     /**
@@ -34,8 +35,36 @@ export class BaseQuestHandler {
     }
 
     /**
+     * Get base validator with common rules for all quest types
+     * @returns {Validator} Validator instance with common rules
+     */
+    getBaseValidator() {
+        const validator = new Validator();
+        validator.addRule('month', required('Month is required'));
+        validator.addRule('year', required('Year is required'));
+        validator.addRule('book', required('Book title is required'));
+        return validator;
+    }
+
+    /**
+     * Get field map for error display
+     * @returns {Object} Object mapping field names to DOM elements
+     */
+    getFieldMap() {
+        return {
+            month: this.formElements.monthInput,
+            year: this.formElements.yearInput,
+            book: this.formElements.bookInput,
+            prompt: this.formElements.promptInput || 
+                   this.formElements.genreQuestSelect || 
+                   this.formElements.sideQuestSelect ||
+                   this.formElements.dungeonRoomSelect
+        };
+    }
+
+    /**
      * Validate form inputs for this quest type
-     * @returns {Object} { valid: boolean, error: string }
+     * @returns {Object} { valid: boolean, error: string, errors: Object }
      */
     validate() {
         throw new Error('validate() must be implemented by subclass');

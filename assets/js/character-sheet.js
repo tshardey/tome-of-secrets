@@ -9,6 +9,8 @@ import { BaseQuestHandler } from './quest-handlers/BaseQuestHandler.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
+import { showErrors, clearAllErrors, showFormError, clearFormError, showFieldError, clearFieldError } from './utils/formErrors.js';
+import { Validator, required, allRequired, min } from './services/Validator.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -195,7 +197,11 @@ export function initializeCharacterSheet() {
             ui.renderMasteryAbilities(smpInput);
             saveState(form);
         } else {
-            alert('Not enough School Mastery Points to learn this ability!');
+            const container = document.querySelector('.mastery-abilities-container');
+            if (container) {
+                clearFormError(container);
+                showFormError(container, 'Not enough School Mastery Points to learn this ability!');
+            }
         }
     });
 
@@ -402,6 +408,7 @@ export function initializeCharacterSheet() {
                     statusSelect: document.getElementById('new-quest-status'),
                     buffsSelect: document.getElementById('quest-buffs-select'),
                     backgroundSelect: keeperBackgroundSelect,
+                    promptInput: document.getElementById('new-quest-prompt'),
                     dungeonRoomSelect,
                     dungeonEncounterSelect,
                     dungeonActionToggle,
@@ -412,10 +419,23 @@ export function initializeCharacterSheet() {
                 // Get handler for quest type
                 const handler = QuestHandlerFactory.getHandler(type, formElements, data);
 
+                // Clear any previous errors
+                const questFormContainer = document.querySelector('.add-quest-form');
+                if (questFormContainer) {
+                    clearFormError(questFormContainer);
+                    clearAllErrors(handler.getFieldMap());
+                }
+
                 // Validate form
                 const validation = handler.validate();
                 if (!validation.valid) {
-                    alert(validation.error);
+                    // Show inline errors
+                    if (questFormContainer && validation.errors) {
+                        showErrors(validation.errors, handler.getFieldMap());
+                    } else {
+                        // Fallback to form-level error if field map isn't available
+                        showFormError(questFormContainer, validation.error || 'Please correct the errors below.');
+                    }
                     return;
                 }
 
@@ -458,7 +478,10 @@ export function initializeCharacterSheet() {
                 resetQuestForm();
             } catch (error) {
                 console.error('Error adding quest:', error);
-                alert(`Error adding quest: ${error.message}`);
+                const questFormContainer = document.querySelector('.add-quest-form');
+                if (questFormContainer) {
+                    showFormError(questFormContainer, `Error adding quest: ${error.message}`);
+                }
             }
         }
 
@@ -480,8 +503,21 @@ export function initializeCharacterSheet() {
         const curseName = cursePenaltySelect.value;
         const bookTitle = curseBookTitle.value;
         
-        if (!curseName) {
-            alert('Please select a curse penalty.');
+        // Clear previous errors
+        const curseFormContainer = document.querySelector('.add-curse-form');
+        if (curseFormContainer) {
+            clearFormError(curseFormContainer);
+            clearFieldError(cursePenaltySelect);
+        }
+        
+        const validator = new Validator();
+        validator.addRule('curseName', required('Please select a curse penalty.'));
+        
+        const validation = validator.validate({ curseName });
+        if (!validation.valid) {
+            if (curseFormContainer && validation.errors.curseName) {
+                showFieldError(cursePenaltySelect, validation.errors.curseName);
+            }
             return;
         }
 
@@ -523,8 +559,24 @@ export function initializeCharacterSheet() {
             const description = trimOrEmpty(tempBuffDescInput.value);
             const duration = tempBuffDurationSelect.value;
 
-            if (!name || !description) {
-                alert('Please enter both a name and description for the buff.');
+            // Clear previous errors
+            const buffFormContainer = document.querySelector('.add-temp-buff-form');
+            if (buffFormContainer) {
+                clearFormError(buffFormContainer);
+                clearFieldError(tempBuffNameInput);
+                clearFieldError(tempBuffDescInput);
+            }
+
+            const validator = new Validator();
+            validator.addRule('name', required('Buff name is required'));
+            validator.addRule('description', required('Buff description is required'));
+
+            const validation = validator.validate({ name, description });
+            if (!validation.valid) {
+                if (buffFormContainer && validation.errors) {
+                    if (validation.errors.name) showFieldError(tempBuffNameInput, validation.errors.name);
+                    if (validation.errors.description) showFieldError(tempBuffDescInput, validation.errors.description);
+                }
                 return;
             }
 
@@ -620,7 +672,12 @@ export function initializeCharacterSheet() {
 
 
 
-    form.addEventListener('submit', (e) => { e.preventDefault(); saveState(form); alert('Character sheet saved!'); });
+    form.addEventListener('submit', (e) => { 
+        e.preventDefault(); 
+        saveState(form); 
+        // Show success message (can keep alert for now as it's a success notification, not an error)
+        alert('Character sheet saved!'); 
+    });
     printButton.addEventListener('click', () => window.print());
 
     form.addEventListener('click', (e) => {
@@ -668,7 +725,11 @@ export function initializeCharacterSheet() {
                     saveState(form);
                 }
             } else {
-                alert(`No empty ${itemToEquip.type} slots available!`);
+                const container = document.querySelector('.inventory-container');
+                if (container) {
+                    clearFormError(container);
+                    showFormError(container, `No empty ${itemToEquip.type} slots available!`);
+                }
             }
         } else if (target.classList.contains('unequip-btn')) {
             if (stateAdapter.moveEquippedItemToInventory(index)) {
@@ -920,6 +981,7 @@ export function initializeCharacterSheet() {
                 if (background === 'scribe') {
                     const papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps + 
                                           GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
+                    // Show notification (keeping alert for success notifications)
                     alert(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
                 }
             }
@@ -974,6 +1036,7 @@ export function initializeCharacterSheet() {
         ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
         saveState(form);
         
+        // Show success notification (keeping alert for success notifications)
         alert('End of Month processed! Rewards distributed and counters reset.');
     };
     

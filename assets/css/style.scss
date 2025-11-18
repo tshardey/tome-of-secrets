@@ -592,6 +592,55 @@ article th:first-child {
     width: 33.33%; /* Match the default width of other inputs in the row */
 }
 
+/* ==========================================================================
+   Form Validation Error Styles
+   ========================================================================== */
+
+/* Field-level error styling */
+.field-error {
+    border-color: #8a6262 !important;
+    background-color: #4a3535 !important;
+}
+
+.field-error-message {
+    color: #d4a5a5;
+    font-size: 0.9em;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    font-style: italic;
+    display: block;
+}
+
+.field-error-message::before {
+    content: "⚠ ";
+    font-style: normal;
+}
+
+/* Form-level error styling */
+.form-error-message {
+    background-color: #4a3535;
+    border: 1px solid #8a6262;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    color: #d4a5a5;
+    font-style: italic;
+}
+
+.form-error-message::before {
+    content: "⚠ ";
+    font-style: normal;
+    font-weight: bold;
+}
+
+/* Ensure error messages are visible */
+.add-quest-form .field-error-message,
+.add-curse-form .field-error-message,
+.add-item-form .field-error-message,
+.add-temp-buff-form .field-error-message {
+    width: 100%;
+}
+
 /* --- Dungeon Action Toggle Switch --- */
 #dungeon-action-container {
     align-items: center;

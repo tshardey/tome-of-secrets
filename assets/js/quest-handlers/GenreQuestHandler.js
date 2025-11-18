@@ -4,6 +4,7 @@
 
 import { BaseQuestHandler } from './BaseQuestHandler.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
+import { selected } from '../services/Validator.js';
 
 export class GenreQuestHandler extends BaseQuestHandler {
     constructor(formElements, data) {
@@ -11,18 +12,41 @@ export class GenreQuestHandler extends BaseQuestHandler {
         this.type = '♥ Organize the Stacks';
     }
 
-    validate() {
-        const common = this.getCommonFormData();
-        const prompt = this.formElements.genreQuestSelect.value;
+    /**
+     * Get field map for error display
+     * @returns {Object} Object mapping field names to DOM elements
+     */
+    getFieldMap() {
+        return {
+            ...super.getFieldMap(),
+            prompt: this.formElements.genreQuestSelect
+        };
+    }
 
-        if (!prompt || !common.book || !common.month || !common.year) {
+    validate() {
+        const validator = this.getBaseValidator();
+        const common = this.getCommonFormData();
+        
+        // Genre quest prompt is required
+        validator.addRule('prompt', selected('Please select a Genre Quest'));
+        
+        const data = {
+            ...common,
+            prompt: this.formElements.genreQuestSelect.value
+        };
+
+        const result = validator.validate(data);
+        
+        // For backwards compatibility, include error message
+        if (!result.valid) {
+            const firstError = Object.values(result.errors)[0];
             return {
-                valid: false,
-                error: 'Please fill in the Month, Year, Prompt, and Book Title.'
+                ...result,
+                error: firstError
             };
         }
 
-        return { valid: true };
+        return { ...result, error: null };
     }
 
     createQuests() {
