@@ -757,8 +757,8 @@ export function initializeCharacterSheet() {
             const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
             const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background);
             
-            // Add to completed quests
-            stateAdapter.addCompletedQuests(completedQuest);
+            // Add to completed quests (wrap in array for consistency with line 456)
+            stateAdapter.addCompletedQuests([completedQuest]);
             
             // Add to completed books set if it's a new book
             if (isNewBook) {
