@@ -1,69 +1,52 @@
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from './storageKeys.js';
-import { GAME_CONFIG } from '../config/gameConfig.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
+import { validateCharacterState, validateFormDataSafe, saveSchemaVersion } from './dataValidator.js';
+import { loadAndMigrateState } from './dataMigrator.js';
 
 export const characterState = createEmptyCharacterState();
 
-function getQuestRewardsLegacy(type, prompt, isEncounter = false) {
-    // Default reward for any quest completion
-    let rewards = {
-        xp: GAME_CONFIG.rewards.defaultQuestCompletion.xp,
-        inkDrops: GAME_CONFIG.rewards.defaultQuestCompletion.inkDrops,
-        paperScraps: GAME_CONFIG.rewards.defaultQuestCompletion.paperScraps,
-        items: []
-    };
-
-    if (type === '♥ Organize the Stacks') {
-        rewards = {
-            xp: GAME_CONFIG.rewards.organizeTheStacks.xp,
-            inkDrops: GAME_CONFIG.rewards.organizeTheStacks.inkDrops,
-            paperScraps: 0,
-            items: []
-        };
-    }
-    // Side quests and dungeon encounters will default to basic rewards for now
-    // They'll be calculated properly when edited or completed
-
-    return rewards;
-}
-
-function migrateOldQuests(quests) {
-    return quests.map(quest => {
-        if (!quest.rewards) {
-            quest.rewards = getQuestRewardsLegacy(quest.type, quest.prompt, quest.isEncounter);
-        }
-        return quest;
-    });
-}
-
+/**
+ * Load state from localStorage with validation and migration
+ * This ensures data consistency and handles old save formats gracefully
+ * 
+ * **CRITICAL:** Never loses player data. Invalid data is fixed or uses safe defaults.
+ */
 export function loadState(form) {
+    // Load and validate form data
     const characterData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
     if (characterData) {
-        for (const key in characterData) {
-            if (form.elements[key]) form.elements[key].value = characterData[key];
+        const validatedFormData = validateFormDataSafe(characterData);
+        for (const key in validatedFormData) {
+            if (form.elements[key]) {
+                form.elements[key].value = validatedFormData[key];
+            }
         }
     }
-    const activeAssignments = safeGetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, []);
-    const completedQuests = safeGetJSON(STORAGE_KEYS.COMPLETED_QUESTS, []);
-    const discardedQuests = safeGetJSON(STORAGE_KEYS.DISCARDED_QUESTS, []);
     
-    // Migrate old quests to include reward data
-    characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = migrateOldQuests(activeAssignments);
-    characterState[STORAGE_KEYS.COMPLETED_QUESTS] = migrateOldQuests(completedQuests);
-    characterState[STORAGE_KEYS.DISCARDED_QUESTS] = migrateOldQuests(discardedQuests);
+    // Load, migrate, and validate state
+    const loadedState = loadAndMigrateState();
+    const validatedState = validateCharacterState(loadedState);
     
-    characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = safeGetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
-    characterState[STORAGE_KEYS.INVENTORY_ITEMS] = safeGetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
-    characterState[STORAGE_KEYS.LEARNED_ABILITIES] = safeGetJSON(STORAGE_KEYS.LEARNED_ABILITIES, []);
-    characterState[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = safeGetJSON(STORAGE_KEYS.ATMOSPHERIC_BUFFS, {});
-    characterState[STORAGE_KEYS.ACTIVE_CURSES] = safeGetJSON(STORAGE_KEYS.ACTIVE_CURSES, []);
-    characterState[STORAGE_KEYS.COMPLETED_CURSES] = safeGetJSON(STORAGE_KEYS.COMPLETED_CURSES, []);
-    characterState[STORAGE_KEYS.TEMPORARY_BUFFS] = safeGetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, []);
-    characterState[STORAGE_KEYS.BUFF_MONTH_COUNTER] = safeGetJSON(STORAGE_KEYS.BUFF_MONTH_COUNTER, 0);
-
-    const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
-    // Ensure it's an array (safeGetJSON already handles this, but being explicit for safety)
-    characterState[STORAGE_KEYS.SELECTED_GENRES] = Array.isArray(selectedGenres) ? selectedGenres : [];
+    // Copy validated state to characterState
+    Object.keys(validatedState).forEach(key => {
+        characterState[key] = validatedState[key];
+    });
+    
+    // If state was migrated or validated, save it back to ensure consistency
+    // This is safe because we only save validated data
+    const needsSave = Object.keys(validatedState).some(key => {
+        const original = loadedState[key];
+        const validated = validatedState[key];
+        return JSON.stringify(original) !== JSON.stringify(validated);
+    });
+    
+    if (needsSave) {
+        // Silently save validated state back to localStorage
+        // This ensures future loads are faster and data is consistent
+        CHARACTER_STATE_KEYS.forEach(key => {
+            safeSetJSON(key, characterState[key]);
+        });
+    }
 }
 
 export function saveState(form) {
@@ -82,4 +65,6 @@ export function saveState(form) {
     CHARACTER_STATE_KEYS.forEach(key => {
         safeSetJSON(key, characterState[key]);
     });
+    // Save schema version to ensure future loads know the data format
+    saveSchemaVersion();
 }
