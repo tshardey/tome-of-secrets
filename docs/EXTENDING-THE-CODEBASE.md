@@ -261,35 +261,132 @@ setNewFeatureData(data) {
 
 ## Adding New UI Features
 
-### Character Sheet Features
+### Character Sheet Features (Controller-Based Architecture)
 
-**Location:** `/assets/js/character-sheet.js`
+**Architecture Overview:**
 
-**Pattern:**
-1. Get DOM elements in the initialization function
-2. Set up event listeners
-3. Use StateAdapter for state mutations
-4. Call UI rendering functions from `/assets/js/character-sheet/ui.js`
-5. Call `saveState(form)` after mutations
-6. Populate dynamic dropdowns/tables from JSON data (avoid hardcoding options)
+The character sheet now uses a **controller-based architecture** for better maintainability and separation of concerns. All feature-specific event handling is handled by dedicated controllers in `/assets/js/controllers/`.
 
-**Example:**
+**Existing Controllers:**
+- `CharacterController` - Character info changes (level, background, school, sanctum)
+- `AbilityController` - Ability learning/forgetting
+- `InventoryController` - Inventory/equipment management
+- `QuestController` - Quest management (adding, editing, completing, discarding)
+- `CurseController` - Curse functionality
+- `BuffController` - Temporary and atmospheric buffs
+- `EndOfMonthController` - End of month processing
+
+**Adding a New Feature Controller:**
+
+1. **Create a new controller** extending `BaseController`:
+   ```javascript
+   // In assets/js/controllers/NewFeatureController.js
+   import { BaseController } from './BaseController.js';
+   
+   export class NewFeatureController extends BaseController {
+       initialize() {
+           const { stateAdapter } = this;
+           const { ui: uiModule } = this.dependencies;
+           
+           if (!uiModule) return;
+           
+           // Get DOM elements
+           const newFeatureButton = document.getElementById('new-feature-button');
+           
+           if (!newFeatureButton) return;
+           
+           // Set up event listeners
+           this.addEventListener(newFeatureButton, 'click', () => {
+               // Use StateAdapter for state changes
+               stateAdapter.setNewFeatureData(newData);
+               
+               // Update UI
+               uiModule.renderNewFeature();
+               
+               // Persist form data (inherited from BaseController)
+               this.saveState();
+           });
+       }
+       
+       // Optional: Handle delegated clicks from main handler
+       handleClick(target) {
+           if (target.classList.contains('new-feature-action')) {
+               // Handle click
+               return true; // Return true if handled
+           }
+           return false;
+       }
+   }
+   ```
+
+2. **Register the controller** in `character-sheet.js`:
+   ```javascript
+   // Import the controller
+   import { NewFeatureController } from './controllers/NewFeatureController.js';
+   
+   // Create and initialize the controller
+   const newFeatureController = new NewFeatureController(stateAdapter, form, dependencies);
+   newFeatureController.initialize();
+   
+   // Add to delegated click handler (if needed)
+   form.addEventListener('click', (e) => {
+       const target = e.target;
+       // ... existing handlers ...
+       if (newFeatureController.handleClick && newFeatureController.handleClick(target)) {
+           return;
+       }
+   });
+   ```
+
+3. **Add tests** in `/tests/controllers.test.js`:
+   ```javascript
+   describe('NewFeatureController', () => {
+       it('should initialize and set up event listeners', () => {
+           const controller = new NewFeatureController(stateAdapter, form, dependencies);
+           controller.initialize();
+           
+           const button = document.getElementById('new-feature-button');
+           expect(button).toBeTruthy();
+       });
+   });
+   ```
+
+**BaseController Features:**
+- `addEventListener(element, event, handler, options)` - Registers event listeners with automatic cleanup
+- `saveState()` - Helper method that calls the saveState dependency
+- `destroy()` - Cleans up all registered event listeners
+- `stateAdapter` - Reference to the StateAdapter instance
+- `form` - Reference to the form element
+- `dependencies` - Shared dependencies (ui, data, saveState)
+
+**Pattern for Simple Features (without controllers):**
+
+For very simple features that don't warrant a full controller, you can still add them directly to `initializeCharacterSheet()`:
+
 ```javascript
 // In initializeCharacterSheet()
-const newFeatureButton = document.getElementById('new-feature-button');
-if (newFeatureButton) {
-    newFeatureButton.addEventListener('click', () => {
+const simpleFeatureButton = document.getElementById('simple-feature-button');
+if (simpleFeatureButton) {
+    simpleFeatureButton.addEventListener('click', () => {
         // Use StateAdapter for state changes
-        stateAdapter.setNewFeatureData(newData);
+        stateAdapter.setSimpleFeatureData(newData);
         
         // Update UI
-        ui.renderNewFeature();
+        ui.renderSimpleFeature();
         
         // Persist form data
         saveState(form);
     });
 }
 ```
+
+**Best Practices:**
+- **Use controllers** for feature areas with multiple related interactions
+- **Use direct event listeners** in main init for very simple one-off features
+- **Always use StateAdapter** for state mutations (never modify `characterState` directly)
+- **Always call `this.saveState()`** or `saveState(form)` after mutations
+- **Populate dynamic dropdowns/tables** from JSON data (avoid hardcoding options)
+- **Add delegated click handlers** to the main form click handler if you need to handle clicks on dynamically generated elements
 
 ### UI Rendering
 
@@ -440,8 +537,11 @@ When adding a new feature:
 - [ ] Add StateAdapter methods (if state mutations needed)
 - [ ] Update `loadState()`/`saveState()` (if new persistent state - validation is automatic)
 - [ ] Add UI rendering functions to `ui.js` (if UI changes)
-- [ ] Wire up event listeners in `character-sheet.js` (if interactive)
-- [ ] Write tests for new functionality (including validation tests)
+- [ ] Create a controller in `/assets/js/controllers/` (if feature has multiple interactions)
+  - OR wire up event listeners directly in `character-sheet.js` (for simple features)
+- [ ] Register controller in `character-sheet.js` (if using a controller)
+- [ ] Add delegated click handler if needed (for dynamically generated elements)
+- [ ] Write tests for new functionality (including validation tests, controller tests if applicable)
 - [ ] Run full test suite: `cd tests && npm test`
 - [ ] Verify manual testing in browser
 
@@ -463,7 +563,8 @@ When changing data structure (schema change):
 2. Create a quest handler in `/assets/js/quest-handlers/`
 3. Register handler in `QuestHandlerFactory.js`
 4. Add reward values to `gameConfig.js` if needed
-5. Update UI to handle new quest type
+5. Update `QuestController` in `/assets/js/controllers/QuestController.js` if the new quest type requires special handling
+6. Update UI to handle new quest type
 
 ### Adding a New Background/School
 
