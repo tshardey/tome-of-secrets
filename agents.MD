@@ -20,6 +20,16 @@ The repository is organized as a standard Jekyll project.
     *   `css/`: Stylesheets for the website's "Dark Academia" theme.
     *   `js/`: JavaScript files for site interactivity.
         *   `character-sheet/data.js`: Re-exports auto-generated data from JSON (see `assets/data/`). Some legacy shapes (e.g., `sideQuests`, `curseTable`) are derived here from detailed JSON to maintain backward compatibility without duplicating data.
+        *   `character-sheet.js`: Main initialization file using controller-based architecture. Orchestrates all feature controllers.
+        *   `controllers/`: Feature controllers for character sheet functionality:
+            * `BaseController.js` - Base class with common patterns (event listener cleanup, saveState helper)
+            * `CharacterController.js` - Character info changes (level, background, school, sanctum)
+            * `AbilityController.js` - Ability learning/forgetting
+            * `InventoryController.js` - Inventory/equipment management
+            * `QuestController.js` - Quest management (adding, editing, completing, discarding)
+            * `CurseController.js` - Curse functionality
+            * `BuffController.js` - Temporary and atmospheric buffs
+            * `EndOfMonthController.js` - End of month processing
         *   `page-renderers/`: Page hydration modules:
             * `rewardsRenderer.js` (hydrates `rewards.md`)
             * `sanctumRenderer.js` (hydrates `sanctum.md`)
@@ -66,7 +76,15 @@ You can perform the following tasks. Always use the local development environmen
 #### Adding New Reward Items
 1.  Ensure the new reward image is placed in the `assets/images/rewards/` directory.
 2.  Open `rewards.md` and add a new `<div class="reward-item">...</div>` block, updating the image `src` and description.
-3.  **Crucially**, open `assets/js/character-sheet/data.js` and add a new entry to the `allItems` object. The key should be the item's name, and the value should be an object with its `type`, `img` path, and `bonus` description.
+3.  **Crucially**, add the item to `assets/data/allItems.json` and run `node scripts/generate-data.js` to update the data exports. The JSON structure should include `type`, `img` path, and `bonus` description.
+
+**Note:** For detailed information about adding new features, extending the codebase, or modifying the character sheet, see [`docs/EXTENDING-THE-CODEBASE.md`](docs/EXTENDING-THE-CODEBASE.md). This includes information about:
+- Adding new game content (items, rewards, quests)
+- Adding new persistent state with validation
+- Creating new feature controllers
+- Schema versioning and migrations
+- StateAdapter patterns
+- Testing requirements
 
 ### 2. Local Development
 
