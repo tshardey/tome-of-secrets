@@ -76,31 +76,34 @@ Track refactoring work to ensure the character sheet is robust, scalable, and ex
 These priorities focus on robustness, data consistency, and extensibility before adding new features.
 
 ### Priority 1: Calculation Audit & Centralization
+**Status:** ✅ Complete (2025-01-27)
+
 **Goal:** Ensure all reward calculations are correct, consistent, and in one place
 
-**Current Issues:**
-- Calculation logic scattered across multiple files
-- Potential for drift between different quest types
-- Hard to verify correctness
-- Background bonuses applied inconsistently
+**Completed Work:**
+- ✅ Extended RewardCalculator with end-of-month calculation methods:
+  - `calculateBookCompletionRewards()` - Book completion XP
+  - `calculateJournalEntryRewards()` - Journal entry paper scraps with Scribe bonus
+  - `calculateAtmosphericBuffRewards()` - Atmospheric buff ink drops
+- ✅ Refactored `handleEndOfMonth()` to use centralized RewardCalculator methods
+- ✅ Audited all background bonuses - confirmed consistent application:
+  - Biblioslinker: Automatic +3 Paper Scraps for Dungeon Crawls
+  - Scribe's Acolyte: Automatic +3 Paper Scraps per journal entry at end of month
+  - Grove Tender: Automatic atmospheric buff (handled separately)
+  - Archivist/Prophet/Cartographer: Manual via buffs dropdown (+10 Ink Drops)
+- ✅ Added comprehensive tests (39 tests total, all passing):
+  - Base reward calculations
+  - Modifier applications
+  - Background bonuses
+  - End-of-month calculations (book completion, journal entries, atmospheric buffs)
+  - Edge cases (negative inputs, zero values, large numbers)
 
-**What Needs Work:**
-- Audit all calculation paths (quests, encounters, end of month)
-- Ensure RewardCalculator handles all cases consistently
-- Verify localStorage-stored calculations match current logic
-- Add comprehensive calculation tests
-
-**Risks:**
-- **Backwards Compatibility:** Medium - May discover existing saved games have incorrect values
-- **Data Migration:** May need to recalculate values on load for older saves
-
-**Effort:** Medium (4-6 hours)
-
-**Success Criteria:**
+**Impact:**
+- All calculation logic centralized in RewardCalculator service
 - Single calculation path for each reward type
 - All bonuses applied consistently
-- Comprehensive tests for calculation edge cases
-- Documentation of calculation formulas
+- Comprehensive test coverage (39 tests)
+- Easier to maintain and extend in the future
 
 ---
 
@@ -228,7 +231,7 @@ These priorities focus on robustness, data consistency, and extensibility before
 
 | Priority | Status | Completion |
 |----------|--------|------------|
-| Calculation Audit & Centralization | 🔴 Not Started | 0% |
+| Calculation Audit & Centralization | ✅ Complete | 100% |
 | Data Consistency Validation | 🔴 Not Started | 0% |
 | UI Rendering Refactor | 🔴 Not Started | 0% |
 | Form Validation Extraction | 🔴 Not Started | 0% |

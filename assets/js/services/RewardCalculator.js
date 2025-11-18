@@ -286,5 +286,85 @@ export class RewardCalculator {
 
         return rewards;
     }
+
+    /**
+     * Calculate book completion XP rewards for end of month
+     * Formula: booksCompleted × GAME_CONFIG.endOfMonth.bookCompletionXP
+     * 
+     * @param {number} booksCompleted - Number of unique books completed this month
+     * @returns {Reward} Reward with XP only
+     */
+    static calculateBookCompletionRewards(booksCompleted) {
+        const xp = Math.max(0, booksCompleted) * GAME_CONFIG.endOfMonth.bookCompletionXP;
+        return new Reward({ xp, inkDrops: 0, paperScraps: 0, items: [] });
+    }
+
+    /**
+     * Calculate journal entry paper scrap rewards for end of month
+     * Formula: journalEntries × (basePaperScraps + scribeBonus if Scribe background)
+     * 
+     * @param {number} journalEntries - Number of journal entries completed
+     * @param {string} background - Keeper background key (e.g., 'scribe')
+     * @returns {Reward} Reward with paper scraps only
+     */
+    static calculateJournalEntryRewards(journalEntries, background = '') {
+        let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
+        
+        // Apply Scribe's Acolyte bonus
+        if (background === 'scribe') {
+            papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
+        }
+        
+        const paperScraps = Math.max(0, journalEntries) * papersPerEntry;
+        // Only track Scribe bonus if it was actually applied (paperScraps > 0)
+        const modifiedBy = (background === 'scribe' && paperScraps > 0) ? ['Scribe\'s Acolyte'] : [];
+        
+        return new Reward({ 
+            xp: 0, 
+            inkDrops: 0, 
+            paperScraps, 
+            items: [],
+            modifiedBy 
+        });
+    }
+
+    /**
+     * Calculate atmospheric buff ink drop rewards for end of month
+     * Formula: Sum of (daysUsed × dailyValue) for each active buff
+     * - Associated buffs (from selected sanctum): dailyValue = 2
+     * - Other buffs: dailyValue = 1
+     * 
+     * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
+     * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
+     * @returns {Reward} Reward with ink drops only
+     */
+    static calculateAtmosphericBuffRewards(atmosphericBuffs = {}, associatedBuffs = []) {
+        let totalInkDrops = 0;
+        const processedBuffs = [];
+
+        for (const buffName in atmosphericBuffs) {
+            const buff = atmosphericBuffs[buffName];
+            
+            // Only process buffs that were marked as active
+            if (buff.isActive && buff.daysUsed > 0) {
+                const isAssociated = associatedBuffs.includes(buffName);
+                const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
+                const buffTotal = buff.daysUsed * dailyValue;
+                totalInkDrops += buffTotal;
+                
+                if (buffTotal > 0) {
+                    processedBuffs.push(buffName);
+                }
+            }
+        }
+
+        return new Reward({ 
+            xp: 0, 
+            inkDrops: totalInkDrops, 
+            paperScraps: 0, 
+            items: [],
+            modifiedBy: processedBuffs 
+        });
+    }
 }
 

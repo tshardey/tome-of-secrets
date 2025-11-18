@@ -288,3 +288,159 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 });
 
+describe('RewardCalculator - End of Month Calculations', () => {
+    describe('calculateBookCompletionRewards', () => {
+        test('should calculate XP for completed books', () => {
+            const rewards = RewardCalculator.calculateBookCompletionRewards(3);
+            
+            expect(rewards.xp).toBe(45); // 3 × 15
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.items).toEqual([]);
+        });
+
+        test('should return zero XP for zero books', () => {
+            const rewards = RewardCalculator.calculateBookCompletionRewards(0);
+            
+            expect(rewards.xp).toBe(0);
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.paperScraps).toBe(0);
+        });
+
+        test('should handle negative input gracefully', () => {
+            const rewards = RewardCalculator.calculateBookCompletionRewards(-5);
+            
+            expect(rewards.xp).toBe(0); // Math.max(0, -5) × 15 = 0
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.paperScraps).toBe(0);
+        });
+
+        test('should handle large numbers', () => {
+            const rewards = RewardCalculator.calculateBookCompletionRewards(100);
+            
+            expect(rewards.xp).toBe(1500); // 100 × 15
+        });
+    });
+
+    describe('calculateJournalEntryRewards', () => {
+        test('should calculate paper scraps for journal entries without Scribe bonus', () => {
+            const rewards = RewardCalculator.calculateJournalEntryRewards(5, '');
+            
+            expect(rewards.xp).toBe(0);
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.paperScraps).toBe(25); // 5 × 5
+            expect(rewards.items).toEqual([]);
+            expect(rewards.modifiedBy).toEqual([]);
+        });
+
+        test('should apply Scribe bonus to journal entries', () => {
+            const rewards = RewardCalculator.calculateJournalEntryRewards(5, 'scribe');
+            
+            expect(rewards.xp).toBe(0);
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.paperScraps).toBe(40); // 5 × (5 + 3)
+            expect(rewards.modifiedBy).toContain('Scribe\'s Acolyte');
+        });
+
+        test('should return zero for zero entries', () => {
+            const rewards = RewardCalculator.calculateJournalEntryRewards(0, 'scribe');
+            
+            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.modifiedBy).toEqual([]); // No bonus applied if no entries
+        });
+
+        test('should handle negative input gracefully', () => {
+            const rewards = RewardCalculator.calculateJournalEntryRewards(-3, 'scribe');
+            
+            expect(rewards.paperScraps).toBe(0); // Math.max(0, -3) × 8 = 0
+            expect(rewards.modifiedBy).toEqual([]);
+        });
+
+        test('should not apply Scribe bonus for non-scribe backgrounds', () => {
+            const rewards = RewardCalculator.calculateJournalEntryRewards(5, 'archivist');
+            
+            expect(rewards.paperScraps).toBe(25); // 5 × 5 (no bonus)
+            expect(rewards.modifiedBy).toEqual([]);
+        });
+    });
+
+    describe('calculateAtmosphericBuffRewards', () => {
+        test('should calculate ink drops for active atmospheric buffs', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 10, isActive: true },
+                'The Soaking in Nature': { daysUsed: 5, isActive: true },
+                'Inactive Buff': { daysUsed: 7, isActive: false }
+            };
+            
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
+            
+            expect(rewards.xp).toBe(0);
+            expect(rewards.inkDrops).toBe(15); // (10 + 5) × 1
+            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.modifiedBy).toContain('The Candlight Study');
+            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
+            expect(rewards.modifiedBy).not.toContain('Inactive Buff');
+        });
+
+        test('should apply sanctum bonus to associated buffs', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 10, isActive: true },
+                'The Soaking in Nature': { daysUsed: 5, isActive: true }
+            };
+            const associatedBuffs = ['The Candlight Study'];
+            
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+            
+            expect(rewards.inkDrops).toBe(25); // (10 × 2) + (5 × 1) = 25
+            expect(rewards.modifiedBy).toContain('The Candlight Study');
+            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
+        });
+
+        test('should ignore buffs with zero days used', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 0, isActive: true },
+                'The Soaking in Nature': { daysUsed: 5, isActive: true }
+            };
+            
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
+            
+            expect(rewards.inkDrops).toBe(5); // Only 5 × 1
+            expect(rewards.modifiedBy).not.toContain('The Candlight Study');
+            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
+        });
+
+        test('should handle empty atmospheric buffs object', () => {
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards({}, []);
+            
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.modifiedBy).toEqual([]);
+        });
+
+        test('should handle multiple associated buffs', () => {
+            const atmosphericBuffs = {
+                'Buff 1': { daysUsed: 3, isActive: true },
+                'Buff 2': { daysUsed: 4, isActive: true },
+                'Buff 3': { daysUsed: 5, isActive: true }
+            };
+            const associatedBuffs = ['Buff 1', 'Buff 3'];
+            
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+            
+            expect(rewards.inkDrops).toBe(20); // (3 × 2) + (4 × 1) + (5 × 2) = 6 + 4 + 10 = 20
+        });
+
+        test('should only process active buffs', () => {
+            const atmosphericBuffs = {
+                'Active Buff': { daysUsed: 10, isActive: true },
+                'Inactive Buff': { daysUsed: 10, isActive: false }
+            };
+            
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
+            
+            expect(rewards.inkDrops).toBe(10); // Only active buff counted
+            expect(rewards.modifiedBy).toContain('Active Buff');
+            expect(rewards.modifiedBy).not.toContain('Inactive Buff');
+        });
+    });
+});
+
