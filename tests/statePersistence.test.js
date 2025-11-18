@@ -72,7 +72,9 @@ describe('state persistence compatibility', () => {
             ...CHARACTER_STATE_KEYS
         ];
 
-        expect(storedKeys.sort()).toEqual(expectedKeys.sort());
+        // Schema version key is now saved, so add it to expected keys
+        const expectedKeysWithVersion = [...expectedKeys, 'tomeOfSecrets_schemaVersion'];
+        expect(storedKeys.sort()).toEqual(expectedKeysWithVersion.sort());
 
         const persistedForm = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM));
         expect(persistedForm).toMatchObject({
@@ -128,7 +130,15 @@ describe('state persistence compatibility', () => {
         });
 
         expect(characterState[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe(4);
-        expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_ASSIGNMENTS))).toEqual(legacyActiveAssignments);
+        // After validation, quests will have all required fields added
+        // The legacy format is migrated to include missing fields like rewards, buffs, etc.
+        const loadedQuests = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_ASSIGNMENTS));
+        expect(loadedQuests.length).toBe(legacyActiveAssignments.length);
+        expect(loadedQuests[0].type).toBe(legacyActiveAssignments[0].type);
+        expect(loadedQuests[0].prompt).toBe(legacyActiveAssignments[0].prompt);
+        // Validated quests will have rewards object added
+        expect(loadedQuests[0].rewards).toBeDefined();
+        expect(typeof loadedQuests[0].rewards.xp).toBe('number');
     });
 });
 
