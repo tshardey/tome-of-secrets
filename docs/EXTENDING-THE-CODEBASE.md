@@ -64,8 +64,9 @@ node scripts/generate-data.js
 1. Add the storage key to `/assets/js/character-sheet/storageKeys.js`
 2. Add the key to `CHARACTER_STATE_KEYS` array if it should be persisted
 3. Add default value to `createEmptyCharacterState()` function
-4. Update `loadState()` and `saveState()` in `/assets/js/character-sheet/state.js` if needed
-5. Add StateAdapter methods if the state needs mutations (see [StateAdapter Pattern](#stateadapter-pattern))
+4. **Add validation for the new state** in `/assets/js/character-sheet/dataValidator.js` (see [Data Validation](#data-validation))
+5. Update `loadState()` and `saveState()` in `/assets/js/character-sheet/state.js` if needed (validation is automatic)
+6. Add StateAdapter methods if the state needs mutations (see [StateAdapter Pattern](#stateadapter-pattern))
 
 **Example - Adding a New Persistent State:**
 ```javascript
@@ -87,6 +88,127 @@ export function createEmptyCharacterState() {
     };
 }
 ```
+
+**Then add validation in dataValidator.js:**
+```javascript
+// In validateCharacterState() function
+validated[STORAGE_KEYS.NEW_FEATURE_DATA] = validateStringArray(
+    state[STORAGE_KEYS.NEW_FEATURE_DATA],
+    STORAGE_KEYS.NEW_FEATURE_DATA
+);
+// Or use validateItemArray(), validateQuestArray(), etc. depending on data type
+```
+
+### Data Validation
+
+**All persistent state is automatically validated on load.** The validation system ensures data consistency and handles corrupted data gracefully.
+
+**Validation happens automatically:**
+- When `loadState()` is called, data is validated via `validateCharacterState()`
+- Invalid data is fixed or uses safe defaults (never lost)
+- Validated data is saved back to localStorage for consistency
+
+**When adding new state, you must add a validator:**
+
+1. **For arrays of strings** (e.g., learned abilities, selected genres):
+   ```javascript
+   // In dataValidator.js, validateCharacterState() function
+   validated[STORAGE_KEYS.NEW_STRING_ARRAY] = validateStringArray(
+       state[STORAGE_KEYS.NEW_STRING_ARRAY],
+       STORAGE_KEYS.NEW_STRING_ARRAY
+   );
+   ```
+
+2. **For arrays of objects** (e.g., quests, items, curses):
+   ```javascript
+   // Use existing validators or create new ones
+   validated[STORAGE_KEYS.NEW_QUEST_ARRAY] = validateQuestArray(
+       state[STORAGE_KEYS.NEW_QUEST_ARRAY],
+       STORAGE_KEYS.NEW_QUEST_ARRAY
+   );
+   
+   validated[STORAGE_KEYS.NEW_ITEM_ARRAY] = validateItemArray(
+       state[STORAGE_KEYS.NEW_ITEM_ARRAY],
+       STORAGE_KEYS.NEW_ITEM_ARRAY
+   );
+   ```
+
+3. **For objects** (e.g., atmospheric buffs):
+   ```javascript
+   validated[STORAGE_KEYS.NEW_OBJECT] = validateAtmosphericBuffs(
+       state[STORAGE_KEYS.NEW_OBJECT]
+   );
+   // Or create a custom validator function
+   ```
+
+4. **For numbers**:
+   ```javascript
+   validated[STORAGE_KEYS.NEW_NUMBER] = validateNumber(
+       state[STORAGE_KEYS.NEW_NUMBER],
+       0, // default value
+       STORAGE_KEYS.NEW_NUMBER
+   );
+   ```
+
+**Creating custom validators:**
+- Follow the pattern of existing validators in `dataValidator.js`
+- Always return safe defaults for invalid data
+- Log warnings for invalid data (use `console.warn`)
+- Never throw errors or lose player data
+
+### Schema Versioning and Migrations
+
+**When the data structure changes, you need to create a migration:**
+
+1. **Increment schema version** in `dataValidator.js`:
+   ```javascript
+   export const SCHEMA_VERSION = 2; // Increment from current version
+   ```
+
+2. **Create migration function** in `dataMigrator.js`:
+   ```javascript
+   function migrateToVersion2(state) {
+       const migrated = { ...state };
+       
+       // Example: Add new field to all quests
+       const questKeys = [
+           STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+           STORAGE_KEYS.COMPLETED_QUESTS,
+           STORAGE_KEYS.DISCARDED_QUESTS
+       ];
+       
+       questKeys.forEach(key => {
+           if (Array.isArray(migrated[key])) {
+               migrated[key] = migrated[key].map(quest => ({
+                   ...quest,
+                   newField: quest.newField || 'defaultValue' // Add new field
+               }));
+           }
+       });
+       
+       return migrated;
+   }
+   ```
+
+3. **Add migration case** in `migrateState()` function:
+   ```javascript
+   switch (nextVersion) {
+       case 1:
+           migratedState = migrateToVersion1(migratedState);
+           break;
+       case 2:
+           migratedState = migrateToVersion2(migratedState); // Add new case
+           break;
+       // ... future migrations
+   }
+   ```
+
+**Migration principles:**
+- Migrations are incremental (version N → N+1 → N+2)
+- Always preserve existing data
+- Add missing fields with safe defaults
+- Never remove data (mark as deprecated instead)
+- Test migrations with real save data
 
 ### StateAdapter Pattern
 
@@ -313,13 +435,23 @@ When adding a new feature:
 
 - [ ] Add configuration values to `gameConfig.js` (if applicable)
 - [ ] Add storage keys to `storageKeys.js` (if persistent state)
+- [ ] Add default value to `createEmptyCharacterState()` (if persistent state)
+- [ ] **Add validation in `dataValidator.js`** (if persistent state - REQUIRED)
 - [ ] Add StateAdapter methods (if state mutations needed)
-- [ ] Update `loadState()`/`saveState()` (if new persistent state)
+- [ ] Update `loadState()`/`saveState()` (if new persistent state - validation is automatic)
 - [ ] Add UI rendering functions to `ui.js` (if UI changes)
 - [ ] Wire up event listeners in `character-sheet.js` (if interactive)
-- [ ] Write tests for new functionality
+- [ ] Write tests for new functionality (including validation tests)
 - [ ] Run full test suite: `cd tests && npm test`
 - [ ] Verify manual testing in browser
+
+When changing data structure (schema change):
+
+- [ ] Increment `SCHEMA_VERSION` in `dataValidator.js`
+- [ ] Create migration function in `dataMigrator.js`
+- [ ] Add migration case to `migrateState()` function
+- [ ] Test migration with existing save data
+- [ ] Update validation if structure changed
 
 ---
 

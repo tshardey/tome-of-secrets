@@ -2,6 +2,16 @@ import * as data from './data.js';
 import { characterState } from './state.js';
 import { keeperBackgrounds } from './data.js';
 import { parseIntOr } from '../utils/helpers.js';
+import { escapeHtml } from '../utils/sanitize.js';
+import { clearElement, appendHTML } from '../utils/domHelpers.js';
+import { 
+    renderQuestRow, 
+    renderItemCard, 
+    renderEmptySlot, 
+    renderCurseRow, 
+    renderTemporaryBuffRow,
+    renderAbilityCard
+} from './renderComponents.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
     const currentLevel = parseIntOr(levelInput.value, 1);
@@ -11,20 +21,23 @@ export function updateXpNeeded(levelInput, xpNeededInput) {
 export function renderPermanentBonuses(levelInput) {
     const bonusList = document.getElementById('permanentBonusesList');
     const currentLevel = parseIntOr(levelInput.value, 1);
-    bonusList.innerHTML = '';
+    clearElement(bonusList);
     let bonusesFound = false;
 
     for (const level in data.permanentBonuses) {
         if (currentLevel >= level) {
             bonusesFound = true;
             const li = document.createElement('li');
+            // Permanent bonuses from JSON are trusted content
             li.innerHTML = data.permanentBonuses[level];
             bonusList.appendChild(li);
         }
     }
 
     if (!bonusesFound) {
-        bonusList.innerHTML = '<li>-- No bonuses unlocked at this level --</li>';
+        const li = document.createElement('li');
+        li.textContent = '-- No bonuses unlocked at this level --';
+        bonusList.appendChild(li);
     }
 }
 
@@ -35,11 +48,12 @@ export function renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperB
     
     const selectedBackground = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
     if (selectedBackground && keeperBackgrounds[selectedBackground]) {
+        // JSON data is trusted content
         backgroundDescriptionDisplay.innerHTML = keeperBackgrounds[selectedBackground].description;
         backgroundBenefitDisplay.innerHTML = keeperBackgrounds[selectedBackground].benefit;
     } else {
-        backgroundDescriptionDisplay.innerHTML = '-- Select a background to see its description --';
-        backgroundBenefitDisplay.innerHTML = '-- Select a background to see its benefit --';
+        backgroundDescriptionDisplay.textContent = '-- Select a background to see its description --';
+        backgroundBenefitDisplay.textContent = '-- Select a background to see its benefit --';
     }
 
     // Render School Benefits
@@ -48,11 +62,12 @@ export function renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperB
 
     const selectedSchool = wizardSchoolSelect.value;
     if (selectedSchool && data.schoolBenefits[selectedSchool]) {
+        // JSON data is trusted content
         schoolDescriptionDisplay.innerHTML = data.schoolBenefits[selectedSchool].description;
         schoolBenefitDisplay.innerHTML = data.schoolBenefits[selectedSchool].benefit;
     } else {
-        schoolDescriptionDisplay.innerHTML = '-- Select a school to see its description --';
-        schoolBenefitDisplay.innerHTML = '-- Select a school to see its benefit --';
+        schoolDescriptionDisplay.textContent = '-- Select a school to see its description --';
+        schoolBenefitDisplay.textContent = '-- Select a school to see its benefit --';
     }
 
     // Render Sanctum Benefits
@@ -61,11 +76,12 @@ export function renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperB
     
     const selectedSanctum = librarySanctumSelect.value;
     if (selectedSanctum && data.sanctumBenefits[selectedSanctum]) {
+        // JSON data is trusted content
         sanctumDescriptionDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].description;
         sanctumBenefitDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].benefit;
     } else {
-        sanctumDescriptionDisplay.innerHTML = '-- Select a sanctum to see its description --';
-        sanctumBenefitDisplay.innerHTML = '-- Select a sanctum to see its benefit --';
+        sanctumDescriptionDisplay.textContent = '-- Select a sanctum to see its description --';
+        sanctumBenefitDisplay.textContent = '-- Select a sanctum to see its benefit --';
     }
 }
 
@@ -76,19 +92,31 @@ export function renderMasteryAbilities(smpInput) {
     const currentSmp = parseIntOr(smpInput.value, 0);
     
     smpDisplay.textContent = currentSmp;
-    learnedList.innerHTML = '';
-    abilitySelect.innerHTML = '<option value="">-- Select an ability to learn --</option>';
+    clearElement(learnedList);
+    
+    // Clear and reset ability select
+    clearElement(abilitySelect);
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '-- Select an ability to learn --';
+    abilitySelect.appendChild(defaultOption);
 
+    // Render learned abilities using component
     characterState.learnedAbilities.forEach((abilityName, index) => {
         const ability = data.masteryAbilities[abilityName];
-        learnedList.innerHTML += `<div class="item-card"><div class="item-info"><h4>${abilityName}</h4><p>${ability.benefit}</p><p class="ability-cost"><strong>School:</strong> ${ability.school} | <strong>Cost:</strong> ${ability.cost} SMP</p><button class="delete-ability-btn" data-index="${index}">Forget</button></div></div>`;
+        if (ability) {
+            const card = renderAbilityCard(abilityName, ability, index);
+            learnedList.appendChild(card);
+        }
     });
 
+    // Populate dropdown with unlearned abilities
     for (const name in data.masteryAbilities) {
         if (!characterState.learnedAbilities.includes(name)) {
             const option = document.createElement('option');
             option.value = name;
-            option.textContent = `${name} (${data.masteryAbilities[name].school}, ${data.masteryAbilities[name].cost} SMP)`;
+            const ability = data.masteryAbilities[name];
+            option.textContent = `${escapeHtml(name)} (${escapeHtml(ability.school)}, ${ability.cost} SMP)`;
             abilitySelect.appendChild(option);
         }
     }
@@ -104,35 +132,49 @@ export function getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familia
 export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
     const equippedList = document.getElementById('equipped-items-list');
     const inventoryList = document.getElementById('inventory-list');
-    equippedList.innerHTML = '';
-    inventoryList.innerHTML = '';
+    clearElement(equippedList);
+    clearElement(inventoryList);
 
     const slotLimits = getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     const equippedCounts = { 'Wearable': 0, 'Non-Wearable': 0, 'Familiar': 0 };
 
+    // Render equipped items using component
     characterState.equippedItems.forEach((item, index) => {
         equippedCounts[item.type]++;
-        equippedList.innerHTML += `<div class="item-card"><img src="${item.img}" alt="${item.name}"><div class="item-info"><h4>${item.name}</h4><p><strong>Type:</strong> ${item.type}</p><p>${item.bonus}</p><button class="unequip-btn" data-index="${index}">Unequip</button></div></div>`;
+        const card = renderItemCard(item, index, { showUnequip: true });
+        equippedList.appendChild(card);
     });
 
-    for (let i = equippedCounts['Wearable']; i < slotLimits['Wearable']; i++) { equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Wearable Slot</p></div>`; }
-    for (let i = equippedCounts['Non-Wearable']; i < slotLimits['Non-Wearable']; i++) { equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Non-Wearable Slot</p></div>`; }
-    for (let i = equippedCounts['Familiar']; i < slotLimits['Familiar']; i++) { equippedList.innerHTML += `<div class="item-card empty-slot"><p>Empty Familiar Slot</p></div>`; }
+    // Render empty slots
+    for (let i = equippedCounts['Wearable']; i < slotLimits['Wearable']; i++) {
+        equippedList.appendChild(renderEmptySlot('Wearable'));
+    }
+    for (let i = equippedCounts['Non-Wearable']; i < slotLimits['Non-Wearable']; i++) {
+        equippedList.appendChild(renderEmptySlot('Non-Wearable'));
+    }
+    for (let i = equippedCounts['Familiar']; i < slotLimits['Familiar']; i++) {
+        equippedList.appendChild(renderEmptySlot('Familiar'));
+    }
 
+    // Render inventory items
     if (characterState.inventoryItems.length > 0) {
         characterState.inventoryItems.forEach((item, index) => {
-            inventoryList.innerHTML += `<div class="item-card"><img src="${item.img}" alt="${item.name}"><div class="item-info"><h4>${item.name}</h4><p><strong>Type:</strong> ${item.type}</p><p>${item.bonus}</p><button class="equip-btn" data-index="${index}">Equip</button><button class="delete-item-btn" data-index="${index}">Delete</button></div></div>`;
+            const card = renderItemCard(item, index, { showEquip: true, showDelete: true });
+            inventoryList.appendChild(card);
         });
     } else {
-        inventoryList.innerHTML = `<p id="empty-inventory-message">Your inventory is empty. Add items using the dropdown above.</p>`;
+        const message = document.createElement('p');
+        message.id = 'empty-inventory-message';
+        message.textContent = 'Your inventory is empty. Add items using the dropdown above.';
+        inventoryList.appendChild(message);
     }
     
-    document.getElementById('equipped-summary').innerText = `Equipped Items (${characterState.equippedItems.length}/${slotLimits.total} Slots Used)`;
+    document.getElementById('equipped-summary').textContent = `Equipped Items (${characterState.equippedItems.length}/${slotLimits.total} Slots Used)`;
 }
 
 export function renderAtmosphericBuffs(librarySanctumSelect) {
     const tbody = document.getElementById('atmospheric-buffs-body');
-    tbody.innerHTML = '';
+    clearElement(tbody);
 
     const selectedSanctum = librarySanctumSelect.value;
     const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
@@ -158,17 +200,53 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
             row.classList.add('highlight');
         }
 
-        // Disable checkbox for Grove Tender's automatic buff
-        const checkboxDisabled = isGroveBuffActive ? 'disabled' : '';
-        const checkboxTitle = isGroveBuffActive ? 'title="Always active (Grove Tender)"' : '';
+        // Buff name cell
+        const nameCell = document.createElement('td');
+        nameCell.textContent = buffName;
+        if (isGroveBuffActive) {
+            const star = document.createElement('span');
+            star.style.color = '#b89f62';
+            star.textContent = ' ★';
+            nameCell.appendChild(star);
+        }
+        row.appendChild(nameCell);
 
-        row.innerHTML = `
-            <td>${buffName}${isGroveBuffActive ? ' <span style="color: #b89f62;">★</span>' : ''}</td>
-            <td>${dailyValue}</td>
-            <td><input type="checkbox" class="buff-active-check" data-buff-name="${buffName}" ${isActive ? 'checked' : ''} ${checkboxDisabled} ${checkboxTitle}></td>
-            <td><input type="number" class="buff-days-input" value="${daysUsed}" min="0" data-buff-name="${buffName}" data-daily-value="${dailyValue}"></td>
-            <td id="total-${buffName.replace(/\s+/g, '')}">${daysUsed * dailyValue}</td>
-        `;
+        // Daily value cell
+        const valueCell = document.createElement('td');
+        valueCell.textContent = dailyValue;
+        row.appendChild(valueCell);
+
+        // Checkbox cell
+        const checkboxCell = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'buff-active-check';
+        checkbox.dataset.buffName = buffName;
+        checkbox.checked = isActive;
+        if (isGroveBuffActive) {
+            checkbox.disabled = true;
+            checkbox.title = 'Always active (Grove Tender)';
+        }
+        checkboxCell.appendChild(checkbox);
+        row.appendChild(checkboxCell);
+
+        // Days input cell
+        const daysCell = document.createElement('td');
+        const daysInput = document.createElement('input');
+        daysInput.type = 'number';
+        daysInput.className = 'buff-days-input';
+        daysInput.value = daysUsed;
+        daysInput.min = 0;
+        daysInput.dataset.buffName = buffName;
+        daysInput.dataset.dailyValue = dailyValue;
+        daysCell.appendChild(daysInput);
+        row.appendChild(daysCell);
+
+        // Total cell
+        const totalCell = document.createElement('td');
+        totalCell.id = `total-${buffName.replace(/\s+/g, '')}`;
+        totalCell.textContent = daysUsed * dailyValue;
+        row.appendChild(totalCell);
     }
 }
 
@@ -181,159 +259,86 @@ export function updateBuffTotal(inputElement) {
 
 export function renderActiveAssignments() {
     const tbody = document.getElementById('active-assignments-body');
-    tbody.innerHTML = '';
+    clearElement(tbody);
+    
     characterState.activeAssignments.forEach((quest, index) => {
-        const row = tbody.insertRow();
-        const rewards = quest.rewards || {};
-        // Format buffs to remove [Buff], [Item], and [Background] prefixes for display
-        const buffs = quest.buffs && quest.buffs.length > 0 
-            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item|Background)\] /, '')).join(', ') 
-            : '-';
-        
-        // Add indicator if quest will receive buffs
-        const buffIndicator = (quest.buffs && quest.buffs.length > 0) ? ' <span style="color: #b89f62;">*</span>' : '';
-        
-        // For Extra Credit, don't show prompt
-        const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : quest.prompt;
-        
-        row.innerHTML = `<td>${quest.month}</td>
-                         <td>${quest.year}</td>
-                         <td>${quest.type}</td>
-                         <td>${promptDisplay}</td>
-                         <td>${quest.book}</td>
-                         <td>${rewards.xp > 0 ? `+${rewards.xp}${buffIndicator}` : '-'}</td>
-                         <td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}${buffIndicator}` : '-'}</td>
-                         <td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}${buffIndicator}` : '-'}</td>
-                         <td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td>
-                         <td>${buffs}</td>
-                         <td>${quest.notes || ''}</td>
-                         <td class="no-print action-cell"><button class="complete-quest-btn" data-index="${index}">Complete</button><button class="discard-quest-btn" data-index="${index}">Discard</button><button class="delete-btn" data-index="${index}" data-list="active">Delete</button></td>`;
-        row.querySelector('.action-cell').prepend(createEditButton(index, 'activeAssignments'));
+        const row = renderQuestRow(quest, index, 'active');
+        tbody.appendChild(row);
     });
-    document.getElementById('active-summary').innerText = `Active Book Assignments (${characterState.activeAssignments.length} Remaining)`;
+    
+    document.getElementById('active-summary').textContent = `Active Book Assignments (${characterState.activeAssignments.length} Remaining)`;
 }
 
 export function renderCompletedQuests() {
     const tbody = document.getElementById('completed-quests-body');
-    tbody.innerHTML = '';
+    clearElement(tbody);
+    
     characterState.completedQuests.forEach((quest, index) => {
-        const row = tbody.insertRow();
-        const rewards = quest.rewards || {};
-        // Format buffs to remove [Buff], [Item], and [Background] prefixes for display
-        const buffs = quest.buffs && quest.buffs.length > 0 
-            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item|Background)\] /, '')).join(', ') 
-            : '-';
-        
-        // Show modified rewards with indicator if they were modified
-        const modifiedIndicator = (rewards.modifiedBy && rewards.modifiedBy.length > 0) 
-            ? ` <span style="color: #b89f62;" title="Modified by: ${rewards.modifiedBy.join(', ')}">✓</span>` 
-            : '';
-        
-        // For Extra Credit, don't show prompt
-        const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : quest.prompt;
-        
-        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${promptDisplay}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}${modifiedIndicator}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}${modifiedIndicator}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}${modifiedIndicator}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${buffs}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
-        row.querySelector('.action-cell').prepend(createEditButton(index, 'completedQuests'));
+        const row = renderQuestRow(quest, index, 'completed');
+        tbody.appendChild(row);
     });
-    document.getElementById('completed-summary').innerText = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
+    
+    document.getElementById('completed-summary').textContent = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
 }
 
 export function renderDiscardedQuests() {
     const tbody = document.getElementById('discarded-quests-body');
-    tbody.innerHTML = '';
+    clearElement(tbody);
+    
     characterState.discardedQuests.forEach((quest, index) => {
-        const row = tbody.insertRow();
-        const rewards = quest.rewards || {};
-        // Format buffs to remove [Buff], [Item], and [Background] prefixes for display
-        const buffs = quest.buffs && quest.buffs.length > 0 
-            ? quest.buffs.map(b => b.replace(/^\[(Buff|Item|Background)\] /, '')).join(', ') 
-            : '-';
-        
-        // For Extra Credit, don't show prompt
-        const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : quest.prompt;
-        
-        row.innerHTML = `<td>${quest.month}</td><td>${quest.year}</td><td>${quest.type}</td><td>${promptDisplay}</td><td>${quest.book}</td><td>${rewards.xp > 0 ? `+${rewards.xp}` : '-'}</td><td>${rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '-'}</td><td>${rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '-'}</td><td>${rewards.items && rewards.items.length > 0 ? rewards.items.join(', ') : '-'}</td><td>${buffs}</td><td>${quest.notes || ''}</td><td class="no-print action-cell"><button class="delete-btn" data-index="${index}" data-list="discarded">Delete</button></td>`;
-        row.querySelector('.action-cell').prepend(createEditButton(index, 'discardedQuests'));
+        const row = renderQuestRow(quest, index, 'discarded');
+        tbody.appendChild(row);
     });
-    document.getElementById('discarded-summary').innerText = `Discarded Quests (${characterState.discardedQuests.length})`;
+    
+    document.getElementById('discarded-summary').textContent = `Discarded Quests (${characterState.discardedQuests.length})`;
 }
 
-function createEditButton(index, listName) {
-    const button = document.createElement('button');
-    button.className = 'edit-quest-btn';
-    button.type = 'button'; // Prevents form submission
-    button.textContent = 'Edit';
-    button.dataset.index = index;
-    button.dataset.list = listName;
-    return button;
-}
+// createEditButton is now handled by renderQuestRow component
 
 export function renderActiveCurses() {
     const tbody = document.getElementById('active-curses-body');
-    tbody.innerHTML = '';
+    clearElement(tbody);
+    
     characterState.activeCurses.forEach((curse, index) => {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td>${curse.name}</td>
-                         <td>${curse.requirement}</td>
-                         <td>${curse.book || ''}</td>
-                         <td>Active</td>
-                         <td class="no-print action-cell"><button type="button" class="complete-curse-btn" data-index="${index}">Complete</button><button type="button" class="edit-curse-btn" data-index="${index}">Edit</button><button type="button" class="delete-curse-btn" data-index="${index}">Delete</button></td>`;
+        const row = renderCurseRow(curse, index, 'Active');
+        tbody.appendChild(row);
     });
-    document.getElementById('active-curses-summary').innerText = `Active Curse Penalties (${characterState.activeCurses.length})`;
+    
+    document.getElementById('active-curses-summary').textContent = `Active Curse Penalties (${characterState.activeCurses.length})`;
 }
 
 export function renderCompletedCurses() {
     const tbody = document.getElementById('completed-curses-body');
-    tbody.innerHTML = '';
+    clearElement(tbody);
+    
     characterState.completedCurses.forEach((curse, index) => {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td>${curse.name}</td>
-                         <td>${curse.requirement}</td>
-                         <td>${curse.book || ''}</td>
-                         <td>Completed</td>
-                         <td class="no-print action-cell"><button type="button" class="delete-curse-btn" data-index="${index}" data-list="completed">Delete</button></td>`;
+        const row = renderCurseRow(curse, index, 'Completed');
+        tbody.appendChild(row);
     });
-    document.getElementById('completed-curses-summary').innerText = `Completed Curse Penalties (${characterState.completedCurses.length})`;
+    
+    document.getElementById('completed-curses-summary').textContent = `Completed Curse Penalties (${characterState.completedCurses.length})`;
 }
 
 export function renderTemporaryBuffs() {
     const tbody = document.getElementById('active-temp-buffs-body');
     if (!tbody) return;
     
-    tbody.innerHTML = '';
+    clearElement(tbody);
     
     if (!characterState.temporaryBuffs || characterState.temporaryBuffs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No active temporary buffs</td></tr>';
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.style.textAlign = 'center';
+        cell.textContent = 'No active temporary buffs';
+        row.appendChild(cell);
+        tbody.appendChild(row);
         return;
     }
     
     characterState.temporaryBuffs.forEach((buff, index) => {
-        const row = tbody.insertRow();
-        let durationText = '';
-        
-        if (buff.duration === 'one-time') {
-            durationText = 'One-Time Use';
-        } else if (buff.duration === 'until-end-month') {
-            durationText = 'Until End of Month';
-        } else if (buff.duration === 'two-months') {
-            const monthsLeft = buff.monthsRemaining || 2;
-            durationText = `${monthsLeft} Month${monthsLeft !== 1 ? 's' : ''} Remaining`;
-        }
-        
-        const statusText = buff.status === 'used' ? 'Used' : 'Active';
-        const statusClass = buff.status === 'used' ? 'style="color: #999;"' : '';
-        
-        row.innerHTML = `
-            <td ${statusClass}>${buff.name}</td>
-            <td ${statusClass}>${buff.description}</td>
-            <td ${statusClass}>${durationText}</td>
-            <td ${statusClass}>${statusText}</td>
-            <td class="no-print action-cell">
-                ${buff.status === 'active' && buff.duration === 'one-time' ? `<button type="button" class="mark-buff-used-btn" data-index="${index}">Mark as Used</button>` : ''}
-                ${buff.status === 'active' ? `<button type="button" class="remove-buff-btn" data-index="${index}">Remove</button>` : ''}
-                ${buff.status === 'used' ? `<button type="button" class="remove-buff-btn" data-index="${index}">Delete</button>` : ''}
-            </td>
-        `;
+        const row = renderTemporaryBuffRow(buff, index);
+        tbody.appendChild(row);
     });
 }
 
@@ -432,7 +437,11 @@ export function populateBackgroundDropdown() {
     if (!backgroundSelect) return;
 
     // Keep the default "-- Select a Background --" option
-    backgroundSelect.innerHTML = '<option value="">-- Select a Background --</option>';
+    clearElement(backgroundSelect);
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '-- Select a Background --';
+    backgroundSelect.appendChild(defaultOption);
     
     for (const [key, background] of Object.entries(keeperBackgrounds)) {
         if (key === '') continue; // Skip the 'None' entry, it's the default
