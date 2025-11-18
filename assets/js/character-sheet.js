@@ -873,27 +873,16 @@ export function initializeCharacterSheet() {
     // End of Month button - processes atmospheric buffs and book completion XP
     // Centralized End of Month handler function
     const handleEndOfMonth = () => {
-        // Process atmospheric buffs to ink drops
-        let totalInkDrops = 0;
         const selectedSanctum = librarySanctumSelect.value;
         const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
-        
         const atmosphericBuffs = stateAdapter.getAtmosphericBuffs();
         const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
         
+        // Calculate atmospheric buff rewards using RewardCalculator
+        const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+        
+        // Reset atmospheric buffs (keep Grove Tender's "Soaking in Nature" active)
         for (const buffName in atmosphericBuffs) {
-            const buff = atmosphericBuffs[buffName];
-            
-            // Only process buffs that were marked as active
-            if (buff.isActive) {
-                const isAssociated = associatedBuffs.includes(buffName);
-                const dailyValue = isAssociated ? 2 : 1;
-                const buffTotal = buff.daysUsed * dailyValue;
-                totalInkDrops += buffTotal;
-            }
-            
-            // Reset the days used and active status for all buffs
-            // Keep Grove Tender's "Soaking in Nature" active, reset others
             const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
             if (isGroveTenderBuff) {
                 stateAdapter.setAtmosphericBuffDaysUsed(buffName, 0);
@@ -903,55 +892,35 @@ export function initializeCharacterSheet() {
             }
         }
         
-        // Add atmospheric buff ink drops
-        const inkDropsInput = document.getElementById('inkDrops');
-        if (inkDropsInput && totalInkDrops > 0) {
-            const currentInk = parseIntOr(inkDropsInput.value, 0);
-            inkDropsInput.value = currentInk + totalInkDrops;
-        }
+        // Apply atmospheric buff ink drops
+        updateCurrency(atmosphericRewards);
         
-        // Calculate and add book completion XP
+        // Calculate and add book completion XP using RewardCalculator
         const booksCompletedInput = document.getElementById('books-completed-month');
         if (booksCompletedInput) {
             const booksCompleted = parseIntOr(booksCompletedInput.value, 0);
-            const bookCompletionXP = booksCompleted * GAME_CONFIG.endOfMonth.bookCompletionXP;
+            const bookRewards = RewardCalculator.calculateBookCompletionRewards(booksCompleted);
             
-            if (bookCompletionXP > 0) {
-                const xpCurrent = document.getElementById('xp-current');
-                if (xpCurrent) {
-                    const currentXP = parseIntOr(xpCurrent.value, 0);
-                    xpCurrent.value = currentXP + bookCompletionXP;
-                }
-            }
+            updateCurrency(bookRewards);
             
             // Reset books completed counter to 0
             booksCompletedInput.value = 0;
         }
         
-        // Calculate and add journal entries paper scraps
+        // Calculate and add journal entries paper scraps using RewardCalculator
         const journalEntriesInput = document.getElementById('journal-entries-completed');
         if (journalEntriesInput) {
             const journalEntries = parseIntOr(journalEntriesInput.value, 0);
-            const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+            const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, background);
             
-            // Base paper scraps per entry, with Scribe's Acolyte bonus
-            let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
-            if (background === 'scribe') {
-                papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-            }
-            
-            const journalPaperScraps = journalEntries * papersPerEntry;
-            
-            if (journalPaperScraps > 0) {
-                const paperScrapsInput = document.getElementById('paperScraps');
-                if (paperScrapsInput) {
-                    const currentPaperScraps = parseIntOr(paperScrapsInput.value, 0);
-                    paperScrapsInput.value = currentPaperScraps + journalPaperScraps;
-                }
+            if (journalRewards.paperScraps > 0) {
+                updateCurrency(journalRewards);
                 
                 // Show notification of bonus if applicable
                 if (background === 'scribe') {
-                    alert(`Journal entries rewarded: ${journalPaperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
+                    const papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps + 
+                                          GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
+                    alert(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
                 }
             }
             
