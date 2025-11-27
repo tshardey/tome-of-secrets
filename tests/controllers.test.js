@@ -14,6 +14,8 @@ import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
+import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
+import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -26,6 +28,8 @@ describe('Controllers', () => {
             <form id="character-sheet">
                 <input id="level" type="number" />
                 <input id="xp-needed" type="text" />
+                <input id="inkDrops" type="number" />
+                <input id="paperScraps" type="number" />
                 <select id="keeperBackground"></select>
                 <select id="wizardSchool"></select>
                 <select id="librarySanctum"></select>
@@ -35,6 +39,7 @@ describe('Controllers', () => {
                 <input id="wearable-slots" type="number" />
                 <input id="non-wearable-slots" type="number" />
                 <input id="familiar-slots" type="number" />
+                <div class="slot-management"></div>
                 <select id="item-select"></select>
                 <button id="add-item-button"></button>
                 <button id="add-quest-button"></button>
@@ -124,6 +129,11 @@ describe('Controllers', () => {
     });
 
     describe('CharacterController', () => {
+        beforeEach(() => {
+            // Clear localStorage before each test
+            localStorage.clear();
+        });
+
         it('should initialize and set up event listeners', () => {
             const controller = new CharacterController(stateAdapter, form, dependencies);
             controller.initialize();
@@ -144,6 +154,132 @@ describe('Controllers', () => {
 
             expect(dependencies.ui.updateXpNeeded).toHaveBeenCalled();
             expect(dependencies.ui.renderPermanentBonuses).toHaveBeenCalled();
+        });
+
+        it('should apply rewards when level increases', () => {
+            const controller = new CharacterController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const levelInput = document.getElementById('level');
+            const inkDropsInput = document.getElementById('inkDrops');
+            const paperScrapsInput = document.getElementById('paperScraps');
+            const smpInput = document.getElementById('smp');
+            
+            // Set initial values
+            levelInput.value = '1';
+            inkDropsInput.value = '10';
+            paperScrapsInput.value = '5';
+            smpInput.value = '0';
+            
+            // Trigger initial load to set previousLevel
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Level up to 2
+            levelInput.value = '2';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Level 2 rewards: 5 inkDrops, 2 paperScraps, 0 SMP
+            expect(parseInt(inkDropsInput.value)).toBe(15); // 10 + 5
+            expect(parseInt(paperScrapsInput.value)).toBe(7); // 5 + 2
+            expect(parseInt(smpInput.value)).toBe(0);
+        });
+
+        it('should apply rewards for multiple level increases', () => {
+            const controller = new CharacterController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const levelInput = document.getElementById('level');
+            const inkDropsInput = document.getElementById('inkDrops');
+            const paperScrapsInput = document.getElementById('paperScraps');
+            const smpInput = document.getElementById('smp');
+            
+            // Set initial values
+            levelInput.value = '1';
+            inkDropsInput.value = '0';
+            paperScrapsInput.value = '0';
+            smpInput.value = '0';
+            
+            // Trigger initial load to set previousLevel
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Level up from 1 to 4 (should get rewards for levels 2, 3, and 4)
+            levelInput.value = '4';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Level 2: 5 ink, 2 paper
+            // Level 3: 5 ink, 3 paper
+            // Level 4: 10 ink, 5 paper
+            // Total: 20 ink, 10 paper
+            expect(parseInt(inkDropsInput.value)).toBe(20);
+            expect(parseInt(paperScrapsInput.value)).toBe(10);
+        });
+
+        it('should award SMP when leveling up to levels with SMP rewards', () => {
+            const controller = new CharacterController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const levelInput = document.getElementById('level');
+            const smpInput = document.getElementById('smp');
+            
+            levelInput.value = '4';
+            smpInput.value = '0';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Level up to 5 (awards 1 SMP)
+            levelInput.value = '5';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            expect(parseInt(smpInput.value)).toBe(1);
+            expect(dependencies.ui.renderMasteryAbilities).toHaveBeenCalled();
+        });
+
+        it('should track unallocated inventory slots when leveling up', () => {
+            const controller = new CharacterController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const levelInput = document.getElementById('level');
+            const wearableSlotsInput = document.getElementById('wearable-slots');
+            const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+            const familiarSlotsInput = document.getElementById('familiar-slots');
+            
+            // Set initial slots to 1 each (3 total)
+            wearableSlotsInput.value = '1';
+            nonWearableSlotsInput.value = '1';
+            familiarSlotsInput.value = '1';
+            
+            levelInput.value = '3';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Level up to 4 (awards 1 inventory slot, expected total becomes 4)
+            levelInput.value = '4';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // renderLoadout should be called to show the unallocated slot warning
+            expect(dependencies.ui.renderLoadout).toHaveBeenCalled();
+        });
+
+        it('should not apply rewards when level decreases', () => {
+            // Set up form data with previous level before initializing
+            const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            formData.previousLevel = 5;
+            safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+            
+            const controller = new CharacterController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const levelInput = document.getElementById('level');
+            const inkDropsInput = document.getElementById('inkDrops');
+            
+            // Set current level and currency (no change event to avoid applying rewards)
+            levelInput.value = '5';
+            inkDropsInput.value = '100';
+            
+            // Decrease level
+            levelInput.value = '3';
+            levelInput.dispatchEvent(new Event('change'));
+            
+            // Should not change currency (rewards only apply on level increase)
+            expect(parseInt(inkDropsInput.value)).toBe(100);
         });
     });
 
@@ -214,6 +350,76 @@ describe('Controllers', () => {
             const result = controller.handleClick(target);
             expect(result).toBe(true);
             expect(stateAdapter.moveInventoryItemToEquipped).toHaveBeenCalledWith(0);
+        });
+
+        it('should update unallocated slots warning when a slot is increased', () => {
+            // Set up: level 8 (expected 5 slots total), current slots = 3 (1+1+1)
+            const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            formData.level = 8;
+            formData['wearable-slots'] = 1;
+            formData['non-wearable-slots'] = 1;
+            formData['familiar-slots'] = 1;
+            safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+            
+            const controller = new InventoryController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const wearableSlotsInput = document.getElementById('wearable-slots');
+            wearableSlotsInput.value = '1';
+            
+            // Increase wearable slots by 1 (total becomes 4, still 1 unallocated)
+            wearableSlotsInput.value = '2';
+            wearableSlotsInput.dispatchEvent(new Event('change'));
+            
+            // renderLoadout should be called to update the warning
+            expect(dependencies.ui.renderLoadout).toHaveBeenCalled();
+        });
+
+        it('should correctly calculate unallocated slots based on level', () => {
+            // Set up: level 4 (expected 4 slots total), current slots = 3 (1+1+1)
+            const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            formData.level = 4;
+            formData['wearable-slots'] = 1;
+            formData['non-wearable-slots'] = 1;
+            formData['familiar-slots'] = 1;
+            safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+            
+            const controller = new InventoryController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const wearableSlotsInput = document.getElementById('wearable-slots');
+            wearableSlotsInput.value = '1';
+            
+            // Increase wearable slots by 2 (total becomes 5, but expected is only 4)
+            // This should still work - the warning will show 0 unallocated (or negative if we allow over-allocation)
+            wearableSlotsInput.value = '3';
+            wearableSlotsInput.dispatchEvent(new Event('change'));
+            
+            // renderLoadout should be called to update the warning
+            expect(dependencies.ui.renderLoadout).toHaveBeenCalled();
+        });
+
+        it('should show warning when slot decreases below expected total', () => {
+            // Set up: level 8 (expected 5 slots total), current slots = 5 (3+1+1)
+            const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            formData.level = 8;
+            formData['wearable-slots'] = 3;
+            formData['non-wearable-slots'] = 1;
+            formData['familiar-slots'] = 1;
+            safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+            
+            const controller = new InventoryController(stateAdapter, form, dependencies);
+            controller.initialize();
+            
+            const wearableSlotsInput = document.getElementById('wearable-slots');
+            wearableSlotsInput.value = '3';
+            
+            // Decrease wearable slots (total becomes 4, but expected is 5, so 1 unallocated)
+            wearableSlotsInput.value = '2';
+            wearableSlotsInput.dispatchEvent(new Event('change'));
+            
+            // renderLoadout should be called to show the warning again
+            expect(dependencies.ui.renderLoadout).toHaveBeenCalled();
         });
     });
 

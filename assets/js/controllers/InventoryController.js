@@ -33,9 +33,17 @@ export class InventoryController extends BaseController {
             uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
         };
 
-        this.addEventListener(wearableSlotsInput, 'change', renderLoadout);
-        this.addEventListener(nonWearableSlotsInput, 'change', renderLoadout);
-        this.addEventListener(familiarSlotsInput, 'change', renderLoadout);
+        // Handle slot changes - save all form data and re-render
+        // The unallocated slots warning is calculated dynamically in renderLoadout
+        const handleSlotChange = () => {
+            // Use saveState to preserve all form fields, not just the slot value
+            this.saveState();
+            renderLoadout();
+        };
+
+        this.addEventListener(wearableSlotsInput, 'change', handleSlotChange);
+        this.addEventListener(nonWearableSlotsInput, 'change', handleSlotChange);
+        this.addEventListener(familiarSlotsInput, 'change', handleSlotChange);
 
         this.addEventListener(addItemButton, 'click', () => {
             const itemName = itemSelect?.value;
