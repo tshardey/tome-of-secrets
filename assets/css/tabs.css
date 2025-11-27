@@ -110,16 +110,35 @@
 /* Print styles - show all tabs when printing */
 @media print {
     .tab-nav {
-        display: none;
+        display: none !important;
     }
     
     .tab-panel {
         display: block !important;
         page-break-inside: avoid;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
     
     .tab-panel:not(:last-child) {
         page-break-after: always;
+        margin-bottom: 20px;
     }
+    
+    /* Ensure tab panels are visible even if they don't have active class */
+    .tab-container .tab-panel {
+        display: block !important;
+    }
+}
+
+/* Force all tabs visible when printing class is added (for pre-print preparation) */
+.tab-container.printing .tab-panel {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.tab-container.printing .tab-nav {
+    display: none !important;
 }
 
