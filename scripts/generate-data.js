@@ -35,7 +35,8 @@ const JSON_EXPORTS = {
     'extraCreditRewards.json': 'extraCreditRewards',
     'sideQuestsDetailed.json': 'sideQuestsDetailed',
     'curseTableDetailed.json': 'curseTableDetailed',
-    'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards'
+    'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards',
+    'levelRewards.json': 'levelRewards'
 };
 
 function generateExports() {

@@ -1,0 +1,123 @@
+{
+  "1": {
+    "inkDrops": 0,
+    "paperScraps": 0,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "2": {
+    "inkDrops": 5,
+    "paperScraps": 2,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "3": {
+    "inkDrops": 5,
+    "paperScraps": 3,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "4": {
+    "inkDrops": 10,
+    "paperScraps": 5,
+    "smp": 0,
+    "inventorySlot": 1
+  },
+  "5": {
+    "inkDrops": 15,
+    "paperScraps": 10,
+    "smp": 1,
+    "inventorySlot": 0
+  },
+  "6": {
+    "inkDrops": 10,
+    "paperScraps": 5,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "7": {
+    "inkDrops": 10,
+    "paperScraps": 5,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "8": {
+    "inkDrops": 15,
+    "paperScraps": 8,
+    "smp": 0,
+    "inventorySlot": 1
+  },
+  "9": {
+    "inkDrops": 15,
+    "paperScraps": 10,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "10": {
+    "inkDrops": 20,
+    "paperScraps": 15,
+    "smp": 1,
+    "inventorySlot": 0
+  },
+  "11": {
+    "inkDrops": 15,
+    "paperScraps": 10,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "12": {
+    "inkDrops": 15,
+    "paperScraps": 10,
+    "smp": 0,
+    "inventorySlot": 1
+  },
+  "13": {
+    "inkDrops": 20,
+    "paperScraps": 12,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "14": {
+    "inkDrops": 20,
+    "paperScraps": 15,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "15": {
+    "inkDrops": 25,
+    "paperScraps": 20,
+    "smp": 1,
+    "inventorySlot": 0
+  },
+  "16": {
+    "inkDrops": 20,
+    "paperScraps": 15,
+    "smp": 0,
+    "inventorySlot": 1
+  },
+  "17": {
+    "inkDrops": 20,
+    "paperScraps": 15,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "18": {
+    "inkDrops": 25,
+    "paperScraps": 18,
+    "smp": 0,
+    "inventorySlot": 0
+  },
+  "19": {
+    "inkDrops": 25,
+    "paperScraps": 20,
+    "smp": 0,
+    "inventorySlot": 1
+  },
+  "20": {
+    "inkDrops": 30,
+    "paperScraps": 25,
+    "smp": 1,
+    "inventorySlot": 0
+  }
+}
+

@@ -4,6 +4,8 @@ import { keeperBackgrounds } from './data.js';
 import { parseIntOr } from '../utils/helpers.js';
 import { escapeHtml } from '../utils/sanitize.js';
 import { clearElement, appendHTML } from '../utils/domHelpers.js';
+import { safeGetJSON } from '../utils/storage.js';
+import { STORAGE_KEYS } from './storageKeys.js';
 import { 
     renderQuestRow, 
     renderItemCard, 
@@ -132,6 +134,7 @@ export function getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familia
 export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
     const equippedList = document.getElementById('equipped-items-list');
     const inventoryList = document.getElementById('inventory-list');
+    const slotManagement = document.querySelector('.slot-management');
     clearElement(equippedList);
     clearElement(inventoryList);
 
@@ -170,6 +173,44 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
     }
     
     document.getElementById('equipped-summary').textContent = `Equipped Items (${characterState.equippedItems.length}/${slotLimits.total} Slots Used)`;
+    
+    // Calculate expected vs actual slots to show unallocated slots warning
+    const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+    const currentLevel = parseIntOr(formData.level || document.getElementById('level')?.value, 1);
+    
+    // Calculate expected total slots: base 3 at level 1, plus slots from leveling
+    let expectedTotalSlots = 3; // Starting slots at level 1
+    if (data.levelRewards && currentLevel > 1) {
+        for (let level = 2; level <= currentLevel; level++) {
+            const levelStr = String(level);
+            const rewards = data.levelRewards[levelStr];
+            if (rewards && rewards.inventorySlot) {
+                expectedTotalSlots += rewards.inventorySlot;
+            }
+        }
+    }
+    
+    // Calculate current total slots
+    const currentTotalSlots = slotLimits.total;
+    
+    // Calculate unallocated slots (difference between expected and current)
+    const unallocatedSlots = expectedTotalSlots - currentTotalSlots;
+    
+    // Remove existing note if present
+    const existingNote = document.getElementById('unallocated-slots-note');
+    if (existingNote) {
+        existingNote.remove();
+    }
+    
+    // Add note if there are unallocated slots
+    if (unallocatedSlots > 0 && slotManagement) {
+        const note = document.createElement('p');
+        note.id = 'unallocated-slots-note';
+        note.className = 'unallocated-slots-note';
+        note.style.cssText = 'color: #b89f62; font-weight: bold; margin-top: 10px; padding: 10px; background: rgba(184, 159, 98, 0.1); border: 1px solid #b89f62; border-radius: 4px;';
+        note.textContent = `⚠️ You have ${unallocatedSlots} unallocated inventory slot${unallocatedSlots > 1 ? 's' : ''} available. Increase one of your slot types above to allocate ${unallocatedSlots > 1 ? 'them' : 'it'}.`;
+        slotManagement.appendChild(note);
+    }
 }
 
 export function renderAtmosphericBuffs(librarySanctumSelect) {

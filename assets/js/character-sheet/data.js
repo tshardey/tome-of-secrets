@@ -17,11 +17,12 @@ import {
     extraCreditRewards,
     sideQuestsDetailed,
     curseTableDetailed,
-    temporaryBuffsFromRewards
+    temporaryBuffsFromRewards,
+    levelRewards
 } from './data.json-exports.js';
 
 // Re-export JSON data for backward compatibility
-export { xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, allGenres, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards };
+export { xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, allGenres, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, levelRewards };
 
 // atmosphericBuffs and other data are now imported from JSON exports above
 
