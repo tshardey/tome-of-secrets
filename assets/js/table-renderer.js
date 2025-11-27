@@ -7,7 +7,9 @@ import {
     atmosphericBuffs,
     sideQuestsDetailed,
     curseTableDetailed,
-    allItems
+    allItems,
+    levelRewards,
+    xpLevels
 } from './character-sheet/data.js';
 import { slugifyId } from './utils/slug.js';
 
@@ -347,6 +349,85 @@ export function renderCurseTable() {
 }
 
 /**
+ * Renders leveling rewards table
+ */
+export function renderLevelingRewardsTable() {
+    let html = `
+<table>
+  <thead>
+    <tr>
+      <th>Level</th>
+      <th>XP Needed (Cumulative)</th>
+      <th>Ink Drops Reward</th>
+      <th>Paper Scraps Reward</th>
+      <th>New Item/Familiar Slot</th>
+      <th>School Mastery Point (SMP)</th>
+    </tr>
+  </thead>
+  <tbody>
+`;
+    
+    let totalSlots = 3; // Starting slots at level 1
+    
+    for (let level = 1; level <= 20; level++) {
+        const levelStr = String(level);
+        const rewards = levelRewards[levelStr];
+        
+        if (!rewards) continue;
+        
+        // Calculate total slots up to this level
+        if (rewards.inventorySlot > 0) {
+            totalSlots += rewards.inventorySlot;
+        }
+        
+        // Format XP needed - xpLevels[1] is the XP needed to reach level 2, so for level N we need xpLevels[N-1]
+        // Level 1 has 0 XP needed (starting level)
+        let xpDisplay = '0';
+        if (level === 1) {
+            xpDisplay = '0';
+        } else {
+            const xpNeeded = xpLevels[level - 1];
+            xpDisplay = xpNeeded === "Max" ? "Max" : xpNeeded.toLocaleString();
+        }
+        
+        // Format ink drops
+        const inkDisplay = rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '0';
+        
+        // Format paper scraps
+        const paperDisplay = rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '0';
+        
+        // Format slot (show total if slot was added, otherwise "-")
+        let slotDisplay = '-';
+        if (level === 1) {
+            slotDisplay = '3';
+        } else if (rewards.inventorySlot > 0) {
+            slotDisplay = `+1 (${totalSlots} total)`;
+        }
+        
+        // Format SMP
+        const smpDisplay = rewards.smp > 0 ? String(rewards.smp) : '-';
+        
+        html += `
+    <tr>
+      <td>${level}</td>
+      <td>${xpDisplay}</td>
+      <td>${inkDisplay}</td>
+      <td>${paperDisplay}</td>
+      <td>${slotDisplay}</td>
+      <td>${smpDisplay}</td>
+    </tr>
+`;
+    }
+    
+    html += `
+  </tbody>
+</table>
+`;
+    
+    return html;
+}
+
+/**
  * Replace Jekyll template variables in links
  */
 function processLinks(html) {
@@ -411,6 +492,12 @@ export function initializeTables() {
     const curseTableEl = document.getElementById('curse-table');
     if (curseTableEl) {
         curseTableEl.innerHTML = processLinks(renderCurseTable());
+    }
+    
+    // Leveling page
+    const levelingRewardsEl = document.getElementById('leveling-rewards-table');
+    if (levelingRewardsEl) {
+        levelingRewardsEl.innerHTML = processLinks(renderLevelingRewardsTable());
     }
 }
 

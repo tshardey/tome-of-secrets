@@ -8,28 +8,7 @@ This document details the Leveling Up & Class Customization expansion for The To
 ## Leveling Up Rewards (Levels 1–20)
 Upon reaching a new level, the Keeper gains the rewards listed in the table below. Permanent Bonuses are gained at levels 3, 6, 7, and 9, and are detailed in the "Permanent Bonuses" section further down.
 
-| Level | XP Needed (Cumulative) | Ink Drops Reward | Paper Scraps Reward | New Item/Familiar Slot | School Mastery Point (SMP) |
-|:-----:|:----------------------:|:----------------:|:-------------------:|:----------------------:|:--------------------------:|
-| 1     | 0                      | 0                | 0                   | 3                      | -                          |
-| 2     | 100                    | +5               | +2                  | -                      | -                          |
-| 3     | 250                    | +5               | +3                  | -                      | -                          |
-| 4     | 500                    | +10              | +5                  | +1 (4 total)           | -                          |
-| 5     | 1,000                  | +15              | +10                 | -                      | 1                          |
-| 6     | 1,750                  | +10              | +5                  | -                      | -                          |
-| 7     | 2,750                  | +10              | +5                  | -                      | -                          |
-| 8     | 4,000                  | +15              | +8                  | +1 (5 total)           | -                          |
-| 9     | 5,500                  | +15              | +10                 | -                      | -                          |
-| 10    | 7,500                  | +20              | +15                 | -                      | 1                          |
-| 11    | 9,750                  | +15              | +10                 | -                      | -                          |
-| 12    | 12,250                 | +15              | +10                 | +1 (6 total)           | -                          |
-| 13    | 15,000                 | +20              | +12                 | -                      | -                          |
-| 14    | 18,000                 | +20              | +15                 | -                      | -                          |
-| 15    | 21,500                 | +25              | +20                 | -                      | 1                          |
-| 16    | 25,500                 | +20              | +15                 | +1 (7 total)           | -                          |
-| 17    | 30,000                 | +20              | +15                 | -                      | -                          |
-| 18    | 35,000                 | +25              | +18                 | -                      | -                          |
-| 19    | 40,500                 | +25              | +20                 | +1 (8 total)           | -                          |
-| 20    | 47,000                 | +30              | +25                 | -                      | 1                          |
+<div id="leveling-rewards-table"></div>
 
 ## Permanent Bonuses
 As you level up, you unlock the following permanent abilities at the specified levels.
@@ -90,4 +69,9 @@ Transmuters are masters of conversion, finding value where others see none and t
 | Ability Name | Cost | Benefit |
 |:---|:---:|:---|
 | **Alchemic Focus** | 1 SMP | You gain an additional +5 XP for every book you read outside of your monthly quest pool (e.g., book club reads, mood reads). You have learned to transmute recreational reading into tangible progress. |
-| **Philosopher's Stone** | 2 SMP | Once per month, you may sacrifice 50 XP to instantly create resources from arcane energy, gaining 50 Ink Drops and 10 Paper Scraps. This allows you to convert character progression directly into currency when needed. |
+| **Philosopher's Stone** | 2 SMP | Once per month, you may sacrifice 50 XP to instantly create resources from arcane energy, gaining 50 Ink Drops and 10 Paper Scraps. This allows you to convert character progression directly into currency when needed.
+
+<script type="module">
+  import { initializeTables } from '{{ site.baseurl }}/assets/js/table-renderer.js';
+  initializeTables();
+</script>

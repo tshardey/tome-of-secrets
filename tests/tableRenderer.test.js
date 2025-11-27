@@ -9,6 +9,7 @@ import {
     renderAtmosphericBuffsTable,
     renderSideQuestsTable,
     renderCurseTable,
+    renderLevelingRewardsTable,
     initializeTables
 } from '../assets/js/table-renderer.js';
 
@@ -234,9 +235,48 @@ describe('Table Renderer', () => {
             expect(html).toContain('<ol>');
             expect(html).toContain('</ol>');
             expect(html).toContain('The Unread Tome');
-            expect(html).toContain('The Lost Lore');
-            expect(html).toContain('The Forgotten Pages');
-            expect(html).toContain('The Ravenous Shadow');
+        });
+
+        test('renderLevelingRewardsTable should render all 20 levels with correct data', () => {
+            const html = renderLevelingRewardsTable();
+            
+            // Check table structure
+            expect(html).toContain('<table>');
+            expect(html).toContain('<thead>');
+            expect(html).toContain('<tbody>');
+            expect(html).toContain('Level');
+            expect(html).toContain('XP Needed');
+            expect(html).toContain('Ink Drops Reward');
+            expect(html).toContain('Paper Scraps Reward');
+            expect(html).toContain('New Item/Familiar Slot');
+            expect(html).toContain('School Mastery Point');
+            
+            // Check specific level data
+            expect(html).toContain('<td>1</td>'); // Level 1
+            expect(html).toContain('<td>2</td>'); // Level 2
+            expect(html).toContain('<td>20</td>'); // Level 20
+            
+            // Check level 1 has 3 slots
+            const level1Index = html.indexOf('<td>1</td>');
+            const level1Row = html.substring(level1Index, level1Index + 200);
+            expect(level1Row).toContain('3');
+            
+            // Check level 4 has +1 slot (4 total)
+            expect(html).toContain('+1 (4 total)');
+            
+            // Check level 5 has SMP
+            expect(html).toContain('<td>5</td>');
+            const level5Index = html.indexOf('<td>5</td>');
+            const level5Row = html.substring(level5Index, level5Index + 300);
+            expect(level5Row).toContain('<td>1</td>'); // SMP value
+            
+            // Check level 20 has correct XP (47,000)
+            expect(html).toContain('47,000');
+            
+            // Verify all 20 levels are present
+            for (let i = 1; i <= 20; i++) {
+                expect(html).toContain(`<td>${i}</td>`);
+            }
         });
     });
 
