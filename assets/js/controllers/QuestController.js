@@ -518,7 +518,31 @@ export class QuestController extends BaseController {
 
         uiModule.renderActiveAssignments();
         uiModule.renderCompletedQuests();
+        
+        // Re-render tables on dungeons/quests pages if they exist
+        this.reRenderTablesIfNeeded();
+        
         this.saveState();
+    }
+    
+    /**
+     * Re-render tables on dungeons/quests pages after quest completion
+     */
+    reRenderTablesIfNeeded() {
+        // Check if we're on dungeons or quests page by looking for table containers
+        const dungeonRoomsTable = document.getElementById('dungeon-rooms-table');
+        const sideQuestsTable = document.getElementById('side-quests-table');
+        
+        // Import and call initializeTables if tables exist
+        if (dungeonRoomsTable || sideQuestsTable) {
+            import('../table-renderer.js').then(module => {
+                if (module.initializeTables) {
+                    module.initializeTables();
+                }
+            }).catch(err => {
+                console.warn('Failed to re-render tables:', err);
+            });
+        }
     }
 
     /**

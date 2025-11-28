@@ -12,6 +12,8 @@ import {
     renderLevelingRewardsTable,
     initializeTables
 } from '../assets/js/table-renderer.js';
+import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { safeSetJSON } from '../assets/js/utils/storage.js';
 
 describe('Table Renderer', () => {
     
@@ -339,6 +341,318 @@ describe('Table Renderer', () => {
             expect(html).toContain('<ol>');
             expect(html).toContain('<li>');
             expect(html).not.toContain('<table>');
+        });
+    });
+
+    describe('Completion Tracking', () => {
+        beforeEach(() => {
+            // Clear localStorage before each test
+            localStorage.clear();
+        });
+
+        describe('Dungeon Room Completion', () => {
+            test('should not gray out rooms when no quests are completed', () => {
+                const html = renderDungeonRoomsTable();
+                
+                // Should not contain completed-room class or grayed out styles
+                expect(html).not.toContain('completed-room');
+                expect(html).not.toContain('opacity: 0.6');
+                expect(html).not.toContain('color: #999');
+            });
+
+            test('should gray out room when challenge and encounter are completed', () => {
+                // Set up completed quests for room 1
+                const completedQuests = [
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: false,
+                        prompt: 'The Hall of Whispers: Read in a quiet space without music.'
+                    },
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: true,
+                        encounterName: 'Librarian\'s Spirit',
+                        prompt: 'Librarian\'s Spirit: Read a book with a ghost-like being or a mystery.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderDungeonRoomsTable();
+                
+                // Should contain completed-room class and grayed out styles
+                expect(html).toContain('completed-room');
+                expect(html).toContain('opacity: 0.6');
+                expect(html).toContain('color: #999');
+                
+                // Should show checkmark on challenge
+                expect(html).toContain('The Hall of Whispers: Read in a quiet space without music. ✓');
+                
+                // Should show checkmark on completed encounter (after </strong> tag, before description)
+                expect(html).toContain('Librarian\'s Spirit (Friendly Creature):</strong> ✓');
+            });
+
+            test('should not gray out room when only challenge is completed', () => {
+                // Only challenge completed, no encounters
+                const completedQuests = [
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: false,
+                        prompt: 'The Hall of Whispers: Read in a quiet space without music.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderDungeonRoomsTable();
+                
+                // Should not be grayed out (room not fully completed)
+                expect(html).not.toContain('completed-room');
+                
+                // But should show checkmark on challenge
+                expect(html).toContain('The Hall of Whispers: Read in a quiet space without music. ✓');
+            });
+
+            test('should show checkmark on multiple completed encounters', () => {
+                // Complete room 1 with both encounters
+                const completedQuests = [
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: false,
+                        prompt: 'The Hall of Whispers: Read in a quiet space without music.'
+                    },
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: true,
+                        encounterName: 'Librarian\'s Spirit',
+                        prompt: 'Librarian\'s Spirit: Read a book with a ghost-like being or a mystery.'
+                    },
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: true,
+                        encounterName: 'Will-o-wisps',
+                        prompt: 'Will-o-wisps: Read a book that involves fated destiny or a newly revealed path.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderDungeonRoomsTable();
+                
+                // Should show checkmarks on both encounters (after </strong> tag, before description)
+                expect(html).toContain('Librarian\'s Spirit (Friendly Creature):</strong> ✓');
+                expect(html).toContain('Will-o-wisps (Monster):</strong> ✓');
+            });
+
+            test('should only gray out the specific completed room, not all rooms', () => {
+                // Complete only room 1
+                const completedQuests = [
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: false,
+                        prompt: 'The Hall of Whispers: Read in a quiet space without music.'
+                    },
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: true,
+                        encounterName: 'Librarian\'s Spirit',
+                        prompt: 'Librarian\'s Spirit: Read a book with a ghost-like being or a mystery.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderDungeonRoomsTable();
+                
+                // Room 1 should be grayed out (check the <tr> tag before the room name)
+                expect(html).toContain('class="completed-room"');
+                
+                // Room 2 should not be grayed out
+                const room2Index = html.indexOf('The Glimmering Pools');
+                const room2Section = html.substring(room2Index, room2Index + 500);
+                expect(room2Section).not.toContain('completed-room');
+            });
+
+            test('should not mark encounters as completed in wrong room when same encounter exists in multiple rooms', () => {
+                // Complete Banshee encounter in Room 7 (Banshee also exists in Room 4 with same prompt)
+                const completedQuests = [
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '7',
+                        isEncounter: false,
+                        prompt: 'The Neglected Archives: Read a book with a ghost-like being or a death theme.'
+                    },
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '7',
+                        isEncounter: true,
+                        encounterName: 'Banshee',
+                        prompt: 'Banshee: Read a book with a ghost-like being or a death theme.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderDungeonRoomsTable();
+                
+                // Room 7 should be grayed out - find the <tr> tag for room 7
+                // Look for the room name, then find the preceding <tr> tag
+                const room7NameIndex = html.indexOf('The Neglected Archives');
+                // Search backwards from the room name to find the <tr> tag
+                const room7TrStart = html.lastIndexOf('<tr', room7NameIndex);
+                const room7Section = html.substring(room7TrStart, room7NameIndex + 1000);
+                expect(room7Section).toContain('class="completed-room"');
+                expect(room7Section).toContain('Banshee (Monster):</strong> ✓');
+                
+                // Room 4 should NOT be grayed out (even though it also has Banshee with same prompt)
+                const room4NameIndex = html.indexOf('The Cursed Tome');
+                const room4TrStart = html.lastIndexOf('<tr', room4NameIndex);
+                const room4Section = html.substring(room4TrStart, room4NameIndex + 1000);
+                expect(room4Section).not.toContain('class="completed-room"');
+                // Room 4's Banshee should NOT have a checkmark
+                const room4BansheeIndex = room4Section.indexOf('Banshee (Monster)');
+                if (room4BansheeIndex !== -1) {
+                    const room4BansheeSection = room4Section.substring(room4BansheeIndex, room4BansheeIndex + 100);
+                    expect(room4BansheeSection).not.toContain('✓');
+                }
+            });
+        });
+
+        describe('Side Quest Completion', () => {
+            test('should not gray out side quests when none are completed', () => {
+                const html = renderSideQuestsTable();
+                
+                // Should not contain completed-quest class or grayed out styles
+                expect(html).not.toContain('completed-quest');
+                expect(html).not.toContain('opacity: 0.6');
+                expect(html).not.toContain('color: #999');
+            });
+
+            test('should gray out completed side quest and show checkmark', () => {
+                // Complete side quest 1 (The Arcane Grimoire)
+                const completedQuests = [
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderSideQuestsTable();
+                
+                // Should contain completed-quest class and grayed out styles
+                expect(html).toContain('completed-quest');
+                expect(html).toContain('opacity: 0.6');
+                expect(html).toContain('color: #999');
+                
+                // Should show checkmark on quest name (after </strong> tag, before description)
+                expect(html).toContain('The Arcane Grimoire:</strong> ✓');
+            });
+
+            test('should only gray out the specific completed side quest', () => {
+                // Complete only side quest 1
+                const completedQuests = [
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderSideQuestsTable();
+                
+                // Side quest 1 should be grayed out (check the <tr> tag)
+                expect(html).toContain('class="completed-quest"');
+                expect(html).toContain('The Arcane Grimoire:</strong> ✓');
+                
+                // Side quest 2 should not be grayed out
+                const sq2Index = html.indexOf('The Blood Fury Tattoo');
+                const sq2Section = html.substring(sq2Index, sq2Index + 200);
+                expect(sq2Section).not.toContain('completed-quest');
+                expect(sq2Section).not.toContain('✓');
+            });
+
+            test('should handle multiple completed side quests', () => {
+                // Complete side quests 1 and 2
+                const completedQuests = [
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.'
+                    },
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'The Blood Fury Tattoo: Read a book featuring a counter culture rebellion.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderSideQuestsTable();
+                
+                // Both should be grayed out with checkmarks (after </strong> tag, before description)
+                expect(html).toContain('The Arcane Grimoire:</strong> ✓');
+                expect(html).toContain('The Blood Fury Tattoo:</strong> ✓');
+                
+                // Count completed-quest classes (should be 2)
+                const completedCount = (html.match(/completed-quest/g) || []).length;
+                expect(completedCount).toBe(2);
+            });
+
+            test('should not mark side quest as completed if prompt does not match exactly', () => {
+                // Try with slightly different prompt format
+                const completedQuests = [
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'Read the book on your TBR the longest.' // Missing name prefix
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const html = renderSideQuestsTable();
+                
+                // Should not be marked as completed
+                expect(html).not.toContain('The Arcane Grimoire:</strong> ✓');
+            });
+        });
+
+        describe('Mixed Quest Types', () => {
+            test('should handle both dungeon and side quest completions independently', () => {
+                const completedQuests = [
+                    // Dungeon room 1 completed
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: false,
+                        prompt: 'The Hall of Whispers: Read in a quiet space without music.'
+                    },
+                    {
+                        type: '♠ Dungeon Crawl',
+                        roomNumber: '1',
+                        isEncounter: true,
+                        encounterName: 'Librarian\'s Spirit',
+                        prompt: 'Librarian\'s Spirit: Read a book with a ghost-like being or a mystery.'
+                    },
+                    // Side quest 1 completed
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.'
+                    }
+                ];
+                safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, completedQuests);
+
+                const dungeonHtml = renderDungeonRoomsTable();
+                const sideQuestHtml = renderSideQuestsTable();
+                
+                // Dungeon room should be grayed out
+                expect(dungeonHtml).toContain('completed-room');
+                expect(dungeonHtml).toContain('Librarian\'s Spirit (Friendly Creature):</strong> ✓');
+                
+                // Side quest should be grayed out
+                expect(sideQuestHtml).toContain('completed-quest');
+                expect(sideQuestHtml).toContain('The Arcane Grimoire:</strong> ✓');
+            });
         });
     });
 });

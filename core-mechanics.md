@@ -36,6 +36,8 @@ Each card suit corresponds to a specific type of challenge or quest.
 
 *Optional Rule: At the start of each month, before drawing cards, you may always roll once for an Atmospheric Buff. This ensures that you always have the option to include at least one immersive effect in your reading journey, even if you do not draw any Diamonds.*
 
+**Re-rolling Completed Quests:** If you roll a number for a dungeon room or side quest that you have already completed (marked with a checkmark in the tables), you may roll again. For dungeon rooms, you may also opt to complete the other encounter if you have only completed one of the room's encounters.
+
 ## Currencies and Progression
 There are two primary currencies that define your progress, plus a third for character advancement.
 
