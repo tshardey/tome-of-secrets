@@ -493,6 +493,26 @@ export function populateBackgroundDropdown() {
     }
 }
 
+export function populateTemporaryBuffDropdown() {
+    const select = document.getElementById('temp-buff-select');
+    if (!select) return;
+    
+    // Clear existing options except the first one
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    
+    // Add all temporary buffs from temporaryBuffs.json
+    if (data.temporaryBuffs) {
+        for (const [name, buff] of Object.entries(data.temporaryBuffs)) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = `${name} - ${buff.description}`;
+            select.appendChild(option);
+        }
+    }
+}
+
 export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
     const keeperBackgroundSelect = document.getElementById('keeperBackground');
     updateXpNeeded(levelInput, xpNeededInput);
@@ -502,6 +522,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     renderAtmosphericBuffs(librarySanctumSelect);
     renderTemporaryBuffs();
+    populateTemporaryBuffDropdown();
     updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     renderActiveAssignments();
     renderCompletedQuests();

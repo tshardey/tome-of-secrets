@@ -6,7 +6,6 @@
  * - Processing book completion XP
  * - Processing journal entry rewards
  * - Resetting monthly counters
- * - Processing temporary buff expiration
  */
 
 import { BaseController } from './BaseController.js';
@@ -88,41 +87,8 @@ export class EndOfMonthController extends BaseController {
                 if (saveCompletedBooksSet) saveCompletedBooksSet();
             }
 
-            // Process temporary buffs - decrement monthsRemaining and remove expired
-            const temporaryBuffs = stateAdapter.getTemporaryBuffs();
-            if (temporaryBuffs && temporaryBuffs.length > 0) {
-                // Filter out expired buffs and update state
-                const activeBuffs = temporaryBuffs
-                    .map(buff => ({ ...buff })) // Create a copy to avoid mutating the original
-                    .filter(buff => {
-                        // Remove one-time buffs that were used
-                        if (buff.duration === 'one-time' && buff.status === 'used') {
-                            return false;
-                        }
-
-                        // Remove end-of-month buffs
-                        if (buff.duration === 'until-end-month') {
-                            return false;
-                        }
-
-                        // Decrement two-month buffs
-                        if (buff.duration === 'two-months' && buff.monthsRemaining > 0) {
-                            buff.monthsRemaining--;
-                            // Remove if no months remaining
-                            if (buff.monthsRemaining === 0) {
-                                return false;
-                            }
-                        }
-
-                        return true;
-                    });
-
-                // Replace the entire list with the filtered/updated buffs
-                stateAdapter._replaceList(STORAGE_KEYS.TEMPORARY_BUFFS, activeBuffs);
-
-                // Increment buff month counter
-                stateAdapter.incrementBuffMonthCounter();
-            }
+            // Note: Temporary buffs are now self-managed by users
+            // No automatic expiration or cleanup is performed
 
             // Re-render the atmospheric buffs table to show 0 days used
             uiModule.renderAtmosphericBuffs(librarySanctumSelect);

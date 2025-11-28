@@ -2,16 +2,15 @@
  * BuffController - Handles temporary and atmospheric buffs
  * 
  * Manages:
- * - Adding custom temporary buffs
+ * - Adding predefined temporary buffs from dropdown
  * - Marking buffs as used
  * - Removing buffs
  * - Atmospheric buff tracking
  */
 
 import { BaseController } from './BaseController.js';
-import { parseIntOr, trimOrEmpty } from '../utils/helpers.js';
-import { Validator, required } from '../services/Validator.js';
-import { clearFormError, clearFieldError, showFieldError } from '../utils/formErrors.js';
+import { parseIntOr } from '../utils/helpers.js';
+import * as data from '../character-sheet/data.js';
 
 export class BuffController extends BaseController {
     initialize() {
@@ -20,16 +19,14 @@ export class BuffController extends BaseController {
 
         if (!uiModule) return;
 
-        const tempBuffNameInput = document.getElementById('temp-buff-name');
-        const tempBuffDescInput = document.getElementById('temp-buff-description');
-        const tempBuffDurationSelect = document.getElementById('temp-buff-duration');
-        const addTempBuffButton = document.getElementById('add-temp-buff-button');
+        const tempBuffSelect = document.getElementById('temp-buff-select');
+        const addTempBuffFromDropdownButton = document.getElementById('add-temp-buff-from-dropdown-button');
         const keeperBackgroundSelect = document.getElementById('keeperBackground');
 
-        // Add custom temporary buff
-        if (addTempBuffButton) {
-            this.addEventListener(addTempBuffButton, 'click', () => {
-                this.handleAddTemporaryBuff();
+        // Add temporary buff from dropdown
+        if (addTempBuffFromDropdownButton) {
+            this.addEventListener(addTempBuffFromDropdownButton, 'click', () => {
+                this.handleAddTemporaryBuffFromDropdown();
             });
         }
 
@@ -56,61 +53,35 @@ export class BuffController extends BaseController {
         this.keeperBackgroundSelect = keeperBackgroundSelect;
     }
 
-    handleAddTemporaryBuff() {
+    handleAddTemporaryBuffFromDropdown() {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
-        const tempBuffNameInput = document.getElementById('temp-buff-name');
-        const tempBuffDescInput = document.getElementById('temp-buff-description');
-        const tempBuffDurationSelect = document.getElementById('temp-buff-duration');
+        const tempBuffSelect = document.getElementById('temp-buff-select');
+        if (!tempBuffSelect || !tempBuffSelect.value) return;
 
-        if (!tempBuffNameInput || !tempBuffDescInput || !tempBuffDurationSelect) return;
-
-        const name = trimOrEmpty(tempBuffNameInput.value);
-        const description = trimOrEmpty(tempBuffDescInput.value);
-        const duration = tempBuffDurationSelect.value;
-
-        // Clear previous errors
-        const buffFormContainer = document.querySelector('.add-temp-buff-form');
-        if (buffFormContainer) {
-            clearFormError(buffFormContainer);
-            clearFieldError(tempBuffNameInput);
-            clearFieldError(tempBuffDescInput);
-        }
-
-        const validator = new Validator();
-        validator.addRule('name', required('Buff name is required'));
-        validator.addRule('description', required('Buff description is required'));
-
-        const validation = validator.validate({ name, description });
-        if (!validation.valid) {
-            if (buffFormContainer && validation.errors) {
-                if (validation.errors.name) showFieldError(tempBuffNameInput, validation.errors.name);
-                if (validation.errors.description) showFieldError(tempBuffDescInput, validation.errors.description);
-            }
-            return;
-        }
+        const buffName = tempBuffSelect.value;
+        const buffData = data.temporaryBuffs[buffName];
+        if (!buffData) return;
 
         // Calculate initial monthsRemaining based on duration
         let monthsRemaining = 0;
-        if (duration === 'two-months') {
+        if (buffData.duration === 'two-months') {
             monthsRemaining = 2;
-        } else if (duration === 'until-end-month') {
+        } else if (buffData.duration === 'until-end-month') {
             monthsRemaining = 1;
         }
 
         stateAdapter.addTemporaryBuff({
-            name,
-            description,
-            duration,
+            name: buffName,
+            description: buffData.description,
+            duration: buffData.duration,
             monthsRemaining,
             status: 'active'
         });
 
-        // Clear inputs
-        tempBuffNameInput.value = '';
-        tempBuffDescInput.value = '';
-        tempBuffDurationSelect.value = 'two-months';
+        // Clear selection
+        tempBuffSelect.value = '';
 
         const wearableSlotsInput = document.getElementById('wearable-slots');
         const nonWearableSlotsInput = document.getElementById('non-wearable-slots');

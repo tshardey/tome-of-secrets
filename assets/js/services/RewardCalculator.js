@@ -246,8 +246,11 @@ export class RewardCalculator {
             return data.allItems[cleanName].rewardModifier;
         }
 
-        // Temporary buff modifiers
-        if (data.temporaryBuffsFromRewards[cleanName]) {
+        // Temporary buff modifiers (check both new and legacy sources)
+        if (data.temporaryBuffs && data.temporaryBuffs[cleanName]) {
+            return data.temporaryBuffs[cleanName].rewardModifier;
+        }
+        if (data.temporaryBuffsFromRewards && data.temporaryBuffsFromRewards[cleanName]) {
             return data.temporaryBuffsFromRewards[cleanName].rewardModifier;
         }
 

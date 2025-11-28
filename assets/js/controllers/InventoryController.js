@@ -77,6 +77,16 @@ export class InventoryController extends BaseController {
             const itemToEquip = inventoryItems[index];
             if (!itemToEquip) return true;
 
+            // Quest type items cannot be equipped
+            if (itemToEquip.type === 'Quest') {
+                const container = document.querySelector('.inventory-container');
+                if (container) {
+                    clearFormError(container);
+                    showFormError(container, 'Quest items cannot be equipped. They remain in your inventory.');
+                }
+                return true;
+            }
+
             const slotLimits = uiModule.getSlotLimits(
                 slotInputs.wearableSlotsInput,
                 slotInputs.nonWearableSlotsInput,

@@ -36,6 +36,7 @@ const JSON_EXPORTS = {
     'sideQuestsDetailed.json': 'sideQuestsDetailed',
     'curseTableDetailed.json': 'curseTableDetailed',
     'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards',
+    'temporaryBuffs.json': 'temporaryBuffs',
     'levelRewards.json': 'levelRewards'
 };
 

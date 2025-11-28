@@ -161,6 +161,22 @@ describe('Render Components', () => {
             const cardWithDelete = renderItemCard(item, 0, { showDelete: true });
             expect(cardWithDelete.querySelector('.delete-item-btn')).toBeDefined();
         });
+
+        test('should not show equip button for Quest type items', () => {
+            const questItem = {
+                name: 'The Grand Key',
+                type: 'Quest',
+                img: 'test.png',
+                bonus: 'You find a master key for a special, rare quest.'
+            };
+
+            const card = renderItemCard(questItem, 0, { showEquip: true });
+            expect(card.querySelector('.equip-btn')).toBeNull();
+            
+            // Should still show delete button if requested
+            const cardWithDelete = renderItemCard(questItem, 0, { showEquip: true, showDelete: true });
+            expect(cardWithDelete.querySelector('.delete-item-btn')).toBeDefined();
+        });
     });
 
     describe('renderEmptySlot', () => {
