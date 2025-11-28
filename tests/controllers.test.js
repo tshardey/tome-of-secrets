@@ -444,7 +444,10 @@ describe('Controllers', () => {
     });
 
     describe('BuffController', () => {
+        let updateCurrency;
+
         beforeEach(() => {
+            updateCurrency = jest.fn();
             // Mock temporaryBuffs data by directly accessing the module
             // Since temporaryBuffs is exported, we can check if it exists in tests
             // The actual data will be loaded from JSON, so we test with real data structure
@@ -452,7 +455,7 @@ describe('Controllers', () => {
 
         it('should initialize buff controller with dropdown', () => {
             const controller = new BuffController(stateAdapter, form, dependencies);
-            controller.initialize();
+            controller.initialize(updateCurrency);
 
             const select = document.getElementById('temp-buff-select');
             const addButton = document.getElementById('add-temp-buff-from-dropdown-button');
@@ -468,7 +471,7 @@ describe('Controllers', () => {
             }
 
             const controller = new BuffController(stateAdapter, form, dependencies);
-            controller.initialize();
+            controller.initialize(updateCurrency);
 
             // Populate dropdown first
             dependencies.ui.populateTemporaryBuffDropdown = jest.fn(() => {
@@ -518,7 +521,7 @@ describe('Controllers', () => {
             }
 
             const controller = new BuffController(stateAdapter, form, dependencies);
-            controller.initialize();
+            controller.initialize(updateCurrency);
 
             // Populate dropdown
             const select = document.getElementById('temp-buff-select');
@@ -559,7 +562,7 @@ describe('Controllers', () => {
 
         it('should not add buff if no selection', () => {
             const controller = new BuffController(stateAdapter, form, dependencies);
-            controller.initialize();
+            controller.initialize(updateCurrency);
 
             const addButton = document.getElementById('add-temp-buff-from-dropdown-button');
             addButton.click();
@@ -569,7 +572,7 @@ describe('Controllers', () => {
 
         it('should handle buff removal click', () => {
             const controller = new BuffController(stateAdapter, form, dependencies);
-            controller.initialize();
+            controller.initialize(updateCurrency);
 
             stateAdapter.getTemporaryBuffs = jest.fn(() => [{ name: 'Test Buff' }]);
             global.confirm = jest.fn(() => true);
@@ -584,10 +587,46 @@ describe('Controllers', () => {
         });
 
         it('should handle marking buff as used', () => {
+            const updateCurrency = jest.fn();
             const controller = new BuffController(stateAdapter, form, dependencies);
-            controller.initialize();
+            controller.initialize(updateCurrency);
 
-            stateAdapter.getTemporaryBuffs = jest.fn(() => [{ name: 'Test Buff', status: 'active' }]);
+            stateAdapter.getTemporaryBuffs = jest.fn(() => [{ 
+                name: 'Disjointed Perception', 
+                status: 'active',
+                duration: 'one-time'
+            }]);
+            stateAdapter.updateTemporaryBuff = jest.fn();
+
+            // Mock temporaryBuffs data
+            if (data.temporaryBuffs && data.temporaryBuffs['Disjointed Perception']) {
+                const target = document.createElement('button');
+                target.classList.add('mark-buff-used-btn');
+                target.dataset.index = '0';
+
+                const result = controller.handleClick(target);
+                expect(result).toBe(true);
+                expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+                // Verify currency is applied when buff is marked as used
+                expect(updateCurrency).toHaveBeenCalledWith({
+                    xp: 0,
+                    inkDrops: 10,
+                    paperScraps: 5,
+                    items: []
+                });
+            }
+        });
+
+        it('should not apply currency for non-one-time buffs', () => {
+            const updateCurrency = jest.fn();
+            const controller = new BuffController(stateAdapter, form, dependencies);
+            controller.initialize(updateCurrency);
+
+            stateAdapter.getTemporaryBuffs = jest.fn(() => [{ 
+                name: 'Unwavering Resolve', 
+                status: 'active',
+                duration: 'until-end-month'
+            }]);
             stateAdapter.updateTemporaryBuff = jest.fn();
 
             const target = document.createElement('button');
@@ -597,6 +636,34 @@ describe('Controllers', () => {
             const result = controller.handleClick(target);
             expect(result).toBe(true);
             expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+            // Should not apply currency for non-one-time buffs
+            expect(updateCurrency).not.toHaveBeenCalled();
+        });
+
+        it('should not apply currency for buffs with empty rewardModifier', () => {
+            const updateCurrency = jest.fn();
+            const controller = new BuffController(stateAdapter, form, dependencies);
+            controller.initialize(updateCurrency);
+
+            stateAdapter.getTemporaryBuffs = jest.fn(() => [{ 
+                name: "Librarian's Blessing", 
+                status: 'active',
+                duration: 'one-time'
+            }]);
+            stateAdapter.updateTemporaryBuff = jest.fn();
+
+            // Mock temporaryBuffs data with empty rewardModifier
+            if (data.temporaryBuffs && data.temporaryBuffs["Librarian's Blessing"]) {
+                const target = document.createElement('button');
+                target.classList.add('mark-buff-used-btn');
+                target.dataset.index = '0';
+
+                const result = controller.handleClick(target);
+                expect(result).toBe(true);
+                expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+                // Should not apply currency when rewardModifier is empty
+                expect(updateCurrency).not.toHaveBeenCalled();
+            }
         });
     });
 

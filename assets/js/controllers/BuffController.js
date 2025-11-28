@@ -10,12 +10,14 @@
 
 import { BaseController } from './BaseController.js';
 import { parseIntOr } from '../utils/helpers.js';
-import * as data from '../character-sheet/data.js';
+import * as dataModule from '../character-sheet/data.js';
 
 export class BuffController extends BaseController {
-    initialize() {
+    initialize(updateCurrency) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
+        
+        this.updateCurrency = updateCurrency;
 
         if (!uiModule) return;
 
@@ -61,7 +63,7 @@ export class BuffController extends BaseController {
         if (!tempBuffSelect || !tempBuffSelect.value) return;
 
         const buffName = tempBuffSelect.value;
-        const buffData = data.temporaryBuffs[buffName];
+        const buffData = dataModule.temporaryBuffs?.[buffName] || dataModule.temporaryBuffsFromRewards?.[buffName];
         if (!buffData) return;
 
         // Calculate initial monthsRemaining based on duration
@@ -120,7 +122,29 @@ export class BuffController extends BaseController {
 
         if (target.classList.contains('mark-buff-used-btn')) {
             const temporaryBuffs = stateAdapter.getTemporaryBuffs();
-            if (temporaryBuffs[index]) {
+            const buff = temporaryBuffs[index];
+            if (buff) {
+                // Apply currency rewards when marking buff as used
+                if (this.updateCurrency && buff.duration === 'one-time') {
+                    // Get buff data to check for rewardModifier (check both new and legacy sources)
+                    const buffData = dataModule.temporaryBuffs?.[buff.name] || dataModule.temporaryBuffsFromRewards?.[buff.name];
+                    if (buffData && buffData.rewardModifier) {
+                        const inkDrops = buffData.rewardModifier.inkDrops || 0;
+                        const paperScraps = buffData.rewardModifier.paperScraps || 0;
+                        
+                        // Only apply currency if there are actual rewards (not just an empty rewardModifier object)
+                        if (inkDrops > 0 || paperScraps > 0) {
+                            const rewards = {
+                                xp: 0,
+                                inkDrops: inkDrops,
+                                paperScraps: paperScraps,
+                                items: []
+                            };
+                            this.updateCurrency(rewards);
+                        }
+                    }
+                }
+                
                 stateAdapter.updateTemporaryBuff(index, { status: 'used' });
                 
                 const wearableSlotsInput = document.getElementById('wearable-slots');

@@ -217,8 +217,8 @@ export function renderTemporaryBuffRow(buff, index) {
     const statusClass = buff.status === 'used' ? 'style="color: #999;"' : '';
     
     const cells = [
-        { content: escapeHtml(buff.name || ''), attrs: statusClass },
-        { content: escapeHtml(buff.description || ''), attrs: statusClass },
+        { content: buff.name || '', attrs: statusClass },
+        { content: buff.description || '', attrs: statusClass },
         { content: durationText, attrs: statusClass },
         { content: statusText, attrs: statusClass }
     ];

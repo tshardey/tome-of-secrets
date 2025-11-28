@@ -1,4 +1,10 @@
 {
+    "The Librarian's Hoard": {
+        "description": "Gain +150 Ink Drops and +20 Paper Scraps.",
+        "duration": "one-time",
+        "source": "Dungeon Completion Reward",
+        "rewardModifier": { "inkDrops": 150, "paperScraps": 20 }
+    },
     "Long Read Focus": {
         "description": "+2 Ink Drops per 100 pages over 300",
         "duration": "one-time",

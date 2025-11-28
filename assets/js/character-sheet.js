@@ -193,7 +193,7 @@ export function initializeCharacterSheet() {
     inventoryController.initialize();
     questController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, updateGenreQuestDropdown);
     curseController.initialize();
-    buffController.initialize();
+    buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
 
     // --- GENRE SELECTION FUNCTIONALITY ---
