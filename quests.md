@@ -38,6 +38,8 @@ These buffs are daily bonuses. Once per day, when you set a mood for reading, yo
 ## ♣️ Side Quests (Roll a d8)
 Completing a side quest rewards you with a magical item or a bonus.
 
+**Note:** If you roll a side quest that you have already completed (grayed out in the table below), you may roll again.
+
 <div id="side-quests-table"></div>
 
 <script type="module">

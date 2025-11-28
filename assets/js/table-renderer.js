@@ -12,6 +12,8 @@ import {
     xpLevels
 } from './character-sheet/data.js';
 import { slugifyId } from './utils/slug.js';
+import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
+import { safeGetJSON } from './utils/storage.js';
 
 function escapeRegExp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -31,6 +33,124 @@ function linkifyItems(text) {
         result = result.replace(pattern, `<a href="{{ site.baseurl }}/rewards.html#${anchorId}">${itemName}</a>`);
     }
     return result;
+}
+
+/**
+ * Get completed quests from localStorage
+ * @returns {Array} Array of completed quest objects
+ */
+function getCompletedQuests() {
+    return safeGetJSON(STORAGE_KEYS.COMPLETED_QUESTS, []);
+}
+
+/**
+ * Check if a dungeon room is completed
+ * A room is considered completed if both the challenge and at least one encounter are completed
+ * @param {string} roomNumber - Room number (1-12)
+ * @returns {Object} { isCompleted: boolean, completedEncounters: Set<string> }
+ */
+function checkDungeonRoomCompletion(roomNumber) {
+    const completedQuests = getCompletedQuests();
+    const completedEncounters = new Set();
+    let challengeCompleted = false;
+    const room = dungeonRooms[roomNumber];
+    if (!room) return { isCompleted: false, completedEncounters, challengeCompleted };
+    
+    for (const quest of completedQuests) {
+        if (quest.type !== '♠ Dungeon Crawl') continue;
+        
+        // Primary check: use roomNumber and isEncounter if available
+        if (quest.roomNumber === roomNumber) {
+            if (quest.isEncounter === false) {
+                // This is the room challenge
+                challengeCompleted = true;
+            } else if (quest.isEncounter === true && quest.encounterName) {
+                // This is an encounter
+                completedEncounters.add(quest.encounterName);
+            }
+        }
+        
+        // Fallback: match by prompt text for older quests that might not have roomNumber/isEncounter
+        // Only use fallback if quest doesn't have roomNumber, or if roomNumber matches current room
+        const canUseFallback = !quest.roomNumber || quest.roomNumber === roomNumber;
+        
+        if (canUseFallback && !challengeCompleted && quest.prompt === room.challenge) {
+            challengeCompleted = true;
+        }
+        
+        // Fallback: match encounters by prompt text (for older quests or when roomNumber/isEncounter not set)
+        // CRITICAL: Only use fallback if quest doesn't have roomNumber, or if roomNumber matches current room
+        // This prevents matching encounters from other rooms that share the same prompt (e.g., Banshee in Room 4 and Room 7)
+        if (canUseFallback && room.encounters) {
+            // Check against the encounters object which has the full prompts
+            for (const encounterName in room.encounters) {
+                const encounterData = room.encounters[encounterName];
+                if (encounterData.defeat && quest.prompt === encounterData.defeat) {
+                    completedEncounters.add(encounterName);
+                }
+                if (encounterData.befriend && quest.prompt === encounterData.befriend) {
+                    completedEncounters.add(encounterName);
+                }
+            }
+        }
+        
+        // Also check encountersDetailed for additional matching
+        // CRITICAL: Only use fallback if quest doesn't have roomNumber, or if roomNumber matches current room
+        if (canUseFallback && room.encountersDetailed) {
+            for (const encounter of room.encountersDetailed) {
+                // Check if quest prompt matches encounter defeat or befriend prompt
+                // Note: encountersDetailed has defeat/befriend without name prefix
+                if (encounter.defeat && quest.prompt && quest.prompt.includes(encounter.name) && quest.prompt.includes(encounter.defeat)) {
+                    completedEncounters.add(encounter.name);
+                }
+                if (encounter.befriend && quest.prompt && quest.prompt.includes(encounter.name) && quest.prompt.includes(encounter.befriend)) {
+                    completedEncounters.add(encounter.name);
+                }
+            }
+        }
+    }
+    
+    // Room is completed if challenge is done and at least one encounter is done
+    const isCompleted = challengeCompleted && completedEncounters.size > 0;
+    
+    return { isCompleted, completedEncounters, challengeCompleted };
+}
+
+/**
+ * Check if a side quest is completed
+ * @param {string} sideQuestNumber - Side quest number (1-8)
+ * @returns {boolean} True if the side quest is completed
+ */
+function checkSideQuestCompletion(sideQuestNumber) {
+    const completedQuests = getCompletedQuests();
+    const sideQuest = sideQuestsDetailed[sideQuestNumber];
+    if (!sideQuest) return false;
+    
+    // The quest prompt is stored as "Name: prompt" format (from sideQuests[key])
+    // We need to match against this format
+    const expectedPrompt = `${sideQuest.name}: ${sideQuest.prompt}`;
+    
+    for (const quest of completedQuests) {
+        if (quest.type !== '♣ Side Quest') continue;
+        
+        // Primary check: exact prompt match (with name prefix)
+        if (quest.prompt === expectedPrompt) {
+            return true;
+        }
+        
+        // Fallback: match if prompt starts with quest name and colon, followed by prompt text
+        // This handles cases like "The Arcane Grimoire: Read the book..." matching "Read the book..."
+        // Only match if the prompt includes the quest name to avoid false positives
+        if (quest.prompt && quest.prompt.includes(sideQuest.name)) {
+            const namePrefix = `${sideQuest.name}: `;
+            if (quest.prompt.startsWith(namePrefix) && 
+                quest.prompt.substring(namePrefix.length).trim() === sideQuest.prompt.trim()) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }
 
 /**
@@ -88,12 +208,16 @@ export function renderDungeonRoomsTable() {
 
     for (let i = 1; i <= 12; i++) {
         const room = dungeonRooms[i.toString()];
+        const roomCompletion = checkDungeonRoomCompletion(i.toString());
+        const rowClass = roomCompletion.isCompleted ? 'class="completed-room"' : '';
+        const rowStyle = roomCompletion.isCompleted ? 'style="opacity: 0.6; color: #999;"' : '';
+        
         html += `
-    <tr>
+    <tr ${rowClass} ${rowStyle}>
       <td><strong>${i}</strong></td>
       <td>
         <strong>${room.name}:</strong> ${room.description}
-        <br><strong>Challenge:</strong> ${room.challenge}`;
+        <br><strong>Challenge:</strong> ${room.challenge}${roomCompletion.challengeCompleted ? ' ✓' : ''}`;
         
         // Display room rewards
         if (room.roomRewards) {
@@ -135,6 +259,9 @@ export function renderDungeonRoomsTable() {
           <tbody>`;
             
             room.encountersDetailed.forEach(encounter => {
+                const isEncounterCompleted = roomCompletion.completedEncounters.has(encounter.name);
+                const encounterCheckmark = isEncounterCompleted ? ' ✓' : '';
+                
                 html += `
             <tr>`;
                 if (encounter.roll) {
@@ -148,7 +275,7 @@ export function renderDungeonRoomsTable() {
                     encounterNameHtml = `<a href="{{ site.baseurl }}/rewards.html#${anchorId}">${encounter.name}</a>`;
                 }
                 html += `
-              <td><strong>${encounterNameHtml} (${encounter.type}):</strong> ${encounter.description}`;
+              <td><strong>${encounterNameHtml} (${encounter.type}):</strong>${encounterCheckmark} ${encounter.description}`;
                 
                 if (encounter.defeat) {
                     html += `
@@ -309,6 +436,11 @@ export function renderSideQuestsTable() {
 
     for (let i = 1; i <= 8; i++) {
         const quest = sideQuestsDetailed[i.toString()];
+        const isCompleted = checkSideQuestCompletion(i.toString());
+        const rowClass = isCompleted ? 'class="completed-quest"' : '';
+        const rowStyle = isCompleted ? 'style="opacity: 0.6; color: #999;"' : '';
+        const checkmark = isCompleted ? ' ✓' : '';
+        
         let rewardText = quest.reward;
         
         if (quest.hasLink && quest.link) {
@@ -319,9 +451,9 @@ export function renderSideQuestsTable() {
         }
         
         html += `
-    <tr>
+    <tr ${rowClass} ${rowStyle}>
       <td><strong>${i}</strong></td>
-      <td><strong>${quest.name}:</strong> ${quest.description} <strong>Prompt:</strong> ${quest.prompt} <strong>Reward:</strong> ${rewardText}</td>
+      <td><strong>${quest.name}:</strong>${checkmark} ${quest.description} <strong>Prompt:</strong> ${quest.prompt} <strong>Reward:</strong> ${rewardText}</td>
     </tr>`;
     }
 
