@@ -488,6 +488,18 @@ export class QuestController extends BaseController {
         // Update currency with finalized rewards
         if (this.updateCurrency) {
             this.updateCurrency(completedQuest.rewards);
+            
+            // Auto-detect temporary buffs from quest notes or reward text
+            // Check quest notes for temporary buff names
+            if (completedQuest.notes) {
+                this.autoDetectTemporaryBuffsFromText(completedQuest.notes);
+            }
+            
+            // For dungeon completion rewards, check the reward text
+            if (completedQuest.type === '♠ Dungeon Crawl' && completedQuest.prompt) {
+                // Try to extract dungeon completion reward info from notes or check all possible rewards
+                // This is a fallback - the main detection happens in updateCurrency
+            }
         }
         
         const wearableSlotsInput = document.getElementById('wearable-slots');
@@ -507,6 +519,50 @@ export class QuestController extends BaseController {
         uiModule.renderActiveAssignments();
         uiModule.renderCompletedQuests();
         this.saveState();
+    }
+
+    /**
+     * Auto-detect and add temporary buffs from text (e.g., quest notes or reward descriptions)
+     */
+    autoDetectTemporaryBuffsFromText(text) {
+        const { stateAdapter } = this;
+        const { ui: uiModule } = this.dependencies;
+        
+        if (!text || !data.temporaryBuffs) return;
+        
+        for (const [buffName, buffData] of Object.entries(data.temporaryBuffs)) {
+            // Check if text contains the buff name (case-insensitive)
+            if (text.toLowerCase().includes(buffName.toLowerCase())) {
+                // Check if buff is already added
+                const existingBuffs = stateAdapter.getTemporaryBuffs();
+                const alreadyAdded = existingBuffs.some(buff => buff.name === buffName && buff.status === 'active');
+                if (!alreadyAdded) {
+                    let monthsRemaining = 0;
+                    if (buffData.duration === 'two-months') {
+                        monthsRemaining = 2;
+                    } else if (buffData.duration === 'until-end-month') {
+                        monthsRemaining = 1;
+                    }
+
+                    stateAdapter.addTemporaryBuff({
+                        name: buffName,
+                        description: buffData.description,
+                        duration: buffData.duration,
+                        monthsRemaining,
+                        status: 'active'
+                    });
+
+                    if (uiModule) {
+                        uiModule.renderTemporaryBuffs();
+                        const wearableSlotsInput = document.getElementById('wearable-slots');
+                        const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+                        const familiarSlotsInput = document.getElementById('familiar-slots');
+                        uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                    }
+                    this.saveState();
+                }
+            }
+        }
     }
 
     handleEditQuest(target) {

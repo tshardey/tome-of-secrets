@@ -1,0 +1,33 @@
+{
+    "Long Read Focus": {
+        "description": "+2 Ink Drops per 100 pages over 300",
+        "duration": "one-time",
+        "source": "Side Quest: The Arcane Grimoire",
+        "rewardModifier": { "inkDrops": 2 }
+    },
+    "Disjointed Perception": {
+        "description": "+10 Ink Drops, +5 Paper Scraps",
+        "duration": "one-time",
+        "source": "Side Quest: The Scarecrow's Cornfield",
+        "rewardModifier": { "inkDrops": 10, "paperScraps": 5 }
+    },
+    "Librarian's Blessing": {
+        "description": "You may remove up to two Worn Page penalties.",
+        "duration": "one-time",
+        "source": "Dungeon Completion Reward",
+        "rewardModifier": {}
+    },
+    "Enchanted Focus": {
+        "description": "The next three books you complete grant a x1.5 Ink Drop bonus.",
+        "duration": "one-time",
+        "source": "Dungeon Completion Reward",
+        "rewardModifier": { "inkDropsMultiplier": 1.5 }
+    },
+    "Unwavering Resolve": {
+        "description": "For the next month, you are immune to Worn Page penalties.",
+        "duration": "until-end-month",
+        "source": "Dungeon Completion Reward",
+        "rewardModifier": {}
+    }
+}
+

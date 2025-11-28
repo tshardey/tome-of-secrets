@@ -94,6 +94,9 @@ export function renderQuestRow(quest, index, listType = 'active') {
 export function renderItemCard(item, index, options = {}) {
     const { showEquip = false, showUnequip = false, showDelete = false } = options;
     
+    // Quest type items cannot be equipped
+    const canEquip = showEquip && item.type !== 'Quest';
+    
     const card = createElement('div', { class: 'item-card' });
     
     // Item image
@@ -125,7 +128,7 @@ export function renderItemCard(item, index, options = {}) {
     }
     
     // Action buttons
-    if (showEquip) {
+    if (canEquip) {
         info.appendChild(createActionButton('Equip', 'equip-btn', index));
     }
     if (showUnequip) {

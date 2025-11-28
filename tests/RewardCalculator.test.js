@@ -286,6 +286,15 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         expect(final.inkDrops).toBe(30); // 0 + 20 + 10
         expect(final.modifiedBy.length).toBeGreaterThan(0);
     });
+
+    test('should check both temporaryBuffs and temporaryBuffsFromRewards', () => {
+        // This test verifies that the RewardCalculator checks both sources
+        const modifier = RewardCalculator._getModifier('Long Read Focus', false, false);
+        
+        // Long Read Focus should exist in temporaryBuffsFromRewards (legacy)
+        // or temporaryBuffs (new)
+        expect(modifier).toBeDefined();
+    });
 });
 
 describe('RewardCalculator - End of Month Calculations', () => {

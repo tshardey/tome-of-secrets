@@ -199,19 +199,16 @@ title: Keeper's Character Sheet
 
         <div id="temporary-buffs-container">
             <h3>✨ Active Temporary Buffs</h3>
+            <p class="description"><strong>Remember:</strong> Don't forget to roll on the <a href="{{ site.baseurl }}/dungeons.html#dungeon-completion-rewards">Dungeon Completion Rewards</a> table when you complete all dungeon rooms! Some rewards are temporary buffs that will be automatically added.</p>
             <p class="description">Temporary buffs are automatically added when earned from side quests and dungeon rewards. Buffs last for the remainder of the current month and the next month unless otherwise specified. One-time buffs are consumed when used.</p>
             
             <div class="add-temp-buff-form">
-                <h4>Add Custom Buff (Optional)</h4>
+                <h4>Add Temporary Buff</h4>
                 <div class="form-row">
-                    <input type="text" id="temp-buff-name" placeholder="Buff Name">
-                    <input type="text" id="temp-buff-description" placeholder="Buff Effect Description">
-                    <select id="temp-buff-duration">
-                        <option value="two-months">Two Months (Current + Next)</option>
-                        <option value="one-time">One-Time Use</option>
-                        <option value="until-end-month">Until End of Month</option>
+                    <select id="temp-buff-select">
+                        <option value="">-- Select a predefined buff --</option>
                     </select>
-                    <button type="button" id="add-temp-buff-button">Add Custom Buff</button>
+                    <button type="button" id="add-temp-buff-from-dropdown-button">Add Buff</button>
                 </div>
             </div>
 

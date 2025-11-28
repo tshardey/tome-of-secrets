@@ -112,6 +112,12 @@
         "img": "assets/images/rewards/page-sprite.png",
         "bonus": "Earn a x2 Ink Drop bonus on any book under 300 pages.",
         "rewardModifier": { "inkDropsMultiplier": 2 }
+    },
+    "The Grand Key": {
+        "type": "Quest",
+        "img": "assets/images/rewards/grand-key.png",
+        "bonus": "You find a master key for a special, rare quest.",
+        "rewardModifier": {}
     }
 }
 
