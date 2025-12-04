@@ -1,0 +1,33 @@
+{
+  "Local Indie Bookstore": {
+    "description": "Exchange to celebrate an inspiring visit and bring home a new book.",
+    "inkDrops": 100,
+    "paperScraps": 25,
+    "allowQuantity": false
+  },
+  "Large Chain Bookstore": {
+    "description": "Exchange to mark the joy of exploring a vast store and returning with a new find.",
+    "inkDrops": 150,
+    "paperScraps": 35,
+    "allowQuantity": false
+  },
+  "Bookish Item": {
+    "description": "Purchase a bookish item like bookmarks, reading lights, or other reading accessories.",
+    "inkDrops": 25,
+    "paperScraps": 0,
+    "allowQuantity": false
+  },
+  "One Month of a Book Box Subscription": {
+    "description": "Subscribe to a book box service for one month.",
+    "inkDrops": 25,
+    "paperScraps": 25,
+    "allowQuantity": true
+  },
+  "Deluxe or Special Edition": {
+    "description": "Purchase a deluxe or special edition of a book.",
+    "inkDrops": 50,
+    "paperScraps": 50,
+    "allowQuantity": false
+  }
+}
+

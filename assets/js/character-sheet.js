@@ -323,7 +323,59 @@ export function initializeCharacterSheet() {
         e.preventDefault();
         saveState(form);
         alert('Character sheet saved!');
+        // Hide currency warning after save
+        checkCurrencyUnsavedChanges();
     });
+
+    // --- CURRENCY UNSAVED CHANGES WARNING ---
+    function checkCurrencyUnsavedChanges() {
+        const warningEl = document.getElementById('currency-unsaved-warning');
+        if (!warningEl) return;
+        
+        const inkDropsEl = document.getElementById('inkDrops');
+        const paperScrapsEl = document.getElementById('paperScraps');
+        if (!inkDropsEl || !paperScrapsEl) return;
+        
+        // Get saved values from localStorage
+        const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+        
+        // Normalize values for comparison (handle empty strings, undefined, null, and number/string mismatches)
+        const normalizeValue = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+            return String(value).trim();
+        };
+        
+        const savedInkDrops = normalizeValue(savedData.inkDrops);
+        const savedPaperScraps = normalizeValue(savedData.paperScraps);
+        
+        // Get current form values and normalize
+        const currentInkDrops = normalizeValue(inkDropsEl.value);
+        const currentPaperScraps = normalizeValue(paperScrapsEl.value);
+        
+        // Check if there are unsaved changes
+        const hasUnsavedChanges = (currentInkDrops !== savedInkDrops) || (currentPaperScraps !== savedPaperScraps);
+        
+        // Show or hide warning
+        if (hasUnsavedChanges) {
+            warningEl.style.display = 'block';
+        } else {
+            warningEl.style.display = 'none';
+        }
+    }
+    
+    // Check for unsaved changes on currency field changes
+    const inkDropsEl = document.getElementById('inkDrops');
+    const paperScrapsEl = document.getElementById('paperScraps');
+    
+    if (inkDropsEl) {
+        inkDropsEl.addEventListener('input', checkCurrencyUnsavedChanges);
+        inkDropsEl.addEventListener('change', checkCurrencyUnsavedChanges);
+    }
+    
+    if (paperScrapsEl) {
+        paperScrapsEl.addEventListener('input', checkCurrencyUnsavedChanges);
+        paperScrapsEl.addEventListener('change', checkCurrencyUnsavedChanges);
+    }
 
     // Delegated click handler for all interactive elements
     form.addEventListener('click', (e) => {
@@ -390,6 +442,12 @@ export function initializeCharacterSheet() {
     // --- INITIAL LOAD ---
     loadState(form);
     initializeCompletedBooksSet();
+    
+    // Check for unsaved currency changes AFTER state is loaded
+    // Use setTimeout to ensure form values are fully populated
+    setTimeout(() => {
+        checkCurrencyUnsavedChanges();
+    }, 0);
 
     const levelInput = document.getElementById('level');
     const xpNeededInput = document.getElementById('xp-needed');
