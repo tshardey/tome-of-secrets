@@ -3,11 +3,12 @@
  */
 import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms, curseTable, genreQuests } from '../assets/js/character-sheet/data.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 
 // We will create the main character sheet script in a later step.
 // For now, we can import it, assuming it will exist at this path.
 import { initializeCharacterSheet } from '../assets/js/character-sheet.js';
-import { characterState } from '../assets/js/character-sheet/state.js';
+import { characterState, loadState, saveState } from '../assets/js/character-sheet/state.js';
 
 describe('Character Sheet', () => {
   beforeEach(() => {
@@ -1481,6 +1482,160 @@ describe('Character Sheet', () => {
       // Should only get ink drops from active buffs: 10 + 8 = 18
       const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
       expect(finalInkDrops).toBe(initialInkDrops + 18);
+    });
+  });
+
+  describe('Currency Unsaved Changes Warning', () => {
+    beforeEach(() => {
+      // Set up saved currency values
+      const formData = {
+        inkDrops: '100',
+        paperScraps: '50'
+      };
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+      
+      // Reload state to sync with saved values
+      const form = document.getElementById('character-sheet');
+      if (form) {
+        loadState(form);
+        // Wait for async operations to complete
+        return new Promise(resolve => setTimeout(resolve, 10));
+      }
+    });
+
+    it('should not show warning when currency matches saved values', async () => {
+      // Wait a bit for the check to run after loadState
+      await new Promise(resolve => setTimeout(resolve, 20));
+      
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      expect(warningEl).toBeTruthy();
+      expect(warningEl.style.display).toBe('none');
+    });
+    
+    it('should not show warning on initial page load with empty values', async () => {
+      // Clear localStorage to simulate fresh page load
+      localStorage.removeItem(STORAGE_KEYS.CHARACTER_SHEET_FORM);
+      
+      // Reload the page HTML and reinitialize
+      loadHTML('character-sheet.md');
+      initializeCharacterSheet();
+      
+      // Wait for initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      const inkDropsEl = document.getElementById('inkDrops');
+      const paperScrapsEl = document.getElementById('paperScraps');
+      
+      expect(warningEl).toBeTruthy();
+      // Warning should not show if both form and saved values are empty
+      expect(warningEl.style.display).toBe('none');
+    });
+
+    it('should show warning when ink drops are modified', () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      
+      expect(warningEl).toBeTruthy();
+      expect(warningEl.style.display).toBe('none');
+      
+      // Modify ink drops
+      inkDropsEl.value = '150';
+      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      // Warning should appear
+      expect(warningEl.style.display).toBe('block');
+      expect(warningEl.textContent).toContain('unsaved changes');
+      expect(warningEl.textContent).toContain('Shopping');
+    });
+
+    it('should show warning when paper scraps are modified', () => {
+      const paperScrapsEl = document.getElementById('paperScraps');
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      
+      expect(warningEl).toBeTruthy();
+      expect(warningEl.style.display).toBe('none');
+      
+      // Modify paper scraps
+      paperScrapsEl.value = '75';
+      paperScrapsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      // Warning should appear
+      expect(warningEl.style.display).toBe('block');
+    });
+
+    it('should show warning when both currency fields are modified', () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const paperScrapsEl = document.getElementById('paperScraps');
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      
+      // Modify both
+      inkDropsEl.value = '200';
+      paperScrapsEl.value = '100';
+      inkDropsEl.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      // Warning should appear
+      expect(warningEl.style.display).toBe('block');
+    });
+
+    it('should hide warning when currency is saved', () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      const form = document.getElementById('character-sheet');
+      
+      // Modify currency
+      inkDropsEl.value = '150';
+      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(warningEl.style.display).toBe('block');
+      
+      // Save form - this will trigger saveState which updates localStorage
+      saveState(form);
+      
+      // The warning check should run after save (it's called in the submit handler)
+      // Since we're testing the logic directly, we need to manually trigger the check
+      // The actual implementation calls checkCurrencyUnsavedChanges after saveState
+      // For testing, we'll manually check the condition
+      const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+      const currentInkDrops = inkDropsEl.value || '';
+      const savedInkDrops = savedData.inkDrops || '';
+      
+      // After save, values should match
+      expect(currentInkDrops).toBe(savedInkDrops);
+      
+      // Trigger the check by dispatching another input event
+      // This simulates what happens after save
+      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      // Warning should be hidden now
+      expect(warningEl.style.display).toBe('none');
+    });
+
+    it('should hide warning when currency is changed back to saved value', () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      
+      // Modify currency
+      inkDropsEl.value = '150';
+      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(warningEl.style.display).toBe('block');
+      
+      // Change back to saved value
+      inkDropsEl.value = '100';
+      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      // Warning should be hidden
+      expect(warningEl.style.display).toBe('none');
+    });
+
+    it('should update warning on change event as well as input event', () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const warningEl = document.getElementById('currency-unsaved-warning');
+      
+      // Modify using change event
+      inkDropsEl.value = '150';
+      inkDropsEl.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      expect(warningEl.style.display).toBe('block');
     });
   });
 });

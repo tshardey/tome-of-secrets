@@ -37,7 +37,8 @@ const JSON_EXPORTS = {
     'curseTableDetailed.json': 'curseTableDetailed',
     'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards',
     'temporaryBuffs.json': 'temporaryBuffs',
-    'levelRewards.json': 'levelRewards'
+    'levelRewards.json': 'levelRewards',
+    'shoppingOptions.json': 'shoppingOptions'
 };
 
 function generateExports() {

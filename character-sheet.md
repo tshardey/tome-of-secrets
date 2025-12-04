@@ -85,6 +85,11 @@ title: Keeper's Character Sheet
                     <input type="number" id="smp" />
                 </div>
             </li>
+            <li id="currency-unsaved-warning" class="currency-warning" style="display: none;">
+                <div class="warning-message">
+                    <strong>⚠️ Warning:</strong> You have unsaved changes to your currency. Please save your character sheet before redeeming items on the <a href="{{ site.baseurl }}/shopping.html">Shopping</a> page to ensure your changes are preserved.
+                </div>
+            </li>
         </ul>
     </div>
 
