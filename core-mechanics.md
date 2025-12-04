@@ -66,3 +66,24 @@ There are two primary currencies that define your progress, plus a third for cha
 
 ## Keeper's Loadout
 As a Keeper, you have three starting item slots: one Wearable, one Non-Wearable, and one Familiar. You can only equip one item per slot at a time. The Familiar slot is filled when you befriend a familiar in a dungeon. As you level up, you can unlock more item slots. This loadout lets you tailor your approach each month, adding strategy to how you tackle quests and challenges.
+
+## The Keeper's Journal (Optional Rule)
+
+While The Tome of Secrets can be played as a simple tracker of reading prompts, it shines brightest as a Solo Journaling Game.
+
+### What is a Journaling Game?
+
+A journaling game is a role-playing experience played alone, where the "gameplay" consists of writing entries in a diary or logbook from the perspective of your character. Instead of just ticking a checkbox that says "Quest Complete," you write a few sentences (or paragraphs) describing how your Keeper completed that quest.
+
+**Earn Paper Scraps:** Completing a journal entry for any quest grants you +5 Paper Scraps.
+
+### How to Connect Your Reads
+
+The core creative challenge is tying the Real World Book you read to the In-Game Quest you faced. This connection doesn't always have to be literal. The Grand Library is a place where stories bleed into reality.
+
+Consider these different ways your book might manifest in your journal:
+
+* **The Literal Object:** You physically pull the book from your satchel. Key items referenced in the book might show up in your library.
+* **The Environmental Echo:** The setting of your book overlays the Library. Reading a snowy thriller? The room you enter is inexplicably freezing, covered in frost, or snowing indoors.
+* **The Manifestation:** Elements of the book come to life. A character from the book appears as a ghost or NPC. A mural on the wall depicts the book's plot as if it were ancient history.
+* **The Vibe:** The tone of the book dictates the mood. A horror novel might make the shadows in the Library lengthen and whisper.
