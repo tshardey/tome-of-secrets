@@ -93,14 +93,16 @@
     background: #a0522d;
 }
 
-.genre-selection-controls {
+.genre-selection-controls,
+.dice-selection-controls {
     display: flex;
     align-items: center;
     gap: 10px;
     margin: 15px 0;
 }
 
-.genre-selection-controls select {
+.genre-selection-controls select,
+.dice-selection-controls select {
     flex: 1;
     max-width: 300px;
     background-color: #2d2d2d;
@@ -119,16 +121,24 @@
     padding-right: 32px;
 }
 
-.genre-selection-controls select:focus {
+.genre-selection-controls select:focus,
+.dice-selection-controls select:focus {
     outline: none;
     border-color: #b89f62;
     box-shadow: 0 0 0 2px rgba(184, 159, 98, 0.2);
 }
 
-.genre-selection-controls select option {
+.genre-selection-controls select option,
+.dice-selection-controls select option {
     background-color: #2d2d2d;
     color: #d4c4a8;
     padding: 8px;
+}
+
+.genre-selection-controls select option:disabled {
+    color: #666;
+    opacity: 0.5;
+    font-style: italic;
 }
 
 .genre-selection-controls button:disabled {

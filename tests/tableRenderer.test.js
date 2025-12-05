@@ -180,19 +180,27 @@ describe('Table Renderer', () => {
             expect(html).toContain('The Grand Key');
         });
 
-        test('renderGenreQuestsTable should render all 12 available genres', () => {
+        test('renderGenreQuestsTable should render all available genres', () => {
             const html = renderGenreQuestsTable();
             
-            // Original 6 genres
+            // Check for some key genres (updated names)
             expect(html).toContain('Historical Fiction');
             expect(html).toContain('Fantasy');
             expect(html).toContain('Romantasy');
             expect(html).toContain('Sci-Fi');
-            expect(html).toContain('Thriller');
+            expect(html).toContain('Thriller/Mystery'); // Updated name
             expect(html).toContain('Classic');
             
-            // New 6 genres
-            expect(html).toContain('Literary Fiction');
+            // Check for renamed genres
+            expect(html).toContain('Fiction'); // Was "Literary Fiction"
+            expect(html).toContain('Comedy'); // Was "LitRPG"
+            
+            // Check for new genres
+            expect(html).toContain('Comics/Manga/Graphic Novels');
+            expect(html).toContain('History');
+            expect(html).toContain('Philosophy');
+            
+            // Check for other existing genres
             expect(html).toContain('Speculative Fiction');
             expect(html).toContain('Romance');
             expect(html).toContain('Memoirs/Biographies');
