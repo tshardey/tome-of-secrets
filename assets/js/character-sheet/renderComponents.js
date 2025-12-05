@@ -5,7 +5,7 @@
  * All user-generated content is sanitized automatically.
  */
 
-import { escapeHtml } from '../utils/sanitize.js';
+import { escapeHtml, decodeHtmlEntities } from '../utils/sanitize.js';
 import { createElement } from '../utils/domHelpers.js';
 import * as data from './data.js';
 
@@ -22,7 +22,10 @@ export function renderQuestRow(quest, index, listType = 'active') {
     
     // Format buffs to remove prefixes for display
     const buffs = quest.buffs && quest.buffs.length > 0 
-        ? quest.buffs.map(b => escapeHtml(b.replace(/^\[(Buff|Item|Background)\] /, ''))).join(', ') 
+        ? quest.buffs.map(b => {
+            const decoded = decodeHtmlEntities(b.replace(/^\[(Buff|Item|Background)\] /, ''));
+            return escapeHtml(decoded);
+        }).join(', ') 
         : '-';
     
     // Add indicator if quest will receive buffs (for active) or was modified (for completed)
@@ -30,28 +33,36 @@ export function renderQuestRow(quest, index, listType = 'active') {
     if (listType === 'active' && quest.buffs && quest.buffs.length > 0) {
         rewardIndicator = ' <span style="color: #b89f62;">*</span>';
     } else if (listType === 'completed' && rewards.modifiedBy && rewards.modifiedBy.length > 0) {
-        const modifiedBy = rewards.modifiedBy.map(m => escapeHtml(m)).join(', ');
+        const modifiedBy = rewards.modifiedBy.map(m => {
+            const decoded = decodeHtmlEntities(m);
+            return escapeHtml(decoded);
+        }).join(', ');
         rewardIndicator = ` <span style="color: #b89f62;" title="Modified by: ${modifiedBy}">✓</span>`;
     }
     
     // For Extra Credit, don't show prompt
-    const promptDisplay = quest.type === '⭐ Extra Credit' ? '-' : escapeHtml(quest.prompt || '');
+    // Decode HTML entities first, then escape for innerHTML safety
+    const rawPrompt = quest.type === '⭐ Extra Credit' ? '-' : (quest.prompt || '');
+    const promptDisplay = rawPrompt === '-' ? '-' : escapeHtml(decodeHtmlEntities(rawPrompt));
     
-    // Build cells
+    // Build cells - decode HTML entities first, then escape for innerHTML
     const cells = [
-        escapeHtml(quest.month || ''),
-        escapeHtml(quest.year || ''),
-        escapeHtml(quest.type || ''),
+        escapeHtml(decodeHtmlEntities(quest.month || '')),
+        escapeHtml(decodeHtmlEntities(quest.year || '')),
+        escapeHtml(decodeHtmlEntities(quest.type || '')),
         promptDisplay,
-        escapeHtml(quest.book || ''),
+        escapeHtml(decodeHtmlEntities(quest.book || '')),
         rewards.xp > 0 ? `+${rewards.xp}${rewardIndicator}` : '-',
         rewards.paperScraps > 0 ? `+${rewards.paperScraps}${rewardIndicator}` : '-',
         rewards.inkDrops > 0 ? `+${rewards.inkDrops}${rewardIndicator}` : '-',
         rewards.items && rewards.items.length > 0 
-            ? rewards.items.map(item => escapeHtml(item)).join(', ') 
+            ? rewards.items.map(item => {
+                const decoded = decodeHtmlEntities(item);
+                return escapeHtml(decoded);
+            }).join(', ') 
             : '-',
         buffs,
-        escapeHtml(quest.notes || '')
+        escapeHtml(decodeHtmlEntities(quest.notes || ''))
     ];
     
     cells.forEach(cellContent => {
@@ -331,7 +342,10 @@ export function renderQuestCard(quest, index, listType = 'active') {
     
     // Format buffs to remove prefixes for display
     const buffs = quest.buffs && quest.buffs.length > 0 
-        ? quest.buffs.map(b => escapeHtml(b.replace(/^\[(Buff|Item|Background)\] /, ''))).join(', ') 
+        ? quest.buffs.map(b => {
+            const decoded = decodeHtmlEntities(b.replace(/^\[(Buff|Item|Background)\] /, ''));
+            return escapeHtml(decoded);
+        }).join(', ') 
         : null;
     
     // Add indicator if quest will receive buffs (for active) or was modified (for completed)
@@ -339,12 +353,17 @@ export function renderQuestCard(quest, index, listType = 'active') {
     if (listType === 'active' && quest.buffs && quest.buffs.length > 0) {
         rewardIndicator = ' <span class="reward-indicator" title="Will receive buffs">*</span>';
     } else if (listType === 'completed' && rewards.modifiedBy && rewards.modifiedBy.length > 0) {
-        const modifiedBy = rewards.modifiedBy.map(m => escapeHtml(m)).join(', ');
+        const modifiedBy = rewards.modifiedBy.map(m => {
+            const decoded = decodeHtmlEntities(m);
+            return escapeHtml(decoded);
+        }).join(', ');
         rewardIndicator = ` <span class="reward-indicator" title="Modified by: ${modifiedBy}">✓</span>`;
     }
     
     // For Extra Credit, don't show prompt
-    const promptDisplay = quest.type === '⭐ Extra Credit' ? null : escapeHtml(quest.prompt || '');
+    // Decode HTML entities first (in case data was previously encoded)
+    const rawPrompt = quest.type === '⭐ Extra Credit' ? null : (quest.prompt || '');
+    const promptDisplay = rawPrompt ? decodeHtmlEntities(rawPrompt) : null;
     
     // Get encounter action (befriend/defeat) for dungeon encounters
     const encounterAction = getEncounterAction(quest);
@@ -355,11 +374,11 @@ export function renderQuestCard(quest, index, listType = 'active') {
     // Quest type and date
     const meta = createElement('div', { class: 'quest-card-meta' });
     const typeBadge = createElement('span', { class: 'quest-type-badge' });
-    typeBadge.textContent = escapeHtml(quest.type || '');
+    typeBadge.textContent = decodeHtmlEntities(quest.type || '');
     meta.appendChild(typeBadge);
     
     const date = createElement('span', { class: 'quest-date' });
-    date.textContent = `${escapeHtml(quest.month || '')} ${escapeHtml(quest.year || '')}`;
+    date.textContent = `${decodeHtmlEntities(quest.month || '')} ${decodeHtmlEntities(quest.year || '')}`;
     meta.appendChild(date);
     
     // Encounter action badge
@@ -378,12 +397,19 @@ export function renderQuestCard(quest, index, listType = 'active') {
     if (quest.book) {
         const bookSection = createElement('div', { class: 'quest-card-book' });
         const bookTitle = createElement('h3', { class: 'quest-book-title' });
-        bookTitle.textContent = escapeHtml(quest.book);
+        // Decode HTML entities first (in case data was previously encoded), then escape for safety
+        const decodedBook = decodeHtmlEntities(quest.book);
+        bookTitle.textContent = decodedBook;
         bookSection.appendChild(bookTitle);
         
         // Always show author section, even if empty (for consistent layout)
         const bookAuthor = createElement('p', { class: 'quest-book-author' });
-        bookAuthor.textContent = quest.bookAuthor ? escapeHtml(quest.bookAuthor) : '';
+        if (quest.bookAuthor) {
+            const decodedAuthor = decodeHtmlEntities(quest.bookAuthor);
+            bookAuthor.textContent = decodedAuthor;
+        } else {
+            bookAuthor.textContent = '';
+        }
         bookSection.appendChild(bookAuthor);
         
         card.appendChild(bookSection);
@@ -467,7 +493,9 @@ export function renderQuestCard(quest, index, listType = 'active') {
     // Notes section
     if (quest.notes) {
         const notesSection = createElement('div', { class: 'quest-card-notes' });
-        notesSection.innerHTML = `<strong>Notes:</strong> ${escapeHtml(quest.notes)}`;
+        // Decode HTML entities first, then escape for safety
+        const decodedNotes = decodeHtmlEntities(quest.notes);
+        notesSection.innerHTML = `<strong>Notes:</strong> ${escapeHtml(decodedNotes)}`;
         card.appendChild(notesSection);
     }
     

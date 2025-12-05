@@ -470,8 +470,6 @@ describe('Character Sheet', () => {
 
   describe('Monthly Tracker', () => {
     it('should add a new side quest to the active table', () => {
-      const activeAssignmentsBody = document.getElementById('active-assignments-body');
-
       // Fill out the quest form
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
@@ -488,11 +486,14 @@ describe('Character Sheet', () => {
       // Click the "Add Quest" button
       document.getElementById('add-quest-button').click();
 
-      // Assert that the new quest appears in the active assignments table
-      const firstRow = activeAssignmentsBody.querySelector('tr');
-      expect(firstRow.textContent).toContain('October');
-      expect(firstRow.textContent).toContain('The Test Book');
-      expect(firstRow.textContent).toContain('The Arcane Grimoire');
+      // Assert that the new quest appears in the active assignments cards
+      const cardsContainer = document.querySelector('#active-assignments-container .quest-cards-container');
+      expect(cardsContainer).toBeTruthy();
+      const firstCard = cardsContainer.querySelector('.quest-card');
+      expect(firstCard).toBeTruthy();
+      expect(firstCard.textContent).toContain('October');
+      expect(firstCard.textContent).toContain('The Test Book');
+      expect(firstCard.textContent).toContain('The Arcane Grimoire');
     });
 
     it('should move a side quest from active to completed', () => {
@@ -512,11 +513,15 @@ describe('Character Sheet', () => {
       document.getElementById('add-quest-button').click();
 
       // Click the "Complete" button on the active quest
-      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+      const completeBtnMove = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
+      expect(completeBtnMove).toBeTruthy();
+      completeBtnMove.click();
 
-      // Assert that the quest is now in the completed table and the active table is empty
-      expect(document.getElementById('completed-quests-body').textContent).toContain('A Finished Story');
-      expect(document.getElementById('active-assignments-body').innerHTML).toBe('');
+      // Assert that the quest is now in the completed cards and the active cards are empty
+      const completedContainer = document.querySelector('#completed-quests-container .quest-cards-container');
+      expect(completedContainer.textContent).toContain('A Finished Story');
+      const activeContainer = document.querySelector('#active-assignments-container .quest-cards-container');
+      expect(activeContainer.children.length).toBe(0);
     });
 
     it('should add rewards property to quests when created', () => {
@@ -562,7 +567,9 @@ describe('Character Sheet', () => {
       const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
 
       // Complete the quest
-      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+      const completeBtnCurrency = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
+      expect(completeBtnCurrency).toBeTruthy();
+      completeBtnCurrency.click();
 
       // Check that currency was updated
       const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
@@ -586,7 +593,9 @@ describe('Character Sheet', () => {
       document.getElementById('add-quest-button').click();
 
       // Complete the quest
-      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+      const completeBtn1 = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
+      expect(completeBtn1).toBeTruthy();
+      completeBtn1.click();
 
       // Check books completed counter
       const booksCompletedInput = document.getElementById('books-completed-month');
@@ -604,14 +613,17 @@ describe('Character Sheet', () => {
       document.getElementById('add-quest-button').click();
 
       // Complete the second quest
-      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+      const completeBtn2 = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
+      expect(completeBtn2).toBeTruthy();
+      completeBtn2.click();
 
       // Books completed should still be 1 (same book)
       expect(parseInt(booksCompletedInput.value, 10)).toBe(1);
     });
 
     it('should add two quests for a dungeon crawl with an encounter', () => {
-      const activeAssignmentsBody = document.getElementById('active-assignments-body');
+      const activeAssignmentsContainer = document.getElementById('active-assignments-container');
+      const activeAssignmentsBody = activeAssignmentsContainer?.querySelector('.quest-cards-container');
 
       // Fill out the quest form for a dungeon crawl
       document.getElementById('quest-month').value = 'November';
@@ -628,15 +640,13 @@ describe('Character Sheet', () => {
 
       document.getElementById('add-quest-button').click();
 
-      // Assert that two rows were added to the active quests table
-      expect(activeAssignmentsBody.querySelectorAll('tr').length).toBe(2);
+      // Assert that two cards were added to the active quests container
+      expect(activeAssignmentsBody.querySelectorAll('.quest-card').length).toBe(2);
       expect(activeAssignmentsBody.textContent).toContain(dungeonRooms['1'].challenge);
       expect(activeAssignmentsBody.textContent).toContain("Librarian's Spirit");
     });
 
     it('should add only ONE quest for a dungeon room without encounters', () => {
-      const activeAssignmentsBody = document.getElementById('active-assignments-body');
-
       // Fill out the quest form for a dungeon crawl
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
@@ -652,8 +662,11 @@ describe('Character Sheet', () => {
       // Click add quest
       document.getElementById('add-quest-button').click();
 
-      // Assert that only ONE row was added (room only, no encounter)
-      expect(activeAssignmentsBody.querySelectorAll('tr').length).toBe(1);
+      // Assert that only ONE card was added (room only, no encounter)
+      const activeAssignmentsContainer = document.getElementById('active-assignments-container');
+      const activeAssignmentsBody = activeAssignmentsContainer?.querySelector('.quest-cards-container');
+      expect(activeAssignmentsBody).toBeTruthy();
+      expect(activeAssignmentsBody.querySelectorAll('.quest-card').length).toBe(1);
       expect(activeAssignmentsBody.textContent).toContain("The Author's Study");
       
       // Verify the quest was added properly
@@ -806,7 +819,9 @@ describe('Character Sheet', () => {
       const initialXP = parseInt(xpInput.value, 10) || 0;
 
       // Complete the quest
-      document.querySelector('#active-assignments-body .complete-quest-btn').click();
+      const completeBtnExtra = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
+      expect(completeBtnExtra).toBeTruthy();
+      completeBtnExtra.click();
 
       // Check that only paper scraps were updated (+10)
       const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
@@ -872,7 +887,9 @@ describe('Character Sheet', () => {
         document.getElementById('add-quest-button').click();
 
         // 2. Click the "Edit" button for the room quest (the first one)
-        document.querySelector('#active-assignments-body .edit-quest-btn[data-index="0"]').click();
+        const editBtn = document.querySelector('#active-assignments-container .quest-card .edit-quest-btn[data-index="0"]');
+        expect(editBtn).toBeTruthy();
+        editBtn.click();
 
         // 3. Change the book title
         document.getElementById('new-quest-book').value = 'Updated Room Book';
@@ -904,7 +921,10 @@ describe('Character Sheet', () => {
         document.getElementById('add-quest-button').click();
 
         // 2. Click the "Edit" button for the encounter quest (the second one)
-        document.querySelector('#active-assignments-body .edit-quest-btn[data-index="1"]').click();
+        const editBtns = document.querySelectorAll('#active-assignments-container .quest-card .edit-quest-btn');
+        const encounterEditBtn = Array.from(editBtns).find(btn => btn.dataset.index === '1');
+        expect(encounterEditBtn).toBeTruthy();
+        encounterEditBtn.click();
 
         // 3. Change the notes
         document.getElementById('new-quest-notes').value = 'Encounter notes added.';
