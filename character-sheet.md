@@ -313,6 +313,9 @@ title: Keeper's Character Sheet
             </div>
             <div class="form-row">
                 <input type="text" id="new-quest-book" placeholder="Book Title">
+                <input type="text" id="new-quest-book-author" placeholder="Book Author (optional)">
+            </div>
+            <div class="form-row">
                 <input type="text" id="new-quest-notes" placeholder="Notes (optional)">
             </div>
             <div class="form-row">
@@ -329,31 +332,7 @@ title: Keeper's Character Sheet
 
         <div id="active-assignments-container">
             <h3 id="active-summary">Active Book Assignments</h3>
-            <table class="tracker-table">
-                <thead>
-                    <tr>
-                        <th class="col-month">Month</th>
-                        <th class="col-year">Year</th>
-                        <th class="col-quest-type">Quest Type</th>
-                        <th class="col-prompt">Prompt</th>
-                        <th class="col-book-title">Book Title</th>
-                        <th colspan="4" class="col-rewards-header">Rewards</th>
-                        <th class="col-buffs">Buffs/Items</th>
-                        <th class="col-notes">Notes</th>
-                        <th class="col-action no-print">Action</th>
-                    </tr>
-                    <tr class="rewards-subheader">
-                        <th colspan="5"></th>
-                        <th class="col-xp">XP</th>
-                        <th class="col-paper-scraps">📄</th>
-                        <th class="col-ink-drops">💧</th>
-                        <th class="col-items">Items</th>
-                        <th colspan="3"></th>
-                    </tr>
-                </thead>
-                <tbody id="active-assignments-body">
-</tbody>
-            </table>
+            <div class="quest-cards-container"></div>
         </div>
     </div>
 </div>
@@ -367,60 +346,12 @@ title: Keeper's Character Sheet
 
         <div id="completed-quests-container">
             <h3 id="completed-summary">Completed Quests</h3>
-            <table class="tracker-table">
-                <thead>
-                    <tr>
-                        <th class="col-month">Month</th>
-                        <th class="col-year">Year</th>
-                        <th class="col-quest-type">Quest Type</th>
-                        <th class="col-prompt">Prompt</th>
-                        <th class="col-book-title">Book Title</th>
-                        <th colspan="4" class="col-rewards-header">Rewards</th>
-                        <th class="col-buffs">Buffs/Items</th>
-                        <th class="col-notes">Notes</th>
-                        <th class="col-action no-print">Action</th>
-                    </tr>
-                    <tr class="rewards-subheader">
-                        <th colspan="5"></th>
-                        <th class="col-xp">XP</th>
-                        <th class="col-paper-scraps">📄</th>
-                        <th class="col-ink-drops">💧</th>
-                        <th class="col-items">Items</th>
-                        <th colspan="3"></th>
-                    </tr>
-                </thead>
-                <tbody id="completed-quests-body">
-                    </tbody>
-            </table>
+            <div class="quest-cards-container"></div>
         </div>
 
         <div id="discarded-quests-container">
             <h3 id="discarded-summary">Discarded Quests</h3>
-            <table class="tracker-table">
-                <thead>
-                    <tr>
-                        <th class="col-month">Month</th>
-                        <th class="col-year">Year</th>
-                        <th class="col-quest-type">Quest Type</th>
-                        <th class="col-prompt">Prompt</th>
-                        <th class="col-book-title">Book Title</th>
-                        <th colspan="4" class="col-rewards-header">Rewards</th>
-                        <th class="col-buffs">Buffs/Items</th>
-                        <th class="col-notes">Notes</th>
-                        <th class="col-action no-print">Action</th>
-                    </tr>
-                    <tr class="rewards-subheader">
-                        <th colspan="5"></th>
-                        <th class="col-xp">XP</th>
-                        <th class="col-paper-scraps">📄</th>
-                        <th class="col-ink-drops">💧</th>
-                        <th class="col-items">Items</th>
-                        <th colspan="3"></th>
-                    </tr>
-                </thead>
-                <tbody id="discarded-quests-body">
-                    </tbody>
-            </table>
+            <div class="quest-cards-container"></div>
         </div>
     </div>
 </div>

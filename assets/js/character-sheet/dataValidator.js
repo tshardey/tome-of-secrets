@@ -63,13 +63,16 @@ function validateQuest(quest, context = 'quest') {
         type: typeof quest.type === 'string' ? quest.type : '',
         prompt: typeof quest.prompt === 'string' ? quest.prompt : '',
         book: typeof quest.book === 'string' ? quest.book : '',
+        bookAuthor: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
         month: typeof quest.month === 'string' ? quest.month : '',
         year: typeof quest.year === 'string' ? quest.year : '',
         status: typeof quest.status === 'string' ? quest.status : 'active',
         notes: typeof quest.notes === 'string' ? quest.notes : '',
         buffs: Array.isArray(quest.buffs) ? quest.buffs.filter(b => typeof b === 'string') : [],
         rewards: validateRewards(quest.rewards, `${context}.rewards`),
-        isEncounter: typeof quest.isEncounter === 'boolean' ? quest.isEncounter : false
+        isEncounter: typeof quest.isEncounter === 'boolean' ? quest.isEncounter : false,
+        roomNumber: quest.roomNumber || null,
+        encounterName: typeof quest.encounterName === 'string' ? quest.encounterName : null
     };
 
     // Warn about missing critical fields but don't fail

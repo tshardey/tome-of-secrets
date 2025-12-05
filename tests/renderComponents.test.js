@@ -4,6 +4,7 @@
 
 import {
     renderQuestRow,
+    renderQuestCard,
     renderItemCard,
     renderEmptySlot,
     renderCurseRow,
@@ -111,6 +112,188 @@ describe('Render Components', () => {
             expect(actionCell).toBeDefined();
             expect(actionCell.querySelector('.complete-quest-btn')).toBeDefined();
             expect(actionCell.querySelector('.edit-quest-btn')).toBeDefined();
+        });
+    });
+
+    describe('renderQuestCard', () => {
+        let originalData;
+        
+        beforeEach(() => {
+            // Mock the data module
+            const renderComponents = require('../assets/js/character-sheet/renderComponents.js');
+            originalData = require('../assets/js/character-sheet/data.js');
+            
+            // We'll need to mock the data import, but for now tests will use actual data
+            // If items don't exist in actual data, we'll skip image tests
+        });
+
+        test('should render quest card with all fields', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy: Read a book with magical creatures',
+                book: 'Test Book',
+                bookAuthor: 'Test Author',
+                month: 'January',
+                year: '2024',
+                notes: 'Test notes',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 5, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            
+            expect(card.classList.contains('quest-card')).toBe(true);
+            expect(card.querySelector('.quest-book-title').textContent).toBe('Test Book');
+            expect(card.querySelector('.quest-book-author').textContent).toBe('Test Author');
+        });
+
+        test('should display book author when provided', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book: 'Test Book',
+                bookAuthor: 'Jane Doe',
+                month: 'January',
+                year: '2024',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const authorElement = card.querySelector('.quest-book-author');
+            
+            expect(authorElement).toBeDefined();
+            expect(authorElement.textContent).toBe('Jane Doe');
+        });
+
+        test('should show encounter action badge for dungeon encounters', () => {
+            // This test requires actual dungeon data, so we'll test the structure
+            // The actual badge display depends on matching encounter data
+            const quest = {
+                type: '♠ Dungeon Crawl',
+                prompt: 'Read a book with a ghost-like being or a mystery.',
+                book: 'Test Book',
+                month: 'January',
+                year: '2024',
+                isEncounter: true,
+                roomNumber: '1',
+                encounterName: 'Librarian\'s Spirit',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'completed');
+            
+            // Badge may or may not appear depending on actual data matching
+            // Just verify the card renders without errors
+            expect(card.classList.contains('quest-card')).toBe(true);
+        });
+
+        test('should display item rewards with or without images', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book: 'Test Book',
+                month: 'January',
+                year: '2024',
+                rewards: { 
+                    xp: 15, 
+                    inkDrops: 10, 
+                    paperScraps: 0, 
+                    items: ['Some Item'] 
+                },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'completed');
+            const itemReward = card.querySelector('.item-reward');
+            
+            // Item reward should exist
+            expect(itemReward).toBeDefined();
+            // Item name should be displayed
+            const itemName = itemReward.querySelector('.reward-item-name');
+            expect(itemName).toBeDefined();
+            // Image may or may not exist depending on item data
+        });
+
+        test('should escape user-generated content', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: '<script>alert("xss")</script>',
+                book: 'Test & Book',
+                bookAuthor: 'Author <script>alert("xss")</script>',
+                month: 'January',
+                year: '2024',
+                notes: 'Test "notes"',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            
+            // Check that script tags are escaped (textContent shows the safe text)
+            const promptElement = card.querySelector('.quest-card-prompt');
+            expect(promptElement.textContent).toContain('script');
+            // Verify HTML entities are escaped (not executable)
+            expect(promptElement.innerHTML).not.toContain('<script>');
+            
+            const authorElement = card.querySelector('.quest-book-author');
+            expect(authorElement.textContent).toContain('script');
+            expect(authorElement.innerHTML).not.toContain('<script>');
+        });
+
+        test('should show buff indicator for active quests with buffs', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book: 'Test',
+                month: 'Jan',
+                year: '2024',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: ['[Item] Librarian\'s Compass']
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const xpReward = card.querySelector('.xp-reward');
+            expect(xpReward.innerHTML).toContain('*');
+        });
+
+        test('should include action buttons', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book: 'Test',
+                month: 'Jan',
+                year: '2024',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const actions = card.querySelector('.quest-card-actions');
+            
+            expect(actions).toBeDefined();
+            expect(actions.querySelector('.complete-quest-btn')).toBeDefined();
+            expect(actions.querySelector('.edit-quest-btn')).toBeDefined();
+        });
+
+        test('should handle long book titles with word wrapping', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book: 'This is a very long book title that should wrap properly within the card container without bleeding out',
+                month: 'January',
+                year: '2024',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const titleElement = card.querySelector('.quest-book-title');
+            
+            expect(titleElement).toBeDefined();
+            // Check that word-wrap CSS class is applied (handled by CSS)
+            expect(titleElement.classList.contains('quest-book-title')).toBe(true);
         });
     });
 

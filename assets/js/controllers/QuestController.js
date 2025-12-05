@@ -210,10 +210,12 @@ export class QuestController extends BaseController {
         // Clear form fields
         const promptInput = document.getElementById('new-quest-prompt');
         const bookInput = document.getElementById('new-quest-book');
+        const bookAuthorInput = document.getElementById('new-quest-book-author');
         const notesInput = document.getElementById('new-quest-notes');
         
         if (promptInput) promptInput.value = '';
         if (bookInput) bookInput.value = '';
+        if (bookAuthorInput) bookAuthorInput.value = '';
         if (notesInput) notesInput.value = '';
 
         if (this.dungeonRoomSelect) this.dungeonRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
@@ -253,6 +255,7 @@ export class QuestController extends BaseController {
 
         const type = this.questTypeSelect.value;
         const book = document.getElementById('new-quest-book')?.value || '';
+        const bookAuthor = document.getElementById('new-quest-book-author')?.value || '';
         const notes = document.getElementById('new-quest-notes')?.value || '';
         const month = document.getElementById('quest-month')?.value || '';
         const year = document.getElementById('quest-year')?.value || '';
@@ -263,14 +266,14 @@ export class QuestController extends BaseController {
 
         if (this.editingQuestInfo) {
             // Update existing quest
-            this.handleUpdateQuest(type, month, year, book, notes, selectedBuffs);
+            this.handleUpdateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs);
         } else {
             // Add new quest
-            this.handleCreateQuest(type, month, year, book, notes, selectedBuffs);
+            this.handleCreateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs);
         }
     }
 
-    handleUpdateQuest(type, month, year, book, notes, selectedBuffs) {
+    handleUpdateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
@@ -297,7 +300,7 @@ export class QuestController extends BaseController {
         stateAdapter.updateQuest(
             this.resolveQuestListKey(this.editingQuestInfo.list),
             this.editingQuestInfo.index,
-            { month, year, type, prompt, book, notes, buffs: selectedBuffs }
+            { month, year, type, prompt, book, bookAuthor, notes, buffs: selectedBuffs }
         );
 
         // Re-render the appropriate list
@@ -315,7 +318,7 @@ export class QuestController extends BaseController {
         this.resetQuestForm();
     }
 
-    handleCreateQuest(type, month, year, book, notes, selectedBuffs) {
+    handleCreateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
@@ -325,6 +328,7 @@ export class QuestController extends BaseController {
                 monthInput: document.getElementById('quest-month'),
                 yearInput: document.getElementById('quest-year'),
                 bookInput: document.getElementById('new-quest-book'),
+                bookAuthorInput: document.getElementById('new-quest-book-author'),
                 notesInput: document.getElementById('new-quest-notes'),
                 statusSelect: document.getElementById('new-quest-status'),
                 buffsSelect: document.getElementById('quest-buffs-select'),
@@ -605,6 +609,7 @@ export class QuestController extends BaseController {
         const typeSelect = document.getElementById('new-quest-type');
         const promptInput = document.getElementById('new-quest-prompt');
         const bookInput = document.getElementById('new-quest-book');
+        const bookAuthorInput = document.getElementById('new-quest-book-author');
         const notesInput = document.getElementById('new-quest-notes');
 
         if (monthInput) monthInput.value = quest.month || '';
@@ -612,6 +617,7 @@ export class QuestController extends BaseController {
         if (typeSelect) typeSelect.value = quest.type || '';
         if (promptInput) promptInput.value = quest.prompt || '';
         if (bookInput) bookInput.value = quest.book || '';
+        if (bookAuthorInput) bookAuthorInput.value = quest.bookAuthor || '';
         if (notesInput) notesInput.value = quest.notes || '';
 
         // Populate buffs selection

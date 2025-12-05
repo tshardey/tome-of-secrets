@@ -27,6 +27,7 @@ export class BaseQuestHandler {
             month: this.formElements.monthInput.value,
             year: this.formElements.yearInput.value,
             book: this.formElements.bookInput.value,
+            bookAuthor: this.formElements.bookAuthorInput ? this.formElements.bookAuthorInput.value : '',
             notes: this.formElements.notesInput.value,
             status: this.formElements.statusSelect.value,
             selectedBuffs: Array.from(this.formElements.buffsSelect.selectedOptions).map(o => o.value),

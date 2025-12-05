@@ -7,7 +7,8 @@ import { clearElement, appendHTML } from '../utils/domHelpers.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from './storageKeys.js';
 import { 
-    renderQuestRow, 
+    renderQuestRow,
+    renderQuestCard, 
     renderItemCard, 
     renderEmptySlot, 
     renderCurseRow, 
@@ -299,39 +300,57 @@ export function updateBuffTotal(inputElement) {
 }
 
 export function renderActiveAssignments() {
-    const tbody = document.getElementById('active-assignments-body');
-    clearElement(tbody);
+    const container = document.getElementById('active-assignments-container');
+    const cardsContainer = container?.querySelector('.quest-cards-container');
+    if (!cardsContainer) return;
+    
+    clearElement(cardsContainer);
     
     characterState.activeAssignments.forEach((quest, index) => {
-        const row = renderQuestRow(quest, index, 'active');
-        tbody.appendChild(row);
+        const card = renderQuestCard(quest, index, 'active');
+        cardsContainer.appendChild(card);
     });
     
-    document.getElementById('active-summary').textContent = `Active Book Assignments (${characterState.activeAssignments.length} Remaining)`;
+    const summary = document.getElementById('active-summary');
+    if (summary) {
+        summary.textContent = `Active Book Assignments (${characterState.activeAssignments.length} Remaining)`;
+    }
 }
 
 export function renderCompletedQuests() {
-    const tbody = document.getElementById('completed-quests-body');
-    clearElement(tbody);
+    const container = document.getElementById('completed-quests-container');
+    const cardsContainer = container?.querySelector('.quest-cards-container');
+    if (!cardsContainer) return;
+    
+    clearElement(cardsContainer);
     
     characterState.completedQuests.forEach((quest, index) => {
-        const row = renderQuestRow(quest, index, 'completed');
-        tbody.appendChild(row);
+        const card = renderQuestCard(quest, index, 'completed');
+        cardsContainer.appendChild(card);
     });
     
-    document.getElementById('completed-summary').textContent = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
+    const summary = document.getElementById('completed-summary');
+    if (summary) {
+        summary.textContent = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
+    }
 }
 
 export function renderDiscardedQuests() {
-    const tbody = document.getElementById('discarded-quests-body');
-    clearElement(tbody);
+    const container = document.getElementById('discarded-quests-container');
+    const cardsContainer = container?.querySelector('.quest-cards-container');
+    if (!cardsContainer) return;
+    
+    clearElement(cardsContainer);
     
     characterState.discardedQuests.forEach((quest, index) => {
-        const row = renderQuestRow(quest, index, 'discarded');
-        tbody.appendChild(row);
+        const card = renderQuestCard(quest, index, 'discarded');
+        cardsContainer.appendChild(card);
     });
     
-    document.getElementById('discarded-summary').textContent = `Discarded Quests (${characterState.discardedQuests.length})`;
+    const summary = document.getElementById('discarded-summary');
+    if (summary) {
+        summary.textContent = `Discarded Quests (${characterState.discardedQuests.length})`;
+    }
 }
 
 // createEditButton is now handled by renderQuestRow component
