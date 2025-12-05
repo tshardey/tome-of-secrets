@@ -89,7 +89,8 @@ function migrateToVersion1(state) {
         [STORAGE_KEYS.COMPLETED_CURSES]: [],
         [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
         [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
-        [STORAGE_KEYS.SELECTED_GENRES]: []
+        [STORAGE_KEYS.SELECTED_GENRES]: [],
+        [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd6'
     };
 
     // Merge defaults with existing state
@@ -169,12 +170,21 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.COMPLETED_CURSES,
         STORAGE_KEYS.TEMPORARY_BUFFS,
         STORAGE_KEYS.BUFF_MONTH_COUNTER,
-        STORAGE_KEYS.SELECTED_GENRES
+        STORAGE_KEYS.SELECTED_GENRES,
+        STORAGE_KEYS.GENRE_DICE_SELECTION
     ];
 
     stateKeys.forEach(key => {
-        const defaultValue = key === STORAGE_KEYS.ATMOSPHERIC_BUFFS ? {} : 
-                            key === STORAGE_KEYS.BUFF_MONTH_COUNTER ? 0 : [];
+        let defaultValue;
+        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS) {
+            defaultValue = {};
+        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER) {
+            defaultValue = 0;
+        } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
+            defaultValue = 'd6';
+        } else {
+            defaultValue = [];
+        }
         state[key] = safeGetJSON(key, defaultValue);
     });
 

@@ -3,12 +3,24 @@ layout: default
 title: Quests and Challenges
 ---
 
-## ♥️ Organize the Stacks (Roll a d6)
+## ♥️ Organize the Stacks (Roll a die)
 Completing an Organize the Stacks quest rewards you with **+15 XP** and **+10 Ink Drops**
 
 <div class="genre-selection-container">
-    <h3>📚 Choose Your 6 Favorite Genres</h3>
-    <p class="description">Select your 6 favorite genres for your "Organize the Stacks" quests. You can change these anytime without affecting your existing quest tracker entries.</p>
+    <h3 id="genre-selection-title">📚 Choose Your Genres</h3>
+    <p class="description">Select how many genres you want for your "Organize the Stacks" quests. Choose a dice type (d4, d6, d8, d10, d12, or d20) to determine how many genres you can select. If you choose d20, all genres will be automatically selected. You can change these anytime without affecting your existing quest tracker entries.</p>
+    
+    <div class="dice-selection-controls">
+        <label for="genre-dice-selector"><strong>Number of Genres (Dice Type):</strong></label>
+        <select id="genre-dice-selector">
+            <option value="d4">d4 (4 genres)</option>
+            <option value="d6" selected>d6 (6 genres)</option>
+            <option value="d8">d8 (8 genres)</option>
+            <option value="d10">d10 (10 genres)</option>
+            <option value="d12">d12 (12 genres)</option>
+            <option value="d20">d20 (all genres)</option>
+        </select>
+    </div>
     
     <div class="selected-genres-grid" id="selected-genres-display">
         <!-- Selected genres will be displayed here -->
@@ -23,7 +35,7 @@ Completing an Organize the Stacks quest rewards you with **+15 XP** and **+10 In
     </div>
     
     <div class="genre-quests-preview">
-        <h3>Your Custom Genre Quests (Roll a d6)</h3>
+        <h3 id="genre-quests-title">Your Custom Genre Quests (Roll a d6)</h3>
         <div id="custom-genre-quests-display">
             <!-- Custom genre quests will be displayed here -->
         </div>

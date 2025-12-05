@@ -335,6 +335,22 @@ function validateNumber(value, defaultValue, context = 'number') {
 }
 
 /**
+ * Validate and fix a genre dice selection value
+ * @param {*} value - Value to validate
+ * @param {string} defaultValue - Default value if invalid
+ * @param {string} context - Context for error messages
+ * @returns {string} - Validated dice selection ('d4', 'd6', 'd8', 'd10', 'd12', 'd20')
+ */
+function validateGenreDiceSelection(value, defaultValue = 'd6', context = 'genreDiceSelection') {
+    const validDice = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+    if (typeof value === 'string' && validDice.includes(value)) {
+        return value;
+    }
+    console.warn(`Invalid ${context}: not a valid dice selection, using default ${defaultValue}`);
+    return defaultValue;
+}
+
+/**
  * Validate and fix character form data
  * @param {*} formData - Form data object
  * @returns {Object} - Validated form data object
@@ -416,6 +432,11 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.SELECTED_GENRES] = validateStringArray(
         state[STORAGE_KEYS.SELECTED_GENRES],
         STORAGE_KEYS.SELECTED_GENRES
+    );
+    validated[STORAGE_KEYS.GENRE_DICE_SELECTION] = validateGenreDiceSelection(
+        state[STORAGE_KEYS.GENRE_DICE_SELECTION],
+        'd6',
+        STORAGE_KEYS.GENRE_DICE_SELECTION
     );
 
     return validated;

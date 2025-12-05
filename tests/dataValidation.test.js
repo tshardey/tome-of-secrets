@@ -167,6 +167,36 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe(0);
         });
 
+        test('should validate genre dice selection', () => {
+            const state = {
+                [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd8'
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.GENRE_DICE_SELECTION]).toBe('d8');
+        });
+
+        test('should default to d6 for invalid genre dice selection', () => {
+            const state = {
+                [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'invalid'
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.GENRE_DICE_SELECTION]).toBe('d6');
+        });
+
+        test('should validate all valid dice types', () => {
+            const validDice = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+            
+            validDice.forEach(dice => {
+                const state = {
+                    [STORAGE_KEYS.GENRE_DICE_SELECTION]: dice
+                };
+                const validated = validateCharacterState(state);
+                expect(validated[STORAGE_KEYS.GENRE_DICE_SELECTION]).toBe(dice);
+            });
+        });
+
         test('should handle completely corrupted state', () => {
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: 'not an array',

@@ -12,7 +12,8 @@ export const STORAGE_KEYS = Object.freeze({
     TEMPORARY_BUFFS: 'temporaryBuffs',
     BUFF_MONTH_COUNTER: 'buffMonthCounter',
     MONTHLY_COMPLETED_BOOKS: 'monthlyCompletedBooks',
-    SELECTED_GENRES: 'selectedGenres'
+    SELECTED_GENRES: 'selectedGenres',
+    GENRE_DICE_SELECTION: 'genreDiceSelection'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -27,7 +28,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.COMPLETED_CURSES,
     STORAGE_KEYS.TEMPORARY_BUFFS,
     STORAGE_KEYS.BUFF_MONTH_COUNTER,
-    STORAGE_KEYS.SELECTED_GENRES
+    STORAGE_KEYS.SELECTED_GENRES,
+    STORAGE_KEYS.GENRE_DICE_SELECTION
 ]);
 
 export function createEmptyCharacterState() {
@@ -43,7 +45,8 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.COMPLETED_CURSES]: [],
         [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
         [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
-        [STORAGE_KEYS.SELECTED_GENRES]: []
+        [STORAGE_KEYS.SELECTED_GENRES]: [],
+        [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd6'
     };
 }
 
