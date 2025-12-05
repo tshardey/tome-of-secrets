@@ -15,6 +15,7 @@ export class Quest {
      * @param {string} data.month - Month when quest was created/completed
      * @param {string} data.year - Year when quest was created/completed
      * @param {string} [data.book=''] - Associated book title
+     * @param {string} [data.bookAuthor=''] - Associated book author
      * @param {string} [data.notes=''] - Additional notes
      * @param {Array<string>} [data.buffs=[]] - Applied atmospheric buffs
      * @param {Object|Reward} [data.rewards] - Quest rewards
@@ -26,6 +27,7 @@ export class Quest {
         month,
         year,
         book = '',
+        bookAuthor = '',
         notes = '',
         buffs = [],
         rewards = null,
@@ -50,6 +52,7 @@ export class Quest {
         this.month = month;
         this.year = year;
         this.book = book;
+        this.bookAuthor = bookAuthor;
         this.notes = notes;
         this.buffs = Array.isArray(buffs) ? buffs : [];
         this.isEncounter = Boolean(isEncounter);
@@ -118,6 +121,7 @@ export class Quest {
             month: this.month,
             year: this.year,
             book: this.book,
+            bookAuthor: this.bookAuthor,
             notes: this.notes,
             buffs: [...this.buffs],
             rewards: this.rewards ? this.rewards.clone() : null,
@@ -136,6 +140,7 @@ export class Quest {
             month: this.month,
             year: this.year,
             book: this.book,
+            bookAuthor: this.bookAuthor,
             notes: this.notes,
             buffs: this.buffs,
             rewards: this.rewards ? this.rewards.toJSON() : { xp: 0, inkDrops: 0, paperScraps: 0, items: [], modifiedBy: [] },

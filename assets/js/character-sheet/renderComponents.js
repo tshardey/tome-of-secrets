@@ -7,6 +7,7 @@
 
 import { escapeHtml } from '../utils/sanitize.js';
 import { createElement } from '../utils/domHelpers.js';
+import * as data from './data.js';
 
 /**
  * Renders a quest row for tables
@@ -282,6 +283,211 @@ export function renderAbilityCard(abilityName, ability, index) {
     
     info.appendChild(createActionButton('Forget', 'delete-ability-btn', index));
     card.appendChild(info);
+    
+    return card;
+}
+
+/**
+ * Determines if a dungeon encounter was befriended or defeated
+ * @param {Object} quest - Quest object
+ * @returns {string|null} - 'befriend', 'defeat', or null if not an encounter
+ */
+function getEncounterAction(quest) {
+    if (!quest.isEncounter || !quest.roomNumber || !quest.encounterName) {
+        return null;
+    }
+    
+    const roomData = data.dungeonRooms?.[quest.roomNumber];
+    if (!roomData || !roomData.encounters) {
+        return null;
+    }
+    
+    const encounter = roomData.encounters[quest.encounterName];
+    if (!encounter) {
+        return null;
+    }
+    
+    // Check if prompt matches befriend or defeat
+    if (encounter.befriend && quest.prompt === encounter.befriend) {
+        return 'befriend';
+    }
+    if (encounter.defeat && quest.prompt === encounter.defeat) {
+        return 'defeat';
+    }
+    
+    return null;
+}
+
+/**
+ * Renders a quest card (responsive card-based layout)
+ * @param {Object} quest - Quest object
+ * @param {number} index - Quest index
+ * @param {string} listType - Type of list ('active', 'completed', 'discarded')
+ * @returns {HTMLElement} The rendered card element
+ */
+export function renderQuestCard(quest, index, listType = 'active') {
+    const card = createElement('div', { class: 'quest-card' });
+    const rewards = quest.rewards || {};
+    
+    // Format buffs to remove prefixes for display
+    const buffs = quest.buffs && quest.buffs.length > 0 
+        ? quest.buffs.map(b => escapeHtml(b.replace(/^\[(Buff|Item|Background)\] /, ''))).join(', ') 
+        : null;
+    
+    // Add indicator if quest will receive buffs (for active) or was modified (for completed)
+    let rewardIndicator = '';
+    if (listType === 'active' && quest.buffs && quest.buffs.length > 0) {
+        rewardIndicator = ' <span class="reward-indicator" title="Will receive buffs">*</span>';
+    } else if (listType === 'completed' && rewards.modifiedBy && rewards.modifiedBy.length > 0) {
+        const modifiedBy = rewards.modifiedBy.map(m => escapeHtml(m)).join(', ');
+        rewardIndicator = ` <span class="reward-indicator" title="Modified by: ${modifiedBy}">✓</span>`;
+    }
+    
+    // For Extra Credit, don't show prompt
+    const promptDisplay = quest.type === '⭐ Extra Credit' ? null : escapeHtml(quest.prompt || '');
+    
+    // Get encounter action (befriend/defeat) for dungeon encounters
+    const encounterAction = getEncounterAction(quest);
+    
+    // Card header
+    const header = createElement('div', { class: 'quest-card-header' });
+    
+    // Quest type and date
+    const meta = createElement('div', { class: 'quest-card-meta' });
+    const typeBadge = createElement('span', { class: 'quest-type-badge' });
+    typeBadge.textContent = escapeHtml(quest.type || '');
+    meta.appendChild(typeBadge);
+    
+    const date = createElement('span', { class: 'quest-date' });
+    date.textContent = `${escapeHtml(quest.month || '')} ${escapeHtml(quest.year || '')}`;
+    meta.appendChild(date);
+    
+    // Encounter action badge
+    if (encounterAction) {
+        const actionBadge = createElement('span', { 
+            class: `encounter-action-badge ${encounterAction}` 
+        });
+        actionBadge.textContent = encounterAction === 'befriend' ? '🤝 Befriended' : '⚔️ Defeated';
+        meta.appendChild(actionBadge);
+    }
+    
+    header.appendChild(meta);
+    card.appendChild(header);
+    
+    // Book info section
+    if (quest.book) {
+        const bookSection = createElement('div', { class: 'quest-card-book' });
+        const bookTitle = createElement('h3', { class: 'quest-book-title' });
+        bookTitle.textContent = escapeHtml(quest.book);
+        bookSection.appendChild(bookTitle);
+        
+        // Always show author section, even if empty (for consistent layout)
+        const bookAuthor = createElement('p', { class: 'quest-book-author' });
+        bookAuthor.textContent = quest.bookAuthor ? escapeHtml(quest.bookAuthor) : '';
+        bookSection.appendChild(bookAuthor);
+        
+        card.appendChild(bookSection);
+    }
+    
+    // Prompt section
+    if (promptDisplay) {
+        const promptSection = createElement('div', { class: 'quest-card-prompt' });
+        promptSection.textContent = promptDisplay;
+        card.appendChild(promptSection);
+    }
+    
+    // Rewards section
+    const rewardsSection = createElement('div', { class: 'quest-card-rewards' });
+    const rewardsTitle = createElement('h4', { class: 'quest-rewards-title' });
+    rewardsTitle.textContent = 'Rewards';
+    rewardsSection.appendChild(rewardsTitle);
+    
+    const rewardsGrid = createElement('div', { class: 'quest-rewards-grid' });
+    
+    if (rewards.xp > 0) {
+        const xpReward = createElement('div', { class: 'reward-item xp-reward' });
+        xpReward.innerHTML = `<span class="reward-label">XP</span><span class="reward-value">+${rewards.xp}${rewardIndicator}</span>`;
+        rewardsGrid.appendChild(xpReward);
+    }
+    
+    if (rewards.paperScraps > 0) {
+        const psReward = createElement('div', { class: 'reward-item paper-scraps-reward' });
+        psReward.innerHTML = `<span class="reward-label">📄</span><span class="reward-value">+${rewards.paperScraps}${rewardIndicator}</span>`;
+        rewardsGrid.appendChild(psReward);
+    }
+    
+    if (rewards.inkDrops > 0) {
+        const idReward = createElement('div', { class: 'reward-item ink-drops-reward' });
+        idReward.innerHTML = `<span class="reward-label">💧</span><span class="reward-value">+${rewards.inkDrops}${rewardIndicator}</span>`;
+        rewardsGrid.appendChild(idReward);
+    }
+    
+    if (rewards.items && rewards.items.length > 0) {
+        // Render each item separately with its image if available
+        rewards.items.forEach(itemName => {
+            const itemData = data.allItems?.[itemName];
+            const itemImg = itemData?.img;
+            
+            const itemReward = createElement('div', { class: 'reward-item item-reward' });
+            
+            if (itemImg) {
+                const itemImage = createElement('img', {
+                    class: 'reward-item-image',
+                    src: itemImg,
+                    alt: escapeHtml(itemName),
+                    title: escapeHtml(itemName)
+                });
+                itemReward.appendChild(itemImage);
+            }
+            
+            const itemNameSpan = createElement('span', { class: 'reward-item-name' });
+            itemNameSpan.textContent = escapeHtml(itemName);
+            itemReward.appendChild(itemNameSpan);
+            
+            rewardsGrid.appendChild(itemReward);
+        });
+    }
+    
+    if (rewardsGrid.children.length === 0) {
+        const noRewards = createElement('div', { class: 'reward-item no-rewards' });
+        noRewards.textContent = 'No rewards';
+        rewardsGrid.appendChild(noRewards);
+    }
+    
+    rewardsSection.appendChild(rewardsGrid);
+    card.appendChild(rewardsSection);
+    
+    // Buffs/Items section
+    if (buffs) {
+        const buffsSection = createElement('div', { class: 'quest-card-buffs' });
+        buffsSection.innerHTML = `<strong>Buffs/Items:</strong> ${buffs}`;
+        card.appendChild(buffsSection);
+    }
+    
+    // Notes section
+    if (quest.notes) {
+        const notesSection = createElement('div', { class: 'quest-card-notes' });
+        notesSection.innerHTML = `<strong>Notes:</strong> ${escapeHtml(quest.notes)}`;
+        card.appendChild(notesSection);
+    }
+    
+    // Action buttons
+    const actions = createElement('div', { class: 'quest-card-actions no-print' });
+    
+    // Determine list name for edit button
+    const listName = listType === 'active' ? 'activeAssignments' : 
+                     listType === 'completed' ? 'completedQuests' : 
+                     'discardedQuests';
+    
+    if (listType === 'active') {
+        actions.appendChild(createActionButton('Complete', 'complete-quest-btn', index));
+        actions.appendChild(createActionButton('Discard', 'discard-quest-btn', index));
+    }
+    
+    actions.appendChild(createActionButton('Delete', 'delete-btn', index, { 'data-list': listType === 'active' ? 'active' : listType }));
+    actions.appendChild(createActionButton('Edit', 'edit-quest-btn', index, { 'data-list': listName }));
+    
+    card.appendChild(actions);
     
     return card;
 }

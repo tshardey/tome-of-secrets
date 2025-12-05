@@ -46,6 +46,7 @@ export class ExtraCreditHandler extends BaseQuestHandler {
             type: this.type,
             prompt: prompt,
             book: common.book,
+            bookAuthor: common.bookAuthor,
             notes: common.notes,
             rewards: rewards,
             buffs: common.selectedBuffs
