@@ -304,26 +304,55 @@ export function renderAbilityCard(abilityName, ability, index) {
  * @returns {string|null} - 'befriend', 'defeat', or null if not an encounter
  */
 function getEncounterAction(quest) {
-    if (!quest.isEncounter || !quest.roomNumber || !quest.encounterName) {
+    // Only check dungeon crawl quests
+    // Ensure prompt is a string before using string methods
+    if (quest.type !== '♠ Dungeon Crawl' || !quest.prompt || typeof quest.prompt !== 'string') {
         return null;
     }
     
-    const roomData = data.dungeonRooms?.[quest.roomNumber];
-    if (!roomData || !roomData.encounters) {
-        return null;
+    // Primary check: use new fields if available
+    if (quest.isEncounter && quest.roomNumber && quest.encounterName) {
+        const roomData = data.dungeonRooms?.[quest.roomNumber];
+        if (roomData && roomData.encounters) {
+            const encounter = roomData.encounters[quest.encounterName];
+            if (encounter) {
+                // Check if prompt matches befriend or defeat
+                if (encounter.befriend && quest.prompt === encounter.befriend) {
+                    return 'befriend';
+                }
+                if (encounter.defeat && quest.prompt === encounter.defeat) {
+                    return 'defeat';
+                }
+            }
+        }
     }
     
-    const encounter = roomData.encounters[quest.encounterName];
-    if (!encounter) {
-        return null;
-    }
-    
-    // Check if prompt matches befriend or defeat
-    if (encounter.befriend && quest.prompt === encounter.befriend) {
-        return 'befriend';
-    }
-    if (encounter.defeat && quest.prompt === encounter.defeat) {
-        return 'defeat';
+    // Fallback: search all rooms and encounters for prompt match (for old quests)
+    if (data.dungeonRooms) {
+        for (const roomNumber in data.dungeonRooms) {
+            const room = data.dungeonRooms[roomNumber];
+            if (!room.encounters) continue;
+            
+            for (const encounterName in room.encounters) {
+                const encounter = room.encounters[encounterName];
+                
+                // Check for exact prompt match
+                if (encounter.befriend && quest.prompt === encounter.befriend) {
+                    return 'befriend';
+                }
+                if (encounter.defeat && quest.prompt === encounter.defeat) {
+                    return 'defeat';
+                }
+                
+                // Also check for prompts with name prefix (e.g., "Zombies: Read a book...")
+                if (encounter.befriend && quest.prompt.includes(encounterName) && quest.prompt.includes(encounter.befriend)) {
+                    return 'befriend';
+                }
+                if (encounter.defeat && quest.prompt.includes(encounterName) && quest.prompt.includes(encounter.defeat)) {
+                    return 'defeat';
+                }
+            }
+        }
     }
     
     return null;

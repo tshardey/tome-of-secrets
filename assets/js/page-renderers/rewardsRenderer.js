@@ -3,18 +3,10 @@ import { allItems, temporaryBuffsFromRewards } from '../character-sheet/data.js'
 import { slugifyId } from '../utils/slug.js';
 
 function createRewardCard(baseurl, name, item) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'reward-item';
+    const container = document.createElement('div');
+    container.className = 'reward-container';
 
-    const imageDiv = document.createElement('div');
-    imageDiv.className = 'reward-image';
-    const img = document.createElement('img');
-    img.src = `${baseurl}/${item.img}`;
-    img.alt = name;
-    imageDiv.appendChild(img);
-
-    const descDiv = document.createElement('div');
-    descDiv.className = 'reward-description';
+    // Title (outside the tile)
     const h4 = document.createElement('h4');
     const id = slugifyId(name);
     h4.id = id;
@@ -23,45 +15,63 @@ function createRewardCard(baseurl, name, item) {
     selfLink.href = `#${id}`;
     selfLink.textContent = name;
     h4.appendChild(selfLink);
+    container.appendChild(h4);
+
+    // Description (outside the tile)
     const p = document.createElement('p');
+    p.className = 'reward-description';
     p.innerHTML = `<strong>Bonus:</strong> ${item.bonus}`;
-    descDiv.appendChild(h4);
-    descDiv.appendChild(p);
+    container.appendChild(p);
 
-    wrapper.appendChild(imageDiv);
-    wrapper.appendChild(descDiv);
-    return wrapper;
-}
-
-function createTempBuffCard(baseurl, name, buff) {
+    // Tile with image (inside reward-item)
     const wrapper = document.createElement('div');
     wrapper.className = 'reward-item';
-
     const imageDiv = document.createElement('div');
     imageDiv.className = 'reward-image';
     const img = document.createElement('img');
-    // Use conventional image path by slug; existing assets follow this pattern
-    const slug = slugifyId(name);
-    img.src = `${baseurl}/assets/images/rewards/${slug}.png`;
+    img.src = `${baseurl}/${item.img}`;
     img.alt = name;
     imageDiv.appendChild(img);
+    wrapper.appendChild(imageDiv);
+    
+    container.appendChild(wrapper);
+    return container;
+}
 
-    const descDiv = document.createElement('div');
-    descDiv.className = 'reward-description';
+function createTempBuffCard(baseurl, name, buff) {
+    const container = document.createElement('div');
+    container.className = 'reward-container';
+
+    // Title (outside the tile)
     const h4 = document.createElement('h4');
+    const slug = slugifyId(name);
     h4.id = slug;
     const selfLink = document.createElement('a');
     selfLink.href = `#${slug}`;
     selfLink.textContent = name;
     h4.appendChild(selfLink);
-    const p = document.createElement('p');
-    p.innerHTML = `<strong>Bonus:</strong> ${buff.description}`;
-    descDiv.appendChild(h4);
-    descDiv.appendChild(p);
+    container.appendChild(h4);
 
+    // Description (outside the tile)
+    const p = document.createElement('p');
+    p.className = 'reward-description';
+    p.innerHTML = `<strong>Bonus:</strong> ${buff.description}`;
+    container.appendChild(p);
+
+    // Tile with image (inside reward-item)
+    const wrapper = document.createElement('div');
+    wrapper.className = 'reward-item';
+    const imageDiv = document.createElement('div');
+    imageDiv.className = 'reward-image';
+    const img = document.createElement('img');
+    // Use conventional image path by slug; existing assets follow this pattern
+    img.src = `${baseurl}/assets/images/rewards/${slug}.png`;
+    img.alt = name;
+    imageDiv.appendChild(img);
     wrapper.appendChild(imageDiv);
-    wrapper.appendChild(descDiv);
-    return wrapper;
+    
+    container.appendChild(wrapper);
+    return container;
 }
 
 export function initializeRewardsPage() {
