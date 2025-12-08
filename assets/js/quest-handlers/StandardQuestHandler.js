@@ -76,7 +76,7 @@ export class StandardQuestHandler extends BaseQuestHandler {
 
         // For completed quests, apply modifiers
         if (common.status === 'completed') {
-            return this.processCompletedQuests([quest], common.selectedBuffs, common.background);
+            return this.processCompletedQuests([quest], common.selectedBuffs, common.background, common.wizardSchool);
         }
 
         return [this.questsToJSON([quest])[0]];

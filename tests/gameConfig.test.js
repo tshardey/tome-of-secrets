@@ -50,9 +50,9 @@ describe('Game Configuration', () => {
   it('should have background bonus configuration', () => {
     expect(GAME_CONFIG.backgrounds).toBeDefined();
     expect(GAME_CONFIG.backgrounds.biblioslinker).toBeDefined();
-    expect(GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps).toBe(3);
+    expect(GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps).toBe(10);
     expect(GAME_CONFIG.backgrounds.backgroundBonus).toBeDefined();
-    expect(GAME_CONFIG.backgrounds.backgroundBonus.inkDrops).toBe(10);
+    expect(GAME_CONFIG.backgrounds.backgroundBonus.inkDrops).toBe(15);
   });
 
   it('should have UI configuration', () => {

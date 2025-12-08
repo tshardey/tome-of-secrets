@@ -698,14 +698,14 @@ describe('Character Sheet', () => {
       // Check that both quests were added to completed
       expect(characterState.completedQuests.length).toBe(2);
       
-      // Room quest should have 8 paper scraps (5 base + 3 from Biblioslinker)
+      // Room quest should have 15 paper scraps (5 base + 10 from Biblioslinker)
       const roomQuest = characterState.completedQuests.find(q => !q.isEncounter);
-      expect(roomQuest.rewards.paperScraps).toBe(8);
+      expect(roomQuest.rewards.paperScraps).toBe(15);
       expect(roomQuest.rewards.modifiedBy).toContain('Biblioslinker');
       
-      // Encounter quest should also have +3 paper scraps applied
+      // Encounter quest should also have +10 paper scraps applied
       const encounterQuest = characterState.completedQuests.find(q => q.isEncounter);
-      expect(encounterQuest.rewards.paperScraps).toBe(3); // 0 base + 3 from Biblioslinker
+      expect(encounterQuest.rewards.paperScraps).toBe(10); // 0 base + 10 from Biblioslinker
       expect(encounterQuest.rewards.modifiedBy).toContain('Biblioslinker');
     });
 
@@ -1319,7 +1319,7 @@ describe('Character Sheet', () => {
       
       // Check that quest was added with bonus
       const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
-      expect(completedQuest.rewards.inkDrops).toBe(20); // 10 base + 10 bonus
+      expect(completedQuest.rewards.inkDrops).toBe(25); // 10 base + 15 bonus
       expect(completedQuest.buffs).toContain('[Background] Archivist Bonus');
     });
 
@@ -1357,7 +1357,7 @@ describe('Character Sheet', () => {
         
         // Check that Biblioslinker bonus was applied
         const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
-        expect(completedQuest.rewards.paperScraps).toBe(8); // 5 from room + 3 Biblioslinker bonus
+        expect(completedQuest.rewards.paperScraps).toBe(15); // 5 from room + 10 Biblioslinker bonus
         expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
       }
     });

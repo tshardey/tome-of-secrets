@@ -102,7 +102,7 @@
         "name": "The Cursed Tome",
         "description": "A massive volume chained to a pedestal, its pages leaking mist and sorrow. The air grows cold with each breath.",
         "challenge": "The Cursed Tome: Read a book with a curse or a dark theme.",
-        "roomRewards": { "xp": 5, "inkDrops": 0, "paperScraps": 0, "items": [] },
+        "roomRewards": { "xp": 50, "inkDrops": 0, "paperScraps": 0, "items": [] },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -138,8 +138,8 @@
     "5": {
         "name": "The Archivist's Riddle",
         "description": "A spectral figure waits, quill in hand, offering only riddles for passage. Its eyes gleam with the weight of endless catalogues.",
-        "challenge": "The Archivist's Riddle: Read a book that has a mystery or secret at its core (+5 XP).",
-        "roomRewards": { "xp": 5, "inkDrops": 0, "paperScraps": 0, "items": [] },
+        "challenge": "The Archivist's Riddle: Read a book that has a mystery or secret at its core (+50 XP).",
+        "roomRewards": { "xp": 50, "inkDrops": 0, "paperScraps": 0, "items": [] },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {

@@ -130,6 +130,7 @@ export class DungeonQuestHandler extends BaseQuestHandler {
                 isEncounter: true,
                 roomNumber: roomNumber,
                 encounterName: encounterName,
+                isBefriend: isBefriend,
                 rewards: encounterRewards,
                 buffs: common.selectedBuffs
             };
@@ -144,7 +145,7 @@ export class DungeonQuestHandler extends BaseQuestHandler {
 
         // For completed quests, apply modifiers
         if (common.status === 'completed') {
-            return this.processCompletedQuests(quests, common.selectedBuffs, common.background);
+            return this.processCompletedQuests(quests, common.selectedBuffs, common.background, common.wizardSchool);
         }
 
         return this.questsToJSON(quests);

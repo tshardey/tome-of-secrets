@@ -46,7 +46,7 @@ There are two primary currencies that define your progress, plus a third for cha
     **Earn XP for:**
     *  Completing any book (+15 XP, calculated at end of month)
     *  Completing an *Organize the Stacks* quest (+15 XP, awarded immediately)
-    *  Defeating monsters in a *Dungeon Room* (+30 XP, awarded immediately) 
+    *  Completing monsters in a *Dungeon Room* (+30 XP, awarded immediately) 
 * **Ink Drops:** The primary currency for in-game rewards and essential for creating books.  Use them to purchase in-game items, buffs, and to help create new books.
 
     **Earn Ink Drops by:**

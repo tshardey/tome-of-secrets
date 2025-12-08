@@ -6,10 +6,10 @@
         "rewardModifier": { "inkDrops": 150, "paperScraps": 20 }
     },
     "Long Read Focus": {
-        "description": "+2 Ink Drops per 100 pages over 300",
+        "description": "+10 Ink Drops per 100 pages over 300",
         "duration": "one-time",
         "source": "Side Quest: The Arcane Grimoire",
-        "rewardModifier": { "inkDrops": 2 }
+        "rewardModifier": { "inkDrops": 10 }
     },
     "Disjointed Perception": {
         "description": "+10 Ink Drops, +5 Paper Scraps",

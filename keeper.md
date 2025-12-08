@@ -16,6 +16,8 @@ Every Keeper draws power from a magical school, which grants them unique abiliti
 
 > **Journaling Prompt:** How did you come to study this school of magic? Were you formally trained, or did you stumble upon its secrets? What about it calls to you?
 
+> **Note:** You may choose a different magical school at level ups if you want to shift your focus.
+
 <div id="wizard-schools"></div>
 
 <script type="module">
