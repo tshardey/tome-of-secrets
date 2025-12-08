@@ -21,7 +21,7 @@
     },
     "Transmutation": {
         "description": "Focuses on the arcane art of alchemy, allowing the Keeper to shift the essence and value of their collected resources. You master the rare skill of converting one material into another, understanding that the value of ink and paper is fluid.",
-        "benefit": "Once per month, you may transmute your currency. You can exchange 5 Ink Drops for 1 Paper Scrap, or 1 Paper Scrap for 5 Ink Drops."
+        "benefit": "Once per month, you may transmute your currency. You can exchange 3 Ink Drops for 1 Paper Scrap, or 1 Paper Scrap for 3 Ink Drops."
     }
 }
 

@@ -39,7 +39,7 @@ describe('Quest Handlers', () => {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
                     rewards: { xp: 10, inkDrops: 5, paperScraps: 5, items: [], modifiedBy: [] },
-                    buffs: ['Long Read Focus'], // +2 Ink Drops
+                    buffs: ['Long Read Focus'], // +10 Ink Drops
                     month: 'January',
                     year: '2024',
                     book: 'Test Book',
@@ -50,10 +50,10 @@ describe('Quest Handlers', () => {
 
                 // Should have buff modifier applied
                 expect(completedQuest.rewards.modifiedBy).toContain('Long Read Focus');
-                // Should have Biblioslinker bonus (+3 Paper Scraps for dungeons)
+                // Should have Biblioslinker bonus (+10 Paper Scraps for dungeons)
                 expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
-                expect(completedQuest.rewards.inkDrops).toBe(7); // 5 base + 2 from Long Read Focus
-                expect(completedQuest.rewards.paperScraps).toBe(8); // 5 base + 3 from Biblioslinker
+                expect(completedQuest.rewards.inkDrops).toBe(15); // 5 base + 10 from Long Read Focus
+                expect(completedQuest.rewards.paperScraps).toBe(15); // 5 base + 10 from Biblioslinker
             });
 
             it('should apply background bonuses even without buffs', () => {
@@ -71,7 +71,7 @@ describe('Quest Handlers', () => {
                 const completedQuest = BaseQuestHandler.completeActiveQuest(quest, 'biblioslinker');
 
                 expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
-                expect(completedQuest.rewards.paperScraps).toBe(8); // 5 base + 3 from Biblioslinker
+                expect(completedQuest.rewards.paperScraps).toBe(15); // 5 base + 10 from Biblioslinker
             });
         });
 

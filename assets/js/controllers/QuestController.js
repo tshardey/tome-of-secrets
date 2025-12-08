@@ -333,6 +333,7 @@ export class QuestController extends BaseController {
                 statusSelect: document.getElementById('new-quest-status'),
                 buffsSelect: document.getElementById('quest-buffs-select'),
                 backgroundSelect: this.keeperBackgroundSelect,
+                wizardSchoolSelect: document.getElementById('wizardSchool'),
                 promptInput: document.getElementById('new-quest-prompt'),
                 dungeonRoomSelect: this.dungeonRoomSelect,
                 dungeonEncounterSelect: this.dungeonEncounterSelect,
@@ -478,7 +479,9 @@ export class QuestController extends BaseController {
 
         // Use the BaseQuestHandler helper to finalize rewards
         const background = this.keeperBackgroundSelect?.value || '';
-        const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background);
+        const wizardSchoolSelect = document.getElementById('wizardSchool');
+        const wizardSchool = wizardSchoolSelect?.value || '';
+        const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool);
 
         // Add to completed quests (wrap in array for consistency)
         stateAdapter.addCompletedQuests([completedQuest]);

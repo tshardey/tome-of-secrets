@@ -31,7 +31,8 @@ export class BaseQuestHandler {
             notes: this.formElements.notesInput.value,
             status: this.formElements.statusSelect.value,
             selectedBuffs: Array.from(this.formElements.buffsSelect.selectedOptions).map(o => o.value),
-            background: this.formElements.backgroundSelect ? this.formElements.backgroundSelect.value : ''
+            background: this.formElements.backgroundSelect ? this.formElements.backgroundSelect.value : '',
+            wizardSchool: this.formElements.wizardSchoolSelect ? this.formElements.wizardSchoolSelect.value : ''
         };
     }
 
@@ -85,9 +86,10 @@ export class BaseQuestHandler {
      * @param {Object} quest - Quest object
      * @param {Array} selectedBuffs - Selected buff/item names
      * @param {string} background - Background key
+     * @param {string} wizardSchool - Wizard school key
      * @returns {Reward} Final rewards with all modifiers applied
      */
-    calculateFinalRewards(baseRewards, quest, selectedBuffs, background) {
+    calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null) {
         let finalRewards = baseRewards;
 
         // Apply buff modifiers if any buffs are selected
@@ -98,6 +100,11 @@ export class BaseQuestHandler {
         // Always apply background bonuses (independent of buffs)
         finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, quest, background);
 
+        // Apply school bonuses
+        if (wizardSchool) {
+            finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
+        }
+
         return finalRewards;
     }
 
@@ -106,15 +113,17 @@ export class BaseQuestHandler {
      * @param {Array} quests - Array of quest objects with base rewards
      * @param {Array} selectedBuffs - Selected buff/item names
      * @param {string} background - Background key
+     * @param {string} wizardSchool - Wizard school key
      * @returns {Array} Quests with finalized rewards
      */
-    processCompletedQuests(quests, selectedBuffs, background) {
+    processCompletedQuests(quests, selectedBuffs, background, wizardSchool = null) {
         return quests.map(quest => {
             const finalRewards = this.calculateFinalRewards(
                 quest.rewards,
                 quest,
                 selectedBuffs,
-                background
+                background,
+                wizardSchool
             );
             return {
                 ...quest,
@@ -139,9 +148,10 @@ export class BaseQuestHandler {
      * Static helper to complete an active quest (recalculate rewards and finalize)
      * @param {Object} quest - Active quest to complete
      * @param {string} background - Background key
+     * @param {string} wizardSchool - Wizard school key
      * @returns {Object} Quest with finalized rewards
      */
-    static completeActiveQuest(quest, background) {
+    static completeActiveQuest(quest, background, wizardSchool = null) {
         // Convert existing rewards to Reward object
         const baseRewards = new Reward(quest.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
         
@@ -154,6 +164,11 @@ export class BaseQuestHandler {
         
         // Always apply background bonuses (independent of buffs)
         finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, quest, background);
+        
+        // Apply school bonuses
+        if (wizardSchool) {
+            finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
+        }
         
         // Return quest with finalized rewards
         return {

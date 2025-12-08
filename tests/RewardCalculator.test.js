@@ -169,7 +169,7 @@ describe('RewardCalculator - Apply Modifiers', () => {
             '[Background] Archivist Bonus'
         ]);
         
-        expect(modified.inkDrops).toBe(20);
+        expect(modified.inkDrops).toBe(25);
         expect(modified.modifiedBy).toContain('Archivist Bonus');
     });
 
@@ -192,7 +192,7 @@ describe('RewardCalculator - Apply Modifiers', () => {
         ]);
         
         expect(modified.xp).toBe(10);
-        expect(modified.inkDrops).toBe(40); // 10 + 20 + 10
+        expect(modified.inkDrops).toBe(45); // 10 + 20 + 15
         expect(modified.paperScraps).toBe(7); // 5 + 2
         expect(modified.modifiedBy).toContain('Librarian\'s Compass');
         expect(modified.modifiedBy).toContain('Librarian\'s Quill');
@@ -207,7 +207,7 @@ describe('RewardCalculator - Background Bonuses', () => {
         
         const modified = RewardCalculator.applyBackgroundBonuses(base, quest, 'biblioslinker');
         
-        expect(modified.paperScraps).toBe(8); // 5 + 3
+        expect(modified.paperScraps).toBe(15); // 5 + 10
         expect(modified.modifiedBy).toContain('Biblioslinker');
     });
 
@@ -261,7 +261,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             }
         );
         
-        expect(final.paperScraps).toBe(8); // 5 from room + 3 from biblioslinker
+        expect(final.paperScraps).toBe(15); // 5 from room + 10 from biblioslinker
         expect(final.modifiedBy).toContain('Biblioslinker');
     });
 
@@ -283,7 +283,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         );
         
         expect(final.xp).toBe(30); // Monster base XP
-        expect(final.inkDrops).toBe(30); // 0 + 20 + 10
+        expect(final.inkDrops).toBe(35); // 0 + 20 + 15
         expect(final.modifiedBy.length).toBeGreaterThan(0);
     });
 

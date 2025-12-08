@@ -80,7 +80,7 @@
     "Celestial Koi Fish": {
         "type": "Familiar",
         "img": "assets/images/rewards/celestial-koi-fish.png",
-        "bonus": "Once per month, you may use this familiar's insight to switch a genre-based quest (d6) to its opposing genre.",
+        "bonus": "Once per month, you may use this familiar's insight to switch a genre-based quest to its opposing genre.",
         "rewardModifier": {}
     },
     "Tome-Bound Cat": {

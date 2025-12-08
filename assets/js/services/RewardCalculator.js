@@ -218,6 +218,33 @@ export class RewardCalculator {
     }
 
     /**
+     * Apply magical school bonuses
+     * @param {Reward} rewards - Rewards to modify
+     * @param {Object} quest - Quest object with type, isEncounter, isBefriend, etc.
+     * @param {string} wizardSchool - Wizard school key (e.g., 'Enchantment')
+     * @returns {Reward}
+     */
+    static applySchoolBonuses(rewards, quest, wizardSchool) {
+        if (!wizardSchool) {
+            return rewards;
+        }
+
+        const modified = rewards.clone();
+
+        // School of Enchantment: 1.5x XP when befriending monsters in dungeons
+        if (wizardSchool === 'Enchantment' && quest.type === '♠ Dungeon Crawl' && quest.isEncounter && quest.isBefriend) {
+            // Only apply if there's base XP to multiply (monster encounters give 30 XP)
+            if (modified.xp > 0) {
+                const originalXP = modified.xp;
+                modified.xp = Math.floor(modified.xp * 1.5);
+                modified.modifiedBy.push('School of Enchantment');
+            }
+        }
+
+        return modified;
+    }
+
+    /**
      * Parse buff name to extract clean name and type
      * @private
      */
@@ -261,13 +288,14 @@ export class RewardCalculator {
      * Calculate final rewards for a quest with all modifiers
      * @param {string} type - Quest type
      * @param {string} prompt - Quest prompt
-     * @param {Object} options - Options including appliedBuffs, background, quest
+     * @param {Object} options - Options including appliedBuffs, background, quest, wizardSchool
      * @returns {Reward}
      */
     static calculateFinalRewards(type, prompt, options = {}) {
         const {
             appliedBuffs = [],
             background = null,
+            wizardSchool = null,
             quest = {},
             isEncounter = false,
             roomNumber = null,
@@ -285,6 +313,11 @@ export class RewardCalculator {
         // Apply background bonuses
         if (background) {
             rewards = this.applyBackgroundBonuses(rewards, quest, background);
+        }
+
+        // Apply school bonuses
+        if (wizardSchool) {
+            rewards = this.applySchoolBonuses(rewards, quest, wizardSchool);
         }
 
         return rewards;

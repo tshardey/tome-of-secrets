@@ -56,10 +56,10 @@ export const GAME_CONFIG = Object.freeze({
      */
     backgrounds: {
         biblioslinker: {
-            dungeonCrawlPaperScraps: 3 // Bonus for completing dungeon crawls
+            dungeonCrawlPaperScraps: 10 // Bonus for completing dungeon crawls
         },
         backgroundBonus: {
-            inkDrops: 10 // Bonus for Archivist, Prophet, Cartographer
+            inkDrops: 15 // Bonus for Archivist, Prophet, Cartographer
         }
     },
 
