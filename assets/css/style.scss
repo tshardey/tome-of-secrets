@@ -402,6 +402,43 @@ article th:first-child {
 }
 
 /* ==========================================================================
+   Data Management Section Styles
+   ========================================================================== */
+
+.data-management-section {
+    margin-top: 20px;
+    border-top: 1px solid #54483b; /* Match border color from theme */
+    padding-top: 20px;
+}
+
+.data-management-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.data-management-buttons button {
+    background-color: #b89f62; /* Muted gold - match form-buttons */
+    color: #2a231d; /* Deep brown text - match form-buttons */
+    border: none;
+    padding: 10px 20px;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.data-management-buttons button:hover {
+    background-color: #cca352; /* Brighter gold on hover - match form-buttons */
+}
+
+.data-management-buttons input[type="file"] {
+    display: none; /* Hide the file input */
+}
+
+/* ==========================================================================
    Monthly Tracker Table and Form Styles
    ========================================================================== */
 
