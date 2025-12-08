@@ -21,6 +21,7 @@ import { QuestController } from './controllers/QuestController.js';
 import { CurseController } from './controllers/CurseController.js';
 import { BuffController } from './controllers/BuffController.js';
 import { EndOfMonthController } from './controllers/EndOfMonthController.js';
+import { DataExportController } from './controllers/DataExportController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -186,6 +187,7 @@ export function initializeCharacterSheet() {
     const curseController = new CurseController(stateAdapter, form, dependencies);
     const buffController = new BuffController(stateAdapter, form, dependencies);
     const endOfMonthController = new EndOfMonthController(stateAdapter, form, dependencies);
+    const dataExportController = new DataExportController(stateAdapter, form, dependencies);
 
     // Initialize controllers
     characterController.initialize();
@@ -195,6 +197,7 @@ export function initializeCharacterSheet() {
     curseController.initialize();
     buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
+    dataExportController.initialize();
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Keeper's Character Sheet
+permalink: /character-sheet.html
 ---
 
 <form id="character-sheet">
@@ -418,5 +419,15 @@ title: Keeper's Character Sheet
     <div class="form-buttons no-print">
     <button type="submit">Save Character Info</button>
     <button type="button" id="print-button">Print</button>
+    </div>
+
+    <div class="form-section no-print data-management-section">
+        <h2>💾 Data Management</h2>
+        <p class="description">Download your character data to save a backup or transfer it to another browser. Upload a previously downloaded file to restore your character.</p>
+        <div class="data-management-buttons">
+            <button type="button" id="download-data-button">📥 Download Character Data</button>
+            <button type="button" id="upload-data-button">📤 Upload Character Data</button>
+            <input type="file" id="upload-data-file" accept=".json" />
+        </div>
     </div>
 </form>
