@@ -454,6 +454,7 @@ describe('Page Renderers Hydration', () => {
         <div id="rewards-wearable"></div>
         <div id="rewards-non-wearable"></div>
         <div id="rewards-familiars"></div>
+        <div id="rewards-quest-items"></div>
         <div id="rewards-temp-buffs"></div>
       `;
     });
@@ -525,6 +526,20 @@ describe('Page Renderers Hydration', () => {
       corners.forEach(img => {
         expect(img.getAttribute('src')).toContain('/assets/images/borders/border-7.PNG');
       });
+    });
+
+    test('renders Quest items (e.g., The Grand Key) in the quest items section', () => {
+      initializeRewardsPage();
+
+      const heading = document.getElementById('the-grand-key');
+      expect(heading).toBeTruthy();
+
+      const questContainer = document.getElementById('rewards-quest-items');
+      expect(questContainer).toBeTruthy();
+
+      const questCard = heading.closest('.reward-card');
+      expect(questCard).toBeTruthy();
+      expect(questContainer.contains(questCard)).toBe(true);
     });
   });
 });

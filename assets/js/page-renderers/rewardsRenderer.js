@@ -179,6 +179,7 @@ export function initializeRewardsPage() {
     const wearableContainer = document.getElementById('rewards-wearable');
     const nonWearableContainer = document.getElementById('rewards-non-wearable');
     const familiarContainer = document.getElementById('rewards-familiars');
+    const questItemsContainer = document.getElementById('rewards-quest-items');
     const tempBuffsContainer = document.getElementById('rewards-temp-buffs');
 
     if (!wearableContainer || !nonWearableContainer || !familiarContainer) return;
@@ -202,6 +203,14 @@ export function initializeRewardsPage() {
     familiarGrid.className = 'rewards-cards-container';
     familiarContainer.appendChild(familiarGrid);
 
+    let questItemsGrid = null;
+    if (questItemsContainer) {
+        questItemsContainer.innerHTML = '';
+        questItemsGrid = document.createElement('div');
+        questItemsGrid.className = 'rewards-cards-container';
+        questItemsContainer.appendChild(questItemsGrid);
+    }
+
     let tempBuffsGrid = null;
     if (tempBuffsContainer) {
         tempBuffsGrid = document.createElement('div');
@@ -219,6 +228,13 @@ export function initializeRewardsPage() {
             nonWearableGrid.appendChild(card);
         } else if (item.type === 'Familiar') {
             familiarGrid.appendChild(card);
+        } else if (item.type === 'Quest') {
+            // Optional section: Quest Items
+            if (questItemsGrid) questItemsGrid.appendChild(card);
+            else nonWearableGrid.appendChild(card);
+        } else {
+            // Fallback: don't drop unknown item types
+            nonWearableGrid.appendChild(card);
         }
     }
 
