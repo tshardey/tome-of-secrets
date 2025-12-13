@@ -5,6 +5,7 @@
 import { initializeSanctumPage } from '../assets/js/page-renderers/sanctumRenderer.js';
 import { initializeKeeperPage } from '../assets/js/page-renderers/keeperRenderer.js';
 import { initializeShoppingPage } from '../assets/js/page-renderers/shoppingRenderer.js';
+import { initializeRewardsPage } from '../assets/js/page-renderers/rewardsRenderer.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 
@@ -442,6 +443,88 @@ describe('Page Renderers Hydration', () => {
       const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
       expect(parseInt(formData.inkDrops)).toBe(75); // 100 - 25
       expect(parseInt(formData.paperScraps)).toBe(75); // 100 - 25
+    });
+  });
+
+  describe('Rewards Page Renderer', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      window.__BASEURL = '';
+      document.body.innerHTML = `
+        <div id="rewards-wearable"></div>
+        <div id="rewards-non-wearable"></div>
+        <div id="rewards-familiars"></div>
+        <div id="rewards-temp-buffs"></div>
+      `;
+    });
+
+    test('marks an obtained (inventory) item as acquired and uses border-7', () => {
+      safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, [{ name: "Librarian's Compass" }]);
+      safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
+
+      initializeRewardsPage();
+
+      const heading = document.getElementById('librarians-compass');
+      expect(heading).toBeTruthy();
+
+      const card = heading.closest('.reward-card');
+      expect(card).toBeTruthy();
+      expect(card.classList.contains('acquired')).toBe(true);
+      expect(card.classList.contains('equipped')).toBe(false);
+
+      const inner = card.querySelector('.reward-card-inner');
+      expect(inner).toBeTruthy();
+
+      const corners = Array.from(card.querySelectorAll('.reward-corner-border img'));
+      expect(corners.length).toBe(2);
+      corners.forEach(img => {
+        expect(img.getAttribute('src')).toContain('/assets/images/borders/border-7.PNG');
+      });
+    });
+
+    test('marks an equipped item as acquired+equipped and uses border-9', () => {
+      safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
+      safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, [{ name: "Librarian's Compass" }]);
+
+      initializeRewardsPage();
+
+      const heading = document.getElementById('librarians-compass');
+      expect(heading).toBeTruthy();
+
+      const card = heading.closest('.reward-card');
+      expect(card).toBeTruthy();
+      expect(card.classList.contains('acquired')).toBe(true);
+      expect(card.classList.contains('equipped')).toBe(true);
+
+      const corners = Array.from(card.querySelectorAll('.reward-corner-border img'));
+      expect(corners.length).toBe(2);
+      corners.forEach(img => {
+        expect(img.getAttribute('src')).toContain('/assets/images/borders/border-9.PNG');
+      });
+    });
+
+    test('marks an acquired temporary buff (TEMPORARY_BUFFS) as acquired and uses border-7', () => {
+      safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
+      safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
+      safeSetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, [
+        { name: 'Long Read Focus', description: 'x', duration: 'two-months', monthsRemaining: 2, status: 'active' }
+      ]);
+
+      initializeRewardsPage();
+
+      const heading = document.getElementById('long-read-focus');
+      expect(heading).toBeTruthy();
+
+      const card = heading.closest('.reward-card');
+      expect(card).toBeTruthy();
+      expect(card.classList.contains('acquired')).toBe(true);
+      expect(card.classList.contains('equipped')).toBe(false);
+
+      const corners = Array.from(card.querySelectorAll('.reward-corner-border img'));
+      expect(corners.length).toBe(2);
+      corners.forEach(img => {
+        expect(img.getAttribute('src')).toContain('/assets/images/borders/border-7.PNG');
+      });
     });
   });
 });

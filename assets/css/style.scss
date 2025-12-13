@@ -318,41 +318,174 @@ article h6:hover .anchor-link {
    Reward Item Layout
    ========================================================================== */
 
-.reward-container {
-    margin-bottom: 40px;
-    /* This creates space between each reward item */
-    padding-bottom: 20px;
-    border-bottom: 1px solid #54483b;
+/* Rewards Cards - Responsive Card-Based Layout */
+.rewards-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
 }
 
-.reward-container h4 {
-    margin-top: 0;
-    font-size: 1.8em;
+.reward-card {
+    position: relative;
+    background-color: rgba(139, 115, 85, 0.15);
+    border: 1px solid #8b7355;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    overflow: visible; /* Allow borders to extend beyond card */
+}
+
+/* Inner wrapper: clips shimmer to the card while allowing corner borders outside */
+.reward-card-inner {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden; /* Clip shimmer */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px; /* Keep content spacing, but allow shimmer to reach the card border */
+    flex: 1; /* Fill the full stretched height of the grid item so foil/shimmer reaches the bottom */
+    height: 100%; /* If the grid stretches the card taller than content, fill that height */
+    box-sizing: border-box; /* Keep padding inside the 100% height */
+}
+
+/* Give acquired cards a subtle full-surface foil tint (so the effect reaches the border) */
+.reward-card.acquired .reward-card-inner {
+    background: linear-gradient(
+        135deg,
+        rgba(65, 97, 125, 0.10),
+        rgba(65, 97, 125, 0.02)
+    );
+}
+
+/* Subtle shiny effect for acquired cards (like shiny Pokemon cards but subtle) */
+.reward-card.acquired .reward-card-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(65, 97, 125, 0.15),
+        rgba(65, 97, 125, 0.3),
+        rgba(65, 97, 125, 0.15),
+        transparent
+    );
+    z-index: 0;
+    pointer-events: none;
+    animation: shimmer 3s infinite;
+    border-radius: 8px;
+    transform: translateX(-150%);
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-150%);
+    }
+    100% {
+        transform: translateX(250%);
+    }
+}
+
+.reward-card.acquired {
+    /* Slightly "pressed in" / selected feel */
+    transform: translateY(3px) scale(0.99);
+    box-shadow:
+        0 0 18px rgba(65, 97, 125, 0.22),
+        inset 0 4px 26px rgba(65, 97, 125, 0.26),
+        inset 0 0 0 2px rgba(65, 97, 125, 0.18);
+}
+
+.reward-card:hover {
+    box-shadow: 0 4px 8px rgba(184, 159, 98, 0.2);
+}
+
+.reward-card.acquired:hover {
+    box-shadow: 0 4px 12px rgba(184, 159, 98, 0.3), 0 0 20px rgba(65, 97, 125, 0.3), inset 0 0 25px rgba(65, 97, 125, 0.15);
+    transform: translateY(0) scale(1);
+}
+
+.reward-card h4 {
+    margin: 0;
+    font-size: 1.2em;
     border-bottom: none;
     padding-bottom: 0;
-    margin-bottom: 10px;
+    position: relative;
+    z-index: 2;
 }
 
-.reward-container .reward-description {
-    margin-bottom: 15px;
+.reward-card .reward-description {
+    margin: 0;
+    color: #d4c8b0;
+    line-height: 1.5;
+    position: relative;
+    z-index: 2;
 }
 
-.reward-item {
-    display: inline-block;
-    /* Tile should only be as wide as the image */
+.reward-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 2;
 }
 
 .reward-image img {
-    width: 250px;
-    /* This controls the image size */
-    height: 250px;
-    /* This controls the image size */
+    max-width: 100%;
+    max-height: 250px;
+    width: auto;
+    height: auto;
     object-fit: contain;
-    /* This prevents clipping while maintaining aspect ratio */
     border-radius: 5px;
     border: 2px solid #54483b;
     background-color: #2a231d;
-    /* Dark background to fill any empty space */
+}
+
+/* Corner border decorations for acquired items */
+.reward-corner-border {
+    position: absolute;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.reward-corner-top-left {
+    top: -25px;
+    left: -25px;
+}
+
+.reward-corner-bottom-right {
+    bottom: -25px;
+    right: -25px;
+}
+
+/* Equipped items (border-9) positioned 2px further in than obtained items (border-7) */
+.reward-card.equipped .reward-corner-top-left {
+    top: -23px;
+    left: -23px;
+}
+
+.reward-card.equipped .reward-corner-bottom-right {
+    bottom: -23px;
+    right: -23px;
+}
+
+.reward-corner-image {
+    width: 135px;
+    height: 135px;
+    object-fit: contain;
+    opacity: 1;
+    display: block;
+    /* Keep original gold/yellow color - no filter */
+}
+
+.reward-corner-top-left .reward-corner-image {
+    transform: scaleX(-1) scaleY(-1);
 }
 
 /* ==========================================================================
