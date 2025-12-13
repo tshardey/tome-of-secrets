@@ -10,6 +10,9 @@ The heart of your adventure is your library, which is also your home. Choosing a
 
 <div id="sanctum-list"></div>
 
+<script>
+  window.__BASEURL = '{{ site.baseurl }}';
+</script>
 <script type="module">
   import { initializeSanctumPage } from '{{ site.baseurl }}/assets/js/page-renderers/sanctumRenderer.js';
   initializeSanctumPage();
