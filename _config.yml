@@ -14,5 +14,5 @@ exclude:
   - docs/
   - node_modules/
   - package-lock.json
-  - agents.MD
+  - AGENTS.md
   - README.md
