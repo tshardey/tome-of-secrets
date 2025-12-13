@@ -1,19 +1,22 @@
----
+--- 
 ---
 /* Dark Academia Theme */
 
 body {
     /* New Fonts and Colors */
     font-family: 'Source Serif Pro', serif;
-    background-color: #2a231d; /* Deep, warm brown */
-    color: #d4c8b0; /* Parchment/cream text */
-    
+    background-color: #2a231d;
+    /* Deep, warm brown */
+    color: #d4c8b0;
+    /* Parchment/cream text */
+
     /* Subtle paper texture background */
     background-image: url("https://www.transparenttextures.com/patterns/old-paper.png");
-    
+
     margin: 0;
     padding: 20px;
-    line-height: 1.7; /* Slightly more spacious for readability */
+    line-height: 1.7;
+    /* Slightly more spacious for readability */
 }
 
 .container {
@@ -22,7 +25,8 @@ body {
 
 header {
     text-align: center;
-    border-bottom: 1px solid #54483b; /* Darker brown border */
+    border-bottom: 1px solid #54483b;
+    /* Darker brown border */
     padding-bottom: 20px;
     margin-bottom: 20px;
 }
@@ -33,13 +37,20 @@ header h1 {
     font-weight: 700;
     font-style: italic;
     font-size: 3em;
-    color: #b89f62; /* Muted gold */
+    color: #b89f62;
+    /* Muted gold */
 }
 
 /* General heading styles */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-family: 'Lora', serif;
-    color: #b89f62; /* Muted gold */
+    color: #b89f62;
+    /* Muted gold */
 }
 
 .main-content {
@@ -59,7 +70,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .sidebar nav a {
     text-decoration: none;
-    color: #d4c8b0; /* Parchment text */
+    color: #d4c8b0;
+    /* Parchment text */
     display: block;
     padding: 8px 10px;
     border-radius: 4px;
@@ -70,7 +82,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .sidebar nav a:hover {
     background-color: #3e352f;
-    color: #cca352; /* Brighter gold on hover */
+    color: #cca352;
+    /* Brighter gold on hover */
 }
 
 main {
@@ -78,7 +91,8 @@ main {
 }
 
 article {
-    background-color: #3e352f; /* Lighter, warm brown */
+    background-color: #3e352f;
+    /* Lighter, warm brown */
     border: 1px solid #54483b;
     padding: 25px;
     border-radius: 5px;
@@ -89,12 +103,14 @@ footer {
     margin-top: 40px;
     padding-top: 20px;
     border-top: 1px solid #54483b;
-    color: #8a7a61; /* Muted text */
+    color: #8a7a61;
+    /* Muted text */
     font-style: italic;
 }
 
 a {
-    color: #cca352; /* Brighter gold for links */
+    color: #cca352;
+    /* Brighter gold for links */
     text-decoration: none;
     border-bottom: 1px dotted #cca352;
 }
@@ -108,14 +124,20 @@ a:hover {
     font-size: 2.8em;
     margin-bottom: 25px;
     padding-bottom: 15px;
-    border-bottom: 2px double #54483b; /* Classic double border */
+    border-bottom: 2px double #54483b;
+    /* Classic double border */
     line-height: 1.2;
 }
 
 /* Styling for the hover-to-show anchor links on headers */
-article h2, article h3, article h4, article h5, article h6 {
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
     position: relative;
-    padding-left: 1.2em; /* Add padding to the header to make room */
+    padding-left: 1.2em;
+    /* Add padding to the header to make room */
 }
 
 .anchor-link {
@@ -123,7 +145,8 @@ article h2, article h3, article h4, article h5, article h6 {
     /* Position the link in the new padding area */
     left: 0;
     top: 50%;
-    transform: translateY(-50%); /* This perfectly centers the link vertically */
+    transform: translateY(-50%);
+    /* This perfectly centers the link vertically */
 
     /* Make the link invisible by default */
     opacity: 0;
@@ -133,7 +156,8 @@ article h2, article h3, article h4, article h5, article h6 {
     color: #cca352;
     text-decoration: none;
     border-bottom: none;
-    font-size: 0.8em; /* Make the symbol slightly smaller than the header text */
+    font-size: 0.8em;
+    /* Make the symbol slightly smaller than the header text */
     font-weight: normal;
 }
 
@@ -151,51 +175,124 @@ article h6:hover .anchor-link {
    ========================================================================== */
 
 .hero {
-  position: relative; /* Needed for the overlay effect */
-  padding: 8em 2em;
-  text-align: center;
-  color: #fff; /* We'll use white text on the dark image */
+    position: relative;
+    /* Needed for the overlay effect */
+    padding: 8em 2em;
+    text-align: center;
+    color: #fff;
+    /* We'll use white text on the dark image */
 
-  /* --- The background image --- */
-  background-image: url("{{ site.baseurl }}/assets/images/library-hero.png");
-  background-size: cover; /* Cover the entire area */
-  background-position: center 60%; /* Center the image, slightly lower */
-  border-radius: 5px;
-  margin-bottom: 20px;
+    /* --- The background image --- */
+    background-image: url("{{ site.baseurl }}/assets/images/library-hero.png");
+    background-size: cover;
+    /* Cover the entire area */
+    background-position: center bottom;
+    /* Center horizontally, anchor to bottom */
+    border-radius: 5px;
+    margin-bottom: 20px;
 }
 
 /* --- Darkening overlay to make text readable --- */
 .hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-  border-radius: 5px; /* Match the parent's border-radius */
-  z-index: 1;
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent black */
+    border-radius: 5px;
+    /* Match the parent's border-radius */
+    z-index: 1;
 }
 
 /* --- Style the text on top of the banner --- */
 .hero-content {
-  position: relative; /* Put the text on top of the overlay */
-  z-index: 2;
+    position: relative;
+    /* Put the text on top of the overlay */
+    z-index: 2;
 }
 
 .hero-title {
-  font-family: 'Lora', serif;
-  font-weight: 700;
-  font-style: italic;
-  font-size: 4em;
-  color: #fff;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.7); /* Add a shadow for readability */
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 4em;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    /* Add a shadow for readability */
 }
 
 .hero-description {
-  font-size: 1.2em;
-  color: #d4c8b0; /* Use the parchment color for the subtitle */
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    font-size: 1.2em;
+    color: #d4c8b0;
+    /* Use the parchment color for the subtitle */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* ==========================================================================
+   Compact Hero Sections for Sanctum Types
+   ========================================================================== */
+
+.sanctum-hero {
+    position: relative;
+    /* Needed for the overlay effect */
+    padding: 4em 2em;
+    /* More compact than main hero */
+    text-align: center;
+    color: #fff;
+    /* We'll use white text on the dark image */
+    background-size: cover;
+    /* Cover the entire area */
+    background-position: center center;
+    /* Center the image */
+    border-radius: 5px;
+    margin-bottom: 20px;
+    margin-left: auto;
+    margin-right: auto;
+    /* Center the hero on wide screens */
+    min-height: 200px;
+    /* Ensure minimum height for compact display */
+    max-width: 1200px;
+    /* Prevent excessive stretching on wide monitors */
+    max-height: 400px;
+    /* Prevent excessive height on wide screens */
+}
+
+/* --- Darkening overlay to make text readable --- */
+.sanctum-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent black */
+    border-radius: 5px;
+    /* Match the parent's border-radius */
+    z-index: 1;
+}
+
+/* --- Style the text on top of the banner --- */
+.sanctum-hero-content {
+    position: relative;
+    /* Put the text on top of the overlay */
+    z-index: 2;
+}
+
+.sanctum-hero-title {
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 2.5em;
+    /* Smaller than main hero title */
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    /* Add a shadow for readability */
+    margin: 0;
+    /* Remove default margin */
 }
 
 
@@ -204,17 +301,17 @@ article h6:hover .anchor-link {
    ========================================================================== */
 
 .page-header {
-  text-align: center;
-  border-bottom: 1px solid #54483b;
-  padding-bottom: 15px;
-  margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 1px solid #54483b;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .page-header h1 {
-  font-family: 'Lora', serif;
-  font-style: italic;
-  font-size: 2em;
-  color: #b89f62;
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 2em;
+    color: #b89f62;
 }
 
 /* ==========================================================================
@@ -222,33 +319,40 @@ article h6:hover .anchor-link {
    ========================================================================== */
 
 .reward-container {
-  margin-bottom: 40px; /* This creates space between each reward item */
-  padding-bottom: 20px;
-  border-bottom: 1px solid #54483b;
+    margin-bottom: 40px;
+    /* This creates space between each reward item */
+    padding-bottom: 20px;
+    border-bottom: 1px solid #54483b;
 }
 
 .reward-container h4 {
-  margin-top: 0;
-  font-size: 1.8em;
-  border-bottom: none;
-  padding-bottom: 0;
-  margin-bottom: 10px;
+    margin-top: 0;
+    font-size: 1.8em;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 10px;
 }
 
 .reward-container .reward-description {
-  margin-bottom: 15px;
+    margin-bottom: 15px;
 }
 
 .reward-item {
-  display: inline-block; /* Tile should only be as wide as the image */
+    display: inline-block;
+    /* Tile should only be as wide as the image */
 }
 
 .reward-image img {
-  width: 150px;  /* This controls the image size */
-  height: 150px; /* This controls the image size */
-  object-fit: cover; /* This prevents the image from being stretched or squished */
-  border-radius: 5px;
-  border: 2px solid #54483b;
+    width: 250px;
+    /* This controls the image size */
+    height: 250px;
+    /* This controls the image size */
+    object-fit: contain;
+    /* This prevents clipping while maintaining aspect ratio */
+    border-radius: 5px;
+    border: 2px solid #54483b;
+    background-color: #2a231d;
+    /* Dark background to fill any empty space */
 }
 
 /* ==========================================================================
@@ -256,31 +360,31 @@ article h6:hover .anchor-link {
    ========================================================================== */
 
 article table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1.5em;
-  margin-bottom: 1.5em;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
 }
 
 article th,
 article td {
-  padding: 12px 15px;
-  border: 1px solid #54483b;
-  text-align: left;
+    padding: 12px 15px;
+    border: 1px solid #54483b;
+    text-align: left;
 }
 
 article th {
-  background-color: #3e352f;
-  font-family: 'Lora', serif;
-  font-size: 1.2em;
+    background-color: #3e352f;
+    font-family: 'Lora', serif;
+    font-size: 1.2em;
 }
 
 /* --- Control Column Widths --- */
 /* Target the first column of any table in the article */
 article td:first-child,
 article th:first-child {
-  font-weight: bold;
-  text-align: center;
+    font-weight: bold;
+    text-align: center;
 }
 
 /* ==========================================================================
@@ -288,19 +392,21 @@ article th:first-child {
    ========================================================================== */
 
 .nested-table {
-  margin-top: 15px !important; /* Add some space above the inner table */
-  background-color: #2a231d; /* Match the darker site background */
-  border: none;
+    margin-top: 15px !important;
+    /* Add some space above the inner table */
+    background-color: #2a231d;
+    /* Match the darker site background */
+    border: none;
 }
 
 .nested-table td {
-  border: 1px solid #54483b;
+    border: 1px solid #54483b;
 }
 
 /* Keep the first column narrow for the roll */
 .nested-table td:first-child {
-  text-align: center;
-  font-weight: bold;
+    text-align: center;
+    font-weight: bold;
 }
 
 /* ==========================================================================
@@ -313,7 +419,10 @@ article th:first-child {
         color: #000;
     }
 
-    .sidebar, footer, .hero, .no-print {
+    .sidebar,
+    footer,
+    .hero,
+    .no-print {
         display: none;
     }
 
@@ -322,7 +431,8 @@ article th:first-child {
         padding: 0;
     }
 
-    input, textarea {
+    input,
+    textarea {
         border: 1px solid #ccc;
         padding: 5px;
         width: 100%;
@@ -337,9 +447,12 @@ article th:first-child {
 #character-sheet input[type="number"],
 #character-sheet select,
 #character-sheet textarea {
-    background-color: #2a231d; /* The darker brown from nested tables */
-    color: #d4c8b0; /* Parchment text color */
-    border: 1px solid #54483b; /* Darker brown border */
+    background-color: #2a231d;
+    /* The darker brown from nested tables */
+    color: #d4c8b0;
+    /* Parchment text color */
+    border: 1px solid #54483b;
+    /* Darker brown border */
     border-radius: 4px;
     padding: 8px;
     font-family: 'Source Serif Pro', serif;
@@ -349,7 +462,8 @@ article th:first-child {
 
 #character-sheet textarea {
     width: 100%;
-    box-sizing: border-box; /* Ensures padding doesn't add to the width */
+    box-sizing: border-box;
+    /* Ensures padding doesn't add to the width */
     min-height: 120px;
     resize: vertical;
 }
@@ -386,8 +500,10 @@ article th:first-child {
 }
 
 .form-buttons button {
-    background-color: #b89f62; /* Muted gold */
-    color: #2a231d; /* Deep brown text */
+    background-color: #b89f62;
+    /* Muted gold */
+    color: #2a231d;
+    /* Deep brown text */
     border: none;
     padding: 10px 20px;
     font-family: 'Lora', serif;
@@ -399,7 +515,8 @@ article th:first-child {
 }
 
 .form-buttons button:hover {
-    background-color: #cca352; /* Brighter gold on hover */
+    background-color: #cca352;
+    /* Brighter gold on hover */
 }
 
 /* ==========================================================================
@@ -408,7 +525,8 @@ article th:first-child {
 
 .data-management-section {
     margin-top: 20px;
-    border-top: 1px solid #54483b; /* Match border color from theme */
+    border-top: 1px solid #54483b;
+    /* Match border color from theme */
     padding-top: 20px;
 }
 
@@ -420,8 +538,10 @@ article th:first-child {
 }
 
 .data-management-buttons button {
-    background-color: #b89f62; /* Muted gold - match form-buttons */
-    color: #2a231d; /* Deep brown text - match form-buttons */
+    background-color: #b89f62;
+    /* Muted gold - match form-buttons */
+    color: #2a231d;
+    /* Deep brown text - match form-buttons */
     border: none;
     padding: 10px 20px;
     font-family: 'Lora', serif;
@@ -432,11 +552,13 @@ article th:first-child {
 }
 
 .data-management-buttons button:hover {
-    background-color: #cca352; /* Brighter gold on hover - match form-buttons */
+    background-color: #cca352;
+    /* Brighter gold on hover - match form-buttons */
 }
 
 .data-management-buttons input[type="file"] {
-    display: none; /* Hide the file input */
+    display: none;
+    /* Hide the file input */
 }
 
 /* ==========================================================================
@@ -444,39 +566,73 @@ article th:first-child {
    ========================================================================== */
 
 .tracker-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1.5em;
-  margin-bottom: 1.5em;
-  table-layout: fixed; /* This is important for respecting column widths */
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+    table-layout: fixed;
+    /* This is important for respecting column widths */
 }
 
 .tracker-table th,
 .tracker-table td {
-  padding: 12px 15px;
-  border: 1px solid #54483b;
-  text-align: left;
-  word-wrap: break-word; /* Helps with long text in fixed-width columns */
+    padding: 12px 15px;
+    border: 1px solid #54483b;
+    text-align: left;
+    word-wrap: break-word;
+    /* Helps with long text in fixed-width columns */
 }
 
 .tracker-table th {
-  background-color: #3e352f;
-  font-family: 'Lora', serif;
-  font-size: 1.1em;
+    background-color: #3e352f;
+    font-family: 'Lora', serif;
+    font-size: 1.1em;
 }
 
 /* --- Column Widths for Tracker Tables --- */
-.tracker-table .col-month      { width: 6%; }
-.tracker-table .col-year       { width: 6%; }
-.tracker-table .col-quest-type { width: 9%; }
-.tracker-table .col-prompt     { width: 17%; }
-.tracker-table .col-book-title { width: 13%; }
-.tracker-table .col-xp         { width: 6%; }
-.tracker-table .col-paper-scraps { width: 6%; }
-.tracker-table .col-ink-drops  { width: 6%; }
-.tracker-table .col-items      { width: 12%; }
-.tracker-table .col-notes      { width: 14%; }
-.tracker-table .col-action     { width: 5%; }
+.tracker-table .col-month {
+    width: 6%;
+}
+
+.tracker-table .col-year {
+    width: 6%;
+}
+
+.tracker-table .col-quest-type {
+    width: 9%;
+}
+
+.tracker-table .col-prompt {
+    width: 17%;
+}
+
+.tracker-table .col-book-title {
+    width: 13%;
+}
+
+.tracker-table .col-xp {
+    width: 6%;
+}
+
+.tracker-table .col-paper-scraps {
+    width: 6%;
+}
+
+.tracker-table .col-ink-drops {
+    width: 6%;
+}
+
+.tracker-table .col-items {
+    width: 12%;
+}
+
+.tracker-table .col-notes {
+    width: 14%;
+}
+
+.tracker-table .col-action {
+    width: 5%;
+}
 
 /* Rewards subheader row styling */
 .tracker-table .rewards-subheader th {
@@ -486,8 +642,10 @@ article th:first-child {
 
 /* Button styles for end of month */
 .end-of-month-button {
-    background-color: #b89f62; /* Muted gold */
-    color: #2a231d; /* Deep brown text */
+    background-color: #b89f62;
+    /* Muted gold */
+    color: #2a231d;
+    /* Deep brown text */
     border: none;
     padding: 10px 20px;
     font-family: 'Lora', serif;
@@ -498,7 +656,8 @@ article th:first-child {
 }
 
 .end-of-month-button:hover {
-    background-color: #cca352; /* Brighter gold on hover */
+    background-color: #cca352;
+    /* Brighter gold on hover */
 }
 
 /* --- Column Widths for Atmospheric Buffs Table --- */
@@ -507,15 +666,35 @@ article th:first-child {
 }
 
 #atmospheric-buffs-container .tracker-table th:nth-child(1),
-#atmospheric-buffs-container .tracker-table td:nth-child(1) { width: 40%; } /* Atmospheric Buff */
+#atmospheric-buffs-container .tracker-table td:nth-child(1) {
+    width: 40%;
+}
+
+/* Atmospheric Buff */
 #atmospheric-buffs-container .tracker-table th:nth-child(2),
-#atmospheric-buffs-container .tracker-table td:nth-child(2) { width: 15%; } /* Daily Buff */
+#atmospheric-buffs-container .tracker-table td:nth-child(2) {
+    width: 15%;
+}
+
+/* Daily Buff */
 #atmospheric-buffs-container .tracker-table th:nth-child(3),
-#atmospheric-buffs-container .tracker-table td:nth-child(3) { width: 12%; } /* Active */
+#atmospheric-buffs-container .tracker-table td:nth-child(3) {
+    width: 12%;
+}
+
+/* Active */
 #atmospheric-buffs-container .tracker-table th:nth-child(4),
-#atmospheric-buffs-container .tracker-table td:nth-child(4) { width: 18%; } /* Total Days Used */
+#atmospheric-buffs-container .tracker-table td:nth-child(4) {
+    width: 18%;
+}
+
+/* Total Days Used */
 #atmospheric-buffs-container .tracker-table th:nth-child(5),
-#atmospheric-buffs-container .tracker-table td:nth-child(5) { width: 15%; } /* Monthly Total */
+#atmospheric-buffs-container .tracker-table td:nth-child(5) {
+    width: 15%;
+}
+
+/* Monthly Total */
 
 /* Ensure text doesn't overflow in atmospheric buffs table */
 #atmospheric-buffs-container .tracker-table th,
@@ -523,13 +702,15 @@ article th:first-child {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: 8px 6px; /* Slightly smaller padding for narrower table */
+    padding: 8px 6px;
+    /* Slightly smaller padding for narrower table */
 }
 
 /* Style input fields in atmospheric buffs table to fit within cells */
 #atmospheric-buffs-container .tracker-table input[type="number"],
 #atmospheric-buffs-container .tracker-table input[type="checkbox"] {
-    width: calc(100% - 8px); /* Account for cell padding */
+    width: calc(100% - 8px);
+    /* Account for cell padding */
     max-width: 100%;
     box-sizing: border-box;
     margin: 0;
@@ -537,7 +718,7 @@ article th:first-child {
     font-size: 0.9em;
 }
 
-#active-assignments-container, 
+#active-assignments-container,
 #completed-quests-container,
 #discarded-quests-container {
     margin-top: 30px;
@@ -568,8 +749,10 @@ article th:first-child {
 .add-quest-form select,
 .add-curse-form input,
 .add-curse-form select {
-    flex-grow: 1; /* Allows inputs to fill the space */
-    width: 33.33%; /* Default width for flex items */
+    flex-grow: 1;
+    /* Allows inputs to fill the space */
+    width: 33.33%;
+    /* Default width for flex items */
 }
 
 .add-curse-form .form-row {
@@ -580,17 +763,22 @@ article th:first-child {
 }
 
 .add-curse-form select {
-    flex: 2; /* Make the select dropdown wider */
+    flex: 2;
+    /* Make the select dropdown wider */
 }
 
 .add-curse-form input {
-    flex: 3; /* Make the book title input even wider */
+    flex: 3;
+    /* Make the book title input even wider */
 }
 
 .add-curse-form button {
-    flex: 1; /* Make the button smaller */
-    width: auto; /* Override the 100% width */
-    min-width: 120px; /* Ensure it's not too small */
+    flex: 1;
+    /* Make the button smaller */
+    width: auto;
+    /* Override the 100% width */
+    min-width: 120px;
+    /* Ensure it's not too small */
 }
 
 .add-quest-form button {
@@ -627,7 +815,8 @@ article th:first-child {
     display: flex;
     flex-grow: 1;
     gap: 15px;
-    width: 33.33%; /* Match the default width of other inputs in the row */
+    width: 33.33%;
+    /* Match the default width of other inputs in the row */
 }
 
 /* ==========================================================================
@@ -690,7 +879,8 @@ article th:first-child {
 #dungeon-action-label {
     color: #d4c8b0;
     font-style: italic;
-    user-select: none; /* Prevents text selection on click */
+    user-select: none;
+    /* Prevents text selection on click */
 }
 
 .switch {
@@ -713,7 +903,8 @@ article th:first-child {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #54483b; /* Darker brown border color */
+    background-color: #54483b;
+    /* Darker brown border color */
     transition: .4s;
     border-radius: 28px;
 }
@@ -725,16 +916,18 @@ article th:first-child {
     width: 20px;
     left: 4px;
     bottom: 4px;
-    background-color: #d4c8b0; /* Parchment/cream text color */
+    background-color: #d4c8b0;
+    /* Parchment/cream text color */
     transition: .4s;
     border-radius: 50%;
 }
 
-input:checked + .slider {
-    background-color: #b89f62; /* Muted gold */
+input:checked+.slider {
+    background-color: #b89f62;
+    /* Muted gold */
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
     transform: translateX(22px);
 }
 
@@ -746,7 +939,8 @@ input:checked + .slider:before {
 .action-cell .complete-curse-btn,
 .action-cell .edit-curse-btn,
 .action-cell .delete-curse-btn {
-    display: block; /* Stack the buttons vertically */
+    display: block;
+    /* Stack the buttons vertically */
     margin-bottom: 5px;
     background: none;
     border: none;
@@ -765,15 +959,20 @@ input:checked + .slider:before {
 /* Specific colors for each action button */
 .action-cell .edit-quest-btn,
 .action-cell .edit-curse-btn {
-    color: #b89f62; /* Muted Gold */
+    color: #b89f62;
+    /* Muted Gold */
 }
+
 .action-cell .complete-quest-btn,
 .action-cell .complete-curse-btn {
     color: #253D2C;
 }
+
 .action-cell .discard-quest-btn {
-    color: #800000; /* Maroon */
+    color: #800000;
+    /* Maroon */
 }
+
 .action-cell .delete-btn,
 .action-cell .delete-curse-btn {
     color: #3F1717;
@@ -900,7 +1099,8 @@ input:checked + .slider:before {
 }
 
 .item-card button {
-    margin-top: auto; /* Pushes button to the bottom */
+    margin-top: auto;
+    /* Pushes button to the bottom */
     margin-right: 5px;
     background: none;
     border: 1px solid #b89f62;
@@ -920,6 +1120,7 @@ input:checked + .slider:before {
     border-color: #8a6262;
     color: #8a6262;
 }
+
 .item-card .delete-item-btn:hover {
     background-color: #8a6262;
     color: #fff;
@@ -1145,7 +1346,7 @@ input:checked + .slider:before {
     margin-bottom: 40px;
 }
 
-.mastery-abilities-container > p {
+.mastery-abilities-container>p {
     text-align: center;
     font-style: italic;
     margin-bottom: 20px;
@@ -1178,7 +1379,8 @@ input:checked + .slider:before {
 }
 
 #xp-needed {
-    background-color: #2a231d; /* Darker background for read-only */
+    background-color: #2a231d;
+    /* Darker background for read-only */
     text-align: center;
     font-weight: bold;
 }
@@ -1189,12 +1391,12 @@ input:checked + .slider:before {
     gap: 20px;
 }
 
-.resource-row > div {
+.resource-row>div {
     flex-grow: 1;
     flex-basis: 30%;
 }
 
-.resource-row > li {
+.resource-row>li {
     flex-grow: 1;
     flex-basis: 45%;
 }
@@ -1238,5 +1440,13 @@ input:checked + .slider:before {
     article th:first-child,
     .nested-table td:first-child {
         width: auto;
+    }
+}
+
+/* Optimize sanctum heroes for wide screens */
+@media screen and (min-width: 1400px) {
+    .sanctum-hero {
+        padding: 3em 2em;
+        /* Slightly reduce padding on very wide screens */
     }
 }
