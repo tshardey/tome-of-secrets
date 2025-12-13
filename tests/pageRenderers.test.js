@@ -502,6 +502,30 @@ describe('Page Renderers Hydration', () => {
         expect(img.getAttribute('src')).toContain('/assets/images/borders/border-9.PNG');
       });
     });
+
+    test('marks an acquired temporary buff (TEMPORARY_BUFFS) as acquired and uses border-7', () => {
+      safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
+      safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
+      safeSetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, [
+        { name: 'Long Read Focus', description: 'x', duration: 'two-months', monthsRemaining: 2, status: 'active' }
+      ]);
+
+      initializeRewardsPage();
+
+      const heading = document.getElementById('long-read-focus');
+      expect(heading).toBeTruthy();
+
+      const card = heading.closest('.reward-card');
+      expect(card).toBeTruthy();
+      expect(card.classList.contains('acquired')).toBe(true);
+      expect(card.classList.contains('equipped')).toBe(false);
+
+      const corners = Array.from(card.querySelectorAll('.reward-corner-border img'));
+      expect(corners.length).toBe(2);
+      corners.forEach(img => {
+        expect(img.getAttribute('src')).toContain('/assets/images/borders/border-7.PNG');
+      });
+    });
   });
 });
 

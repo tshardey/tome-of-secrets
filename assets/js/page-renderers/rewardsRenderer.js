@@ -12,12 +12,16 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 function getItemStatus(itemName) {
     const inventoryItems = safeGetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
     const equippedItems = safeGetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
+    const temporaryBuffs = safeGetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, []);
     
     const equippedNames = new Set(equippedItems.map(i => i.name));
     const inventoryNames = new Set(inventoryItems.map(i => i.name));
+    const temporaryBuffNames = new Set(
+        Array.isArray(temporaryBuffs) ? temporaryBuffs.map(b => b?.name).filter(Boolean) : []
+    );
     
     const isEquipped = equippedNames.has(itemName);
-    const isAcquired = isEquipped || inventoryNames.has(itemName);
+    const isAcquired = isEquipped || inventoryNames.has(itemName) || temporaryBuffNames.has(itemName);
     
     return { isAcquired, isEquipped };
 }
