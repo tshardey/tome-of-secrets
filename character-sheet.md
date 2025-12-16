@@ -263,10 +263,76 @@ permalink: /character-sheet.html
     <div class="form-section">
         <h2>📅 Monthly Tracker</h2>
 
+        <div class="completed-reads-shelf-container">
+            <svg id="completed-reads-shelf" viewBox="0 0 360 140" xmlns="http://www.w3.org/2000/svg" aria-label="Completed Reads Bookshelf">
+                <!-- Shelf wood grain background -->
+                <defs>
+                    <pattern id="wood-grain" patternUnits="userSpaceOnUse" width="100" height="10">
+                        <line x1="0" y1="3" x2="100" y2="3" stroke="#5c4033" stroke-width="0.5" opacity="0.3"/>
+                        <line x1="0" y1="7" x2="100" y2="7" stroke="#5c4033" stroke-width="0.3" opacity="0.2"/>
+                    </pattern>
+                </defs>
+                
+                <!-- Shelf base -->
+                <rect x="0" y="118" width="360" height="22" fill="#8b6914" stroke="#3d2914" stroke-width="2"/>
+                <rect x="0" y="118" width="360" height="22" fill="url(#wood-grain)"/>
+                <line x1="0" y1="120" x2="360" y2="120" stroke="#a67c00" stroke-width="1" opacity="0.5"/>
+                
+                <!-- Book shapes - each has id="shelf-book-N" for JS to fill -->
+                <!-- Book 0: Slim book -->
+                <rect id="shelf-book-0" x="15" y="14" width="20" height="102" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 1: Tall straight -->
+                <rect id="shelf-book-1" x="39" y="8" width="28" height="108" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 2: Medium height -->
+                <rect id="shelf-book-2" x="71" y="32" width="26" height="84" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 3: Tall -->
+                <rect id="shelf-book-3" x="101" y="12" width="30" height="104" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 4: Horizontal stack - bottom (longest, offset left) -->
+                <rect id="shelf-book-4" x="140" y="96" width="90" height="20" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 5: Horizontal stack - middle (offset right) -->
+                <rect id="shelf-book-5" x="148" y="74" width="86" height="20" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 6: Horizontal stack - top (offset left) -->
+                <rect id="shelf-book-6" x="144" y="52" width="78" height="20" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 7: Tall after stack -->
+                <rect id="shelf-book-7" x="238" y="6" width="30" height="110" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 8: Short book -->
+                <rect id="shelf-book-8" x="272" y="48" width="28" height="68" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 9: Tall rightmost -->
+                <rect id="shelf-book-9" x="304" y="10" width="32" height="106" 
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Decorative spine lines (subtle) -->
+                <g stroke="#2a1f1a" stroke-width="0.5" opacity="0.4">
+                    <line x1="53" y1="14" x2="53" y2="110"/>
+                    <line x1="116" y1="18" x2="116" y2="110"/>
+                    <line x1="253" y1="12" x2="253" y2="110"/>
+                    <line x1="320" y1="16" x2="320" y2="110"/>
+                </g>
+            </svg>
+        </div>
+
         <div class="form-row" style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
             <label for="books-completed-month" style="display: flex; align-items: center; gap: 10px;">
                 <strong>📚 Books Completed This Month:</strong>
-                <input type="number" id="books-completed-month" value="0" min="0" style="width: 80px;" />
+                <input type="number" id="books-completed-month" value="0" min="0" max="10" style="width: 80px;" />
             </label>
             <label for="journal-entries-completed" style="display: flex; align-items: center; gap: 10px;">
                 <strong>📝 Journal Entries Completed:</strong>

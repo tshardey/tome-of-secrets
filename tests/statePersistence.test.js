@@ -58,7 +58,8 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.TEMPORARY_BUFFS]: [{ name: 'Moonlit Focus', duration: 'two-months', monthsRemaining: 2, status: 'active' }],
             [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 3,
             [STORAGE_KEYS.SELECTED_GENRES]: ['Mystery', 'Fantasy'],
-            [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd6'
+            [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd6',
+            [STORAGE_KEYS.SHELF_BOOK_COLORS]: []
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {

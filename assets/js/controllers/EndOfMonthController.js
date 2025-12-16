@@ -13,6 +13,8 @@ import { RewardCalculator } from '../services/RewardCalculator.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { parseIntOr } from '../utils/helpers.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { safeSetJSON } from '../utils/storage.js';
+import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
 
 export class EndOfMonthController extends BaseController {
@@ -58,6 +60,12 @@ export class EndOfMonthController extends BaseController {
 
                 // Reset books completed counter to 0
                 booksCompletedInput.value = 0;
+                
+                // Clear shelf book colors and re-render empty shelf
+                // Update both localStorage and characterState to keep them in sync
+                safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+                characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = [];
+                uiModule.renderShelfBooks(0, []);
             }
 
             // Calculate and add journal entries paper scraps using RewardCalculator
