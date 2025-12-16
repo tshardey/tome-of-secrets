@@ -500,3 +500,24 @@
         width: 100%;
     }
 }
+
+/* ==========================================================================
+   Completed Reads Shelf Visualization (SVG)
+   ========================================================================== */
+
+.completed-reads-shelf-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 20px auto;
+}
+
+#completed-reads-shelf {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Book fill transition for smooth color changes */
+#completed-reads-shelf path[id^="shelf-book-"] {
+    transition: fill 0.3s ease;
+}

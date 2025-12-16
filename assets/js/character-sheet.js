@@ -446,6 +446,41 @@ export function initializeCharacterSheet() {
     loadState(form);
     initializeCompletedBooksSet();
     
+    // Initialize shelf books visualization
+    const booksCompletedInput = document.getElementById('books-completed-month');
+    const booksCompleted = booksCompletedInput ? parseIntOr(booksCompletedInput.value, 0) : 0;
+    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+    ui.renderShelfBooks(booksCompleted, shelfColors);
+    
+    // Handle manual changes to books completed input
+    if (booksCompletedInput) {
+        booksCompletedInput.addEventListener('change', () => {
+            let newCount = parseIntOr(booksCompletedInput.value, 0);
+            // Enforce maximum of 10 books
+            if (newCount > 10) {
+                newCount = 10;
+                booksCompletedInput.value = 10;
+            }
+            
+            let currentColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+            
+            // Add new colors if count increased (but don't exceed 10)
+            while (currentColors.length < newCount && currentColors.length < 10) {
+                currentColors.push(ui.getRandomShelfColor());
+            }
+            
+            // Trim colors if count decreased
+            if (currentColors.length > newCount) {
+                currentColors = currentColors.slice(0, newCount);
+            }
+            
+            // Update both localStorage and characterState to keep them in sync
+            safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, currentColors);
+            characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = currentColors;
+            ui.renderShelfBooks(newCount, currentColors);
+        });
+    }
+    
     // Check for unsaved currency changes AFTER state is loaded
     // Use setTimeout to ensure form values are fully populated
     setTimeout(() => {

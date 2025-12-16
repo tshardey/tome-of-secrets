@@ -354,6 +354,25 @@ function validateGenreDiceSelection(value, defaultValue = 'd6', context = 'genre
 }
 
 /**
+ * Validate and fix shelf book colors array
+ * @param {Array} colors - Array of hex color strings
+ * @param {string} context - Context for error messages
+ * @returns {Array} - Array of validated hex color strings (max 10)
+ */
+function validateShelfBookColors(colors, context = 'shelfBookColors') {
+    if (!Array.isArray(colors)) {
+        console.warn(`Invalid ${context}: not an array, using empty array`);
+        return [];
+    }
+
+    // Filter to valid hex color strings and limit to 10
+    const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+    return colors
+        .filter(color => typeof color === 'string' && hexColorRegex.test(color))
+        .slice(0, 10);
+}
+
+/**
  * Validate and fix character form data
  * @param {*} formData - Form data object
  * @returns {Object} - Validated form data object
@@ -440,6 +459,10 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.GENRE_DICE_SELECTION],
         'd6',
         STORAGE_KEYS.GENRE_DICE_SELECTION
+    );
+    validated[STORAGE_KEYS.SHELF_BOOK_COLORS] = validateShelfBookColors(
+        state[STORAGE_KEYS.SHELF_BOOK_COLORS],
+        STORAGE_KEYS.SHELF_BOOK_COLORS
     );
 
     return validated;

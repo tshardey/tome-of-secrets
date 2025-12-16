@@ -16,6 +16,7 @@ import { trimOrEmpty, parseIntOr } from '../utils/helpers.js';
 import { showErrors, clearAllErrors, showFormError, clearFormError } from '../utils/formErrors.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
+import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import * as data from '../character-sheet/data.js';
 
 export class QuestController extends BaseController {
@@ -391,7 +392,20 @@ export class QuestController extends BaseController {
                     const booksCompleted = document.getElementById('books-completed-month');
                     if (booksCompleted) {
                         const currentBooks = parseIntOr(booksCompleted.value, 0);
-                        booksCompleted.value = currentBooks + 1;
+                        // Only increment if we haven't reached the maximum of 10
+                        if (currentBooks < 10) {
+                            booksCompleted.value = currentBooks + 1;
+                            
+                            // Add random color for new book and re-render shelf (only if under limit)
+                            const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+                            if (shelfColors.length < 10) {
+                                shelfColors.push(uiModule.getRandomShelfColor());
+                                // Update both localStorage and characterState to keep them in sync
+                                safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
+                                characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
+                                uiModule.renderShelfBooks(currentBooks + 1, shelfColors);
+                            }
+                        }
                     }
                 }
 
@@ -519,7 +533,20 @@ export class QuestController extends BaseController {
             const booksCompleted = document.getElementById('books-completed-month');
             if (booksCompleted) {
                 const currentBooks = parseIntOr(booksCompleted.value, 0);
-                booksCompleted.value = currentBooks + 1;
+                // Only increment if we haven't reached the maximum of 10
+                if (currentBooks < 10) {
+                    booksCompleted.value = currentBooks + 1;
+                    
+                    // Add random color for new book and re-render shelf (only if under limit)
+                    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+                    if (shelfColors.length < 10) {
+                        shelfColors.push(uiModule.getRandomShelfColor());
+                        // Update both localStorage and characterState to keep them in sync
+                        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
+                        characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
+                        uiModule.renderShelfBooks(currentBooks + 1, shelfColors);
+                    }
+                }
             }
         }
 

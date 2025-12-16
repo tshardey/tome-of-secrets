@@ -549,3 +549,43 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderActiveCurses();
     renderCompletedCurses();
 }
+
+// Dark academia color palette for shelf books
+const SHELF_COLORS = Object.freeze([
+    '#722F37', // Deep Burgundy
+    '#2D4739', // Forest Green
+    '#2C3E50', // Navy Blue
+    '#4A3728'  // Plum
+]);
+
+const TOTAL_SHELF_BOOKS = 10;
+
+/**
+ * Get a random color from the shelf color palette
+ * @returns {string} - Random hex color from the palette
+ */
+export function getRandomShelfColor() {
+    return SHELF_COLORS[Math.floor(Math.random() * SHELF_COLORS.length)];
+}
+
+/**
+ * Render the completed reads shelf visualization by setting SVG fill colors
+ * @param {number} booksCompleted - Number of books completed this month
+ * @param {Array} shelfColors - Array of assigned colors for each book slot
+ */
+export function renderShelfBooks(booksCompleted, shelfColors = []) {
+    const svg = document.getElementById('completed-reads-shelf');
+    if (!svg) return;
+    
+    for (let i = 0; i < TOTAL_SHELF_BOOKS; i++) {
+        const bookPath = document.getElementById(`shelf-book-${i}`);
+        if (!bookPath) continue;
+        
+        // Color the book if it's within the completed count and has an assigned color
+        if (i < booksCompleted && shelfColors[i]) {
+            bookPath.setAttribute('fill', shelfColors[i]);
+        } else {
+            bookPath.setAttribute('fill', 'transparent');
+        }
+    }
+}
