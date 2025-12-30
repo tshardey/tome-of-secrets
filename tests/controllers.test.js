@@ -16,7 +16,7 @@ import { characterState } from '../assets/js/character-sheet/state.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
-import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -736,6 +736,90 @@ describe('Controllers', () => {
             controller.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, updateGenreQuestDropdown);
 
             expect(controller.completedBooksSet).toBe(completedBooksSet);
+        });
+
+        it('should award correct blueprint reward for Speculative Fiction (avoid Fiction substring match)', () => {
+            const controller = new QuestController(stateAdapter, form, dependencies);
+            const blueprintReward = controller.calculateBlueprintReward({
+                type: '♥ Organize the Stacks',
+                prompt: 'Speculative Fiction'
+            });
+            expect(blueprintReward).toBe(18);
+        });
+
+        it('should not move a restoration project quest to completed if blueprint spend fails', () => {
+            window.alert = jest.fn();
+
+            // Fresh, real state adapter (avoid mocked adapter from outer beforeEach)
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 0;
+            state[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] = [];
+            state[STORAGE_KEYS.COMPLETED_WINGS] = [];
+            state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+            state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+
+            // Pick a restoration project that has a non-zero cost
+            const projectId = Object.keys(data.restorationProjects || {}).find(id => {
+                const p = data.restorationProjects[id];
+                return (p?.cost || 0) > 0;
+            });
+            expect(projectId).toBeTruthy();
+            const project = data.restorationProjects[projectId];
+
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{
+                type: '🔨 Restoration Project',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book',
+                prompt: `${project.name}: ${project.completionPrompt}`,
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId: String(project.wingId || ''),
+                    wingName: 'Test Wing',
+                    projectId,
+                    projectName: project.name,
+                    cost: project.cost || 0,
+                    rewardType: project.reward?.type || null,
+                    rewardSuggestedItems: project.reward?.suggestedItems || []
+                }
+            }];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.showRewardNotification = jest.fn();
+            controller.reRenderTablesIfNeeded = jest.fn();
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            controller.handleCompleteQuest(0);
+
+            // Quest should remain active and NOT be in completed history
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(0);
+
+            // Restoration should NOT be marked complete and no slots should be unlocked
+            expect(realStateAdapter.isRestorationProjectCompleted(projectId)).toBe(false);
+            expect(realStateAdapter.getPassiveItemSlots()).toHaveLength(0);
+            expect(realStateAdapter.getPassiveFamiliarSlots()).toHaveLength(0);
+
+            // And the player should be notified
+            expect(window.alert).toHaveBeenCalledWith(
+                expect.stringContaining('Cannot complete restoration project')
+            );
         });
 
         it('should resolve quest list keys correctly', () => {

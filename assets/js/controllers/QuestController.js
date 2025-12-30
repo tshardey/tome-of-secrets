@@ -543,13 +543,21 @@ export class QuestController extends BaseController {
                     }
                 });
 
+                // Handle restoration project completion BEFORE adding to completed history.
+                // If blueprint spend fails, we should not add the quest to completed.
+                for (const quest of quests) {
+                    const restorationSuccess = this.handleRestorationProjectCompletion(quest);
+                    if (!restorationSuccess) {
+                        // Nothing was added yet; abort without saving/resetting the form.
+                        return;
+                    }
+                }
+
                 // Add to completed quests
                 stateAdapter.addCompletedQuests(quests);
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
-                    // Handle restoration project completion
-                    this.handleRestorationProjectCompletion(quest);
                     if (this.updateCurrency) this.updateCurrency(quest.rewards);
                 });
 
@@ -677,6 +685,17 @@ export class QuestController extends BaseController {
             completedQuest.rewards.blueprints = blueprintReward;
         }
 
+        // Handle restoration project completion BEFORE moving quest to completed history.
+        // This prevents inconsistent state if blueprint spend fails (e.g., player spent blueprints elsewhere).
+        const restorationSuccess = this.handleRestorationProjectCompletion(completedQuest);
+        if (!restorationSuccess) {
+            // Roll back: restore quest to active queue and exit without adding to completed.
+            stateAdapter.addActiveQuests(questToMove);
+            uiModule.renderActiveAssignments();
+            this.saveState();
+            return;
+        }
+
         // Add to completed quests (wrap in array for consistency)
         stateAdapter.addCompletedQuests([completedQuest]);
 
@@ -689,9 +708,6 @@ export class QuestController extends BaseController {
         // Award blueprints to state (currency)
         this.awardBlueprintsForQuest(completedQuest);
         
-        // Handle restoration project completion
-        this.handleRestorationProjectCompletion(completedQuest);
-
         // Update currency with finalized rewards
         if (this.updateCurrency) {
             this.updateCurrency(completedQuest.rewards);
@@ -761,12 +777,40 @@ export class QuestController extends BaseController {
         if (quest.type === '♥ Organize the Stacks') {
             // Genre quest - check genreQuests for blueprint reward
             if (data.genreQuests) {
-                for (const key in data.genreQuests) {
-                    const genreQuest = data.genreQuests[key];
-                    if (quest.prompt && quest.prompt.includes(genreQuest.genre)) {
+                const normalize = (value) => String(value ?? '').trim().toLowerCase();
+                // Some historical prompts may include extra text like "Fantasy: Read ..."
+                const extractGenreFromPrompt = (prompt) => String(prompt ?? '').split(':')[0].trim();
+
+                const promptRaw = String(quest.prompt ?? '');
+                const promptGenre = normalize(extractGenreFromPrompt(promptRaw));
+
+                // Prefer exact genre equality (prevents substring collisions like "Fiction" vs "Speculative Fiction")
+                for (const genreQuest of Object.values(data.genreQuests)) {
+                    if (!genreQuest) continue;
+                    if (promptGenre && normalize(genreQuest.genre) === promptGenre) {
                         blueprintReward = genreQuest.blueprintReward || 3;
                         break;
                     }
+                }
+
+                // Fallback: if we didn't find an exact match, allow a contained match but choose the longest genre match.
+                // This keeps compatibility with any prompts that include the genre inside longer text without being
+                // vulnerable to "shorter genre" matches hijacking longer ones.
+                if (blueprintReward === 0 && promptRaw) {
+                    let best = null; // { len: number, reward: number }
+                    const promptNorm = normalize(promptRaw);
+                    for (const genreQuest of Object.values(data.genreQuests)) {
+                        if (!genreQuest?.genre) continue;
+                        const genreNorm = normalize(genreQuest.genre);
+                        if (!genreNorm) continue;
+                        if (promptNorm.includes(genreNorm)) {
+                            const reward = genreQuest.blueprintReward || 3;
+                            if (!best || genreNorm.length > best.len) {
+                                best = { len: genreNorm.length, reward };
+                            }
+                        }
+                    }
+                    if (best) blueprintReward = best.reward;
                 }
             }
             // Default if no specific match
@@ -803,7 +847,7 @@ export class QuestController extends BaseController {
      * @param {Object} quest - The completed quest
      */
     handleRestorationProjectCompletion(quest) {
-        if (quest.type !== '🔨 Restoration Project') return;
+        if (quest.type !== '🔨 Restoration Project') return true;
         
         const { stateAdapter } = this;
         
@@ -811,11 +855,11 @@ export class QuestController extends BaseController {
         const projectId = quest.restorationData?.projectId;
         const cost = quest.restorationData?.cost || 0;
         
-        if (!projectId) return;
+        if (!projectId) return true;
         
         // Get project data to process reward
         const project = data.restorationProjects?.[projectId];
-        if (!project) return;
+        if (!project) return true;
         
         // Check if player has enough blueprints BEFORE processing completion
         if (cost > 0) {
@@ -824,7 +868,7 @@ export class QuestController extends BaseController {
                 // Don't complete the project if player doesn't have enough blueprints
                 const needed = cost - currentBlueprints;
                 alert(`Cannot complete restoration project: You need ${needed} more Dusty Blueprints. (Cost: ${cost}, You have: ${currentBlueprints})`);
-                return;
+                return false;
             }
             
             // Spend blueprints for the project cost
@@ -832,7 +876,7 @@ export class QuestController extends BaseController {
             if (!success) {
                 // This shouldn't happen if we checked above, but handle it just in case
                 alert(`Cannot complete restoration project: Failed to spend ${cost} Dusty Blueprints.`);
-                return;
+                return false;
             }
             
             // Update the blueprints display in the UI
@@ -886,6 +930,8 @@ export class QuestController extends BaseController {
             const rewardText = this.getRestorationRewardText(reward);
             this.showRewardNotification(`Restoration Project Complete! ${rewardText}`);
         }
+
+        return true;
     }
 
     /**
