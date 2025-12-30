@@ -8,8 +8,11 @@ import { GenreQuestHandler } from '../assets/js/quest-handlers/GenreQuestHandler
 import { SideQuestHandler } from '../assets/js/quest-handlers/SideQuestHandler.js';
 import { ExtraCreditHandler } from '../assets/js/quest-handlers/ExtraCreditHandler.js';
 import { StandardQuestHandler } from '../assets/js/quest-handlers/StandardQuestHandler.js';
+import { RestorationQuestHandler } from '../assets/js/quest-handlers/RestorationQuestHandler.js';
 import { QuestHandlerFactory } from '../assets/js/quest-handlers/QuestHandlerFactory.js';
 import * as data from '../assets/js/character-sheet/data.js';
+import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
+import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
 describe('Quest Handlers', () => {
     let formElements;
@@ -28,7 +31,17 @@ describe('Quest Handlers', () => {
             dungeonEncounterSelect: { value: '' },
             dungeonActionToggle: { checked: false },
             genreQuestSelect: { value: 'Fantasy' },
-            sideQuestSelect: { value: 'Visit a new-to-you bookstore or library' }
+            sideQuestSelect: { value: 'Visit a new-to-you bookstore or library' },
+            restorationWingSelect: { value: '' },
+            restorationProjectSelect: { value: '' }
+        };
+
+        // Mock localStorage for restoration quest tests
+        const storage = {};
+        global.localStorage = {
+            getItem: jest.fn((key) => storage[key] || null),
+            setItem: jest.fn((key, value) => { storage[key] = value; }),
+            removeItem: jest.fn((key) => { delete storage[key]; })
         };
     });
 
@@ -389,6 +402,119 @@ describe('Quest Handlers', () => {
             const quests = handler.createQuests();
 
             expect(quests[0].buffs).toContain('Long Read Focus');
+        });
+    });
+
+    describe('RestorationQuestHandler', () => {
+        beforeEach(() => {
+            // Set up default blueprints
+            safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, 50);
+            safeSetJSON(STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS, []);
+        });
+
+        it('should validate wing selection', () => {
+            formElements.restorationWingSelect.value = '';
+            formElements.restorationProjectSelect.value = '';
+            
+            const handler = new RestorationQuestHandler(formElements, data);
+            const validation = handler.validate();
+
+            expect(validation.valid).toBe(false);
+            expect(validation.error).toBe('Please select a wing.');
+            expect(validation.errors['restoration-wing-select']).toBeDefined();
+        });
+
+        it('should validate project selection', () => {
+            // Mock a wing that's always accessible (Heart of the Library)
+            formElements.restorationWingSelect.value = '6';
+            formElements.restorationProjectSelect.value = '';
+            
+            const handler = new RestorationQuestHandler(formElements, data);
+            const validation = handler.validate();
+
+            expect(validation.valid).toBe(false);
+            expect(validation.error).toBe('Please select a restoration project.');
+        });
+
+        it('should validate player has enough blueprints', () => {
+            // Set blueprints to 0
+            safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, 0);
+            
+            // Mock a project that costs 35 blueprints
+            formElements.restorationWingSelect.value = '6';
+            formElements.restorationProjectSelect.value = Object.keys(data.restorationProjects || {})[0] || 'test-project';
+            
+            const handler = new RestorationQuestHandler(formElements, data);
+            const validation = handler.validate();
+
+            expect(validation.valid).toBe(false);
+            expect(validation.error).toContain('Dusty Blueprints');
+        });
+
+        it('should validate project is not already completed', () => {
+            // Mark a project as completed
+            const projectId = Object.keys(data.restorationProjects || {})[0] || 'test-project';
+            safeSetJSON(STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS, [projectId]);
+            
+            formElements.restorationWingSelect.value = '6';
+            formElements.restorationProjectSelect.value = projectId;
+            
+            const handler = new RestorationQuestHandler(formElements, data);
+            const validation = handler.validate();
+
+            expect(validation.valid).toBe(false);
+            expect(validation.error).toContain('already been completed');
+        });
+
+        it('should create restoration quest with restorationData', () => {
+            // Find a valid restoration project
+            const projects = data.restorationProjects || {};
+            const projectId = Object.keys(projects).find(id => projects[id].wingId === '6');
+            
+            if (!projectId) {
+                // Skip test if no projects available
+                return;
+            }
+
+            formElements.restorationWingSelect.value = '6';
+            formElements.restorationProjectSelect.value = projectId;
+            
+            const handler = new RestorationQuestHandler(formElements, data);
+            const quests = handler.createQuests();
+
+            expect(quests).toHaveLength(1);
+            expect(quests[0].type).toBe('🔨 Restoration Project');
+            expect(quests[0].restorationData).toBeDefined();
+            expect(quests[0].restorationData.wingId).toBe('6');
+            expect(quests[0].restorationData.projectId).toBe(projectId);
+            expect(quests[0].restorationData.wingName).toBeDefined();
+            expect(quests[0].restorationData.projectName).toBeDefined();
+        });
+
+        it('should allow alwaysAccessible wings without room completion', () => {
+            // Heart of the Library (id: 6) is always accessible
+            const projects = data.restorationProjects || {};
+            const projectId = Object.keys(projects).find(id => projects[id].wingId === '6');
+            
+            if (!projectId) {
+                return;
+            }
+
+            formElements.restorationWingSelect.value = '6';
+            formElements.restorationProjectSelect.value = projectId;
+            
+            const handler = new RestorationQuestHandler(formElements, data);
+            const validation = handler.validate();
+
+            // Should validate successfully if blueprints are sufficient
+            if (projects[projectId].cost <= 50) {
+                expect(validation.valid).toBe(true);
+            }
+        });
+
+        it('should return RestorationQuestHandler from factory', () => {
+            const handler = QuestHandlerFactory.getHandler('🔨 Restoration Project', formElements, data);
+            expect(handler).toBeInstanceOf(RestorationQuestHandler);
         });
     });
 });

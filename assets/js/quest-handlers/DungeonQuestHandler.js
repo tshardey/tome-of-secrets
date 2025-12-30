@@ -116,7 +116,7 @@ export class DungeonQuestHandler extends BaseQuestHandler {
             const encounterRewards = RewardCalculator.getBaseRewards(
                 this.type,
                 encounterPrompt,
-                { isEncounter: true, roomNumber, encounterName }
+                { isEncounter: true, roomNumber, encounterName, isBefriend: isBefriend }
             );
 
             const encounterQuest = {

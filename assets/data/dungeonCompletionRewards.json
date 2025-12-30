@@ -5,9 +5,18 @@
     "4": { "name": "Librarian's Quill", "reward": "You find a Librarian's Quill.", "hasLink": true, "link": { "text": "Librarian's Quill", "url": "{{ site.baseurl }}/rewards.html#librarians-quill" } },
     "5": { "name": "Enchanted Focus", "reward": "The next three books you complete grant a x1.5 Ink Drop bonus." },
     "6": { "name": "Lantern of Foresight", "reward": "You find a Lantern of Foresight.", "hasLink": true, "link": { "text": "Lantern of Foresight", "url": "{{ site.baseurl }}/rewards.html#lantern-of-foresight" } },
-    "7": { "name": "Unwavering Resolve", "reward": "for the next month, you are immune to Worn Page penalties." },
+    "7": { "name": "Unwavering Resolve", "reward": "For the next month, you are immune to Worn Page penalties." },
     "8": { "name": "Cloak of the Story-Weaver", "reward": "You find a Cloak of the Story-Weaver.", "hasLink": true, "link": { "text": "Cloak of the Story-Weaver", "url": "{{ site.baseurl }}/rewards.html#cloak-of-the-story-weaver" } },
     "9": { "name": "The Archivist's Favor", "reward": "Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off." },
-    "10": { "name": "The Grand Key", "reward": "You find a master key for a special, rare quest." }
+    "10": { "name": "Romance Reader's Ribbon", "reward": "You find a Romance Reader's Ribbon.", "hasLink": true, "link": { "text": "Romance Reader's Ribbon", "url": "{{ site.baseurl }}/rewards.html#romance-readers-ribbon" } },
+    "11": { "name": "Star Navigator's Chart", "reward": "You find a Star Navigator's Chart.", "hasLink": true, "link": { "text": "Star Navigator's Chart", "url": "{{ site.baseurl }}/rewards.html#star-navigators-chart" } },
+    "12": { "name": "Story Surge", "reward": "Your next 5 books grant x2 Ink Drops." },
+    "13": { "name": "Fae-Touched Crystal", "reward": "You find a Fae-Touched Crystal.", "hasLink": true, "link": { "text": "Fae-Touched Crystal", "url": "{{ site.baseurl }}/rewards.html#fae-touched-crystal" } },
+    "14": { "name": "Warding Candle", "reward": "You find a Warding Candle.", "hasLink": true, "link": { "text": "Warding Candle", "url": "{{ site.baseurl }}/rewards.html#warding-candle" } },
+    "15": { "name": "Keeper's Blessing", "reward": "Gain +200 XP and +50 Dusty Blueprints." },
+    "16": { "name": "Literary Medallion", "reward": "You find a Literary Medallion.", "hasLink": true, "link": { "text": "Literary Medallion", "url": "{{ site.baseurl }}/rewards.html#literary-medallion" } },
+    "17": { "name": "Golden Pen", "reward": "You find a Golden Pen.", "hasLink": true, "link": { "text": "Golden Pen", "url": "{{ site.baseurl }}/rewards.html#golden-pen" } },
+    "18": { "name": "Detective's Magnifying Glass", "reward": "You find a Detective's Magnifying Glass.", "hasLink": true, "link": { "text": "Detective's Magnifying Glass", "url": "{{ site.baseurl }}/rewards.html#detectives-magnifying-glass" } },
+    "19": { "name": "Raven Familiar", "reward": "A Raven Familiar joins you.", "hasLink": true, "link": { "text": "Raven Familiar", "url": "{{ site.baseurl }}/rewards.html#raven-familiar" } },
+    "20": { "name": "The Grand Key", "reward": "You find a master key for a special, rare quest.", "hasLink": true, "link": { "text": "The Grand Key", "url": "{{ site.baseurl }}/rewards.html#the-grand-key" } }
 }
-

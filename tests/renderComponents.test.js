@@ -189,6 +189,118 @@ describe('Render Components', () => {
             expect(card.classList.contains('quest-card')).toBe(true);
         });
 
+        test('should show wing badge for restoration quests', () => {
+            const quest = {
+                type: '🔨 Restoration Project',
+                prompt: 'Restore Card Catalog: Read a translated book',
+                book: 'Test Book',
+                month: 'January',
+                year: '2024',
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId: '1',
+                    wingName: 'The Scholarly Archives',
+                    projectId: 'restore-card-catalog',
+                    projectName: 'Restore Card Catalog',
+                    cost: 30,
+                    rewardType: 'passiveItemSlot'
+                }
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            
+            expect(card.classList.contains('quest-card')).toBe(true);
+            const wingBadge = card.querySelector('.restoration-wing-badge');
+            expect(wingBadge).toBeDefined();
+            expect(wingBadge.textContent).toContain('The Scholarly Archives');
+        });
+
+        test('should show display/adoption slot as a reward for restoration projects', () => {
+            const quest = {
+                type: '🔨 Restoration Project',
+                prompt: 'Restore the Stained Glass Windows: Read a book',
+                book: 'Test Book',
+                month: 'January',
+                year: '2024',
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId: '2',
+                    wingName: 'Heart&#039;s Gallery',
+                    projectId: 'restore-stained-glass-windows',
+                    projectName: 'Restore the Stained Glass Windows',
+                    cost: 35,
+                    rewardType: 'passiveItemSlot'
+                }
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const slotReward = card.querySelector('.slot-reward');
+            expect(slotReward).toBeDefined();
+            expect(slotReward.textContent).toContain('Display Slot');
+            // Should not fall back to "No rewards"
+            const noRewards = card.querySelector('.no-rewards');
+            expect(noRewards).toBeNull();
+        });
+
+        test('should decode HTML entities in wing badge', () => {
+            const quest = {
+                type: '🔨 Restoration Project',
+                prompt: 'Test Project: Read a book',
+                book: 'Test Book',
+                month: 'January',
+                year: '2024',
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId: '2',
+                    wingName: 'Heart&#039;s Gallery', // HTML entity for apostrophe
+                    projectId: 'test-project',
+                    projectName: 'Test Project',
+                    cost: 35,
+                    rewardType: 'passiveItemSlot'
+                }
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const wingBadge = card.querySelector('.restoration-wing-badge');
+            
+            expect(wingBadge).toBeDefined();
+            // Should decode HTML entities, so apostrophe should be displayed correctly
+            expect(wingBadge.textContent).toContain('Heart\'s Gallery');
+            expect(wingBadge.textContent).not.toContain('&#039;');
+        });
+
+        test('should apply wing accent color to badge', () => {
+            const quest = {
+                type: '🔨 Restoration Project',
+                prompt: 'Test Project: Read a book',
+                book: 'Test Book',
+                month: 'January',
+                year: '2024',
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId: '3',
+                    wingName: 'The Innovation Spire',
+                    projectId: 'test-project',
+                    projectName: 'Test Project',
+                    cost: 40,
+                    rewardType: 'passiveItemSlot'
+                }
+            };
+
+            const card = renderQuestCard(quest, 0, 'active');
+            const wingBadge = card.querySelector('.restoration-wing-badge');
+            
+            expect(wingBadge).toBeDefined();
+            // Should have inline styles for colors if wing data is available
+            expect(wingBadge.style.color).toBeTruthy();
+            expect(wingBadge.style.backgroundColor).toBeTruthy();
+            expect(wingBadge.style.borderColor).toBeTruthy();
+        });
+
         test('should display item rewards with or without images', () => {
             const quest = {
                 type: '♥ Organize the Stacks',

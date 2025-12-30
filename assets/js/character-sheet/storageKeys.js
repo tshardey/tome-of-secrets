@@ -14,7 +14,13 @@ export const STORAGE_KEYS = Object.freeze({
     MONTHLY_COMPLETED_BOOKS: 'monthlyCompletedBooks',
     SELECTED_GENRES: 'selectedGenres',
     GENRE_DICE_SELECTION: 'genreDiceSelection',
-    SHELF_BOOK_COLORS: 'shelfBookColors'
+    SHELF_BOOK_COLORS: 'shelfBookColors',
+    // Library Restoration Expansion
+    DUSTY_BLUEPRINTS: 'dustyBlueprints',
+    COMPLETED_RESTORATION_PROJECTS: 'completedRestorationProjects',
+    COMPLETED_WINGS: 'completedWings',
+    PASSIVE_ITEM_SLOTS: 'passiveItemSlots',
+    PASSIVE_FAMILIAR_SLOTS: 'passiveFamiliarSlots'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -31,7 +37,13 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.BUFF_MONTH_COUNTER,
     STORAGE_KEYS.SELECTED_GENRES,
     STORAGE_KEYS.GENRE_DICE_SELECTION,
-    STORAGE_KEYS.SHELF_BOOK_COLORS
+    STORAGE_KEYS.SHELF_BOOK_COLORS,
+    // Library Restoration Expansion
+    STORAGE_KEYS.DUSTY_BLUEPRINTS,
+    STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS,
+    STORAGE_KEYS.COMPLETED_WINGS,
+    STORAGE_KEYS.PASSIVE_ITEM_SLOTS,
+    STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
 ]);
 
 export function createEmptyCharacterState() {
@@ -49,7 +61,13 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
         [STORAGE_KEYS.SELECTED_GENRES]: [],
         [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd6',
-        [STORAGE_KEYS.SHELF_BOOK_COLORS]: []
+        [STORAGE_KEYS.SHELF_BOOK_COLORS]: [],
+        // Library Restoration Expansion
+        [STORAGE_KEYS.DUSTY_BLUEPRINTS]: 0,
+        [STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS]: [],
+        [STORAGE_KEYS.COMPLETED_WINGS]: [],
+        [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+        [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: []
     };
 }
 

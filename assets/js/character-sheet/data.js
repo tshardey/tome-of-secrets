@@ -12,7 +12,6 @@ import {
     masteryAbilities,
     dungeonRewards,
     dungeonCompletionRewards,
-    allGenres,
     genreQuests,
     extraCreditRewards,
     sideQuestsDetailed,
@@ -20,11 +19,24 @@ import {
     temporaryBuffsFromRewards,
     temporaryBuffs,
     levelRewards,
-    shoppingOptions
+    shoppingOptions,
+    wings,
+    restorationProjects
 } from './data.json-exports.js';
 
+// Derive allGenres from genreQuests (genre name -> description mapping)
+// This consolidates genre data into a single source of truth
+export const allGenres = (() => {
+    const result = {};
+    for (const key of Object.keys(genreQuests)) {
+        const quest = genreQuests[key];
+        result[quest.genre] = quest.description;
+    }
+    return result;
+})();
+
 // Re-export JSON data for backward compatibility
-export { xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, allGenres, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions };
+export { xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects };
 
 // atmosphericBuffs and other data are now imported from JSON exports above
 

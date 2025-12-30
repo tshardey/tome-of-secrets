@@ -12,8 +12,9 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 
 /**
  * Current schema version - increment when data structure changes
+ * Version 2: Added Library Restoration Expansion fields
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /**
  * Schema version key in localStorage
@@ -72,7 +73,9 @@ function validateQuest(quest, context = 'quest') {
         rewards: validateRewards(quest.rewards, `${context}.rewards`),
         isEncounter: typeof quest.isEncounter === 'boolean' ? quest.isEncounter : false,
         roomNumber: quest.roomNumber || null,
-        encounterName: typeof quest.encounterName === 'string' ? quest.encounterName : null
+        encounterName: typeof quest.encounterName === 'string' ? quest.encounterName : null,
+        // Preserve restorationData for restoration project quests
+        restorationData: quest.restorationData && typeof quest.restorationData === 'object' ? quest.restorationData : null
     };
 
     // Warn about missing critical fields but don't fail
@@ -373,6 +376,56 @@ function validateShelfBookColors(colors, context = 'shelfBookColors') {
 }
 
 /**
+ * Validate a passive slot object (item or familiar in a passive slot)
+ * @param {*} slot - Passive slot object to validate
+ * @param {string} context - Context for error messages
+ * @returns {Object|null} - Validated slot object, or null if unfixable
+ */
+function validatePassiveSlot(slot, context = 'passiveSlot') {
+    if (!slot || typeof slot !== 'object') {
+        console.warn(`Invalid passive slot in ${context}: not an object`);
+        return null;
+    }
+
+    // A passive slot must have at minimum a slotId
+    if (typeof slot.slotId !== 'string' || !slot.slotId.trim()) {
+        console.warn(`Invalid passive slot in ${context}: missing or invalid slotId`);
+        return null;
+    }
+
+    return {
+        slotId: slot.slotId.trim(),
+        itemName: typeof slot.itemName === 'string' ? slot.itemName.trim() : null,
+        unlockedFrom: typeof slot.unlockedFrom === 'string' ? slot.unlockedFrom : null,
+        unlockedAt: typeof slot.unlockedAt === 'string' ? slot.unlockedAt : null
+    };
+}
+
+/**
+ * Validate and fix an array of passive slots
+ * @param {Array} slots - Array of passive slot objects
+ * @param {string} context - Context for error messages
+ * @returns {Array} - Array of validated passive slot objects
+ */
+function validatePassiveSlotArray(slots, context = 'passiveSlots') {
+    if (!Array.isArray(slots)) {
+        console.warn(`Invalid ${context}: not an array, using empty array`);
+        return [];
+    }
+
+    const validated = [];
+    slots.forEach((slot, index) => {
+        const validatedSlot = validatePassiveSlot(slot, `${context}[${index}]`);
+        if (validatedSlot) {
+            validated.push(validatedSlot);
+        } else {
+            console.warn(`Skipping invalid passive slot at ${context}[${index}]`);
+        }
+    });
+    return validated;
+}
+
+/**
  * Validate and fix character form data
  * @param {*} formData - Form data object
  * @returns {Object} - Validated form data object
@@ -463,6 +516,29 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.SHELF_BOOK_COLORS] = validateShelfBookColors(
         state[STORAGE_KEYS.SHELF_BOOK_COLORS],
         STORAGE_KEYS.SHELF_BOOK_COLORS
+    );
+
+    // Library Restoration Expansion validation
+    validated[STORAGE_KEYS.DUSTY_BLUEPRINTS] = validateNumber(
+        state[STORAGE_KEYS.DUSTY_BLUEPRINTS],
+        0,
+        STORAGE_KEYS.DUSTY_BLUEPRINTS
+    );
+    validated[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] = validateStringArray(
+        state[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS],
+        STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS
+    );
+    validated[STORAGE_KEYS.COMPLETED_WINGS] = validateStringArray(
+        state[STORAGE_KEYS.COMPLETED_WINGS],
+        STORAGE_KEYS.COMPLETED_WINGS
+    );
+    validated[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = validatePassiveSlotArray(
+        state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS],
+        STORAGE_KEYS.PASSIVE_ITEM_SLOTS
+    );
+    validated[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = validatePassiveSlotArray(
+        state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS],
+        STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
     );
 
     return validated;

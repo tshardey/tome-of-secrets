@@ -1,9 +1,122 @@
 {
-    "1": { "genre": "Historical Fiction", "description": "Read a book set in the past or with a historical figure as a character.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
-    "2": { "genre": "Fantasy", "description": "Read a book with magical creatures, settings, or a non-human protagonist.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
-    "3": { "genre": "Romantasy", "description": "Read a book with a magical system and/or a romantic plot.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
-    "4": { "genre": "Sci-Fi", "description": "Read a book set in the future or one with a morally gray main character.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
-    "5": { "genre": "Thriller", "description": "Read a book with a plot twist, deception, or hidden identity.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } },
-    "6": { "genre": "Classic", "description": "Read a classic novel you have not yet read.", "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] } }
+    "1": { 
+        "genre": "Historical Fiction", 
+        "description": "Read a book set in the past or with a historical figure as a character.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "2": { 
+        "genre": "Fantasy", 
+        "description": "Read a book with magical creatures, settings, or a non-human protagonist.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "3": { 
+        "genre": "Romantasy", 
+        "description": "Read a book with a magical system and/or a romantic plot.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "4": { 
+        "genre": "Sci-Fi", 
+        "description": "Read a book set in the future or one with a morally gray main character.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 18
+    },
+    "5": { 
+        "genre": "Thriller/Mystery", 
+        "description": "Read a book with a plot twist, deception, or hidden identity.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "6": { 
+        "genre": "Classic", 
+        "description": "Read a classic novel you have not yet read.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 20
+    },
+    "7": { 
+        "genre": "Horror", 
+        "description": "Read a book that genuinely unsettles or frightens you.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "8": { 
+        "genre": "Romance", 
+        "description": "Read a book where love is the central theme.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "9": { 
+        "genre": "Non-Fiction", 
+        "description": "Read a book that teaches you something factual about the world.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 20
+    },
+    "10": { 
+        "genre": "Memoir/Biography", 
+        "description": "Read about a real person's life, written by themselves or another.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 18
+    },
+    "11": { 
+        "genre": "Comedy", 
+        "description": "Read a humorous story or book that makes you laugh.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "12": { 
+        "genre": "Comics/Manga/Graphic Novels", 
+        "description": "Read a comic book, manga, or graphic novel.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "13": { 
+        "genre": "Crime", 
+        "description": "Read a book involving criminal activities, investigations, or mysteries.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "14": { 
+        "genre": "Drama", 
+        "description": "Read a story centered on emotional conflicts and character relationships.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "15": { 
+        "genre": "Fiction", 
+        "description": "Read a book that focuses on character development or plot development and literary merit.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    },
+    "16": { 
+        "genre": "History", 
+        "description": "Read a non-fiction book about historical events, people, or periods.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 20
+    },
+    "17": { 
+        "genre": "Philosophy", 
+        "description": "Read a book exploring philosophical ideas, ethics, or existential questions.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 25
+    },
+    "18": { 
+        "genre": "Speculative Fiction", 
+        "description": "Read a book that explores 'what if' scenarios across any genre.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 18
+    },
+    "19": { 
+        "genre": "TTRPG/Solo RPG", 
+        "description": "Play or read through a tabletop or solo roleplaying game adventure.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 25
+    },
+    "20": { 
+        "genre": "Young Adult", 
+        "description": "Read a book featuring teen protagonists and coming-of-age themes.", 
+        "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "blueprintReward": 15
+    }
 }
-

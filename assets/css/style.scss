@@ -1301,6 +1301,128 @@ input:checked+.slider:before {
 }
 
 /* ==========================================================================
+   Passive Equipment Styles
+   ========================================================================== */
+
+.passive-equipment-section {
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 5px;
+    padding: 20px;
+    margin-top: 2em;
+    margin-bottom: 30px;
+}
+
+.passive-equipment-section h3 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-family: 'Lora', serif;
+    color: #b89f62;
+}
+
+.passive-equipment-description {
+    color: #d4c8b0;
+    margin-bottom: 1.5em;
+    line-height: 1.6;
+}
+
+.passive-equipment-description a {
+    color: #b89f62;
+    text-decoration: underline;
+}
+
+.passive-equipment-description a:hover {
+    color: #cca352;
+}
+
+.passive-equipment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2em;
+}
+
+.passive-equipment-column h4 {
+    font-family: 'Lora', serif;
+    color: #b89f62;
+    margin: 0 0 1em 0;
+    font-size: 1.1em;
+}
+
+.passive-slots-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.passive-slot-card {
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+.slot-source {
+    font-size: 0.75rem;
+    color: #8a7a61;
+    margin-bottom: 0.5em;
+    font-style: italic;
+}
+
+.slot-item-select {
+    width: 100%;
+    padding: 8px;
+    background-color: #3e352f;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    color: #d4c8b0;
+    font-family: 'Source Serif Pro', serif;
+    font-size: 0.95em;
+    margin-bottom: 0.75em;
+}
+
+.slot-item-select:focus {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+}
+
+.passive-bonus-preview {
+    font-size: 0.9em;
+    color: #8a7a61;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.no-slots-message {
+    color: #8a7a61;
+    font-style: italic;
+    padding: 1em;
+    text-align: center;
+}
+
+.passive-slot-card .remove-passive-item-btn {
+    background-color: transparent;
+    border: 1px solid #b89f62;
+    color: #b89f62;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s, color 0.2s;
+    font-family: 'Lora', serif;
+    font-size: 0.9em;
+}
+
+.passive-slot-card .remove-passive-item-btn:hover {
+    background-color: #b89f62;
+    color: #2a231d;
+}
+
+@media (max-width: 768px) {
+    .passive-equipment-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
    Abilities & Benefits Styles
    ========================================================================== */
 

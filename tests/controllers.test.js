@@ -795,6 +795,71 @@ describe('Controllers', () => {
 
             expect(stateAdapter.addTemporaryBuff).not.toHaveBeenCalled();
         });
+
+        it('should complete a wing when all restoration projects in that wing are completed via quest completion', () => {
+            // Use a real StateAdapter instance (not mocked) for restoration state mutations
+            const realStateAdapter = new StateAdapter(characterState);
+
+            // Reset relevant state
+            characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 9999;
+            characterState[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] = [];
+            characterState[STORAGE_KEYS.COMPLETED_WINGS] = [];
+            characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+            characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+
+            // Create controller with real adapter
+            const controller = new QuestController(realStateAdapter, form, dependencies);
+            const completedBooksSet = new Set();
+            const saveCompletedBooksSet = jest.fn();
+            const updateCurrency = jest.fn();
+            const updateGenreQuestDropdown = jest.fn();
+            controller.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, updateGenreQuestDropdown);
+
+            // Pick wing 2 projects from real data
+            const wingId = '2';
+            const wingProjectIds = Object.entries(data.restorationProjects)
+                .filter(([_, p]) => String(p.wingId) === wingId)
+                .map(([id]) => id);
+
+            expect(wingProjectIds.length).toBeGreaterThan(0);
+
+            // Mark all but last project completed
+            const lastProjectId = wingProjectIds[wingProjectIds.length - 1];
+            wingProjectIds.slice(0, -1).forEach(id => realStateAdapter.completeRestorationProject(id));
+
+            // Complete the last project via handler
+            const lastProject = data.restorationProjects[lastProjectId];
+            const quest = {
+                type: '🔨 Restoration Project',
+                month: 'January',
+                year: '2024',
+                prompt: `${lastProject.name}: ${lastProject.completionPrompt}`,
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId,
+                    wingName: 'Heart&#039;s Gallery',
+                    projectId: lastProjectId,
+                    projectName: lastProject.name,
+                    cost: lastProject.cost || 0,
+                    rewardType: lastProject.reward?.type || null,
+                    rewardSuggestedItems: lastProject.reward?.suggestedItems || []
+                }
+            };
+
+            controller.handleRestorationProjectCompletion(quest);
+
+            // Wing should now be completed
+            expect(realStateAdapter.isWingCompleted(wingId)).toBe(true);
+            // And UI currency award should have been invoked
+            expect(updateCurrency).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    xp: expect.any(Number),
+                    inkDrops: expect.any(Number),
+                    paperScraps: expect.any(Number)
+                })
+            );
+        });
     });
 
     describe('EndOfMonthController', () => {

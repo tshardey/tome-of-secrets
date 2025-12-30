@@ -30,7 +30,6 @@ const JSON_EXPORTS = {
     'masteryAbilities.json': 'masteryAbilities',
     'dungeonRewards.json': 'dungeonRewards',
     'dungeonCompletionRewards.json': 'dungeonCompletionRewards',
-    'allGenres.json': 'allGenres',
     'genreQuests.json': 'genreQuests',
     'extraCreditRewards.json': 'extraCreditRewards',
     'sideQuestsDetailed.json': 'sideQuestsDetailed',
@@ -38,7 +37,9 @@ const JSON_EXPORTS = {
     'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards',
     'temporaryBuffs.json': 'temporaryBuffs',
     'levelRewards.json': 'levelRewards',
-    'shoppingOptions.json': 'shoppingOptions'
+    'shoppingOptions.json': 'shoppingOptions',
+    'wings.json': 'wings',
+    'restorationProjects.json': 'restorationProjects'
 };
 
 function generateExports() {

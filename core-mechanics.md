@@ -10,8 +10,9 @@ Your journey through the Grand Library unfolds in a steady rhythm of discovery, 
 2.  **Roll for Challenges:** For each card, roll the appropriate dice to reveal the challenges and quests that await.
 3.  **Determine Your Loadout:** Select the magical items and companions you will equip for this cycle to best meet the quests ahead.
 4.  **Pick Your Books:** Choose the books you will read for each prompt. You may use the same book to satisfy multiple prompts unless a prompt specifically forbids it.
-5.  **Read and Earn:** Read the books to complete your quests, earning Ink Drops, Paper Scraps, XP, and magical rewards.
-6.  **Face the Shroud if Needed:** If you do not complete all quests, consult The Shroud's Curse to resolve any consequences.
+5.  **Read and Earn:** Read the books to complete your quests, earning Ink Drops, Paper Scraps, XP, magical rewards, and Dusty Blueprints.
+6.  **Restore the Library (Optional but Recommended):** Spend Dusty Blueprints on **Restoration Projects** in the [Library Restoration]({{ site.baseurl }}/library.html) page to unlock Display/Adoption slots and permanent wing bonuses.
+7.  **Face the Shroud if Needed:** If you do not complete all quests, consult The Shroud's Curse to resolve any consequences.
 
 This loop forms the beating heart of your adventure, carrying you from month to month as you preserve the magic of the Grand Library.
 
@@ -39,7 +40,7 @@ Each card suit corresponds to a specific type of challenge or quest.
 **Re-rolling Completed Quests:** If you roll a number for a dungeon room or side quest that you have already completed (marked with a checkmark in the tables), you may roll again. For dungeon rooms, you may also opt to complete the other encounter if you have only completed one of the room's encounters.
 
 ## Currencies and Progression
-There are two primary currencies that define your progress, plus a third for character advancement.
+There are three primary currencies that define your progress, plus a fourth for character advancement.
 
 * **XP (Experience Points):** Your XP is for character progression and leveling up.
 
@@ -63,6 +64,15 @@ There are two primary currencies that define your progress, plus a third for cha
     *  Taming a *Familiar* in a *Dungeon Room* (+5 *Paper Scraps*)
 
 *Note: See the [Shopping Episode]({{ site.baseurl }}/shopping.html) section for more details on creating books.*
+
+* **Dusty Blueprints:** A special currency used for **Library Restoration**. Spend Dusty Blueprints to complete Restoration Projects, which unlock **Display Slots** (passive item slots), **Adoption Slots** (passive familiar slots), and wing completion bonuses.
+
+    **Earn Dusty Blueprints for:**
+    * Completing **Genre Quests**
+    * Completing **Extra Credit** challenges
+
+    **Spend Dusty Blueprints on:**
+    * Restoration Projects in [Library Restoration]({{ site.baseurl }}/library.html)
 
 ## Keeper's Loadout
 As a Keeper, you have three starting item slots: one Wearable, one Non-Wearable, and one Familiar. You can only equip one item per slot at a time. The Familiar slot is filled when you befriend a familiar in a dungeon. As you level up, you can unlock more item slots. This loadout lets you tailor your approach each month, adding strategy to how you tackle quests and challenges.

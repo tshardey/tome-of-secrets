@@ -77,6 +77,22 @@ export const GAME_CONFIG = Object.freeze({
     atmospheric: {
         baseValue: 1,
         sanctumBonus: 2
+    },
+
+    /**
+     * Library Restoration Expansion configuration
+     */
+    restoration: {
+        // Rewards for completing all projects in a wing
+        wingCompletionRewards: {
+            inkDrops: 100,
+            paperScraps: 40,
+            xp: 75
+        },
+        // Permanent bonus from completing a wing (+X Ink Drops for matching genre books)
+        wingPassiveBonus: 4,
+        // Blueprint rewards by quest type
+        extraCreditBlueprintReward: 10
     }
 });
 

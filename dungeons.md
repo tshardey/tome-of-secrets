@@ -3,8 +3,8 @@ layout: default
 title: Dungeons
 ---
 
-## ♠️ Dungeon Rooms (Roll a d12 )
-Roll a d12 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards">Dungeon Completion Rewards</a> table.
+## ♠️ Dungeon Rooms (Roll a d20)
+Roll a d20 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards">Dungeon Completion Rewards</a> table. Each room belongs to a wing of the library—explore the <a href="{{ site.baseurl }}/library.html">Library Restoration</a> page to see how your progress unlocks restoration projects.
 
 **Note:** If you roll a dungeon room that you have already completed (grayed out in the table below), you may roll again. Alternatively, if you have only completed one encounter in a room, you may opt to complete the other encounter instead of re-rolling.
 
@@ -22,7 +22,7 @@ These are the high-stakes moments of your story. You are venturing into dangerou
 
 <div id="dungeon-rooms-table"></div>
 
-## <span id="dungeon-completion-rewards">♠️ Dungeon Completion Rewards (Roll a d10)</span>
+## <span id="dungeon-completion-rewards">♠️ Dungeon Completion Rewards (Roll a d20)</span>
 
 <div id="dungeon-completion-rewards-table"></div>
 

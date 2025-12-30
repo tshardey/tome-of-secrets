@@ -143,7 +143,7 @@ export class Quest {
             bookAuthor: this.bookAuthor,
             notes: this.notes,
             buffs: this.buffs,
-            rewards: this.rewards ? this.rewards.toJSON() : { xp: 0, inkDrops: 0, paperScraps: 0, items: [], modifiedBy: [] },
+            rewards: this.rewards ? this.rewards.toJSON() : { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [], modifiedBy: [] },
             isEncounter: this.isEncounter
         };
     }

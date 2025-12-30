@@ -49,6 +49,55 @@ describe('Data Validation', () => {
             expect(typeof validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe('number');
         });
 
+        test('should preserve restorationData in restoration quests', () => {
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+                    {
+                        type: '🔨 Restoration Project',
+                        prompt: 'Restore Card Catalog: Read a translated book',
+                        book: 'Test Book',
+                        month: 'January',
+                        year: '2024',
+                        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                        restorationData: {
+                            wingId: '1',
+                            wingName: 'The Scholarly Archives',
+                            projectId: 'restore-card-catalog',
+                            projectName: 'Restore Card Catalog',
+                            cost: 30,
+                            rewardType: 'passiveItemSlot'
+                        }
+                    }
+                ]
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS].length).toBe(1);
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData).toBeDefined();
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData.wingId).toBe('1');
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData.wingName).toBe('The Scholarly Archives');
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData.projectId).toBe('restore-card-catalog');
+        });
+
+        test('should set restorationData to null for non-restoration quests', () => {
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+                    {
+                        type: '♥ Organize the Stacks',
+                        prompt: 'Fantasy',
+                        book: 'Test Book',
+                        month: 'January',
+                        year: '2024',
+                        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] }
+                        // No restorationData
+                    }
+                ]
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData).toBeNull();
+        });
+
         test('should filter out invalid quests', () => {
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [

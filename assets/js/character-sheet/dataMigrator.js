@@ -56,6 +56,35 @@ function migrateQuestRewards(quest) {
 }
 
 /**
+ * Migration from schema version 1 to version 2
+ * - Adds Library Restoration Expansion fields
+ * - Adds dustyBlueprints, completedRestorationProjects, completedWings
+ * - Adds passiveItemSlots, passiveFamiliarSlots
+ */
+function migrateToVersion2(state) {
+    const migrated = { ...state };
+
+    // Add new restoration-related fields with safe defaults
+    if (!(STORAGE_KEYS.DUSTY_BLUEPRINTS in migrated)) {
+        migrated[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 0;
+    }
+    if (!(STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS in migrated)) {
+        migrated[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] = [];
+    }
+    if (!(STORAGE_KEYS.COMPLETED_WINGS in migrated)) {
+        migrated[STORAGE_KEYS.COMPLETED_WINGS] = [];
+    }
+    if (!(STORAGE_KEYS.PASSIVE_ITEM_SLOTS in migrated)) {
+        migrated[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+    }
+    if (!(STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS in migrated)) {
+        migrated[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+    }
+
+    return migrated;
+}
+
+/**
  * Migration from schema version 0 (no version) to version 1
  * - Adds rewards objects to quests that don't have them
  * - Ensures all quests have required fields
@@ -130,10 +159,9 @@ export function migrateState(state) {
             case 1:
                 migratedState = migrateToVersion1(migratedState);
                 break;
-            // Add future migrations here:
-            // case 2:
-            //     migratedState = migrateToVersion2(migratedState);
-            //     break;
+            case 2:
+                migratedState = migrateToVersion2(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -171,14 +199,20 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.TEMPORARY_BUFFS,
         STORAGE_KEYS.BUFF_MONTH_COUNTER,
         STORAGE_KEYS.SELECTED_GENRES,
-        STORAGE_KEYS.GENRE_DICE_SELECTION
+        STORAGE_KEYS.GENRE_DICE_SELECTION,
+        // Library Restoration Expansion
+        STORAGE_KEYS.DUSTY_BLUEPRINTS,
+        STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS,
+        STORAGE_KEYS.COMPLETED_WINGS,
+        STORAGE_KEYS.PASSIVE_ITEM_SLOTS,
+        STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
     ];
 
     stateKeys.forEach(key => {
         let defaultValue;
         if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS) {
             defaultValue = {};
-        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER) {
+        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
             defaultValue = 'd6';
