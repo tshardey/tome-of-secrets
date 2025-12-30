@@ -1,10 +1,10 @@
 import * as data from './data.js';
 import { characterState } from './state.js';
-import { keeperBackgrounds } from './data.js';
+import { keeperBackgrounds, allItems } from './data.js';
 import { parseIntOr } from '../utils/helpers.js';
 import { escapeHtml } from '../utils/sanitize.js';
 import { clearElement, appendHTML } from '../utils/domHelpers.js';
-import { safeGetJSON } from '../utils/storage.js';
+import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from './storageKeys.js';
 import { 
     renderQuestRow,
@@ -142,10 +142,50 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
     const slotLimits = getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     const equippedCounts = { 'Wearable': 0, 'Non-Wearable': 0, 'Familiar': 0 };
 
-    // Render equipped items using component
+    // Get items in passive slots to filter them out from equipped
+    const passiveItemSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    const passiveFamiliarSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    const itemsInPassiveSlots = new Set([
+        ...passiveItemSlots.map(slot => slot.itemName).filter(Boolean),
+        ...passiveFamiliarSlots.map(slot => slot.itemName).filter(Boolean)
+    ]);
+    
+    // Clean up: Remove items from equipped if they're in passive slots
+    const equippedItems = characterState[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
+    // Filter out items that are in passive slots (iterate backwards to avoid index issues when splicing)
+    let needsCleanup = false;
+    for (let i = equippedItems.length - 1; i >= 0; i--) {
+        if (itemsInPassiveSlots.has(equippedItems[i].name)) {
+            // Item is in passive slot but still in equipped - remove it
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS].splice(i, 1);
+            needsCleanup = true;
+        }
+    }
+    
+    // If cleanup happened, save the state
+    if (needsCleanup) {
+        safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, characterState[STORAGE_KEYS.EQUIPPED_ITEMS]);
+    }
+
+    // Helper: hydrate item objects with canonical data (fixes older saved inventory entries missing fields like passiveBonus)
+    const hydrateItem = (item) => {
+        if (!item || !item.name) return item;
+        const canonical = allItems[item.name];
+        if (canonical) return { ...item, ...canonical, name: item.name };
+        // Case-insensitive fallback
+        const key = Object.keys(allItems).find(k => k.toLowerCase() === String(item.name).toLowerCase());
+        if (key) return { ...item, ...allItems[key], name: item.name };
+        return item;
+    };
+
+    // Render equipped items using component (exclude items in passive slots)
     characterState.equippedItems.forEach((item, index) => {
+        // Skip items that are in passive slots
+        if (itemsInPassiveSlots.has(item.name)) {
+            return;
+        }
         equippedCounts[item.type]++;
-        const card = renderItemCard(item, index, { showUnequip: true });
+        const card = renderItemCard(hydrateItem(item), index, { showUnequip: true });
         equippedList.appendChild(card);
     });
 
@@ -160,10 +200,29 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
         equippedList.appendChild(renderEmptySlot('Familiar'));
     }
 
+    
+    // Get equipped item names for checking (using already declared equippedItems variable above)
+    const equippedItemNames = new Set((characterState[STORAGE_KEYS.EQUIPPED_ITEMS] || []).map(item => item.name));
+    
+    // Check if there are available passive slots
+    const hasAvailableItemSlots = passiveItemSlots.some(slot => !slot.itemName);
+    const hasAvailableFamiliarSlots = passiveFamiliarSlots.some(slot => !slot.itemName);
+
     // Render inventory items
     if (characterState.inventoryItems.length > 0) {
         characterState.inventoryItems.forEach((item, index) => {
-            const card = renderItemCard(item, index, { showEquip: true, showDelete: true });
+            // If an item is in a passive slot, it should NOT appear in inventory
+            if (itemsInPassiveSlots.has(item.name)) return;
+
+            const showDisplay = hasAvailableItemSlots && !equippedItemNames.has(item.name);
+            const showAdopt = hasAvailableFamiliarSlots && !equippedItemNames.has(item.name);
+            
+            const card = renderItemCard(hydrateItem(item), index, { 
+                showEquip: true, 
+                showDelete: true,
+                showDisplay,
+                showAdopt
+            });
             inventoryList.appendChild(card);
         });
     } else {
@@ -483,6 +542,48 @@ export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInp
         select.appendChild(itemGroup);
     }
     
+    // Add passive item slot items
+    const passiveItemSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    const passiveItemsWithNames = passiveItemSlots.filter(slot => slot.itemName);
+    if (passiveItemsWithNames.length > 0) {
+        const passiveItemGroup = document.createElement('optgroup');
+        passiveItemGroup.label = 'Passive Items';
+        passiveItemsWithNames.forEach((slot) => {
+            const itemData = allItems[slot.itemName];
+            if (itemData && itemData.passiveBonus) {
+                const option = document.createElement('option');
+                option.value = `[Item] ${slot.itemName}`;
+                option.textContent = `${slot.itemName} - ${itemData.passiveBonus}`;
+                passiveItemGroup.appendChild(option);
+                hasOptions = true;
+            }
+        });
+        if (passiveItemGroup.children.length > 0) {
+            select.appendChild(passiveItemGroup);
+        }
+    }
+    
+    // Add passive familiar slot familiars
+    const passiveFamiliarSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    const passiveFamiliarsWithNames = passiveFamiliarSlots.filter(slot => slot.itemName);
+    if (passiveFamiliarsWithNames.length > 0) {
+        const passiveFamiliarGroup = document.createElement('optgroup');
+        passiveFamiliarGroup.label = 'Passive Familiars';
+        passiveFamiliarsWithNames.forEach((slot) => {
+            const itemData = allItems[slot.itemName];
+            if (itemData && itemData.passiveBonus) {
+                const option = document.createElement('option');
+                option.value = `[Item] ${slot.itemName}`;
+                option.textContent = `${slot.itemName} - ${itemData.passiveBonus}`;
+                passiveFamiliarGroup.appendChild(option);
+                hasOptions = true;
+            }
+        });
+        if (passiveFamiliarGroup.children.length > 0) {
+            select.appendChild(passiveFamiliarGroup);
+        }
+    }
+    
     if (!hasOptions) {
         const option = document.createElement('option');
         option.value = '';
@@ -539,6 +640,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect);
     renderMasteryAbilities(smpInput);
     renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    renderPassiveEquipment();
     renderAtmosphericBuffs(librarySanctumSelect);
     renderTemporaryBuffs();
     populateTemporaryBuffDropdown();
@@ -548,6 +650,156 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderDiscardedQuests();
     renderActiveCurses();
     renderCompletedCurses();
+}
+
+/**
+ * Render passive equipment section (from restoration projects)
+ */
+export function renderPassiveEquipment() {
+    renderPassiveItemSlots();
+    renderPassiveFamiliarSlots();
+}
+
+/**
+ * Render passive item slots in character sheet
+ */
+function renderPassiveItemSlots() {
+    const container = document.getElementById('passive-item-slots-character-sheet');
+    if (!container) return;
+
+    const passiveSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    
+    clearElement(container);
+
+    if (passiveSlots.length === 0) {
+        const message = document.createElement('p');
+        message.className = 'no-slots-message';
+        message.textContent = 'Complete restoration projects to unlock display slots.';
+        container.appendChild(message);
+        return;
+    }
+
+    passiveSlots.forEach(slot => {
+        const card = createPassiveSlotCard(slot, [], 'item');
+        container.appendChild(card);
+    });
+}
+
+/**
+ * Render passive familiar slots in character sheet
+ */
+function renderPassiveFamiliarSlots() {
+    const container = document.getElementById('passive-familiar-slots-character-sheet');
+    if (!container) return;
+
+    const passiveSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    
+    clearElement(container);
+
+    if (passiveSlots.length === 0) {
+        const message = document.createElement('p');
+        message.className = 'no-slots-message';
+        message.textContent = 'Complete restoration projects to unlock adoption slots.';
+        container.appendChild(message);
+        return;
+    }
+
+    passiveSlots.forEach(slot => {
+        const card = createPassiveSlotCard(slot, [], 'familiar');
+        container.appendChild(card);
+    });
+}
+
+/**
+ * Create a passive slot card element
+ */
+function createPassiveSlotCard(slot, availableItems, slotType) {
+    const card = document.createElement('div');
+    card.className = 'passive-slot-card';
+    card.setAttribute('data-slot-id', slot.slotId);
+    card.setAttribute('data-slot-type', slotType);
+
+    const currentItem = slot.itemName;
+    // Try to find item data - check exact match first, then case-insensitive
+    let itemData = currentItem && allItems[currentItem];
+    if (currentItem && !itemData) {
+        // Fallback: try case-insensitive lookup
+        const itemKey = Object.keys(allItems).find(key => 
+            key.toLowerCase() === currentItem.toLowerCase()
+        );
+        if (itemKey) {
+            itemData = allItems[itemKey];
+        }
+    }
+
+    const source = document.createElement('div');
+    source.className = 'slot-source';
+    source.textContent = `From: ${slot.unlockedFrom || 'Unknown'}`;
+    card.appendChild(source);
+
+    if (currentItem) {
+        if (itemData) {
+            // Show the item card (will display passive bonus since isInPassiveSlot is true)
+            // Add special data attributes to identify this as a passive slot item for button handlers
+            const itemCard = renderItemCard(
+                { name: currentItem, ...itemData },
+                -1, // No index needed for passive slot items
+                { 
+                    showDelete: false, 
+                    isInPassiveSlot: true,
+                    showEquip: true // Show equip button on passive slot items
+                }
+            );
+            
+            // Mark buttons with special attributes for passive slot items
+            const equipBtn = itemCard.querySelector('.equip-btn');
+            if (equipBtn) {
+                equipBtn.classList.add('equip-from-passive-btn');
+                equipBtn.setAttribute('data-passive-slot-id', slot.slotId);
+                equipBtn.setAttribute('data-passive-slot-type', slotType);
+                equipBtn.removeAttribute('data-index'); // Remove index since this isn't from inventory
+            }
+            
+            card.appendChild(itemCard);
+        } else {
+            // Item name exists but data not found - show error state
+            const errorCard = document.createElement('div');
+            errorCard.className = 'item-card';
+            errorCard.style.opacity = '0.7';
+            
+            const errorInfo = document.createElement('div');
+            errorInfo.className = 'item-info';
+            
+            const errorName = document.createElement('h4');
+            errorName.textContent = currentItem || 'Unknown Item';
+            errorInfo.appendChild(errorName);
+            
+            const errorMsg = document.createElement('p');
+            errorMsg.style.color = '#8a6262';
+            errorMsg.textContent = 'Item data not found. This item may have been removed or renamed.';
+            errorInfo.appendChild(errorMsg);
+            
+            errorCard.appendChild(errorInfo);
+            card.appendChild(errorCard);
+        }
+        
+        // Add remove button - styled like other action buttons (always show if item name exists)
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-passive-item-btn action-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.setAttribute('data-slot-id', slot.slotId);
+        removeBtn.setAttribute('data-slot-type', slotType);
+        card.appendChild(removeBtn);
+    } else {
+        // Empty slot - show placeholder
+        const emptySlot = document.createElement('div');
+        emptySlot.className = 'empty-passive-slot';
+        emptySlot.textContent = `Empty ${slotType === 'item' ? 'item' : 'familiar'} slot`;
+        card.appendChild(emptySlot);
+    }
+
+    return card;
 }
 
 // Dark academia color palette for shelf books

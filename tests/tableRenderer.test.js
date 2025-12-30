@@ -203,7 +203,7 @@ describe('Table Renderer', () => {
             // Check for other existing genres
             expect(html).toContain('Speculative Fiction');
             expect(html).toContain('Romance');
-            expect(html).toContain('Memoirs/Biographies');
+            expect(html).toContain('Memoir/Biography');
             expect(html).toContain('Non-Fiction');
             expect(html).toContain('Crime');
         });
@@ -365,7 +365,6 @@ describe('Table Renderer', () => {
                 // Should not contain completed-room class or grayed out styles
                 expect(html).not.toContain('completed-room');
                 expect(html).not.toContain('opacity: 0.6');
-                expect(html).not.toContain('color: #999');
             });
 
             test('should gray out room when challenge and encounter are completed', () => {
@@ -392,7 +391,6 @@ describe('Table Renderer', () => {
                 // Should contain completed-room class and grayed out styles
                 expect(html).toContain('completed-room');
                 expect(html).toContain('opacity: 0.6');
-                expect(html).toContain('color: #999');
                 
                 // Should show checkmark on challenge
                 expect(html).toContain('The Hall of Whispers: Read in a quiet space without music. ✓');

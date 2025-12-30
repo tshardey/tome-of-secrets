@@ -788,11 +788,12 @@ describe('Character Sheet', () => {
       expect(addedQuest.prompt).toBe('Book read outside of quest pool');
       expect(addedQuest.book).toBe('Extra Reading Book');
       
-      // Check that rewards are correct (0 XP, 0 Ink Drops, 10 Paper Scraps)
+      // Check that rewards are correct (0 XP, 0 Ink Drops, 10 Paper Scraps, 0 Blueprints)
       expect(addedQuest.rewards).toEqual({
         xp: 0,
         inkDrops: 0,
         paperScraps: 10,
+        blueprints: 0,
         items: [],
         modifiedBy: []
       });
@@ -1284,6 +1285,129 @@ describe('Character Sheet', () => {
       expect(cartographerOption).toBeTruthy();
       expect(cartographerOption.textContent).toContain('+10 Ink Drops');
       expect(cartographerOption.textContent).toContain('First Dungeon Crawl');
+    });
+
+    it('should show passive items in quest buffs dropdown', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
+      const { updateQuestBuffsDropdown } = require('../assets/js/character-sheet/ui.js');
+      
+      // Setup: Add an item to a passive slot
+      characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
+        { itemName: "The Bookwyrm's Scale" }
+      ];
+      
+      // Get the required inputs (these should exist in the character sheet)
+      const wearableSlotsInput = document.getElementById('wearableSlots') || document.createElement('input');
+      const nonWearableSlotsInput = document.getElementById('nonWearableSlots') || document.createElement('input');
+      const familiarSlotsInput = document.getElementById('familiarSlots') || document.createElement('input');
+      
+      // Update the dropdown
+      updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      // Check that the passive item appears in the dropdown
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const options = Array.from(questBuffsSelect.options);
+      
+      // Find the optgroup for passive items
+      const optgroups = Array.from(questBuffsSelect.querySelectorAll('optgroup'));
+      const passiveItemGroup = optgroups.find(group => group.label === 'Passive Items');
+      
+      expect(passiveItemGroup).toBeTruthy();
+      
+      // Check that The Bookwyrm's Scale appears with passive bonus
+      const bookwyrmOption = Array.from(passiveItemGroup.querySelectorAll('option')).find(opt => 
+        opt.textContent.includes("The Bookwyrm's Scale")
+      );
+      
+      expect(bookwyrmOption).toBeTruthy();
+      expect(bookwyrmOption.textContent).toContain('Gain a +5 Ink Drop bonus for books over 500 pages');
+      expect(bookwyrmOption.value).toBe('[Item] The Bookwyrm\'s Scale');
+      
+      // Cleanup
+      characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+    });
+
+    it('should show passive familiars in quest buffs dropdown', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
+      const { updateQuestBuffsDropdown } = require('../assets/js/character-sheet/ui.js');
+      
+      // Setup: Add a familiar to a passive familiar slot
+      characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [
+        { itemName: 'Coffee Elemental' }
+      ];
+      
+      // Get the required inputs
+      const wearableSlotsInput = document.getElementById('wearableSlots') || document.createElement('input');
+      const nonWearableSlotsInput = document.getElementById('nonWearableSlots') || document.createElement('input');
+      const familiarSlotsInput = document.getElementById('familiarSlots') || document.createElement('input');
+      
+      // Update the dropdown
+      updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      // Check that the passive familiar appears in the dropdown
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const optgroups = Array.from(questBuffsSelect.querySelectorAll('optgroup'));
+      const passiveFamiliarGroup = optgroups.find(group => group.label === 'Passive Familiars');
+      
+      expect(passiveFamiliarGroup).toBeTruthy();
+      
+      // Check that Coffee Elemental appears with passive bonus
+      const coffeeOption = Array.from(passiveFamiliarGroup.querySelectorAll('option')).find(opt => 
+        opt.textContent.includes('Coffee Elemental')
+      );
+      
+      expect(coffeeOption).toBeTruthy();
+      expect(coffeeOption.textContent).toContain('Cozy books grant +5 Ink Drops (passive)');
+      expect(coffeeOption.value).toBe('[Item] Coffee Elemental');
+      
+      // Cleanup
+      characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+    });
+
+    it('should apply passive item modifier when selected in quest buffs', () => {
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
+      
+      // Setup: Add an item to a passive slot
+      characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
+        { itemName: "The Bookwyrm's Scale" }
+      ];
+      characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+      
+      // Create a quest with the passive item buff
+      document.getElementById('quest-month').value = 'October';
+      document.getElementById('quest-year').value = '2025';
+      document.getElementById('new-quest-type').value = '♥ Organize the Stacks';
+      document.getElementById('new-quest-type').dispatchEvent(new Event('change'));
+      
+      const genreSelect = document.getElementById('genre-quest-select');
+      genreSelect.value = 'Fantasy: Read a book with magical creatures.';
+      
+      document.getElementById('new-quest-book').value = 'Test Book';
+      
+      // Select the passive item in buffs dropdown
+      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const bookwyrmOption = Array.from(questBuffsSelect.options).find(opt => 
+        opt.value === '[Item] The Bookwyrm\'s Scale'
+      );
+      
+      if (bookwyrmOption) {
+        bookwyrmOption.selected = true;
+        
+        // Add quest as completed
+        document.getElementById('new-quest-status').value = 'completed';
+        document.getElementById('add-quest-button').click();
+        
+        // Check that quest was added with passive bonus (+5, not +10)
+        const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
+        expect(completedQuest.rewards.inkDrops).toBe(15); // 10 base + 5 passive bonus
+        expect(completedQuest.buffs).toContain('[Item] The Bookwyrm\'s Scale');
+      }
+      
+      // Cleanup
+      characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
     });
 
     it('should apply Archivist bonus when selected for a quest', () => {

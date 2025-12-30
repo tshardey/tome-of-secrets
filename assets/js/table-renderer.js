@@ -9,7 +9,8 @@ import {
     curseTableDetailed,
     allItems,
     levelRewards,
-    xpLevels
+    xpLevels,
+    wings
 } from './character-sheet/data.js';
 import { slugifyId } from './utils/slug.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
@@ -193,28 +194,65 @@ export function renderDungeonRewardsTable() {
 }
 
 /**
+ * Get wing info for a room
+ * @param {string} roomNumber - Room number as string
+ * @returns {Object|null} Wing info or null
+ */
+function getWingForRoom(roomNumber) {
+    for (const wingId in wings) {
+        const wing = wings[wingId];
+        if (wing.rooms && wing.rooms.includes(roomNumber)) {
+            return { wingId, ...wing };
+        }
+    }
+    return null;
+}
+
+/**
  * Renders dungeon rooms table
  */
 export function renderDungeonRoomsTable() {
+    // Determine how many rooms to show (all rooms in dungeonRooms)
+    const roomNumbers = Object.keys(dungeonRooms).map(Number).sort((a, b) => a - b);
+    const maxRoom = Math.max(...roomNumbers);
+    
     let html = `
 <table>
   <thead>
     <tr>
       <th>Roll</th>
+      <th>Wing</th>
       <th>Room Description & Encounters</th>
     </tr>
   </thead>
   <tbody>`;
 
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= maxRoom; i++) {
         const room = dungeonRooms[i.toString()];
+        if (!room) continue;
+        
         const roomCompletion = checkDungeonRoomCompletion(i.toString());
-        const rowClass = roomCompletion.isCompleted ? 'class="completed-room"' : '';
-        const rowStyle = roomCompletion.isCompleted ? 'style="opacity: 0.6; color: #999;"' : '';
+        
+        // Get wing info
+        const wing = getWingForRoom(i.toString());
+        
+        // Build row styling - use wing colors for background
+        let rowStyle = '';
+        let rowClass = '';
+        if (roomCompletion.isCompleted) {
+            rowClass = 'class="completed-room"';
+            rowStyle = 'style="opacity: 0.6;"';
+        } else if (wing) {
+            // Apply wing color as subtle row background
+            rowStyle = `style="background: linear-gradient(90deg, ${wing.colorPalette.primary}15 0%, ${wing.colorPalette.secondary}10 100%); border-left: 4px solid ${wing.colorPalette.primary};"`;
+        }
+        
+        const wingName = wing ? wing.name.replace('The ', '') : '';
         
         html += `
     <tr ${rowClass} ${rowStyle}>
       <td><strong>${i}</strong></td>
+      <td style="color: ${wing ? wing.colorPalette.primary : 'inherit'}; font-weight: 600;">${wingName}</td>
       <td>
         <strong>${room.name}:</strong> ${room.description}
         <br><strong>Challenge:</strong> ${room.challenge}${roomCompletion.challengeCompleted ? ' ✓' : ''}`;
@@ -322,8 +360,13 @@ export function renderDungeonCompletionRewardsTable() {
   </thead>
   <tbody>`;
 
-    for (let i = 1; i <= 10; i++) {
+    // Get all rewards (d20 table)
+    const rewardKeys = Object.keys(dungeonCompletionRewards).map(Number).sort((a, b) => a - b);
+    const maxReward = Math.max(...rewardKeys);
+    
+    for (let i = 1; i <= maxReward; i++) {
         const reward = dungeonCompletionRewards[i.toString()];
+        if (!reward) continue;
         let rewardText = reward.reward;
         
         if (reward.hasLink && reward.link) {

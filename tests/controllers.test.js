@@ -16,7 +16,7 @@ import { characterState } from '../assets/js/character-sheet/state.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
-import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -738,6 +738,90 @@ describe('Controllers', () => {
             expect(controller.completedBooksSet).toBe(completedBooksSet);
         });
 
+        it('should award correct blueprint reward for Speculative Fiction (avoid Fiction substring match)', () => {
+            const controller = new QuestController(stateAdapter, form, dependencies);
+            const blueprintReward = controller.calculateBlueprintReward({
+                type: '♥ Organize the Stacks',
+                prompt: 'Speculative Fiction'
+            });
+            expect(blueprintReward).toBe(18);
+        });
+
+        it('should not move a restoration project quest to completed if blueprint spend fails', () => {
+            window.alert = jest.fn();
+
+            // Fresh, real state adapter (avoid mocked adapter from outer beforeEach)
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 0;
+            state[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] = [];
+            state[STORAGE_KEYS.COMPLETED_WINGS] = [];
+            state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+            state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+
+            // Pick a restoration project that has a non-zero cost
+            const projectId = Object.keys(data.restorationProjects || {}).find(id => {
+                const p = data.restorationProjects[id];
+                return (p?.cost || 0) > 0;
+            });
+            expect(projectId).toBeTruthy();
+            const project = data.restorationProjects[projectId];
+
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{
+                type: '🔨 Restoration Project',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book',
+                prompt: `${project.name}: ${project.completionPrompt}`,
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId: String(project.wingId || ''),
+                    wingName: 'Test Wing',
+                    projectId,
+                    projectName: project.name,
+                    cost: project.cost || 0,
+                    rewardType: project.reward?.type || null,
+                    rewardSuggestedItems: project.reward?.suggestedItems || []
+                }
+            }];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.showRewardNotification = jest.fn();
+            controller.reRenderTablesIfNeeded = jest.fn();
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            controller.handleCompleteQuest(0);
+
+            // Quest should remain active and NOT be in completed history
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(0);
+
+            // Restoration should NOT be marked complete and no slots should be unlocked
+            expect(realStateAdapter.isRestorationProjectCompleted(projectId)).toBe(false);
+            expect(realStateAdapter.getPassiveItemSlots()).toHaveLength(0);
+            expect(realStateAdapter.getPassiveFamiliarSlots()).toHaveLength(0);
+
+            // And the player should be notified
+            expect(window.alert).toHaveBeenCalledWith(
+                expect.stringContaining('Cannot complete restoration project')
+            );
+        });
+
         it('should resolve quest list keys correctly', () => {
             const controller = new QuestController(stateAdapter, form, dependencies);
             expect(controller.resolveQuestListKey('active')).toBeDefined();
@@ -794,6 +878,71 @@ describe('Controllers', () => {
             controller.autoDetectTemporaryBuffsFromText(notes);
 
             expect(stateAdapter.addTemporaryBuff).not.toHaveBeenCalled();
+        });
+
+        it('should complete a wing when all restoration projects in that wing are completed via quest completion', () => {
+            // Use a real StateAdapter instance (not mocked) for restoration state mutations
+            const realStateAdapter = new StateAdapter(characterState);
+
+            // Reset relevant state
+            characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 9999;
+            characterState[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] = [];
+            characterState[STORAGE_KEYS.COMPLETED_WINGS] = [];
+            characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+            characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+
+            // Create controller with real adapter
+            const controller = new QuestController(realStateAdapter, form, dependencies);
+            const completedBooksSet = new Set();
+            const saveCompletedBooksSet = jest.fn();
+            const updateCurrency = jest.fn();
+            const updateGenreQuestDropdown = jest.fn();
+            controller.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, updateGenreQuestDropdown);
+
+            // Pick wing 2 projects from real data
+            const wingId = '2';
+            const wingProjectIds = Object.entries(data.restorationProjects)
+                .filter(([_, p]) => String(p.wingId) === wingId)
+                .map(([id]) => id);
+
+            expect(wingProjectIds.length).toBeGreaterThan(0);
+
+            // Mark all but last project completed
+            const lastProjectId = wingProjectIds[wingProjectIds.length - 1];
+            wingProjectIds.slice(0, -1).forEach(id => realStateAdapter.completeRestorationProject(id));
+
+            // Complete the last project via handler
+            const lastProject = data.restorationProjects[lastProjectId];
+            const quest = {
+                type: '🔨 Restoration Project',
+                month: 'January',
+                year: '2024',
+                prompt: `${lastProject.name}: ${lastProject.completionPrompt}`,
+                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: [],
+                restorationData: {
+                    wingId,
+                    wingName: 'Heart&#039;s Gallery',
+                    projectId: lastProjectId,
+                    projectName: lastProject.name,
+                    cost: lastProject.cost || 0,
+                    rewardType: lastProject.reward?.type || null,
+                    rewardSuggestedItems: lastProject.reward?.suggestedItems || []
+                }
+            };
+
+            controller.handleRestorationProjectCompletion(quest);
+
+            // Wing should now be completed
+            expect(realStateAdapter.isWingCompleted(wingId)).toBe(true);
+            // And UI currency award should have been invoked
+            expect(updateCurrency).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    xp: expect.any(Number),
+                    inkDrops: expect.any(Number),
+                    paperScraps: expect.any(Number)
+                })
+            );
         });
     });
 

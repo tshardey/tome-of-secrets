@@ -82,6 +82,10 @@ permalink: /character-sheet.html
                     <input type="number" id="paperScraps" />
                 </div>
                 <div>
+                    <label for="dustyBlueprints"><strong>📜 Dusty Blueprints:</strong></label>
+                    <input type="number" id="dustyBlueprints" />
+                </div>
+                <div>
                     <label for="smp"><strong>🎓 SMP:</strong></label>
                     <input type="number" id="smp" />
                 </div>
@@ -192,6 +196,27 @@ permalink: /character-sheet.html
         <h3>📦 Inventory (Unequipped)</h3>
         <div id="inventory-list" class="item-grid">
             </div>
+    </div>
+
+    <div id="passive-equipment-section" class="passive-equipment-section">
+        <h3>🌟 Passive Equipment</h3>
+        <p class="passive-equipment-description">
+            Items and familiars placed in passive slots provide half their normal bonus automatically. Complete restoration projects in the <a href="{{ site.baseurl }}/library.html">Library Restoration</a> to unlock passive slots.
+        </p>
+        <div class="passive-equipment-grid">
+            <div class="passive-equipment-column">
+                <h4>Display Slots</h4>
+                <div id="passive-item-slots-character-sheet" class="passive-slots-container">
+                    <p class="no-slots-message">Complete restoration projects to unlock display slots.</p>
+                </div>
+            </div>
+            <div class="passive-equipment-column">
+                <h4>Adoption Slots</h4>
+                <div id="passive-familiar-slots-character-sheet" class="passive-slots-container">
+                    <p class="no-slots-message">Complete restoration projects to unlock adoption slots.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 </div>
@@ -356,7 +381,12 @@ permalink: /character-sheet.html
                 </select>
                 <select id="new-quest-type">
                     <option value="">-- Quest Type --</option>
-                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option> <option value="♣ Side Quest">♣ Side Quest</option> <option value="♥ Organize the Stacks">♥ Organize the Stacks</option> <option value="⭐ Extra Credit">⭐ Extra Credit</option> </select>
+                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option>
+                    <option value="♣ Side Quest">♣ Side Quest</option>
+                    <option value="♥ Organize the Stacks">♥ Organize the Stacks</option>
+                    <option value="🔨 Restoration Project">🔨 Restoration Project</option>
+                    <option value="⭐ Extra Credit">⭐ Extra Credit</option>
+                </select>
                 <div id="standard-prompt-container" class="prompt-container">
                     <input type="text" id="new-quest-prompt" placeholder="Prompt Name">
                 </div>
@@ -376,6 +406,10 @@ permalink: /character-sheet.html
                         </label>
                         <span id="dungeon-action-label">Defeat</span>
                     </div>
+                </div>
+                <div id="restoration-prompt-container" class="prompt-container" style="display: none;">
+                    <select id="restoration-wing-select"><option value="">-- Select a Wing --</option></select>
+                    <select id="restoration-project-select" style="display: none;"><option value="">-- Select a Project --</option></select>
                 </div>
             </div>
             <div class="form-row">

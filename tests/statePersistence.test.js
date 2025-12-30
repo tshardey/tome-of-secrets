@@ -59,7 +59,13 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 3,
             [STORAGE_KEYS.SELECTED_GENRES]: ['Mystery', 'Fantasy'],
             [STORAGE_KEYS.GENRE_DICE_SELECTION]: 'd6',
-            [STORAGE_KEYS.SHELF_BOOK_COLORS]: []
+            [STORAGE_KEYS.SHELF_BOOK_COLORS]: [],
+            // Library Restoration Expansion state
+            [STORAGE_KEYS.DUSTY_BLUEPRINTS]: 0,
+            [STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS]: [],
+            [STORAGE_KEYS.COMPLETED_WINGS]: [],
+            [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: []
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {

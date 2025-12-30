@@ -1,0 +1,77 @@
+{
+    "1": {
+        "id": "scholarly-archives",
+        "name": "The Scholarly Archives",
+        "genres": ["Historical Fiction", "History", "Memoir/Biography", "Philosophy", "Non-Fiction"],
+        "theme": "Ancient knowledge, academic pursuit, and documented wisdom. Stone halls lined with leather-bound tomes and scholarly artifacts.",
+        "rooms": ["5", "8", "10", "13"],
+        "colorPalette": {
+            "primary": "#8B4513",
+            "secondary": "#D2B48C",
+            "accent": "#B8860B"
+        }
+    },
+    "2": {
+        "id": "hearts-gallery",
+        "name": "Heart's Gallery",
+        "genres": ["Romance", "Romantasy", "Contemporary Fiction", "Drama"],
+        "theme": "Emotional connections, intimate spaces, and the human heart. Soft lighting, comfortable seating, and spaces designed for feeling.",
+        "rooms": ["3", "14", "15", "16"],
+        "colorPalette": {
+            "primary": "#B76E79",
+            "secondary": "#F5E6E8",
+            "accent": "#D4A574"
+        }
+    },
+    "3": {
+        "id": "innovation-spire",
+        "name": "The Innovation Spire",
+        "genres": ["Sci-Fi", "Science", "Speculative Fiction"],
+        "theme": "Discovery, technology, and the future. Gleaming instruments, star charts, and mechanical wonders.",
+        "rooms": ["6", "17", "18", "19"],
+        "colorPalette": {
+            "primary": "#1B263B",
+            "secondary": "#415A77",
+            "accent": "#00D4FF"
+        }
+    },
+    "4": {
+        "id": "enchanted-realm",
+        "name": "The Enchanted Realm",
+        "genres": ["Fantasy", "Romantasy", "Magic Systems"],
+        "theme": "Wonder and magic. Glowing crystals, mystical creatures, and spaces where reality bends.",
+        "rooms": ["2", "9", "20", "21"],
+        "colorPalette": {
+            "primary": "#4B0082",
+            "secondary": "#9370DB",
+            "accent": "#FFD700"
+        }
+    },
+    "5": {
+        "id": "shadow-quarter",
+        "name": "The Shadow Quarter",
+        "genres": ["Horror", "Mystery", "Thriller", "Crime"],
+        "theme": "Darkness, secrets, and things that lurk. Flickering candles, cold stone, and shadows that move.",
+        "rooms": ["1", "4", "7", "11", "12"],
+        "colorPalette": {
+            "primary": "#2C2C2C",
+            "secondary": "#4A4A4A",
+            "accent": "#8B0000"
+        }
+    },
+    "6": {
+        "id": "heart-of-library",
+        "name": "Heart of the Library",
+        "genres": ["Literary Fiction", "General Fiction", "Classics"],
+        "theme": "The welcoming entrance and central hub. Grand staircases, comfortable reading nooks, and the beating heart of the library itself.",
+        "rooms": [],
+        "colorPalette": {
+            "primary": "#D4A574",
+            "secondary": "#F5E6D3",
+            "accent": "#8B7355"
+        },
+        "special": true,
+        "alwaysAccessible": true,
+        "description": "No dungeon rooms required - accessible immediately. Players can begin restoration here from the start."
+    }
+}

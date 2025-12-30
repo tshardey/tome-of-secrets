@@ -3,6 +3,8 @@
  */
 
 import { Reward, RewardCalculator } from '../assets/js/services/RewardCalculator.js';
+import { characterState } from '../assets/js/character-sheet/state.js';
+import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
 describe('Reward Class', () => {
     test('should create a reward with default values', () => {
@@ -54,6 +56,7 @@ describe('Reward Class', () => {
             xp: 15,
             inkDrops: 20,
             paperScraps: 0,
+            blueprints: 0,
             items: ['Item1'],
             modifiedBy: ['Modifier1']
         });
@@ -294,6 +297,109 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         // Long Read Focus should exist in temporaryBuffsFromRewards (legacy)
         // or temporaryBuffs (new)
         expect(modifier).toBeDefined();
+    });
+
+    test('should use passiveRewardModifier for items in passive slots', () => {
+        // Setup: Add an item to a passive slot
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
+            { itemName: "The Bookwyrm's Scale" }
+        ];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+
+        const base = new Reward({ inkDrops: 10 });
+        // The Bookwyrm's Scale in passive slot should give +5 ink drops (passive), not +10 (active)
+        const modified = RewardCalculator.applyModifiers(base, [
+            '[Item] The Bookwyrm\'s Scale'
+        ]);
+
+        expect(modified.inkDrops).toBe(15); // 10 base + 5 passive bonus
+        expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+
+        // Cleanup
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+    });
+
+    test('should use active rewardModifier for equipped items, even if also in passive slot', () => {
+        // Setup: Item in both passive slot AND equipped
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
+            { itemName: "The Bookwyrm's Scale" }
+        ];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
+            { name: "The Bookwyrm's Scale" }
+        ];
+
+        const base = new Reward({ inkDrops: 10 });
+        // When equipped, should use active modifier (+10), not passive (+5)
+        const modified = RewardCalculator.applyModifiers(base, [
+            '[Item] The Bookwyrm\'s Scale'
+        ]);
+
+        expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
+        expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+
+        // Cleanup
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    });
+
+    test('should use passiveRewardModifier for familiars in passive slots', () => {
+        // Setup: Add a familiar to a passive familiar slot
+        characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [
+            { itemName: "Coffee Elemental" }
+        ];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+
+        const base = new Reward({ inkDrops: 10 });
+        // Coffee Elemental in passive slot should give +5 ink drops (passive), not +10 (active)
+        const modified = RewardCalculator.applyModifiers(base, [
+            '[Item] Coffee Elemental'
+        ]);
+
+        expect(modified.inkDrops).toBe(15); // 10 base + 5 passive bonus
+        expect(modified.modifiedBy).toContain('Coffee Elemental');
+
+        // Cleanup
+        characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+    });
+
+    test('should use active modifier for items not in passive slots', () => {
+        // Setup: No passive slots, item is just equipped
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
+            { name: "The Bookwyrm's Scale" }
+        ];
+
+        const base = new Reward({ inkDrops: 10 });
+        // Should use active modifier (+10)
+        const modified = RewardCalculator.applyModifiers(base, [
+            '[Item] The Bookwyrm\'s Scale'
+        ]);
+
+        expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
+        expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+
+        // Cleanup
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    });
+
+    test('should handle passive multiplier modifiers correctly', () => {
+        // Setup: Add an item with a passive multiplier to a passive slot
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
+            { itemName: 'Page Sprite' }
+        ];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+
+        const base = new Reward({ inkDrops: 10 });
+        // Page Sprite passive: x1.5 multiplier (active is x2)
+        const modified = RewardCalculator.applyModifiers(base, [
+            '[Item] Page Sprite'
+        ]);
+
+        expect(modified.inkDrops).toBe(15); // 10 * 1.5 = 15
+        expect(modified.modifiedBy).toContain('Page Sprite');
+
+        // Cleanup
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
     });
 });
 

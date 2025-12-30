@@ -17,7 +17,9 @@ import { showErrors, clearAllErrors, showFormError, clearFormError } from '../ut
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 import * as data from '../character-sheet/data.js';
+import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 
 export class QuestController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -59,6 +61,8 @@ export class QuestController extends BaseController {
         const dungeonActionToggle = document.getElementById('dungeon-action-toggle');
         const genreQuestSelect = document.getElementById('genre-quest-select');
         const sideQuestSelect = document.getElementById('side-quest-select');
+        const restorationWingSelect = document.getElementById('restoration-wing-select');
+        const restorationProjectSelect = document.getElementById('restoration-project-select');
         const addQuestButton = document.getElementById('add-quest-button');
         const cancelEditQuestButton = document.getElementById('cancel-edit-quest-button');
         const keeperBackgroundSelect = document.getElementById('keeperBackground');
@@ -73,6 +77,8 @@ export class QuestController extends BaseController {
         this.dungeonActionToggle = dungeonActionToggle;
         this.genreQuestSelect = genreQuestSelect;
         this.sideQuestSelect = sideQuestSelect;
+        this.restorationWingSelect = restorationWingSelect;
+        this.restorationProjectSelect = restorationProjectSelect;
         this.addQuestButton = addQuestButton;
         this.cancelEditQuestButton = cancelEditQuestButton;
         this.keeperBackgroundSelect = keeperBackgroundSelect;
@@ -106,6 +112,13 @@ export class QuestController extends BaseController {
             });
         }
 
+        // Restoration wing selection
+        if (restorationWingSelect) {
+            this.addEventListener(restorationWingSelect, 'change', () => {
+                this.handleRestorationWingChange();
+            });
+        }
+
         // Add/Update quest button
         this.addEventListener(addQuestButton, 'click', () => {
             this.handleAddQuest();
@@ -124,14 +137,17 @@ export class QuestController extends BaseController {
         const dungeonContainer = document.getElementById('dungeon-prompt-container');
         const genreContainer = document.getElementById('genre-prompt-container');
         const sideContainer = document.getElementById('side-prompt-container');
+        const restorationContainer = document.getElementById('restoration-prompt-container');
 
         // Hide all prompt containers by default
         if (standardContainer) standardContainer.style.display = 'none';
         if (dungeonContainer) dungeonContainer.style.display = 'none';
         if (genreContainer) genreContainer.style.display = 'none';
         if (sideContainer) sideContainer.style.display = 'none';
+        if (restorationContainer) restorationContainer.style.display = 'none';
         if (this.dungeonEncounterSelect) this.dungeonEncounterSelect.style.display = 'none';
         if (this.dungeonActionContainer) this.dungeonActionContainer.style.display = 'none';
+        if (this.restorationProjectSelect) this.restorationProjectSelect.style.display = 'none';
 
         const selectedType = this.questTypeSelect.value;
 
@@ -162,6 +178,9 @@ export class QuestController extends BaseController {
                     this.sideQuestSelect.appendChild(option);
                 }
             }
+        } else if (selectedType === '🔨 Restoration Project') {
+            if (restorationContainer) restorationContainer.style.display = 'flex';
+            this.populateRestorationWings();
         } else if (selectedType === '⭐ Extra Credit') {
             // Extra Credit doesn't need a prompt
         } else {
@@ -207,6 +226,109 @@ export class QuestController extends BaseController {
         }
     }
 
+    /**
+     * Check if a wing is unlocked for restoration
+     * A wing is unlocked if it has alwaysAccessible=true OR all its dungeon rooms are completed
+     * @param {Object} wing - Wing data object
+     * @param {string} wingId - Wing ID
+     * @returns {boolean}
+     */
+    isWingUnlocked(wing, wingId) {
+        // Wing 6 (Heart of the Library) is always accessible
+        if (wing.alwaysAccessible) return true;
+        
+        // Other wings require all dungeon rooms to be completed
+        return isWingReadyForRestoration(wingId);
+    }
+
+    /**
+     * Populate the restoration wings dropdown
+     * Only shows wings that are unlocked and have uncompleted projects
+     */
+    populateRestorationWings() {
+        if (!this.restorationWingSelect || !data.wings) return;
+        
+        this.restorationWingSelect.innerHTML = '<option value="">-- Select a Wing --</option>';
+        
+        // Get completed projects to filter out already completed ones
+        const completedProjects = this.stateAdapter.getCompletedRestorationProjects() || [];
+        
+        for (const wingId in data.wings) {
+            const wing = data.wings[wingId];
+            
+            // Skip wings that are not unlocked
+            if (!this.isWingUnlocked(wing, wingId)) continue;
+            
+            // Check if wing has any uncompleted projects
+            const wingProjects = this.getProjectsForWing(wingId);
+            const hasUncompletedProjects = wingProjects.some(p => !completedProjects.includes(p.id));
+            
+            if (hasUncompletedProjects) {
+                const option = document.createElement('option');
+                option.value = wingId;
+                option.textContent = wing.name;
+                this.restorationWingSelect.appendChild(option);
+            }
+        }
+    }
+
+    /**
+     * Get all projects for a specific wing
+     */
+    getProjectsForWing(wingId) {
+        if (!data.restorationProjects) return [];
+        
+        const projects = [];
+        for (const projectId in data.restorationProjects) {
+            const project = data.restorationProjects[projectId];
+            if (project.wingId === wingId) {
+                projects.push({ id: projectId, ...project });
+            }
+        }
+        return projects;
+    }
+
+    /**
+     * Handle restoration wing selection
+     * Only shows projects the player can afford
+     */
+    handleRestorationWingChange() {
+        const selectedWingId = this.restorationWingSelect?.value;
+        if (!this.restorationProjectSelect) return;
+
+        this.restorationProjectSelect.innerHTML = '<option value="">-- Select a Project --</option>';
+
+        if (selectedWingId) {
+            // Verify wing is still unlocked (double-check)
+            const wing = data.wings?.[selectedWingId];
+            if (!wing || !this.isWingUnlocked(wing, selectedWingId)) {
+                this.restorationProjectSelect.style.display = 'none';
+                return;
+            }
+
+            const completedProjects = this.stateAdapter.getCompletedRestorationProjects() || [];
+            const currentBlueprints = this.stateAdapter.getDustyBlueprints();
+            const projects = this.getProjectsForWing(selectedWingId);
+            
+            for (const project of projects) {
+                // Skip already completed projects
+                if (completedProjects.includes(project.id)) continue;
+                
+                // Skip projects the player can't afford
+                const cost = project.cost || 0;
+                if (currentBlueprints < cost) continue;
+                
+                const option = document.createElement('option');
+                option.value = project.id;
+                option.textContent = `${project.name} (📜 ${cost})`;
+                this.restorationProjectSelect.appendChild(option);
+            }
+            this.restorationProjectSelect.style.display = 'block';
+        } else {
+            this.restorationProjectSelect.style.display = 'none';
+        }
+    }
+
     resetQuestForm() {
         // Clear form fields
         const promptInput = document.getElementById('new-quest-prompt');
@@ -223,6 +345,8 @@ export class QuestController extends BaseController {
         if (this.dungeonEncounterSelect) this.dungeonEncounterSelect.innerHTML = '<option value="">-- Select an Encounter --</option>';
         if (this.genreQuestSelect) this.genreQuestSelect.innerHTML = '<option value="">-- Select a Genre Quest --</option>';
         if (this.sideQuestSelect) this.sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
+        if (this.restorationWingSelect) this.restorationWingSelect.innerHTML = '<option value="">-- Select a Wing --</option>';
+        if (this.restorationProjectSelect) this.restorationProjectSelect.innerHTML = '<option value="">-- Select a Project --</option>';
         if (this.dungeonActionContainer) this.dungeonActionContainer.style.display = 'none';
 
         // Clear buff selection
@@ -248,6 +372,8 @@ export class QuestController extends BaseController {
         if (sideContainer) sideContainer.style.display = 'none';
         const dungeonContainer = document.getElementById('dungeon-prompt-container');
         if (dungeonContainer) dungeonContainer.style.display = 'none';
+        const restorationContainer = document.getElementById('restoration-prompt-container');
+        if (restorationContainer) restorationContainer.style.display = 'none';
     }
 
     handleAddQuest() {
@@ -297,11 +423,40 @@ export class QuestController extends BaseController {
         // Use BaseQuestHandler to determine the correct prompt
         const prompt = BaseQuestHandler.determinePromptForEdit(type, originalQuest, formElements, data);
 
+        // Preserve restorationData if it exists (for restoration project quests)
+        const updates = { month, year, type, prompt, book, bookAuthor, notes, buffs: selectedBuffs };
+        if (originalQuest.restorationData) {
+            // For restoration quests, also update restorationData from form selections
+            if (type === '🔨 Restoration Project') {
+                const wingId = this.restorationWingSelect?.value;
+                const projectId = this.restorationProjectSelect?.value;
+                if (wingId && projectId) {
+                    const wing = data.wings?.[wingId];
+                    const project = data.restorationProjects?.[projectId];
+                    updates.restorationData = {
+                        wingId: wingId,
+                        wingName: wing?.name || '',
+                        projectId: projectId,
+                        projectName: project?.name || '',
+                        cost: project?.cost || 0,
+                        rewardType: project?.reward?.type || null,
+                        rewardSuggestedItems: project?.reward?.suggestedItems || []
+                    };
+                } else {
+                    // Preserve existing restorationData if form wasn't filled
+                    updates.restorationData = originalQuest.restorationData;
+                }
+            } else {
+                // Preserve restorationData for non-restoration quests (shouldn't happen, but be safe)
+                updates.restorationData = originalQuest.restorationData;
+            }
+        }
+        
         // Update the quest in the state
         stateAdapter.updateQuest(
             this.resolveQuestListKey(this.editingQuestInfo.list),
             this.editingQuestInfo.index,
-            { month, year, type, prompt, book, bookAuthor, notes, buffs: selectedBuffs }
+            updates
         );
 
         // Re-render the appropriate list
@@ -340,7 +495,9 @@ export class QuestController extends BaseController {
                 dungeonEncounterSelect: this.dungeonEncounterSelect,
                 dungeonActionToggle: this.dungeonActionToggle,
                 genreQuestSelect: this.genreQuestSelect,
-                sideQuestSelect: this.sideQuestSelect
+                sideQuestSelect: this.sideQuestSelect,
+                restorationWingSelect: this.restorationWingSelect,
+                restorationProjectSelect: this.restorationProjectSelect
             };
 
             // Get handler for quest type
@@ -378,9 +535,29 @@ export class QuestController extends BaseController {
                 const bookName = trimOrEmpty(book);
                 const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
+                // Calculate and add blueprint rewards to quests before storing
+                quests.forEach(quest => {
+                    const blueprintReward = this.calculateBlueprintReward(quest);
+                    if (blueprintReward > 0 && quest.rewards) {
+                        quest.rewards.blueprints = blueprintReward;
+                    }
+                });
+
+                // Handle restoration project completion BEFORE adding to completed history.
+                // If blueprint spend fails, we should not add the quest to completed.
+                for (const quest of quests) {
+                    const restorationSuccess = this.handleRestorationProjectCompletion(quest);
+                    if (!restorationSuccess) {
+                        // Nothing was added yet; abort without saving/resetting the form.
+                        return;
+                    }
+                }
+
                 // Add to completed quests
                 stateAdapter.addCompletedQuests(quests);
                 quests.forEach(quest => {
+                    // Award blueprints to state (currency)
+                    this.awardBlueprintsForQuest(quest);
                     if (this.updateCurrency) this.updateCurrency(quest.rewards);
                 });
 
@@ -414,6 +591,11 @@ export class QuestController extends BaseController {
                 const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
                 const familiarSlotsInput = document.getElementById('familiar-slots');
                 uiModule.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                
+                // Render passive equipment if restoration project was completed
+                if (quests.some(q => q.type === '🔨 Restoration Project') && uiModule.renderPassiveEquipment) {
+                    uiModule.renderPassiveEquipment();
+                }
             }
 
             this.saveState();
@@ -497,6 +679,23 @@ export class QuestController extends BaseController {
         const wizardSchool = wizardSchoolSelect?.value || '';
         const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool);
 
+        // Calculate and add blueprints to rewards BEFORE storing the quest
+        const blueprintReward = this.calculateBlueprintReward(completedQuest);
+        if (blueprintReward > 0 && completedQuest.rewards) {
+            completedQuest.rewards.blueprints = blueprintReward;
+        }
+
+        // Handle restoration project completion BEFORE moving quest to completed history.
+        // This prevents inconsistent state if blueprint spend fails (e.g., player spent blueprints elsewhere).
+        const restorationSuccess = this.handleRestorationProjectCompletion(completedQuest);
+        if (!restorationSuccess) {
+            // Roll back: restore quest to active queue and exit without adding to completed.
+            stateAdapter.addActiveQuests(questToMove);
+            uiModule.renderActiveAssignments();
+            this.saveState();
+            return;
+        }
+
         // Add to completed quests (wrap in array for consistency)
         stateAdapter.addCompletedQuests([completedQuest]);
 
@@ -506,6 +705,9 @@ export class QuestController extends BaseController {
             this.saveCompletedBooksSet();
         }
 
+        // Award blueprints to state (currency)
+        this.awardBlueprintsForQuest(completedQuest);
+        
         // Update currency with finalized rewards
         if (this.updateCurrency) {
             this.updateCurrency(completedQuest.rewards);
@@ -527,6 +729,11 @@ export class QuestController extends BaseController {
         const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
         const familiarSlotsInput = document.getElementById('familiar-slots');
         uiModule.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+        
+        // Render passive equipment if restoration project was completed
+        if (completedQuest.type === '🔨 Restoration Project' && uiModule.renderPassiveEquipment) {
+            uiModule.renderPassiveEquipment();
+        }
 
         // Increment books completed counter only if this is a new book
         if (isNewBook && this.completedBooksSet) {
@@ -559,6 +766,242 @@ export class QuestController extends BaseController {
         this.saveState();
     }
     
+    /**
+     * Calculate blueprint reward for a quest type
+     * @param {Object} quest - The quest
+     * @returns {number} Blueprint reward amount
+     */
+    calculateBlueprintReward(quest) {
+        let blueprintReward = 0;
+
+        if (quest.type === '♥ Organize the Stacks') {
+            // Genre quest - check genreQuests for blueprint reward
+            if (data.genreQuests) {
+                const normalize = (value) => String(value ?? '').trim().toLowerCase();
+                // Some historical prompts may include extra text like "Fantasy: Read ..."
+                const extractGenreFromPrompt = (prompt) => String(prompt ?? '').split(':')[0].trim();
+
+                const promptRaw = String(quest.prompt ?? '');
+                const promptGenre = normalize(extractGenreFromPrompt(promptRaw));
+
+                // Prefer exact genre equality (prevents substring collisions like "Fiction" vs "Speculative Fiction")
+                for (const genreQuest of Object.values(data.genreQuests)) {
+                    if (!genreQuest) continue;
+                    if (promptGenre && normalize(genreQuest.genre) === promptGenre) {
+                        blueprintReward = genreQuest.blueprintReward || 3;
+                        break;
+                    }
+                }
+
+                // Fallback: if we didn't find an exact match, allow a contained match but choose the longest genre match.
+                // This keeps compatibility with any prompts that include the genre inside longer text without being
+                // vulnerable to "shorter genre" matches hijacking longer ones.
+                if (blueprintReward === 0 && promptRaw) {
+                    let best = null; // { len: number, reward: number }
+                    const promptNorm = normalize(promptRaw);
+                    for (const genreQuest of Object.values(data.genreQuests)) {
+                        if (!genreQuest?.genre) continue;
+                        const genreNorm = normalize(genreQuest.genre);
+                        if (!genreNorm) continue;
+                        if (promptNorm.includes(genreNorm)) {
+                            const reward = genreQuest.blueprintReward || 3;
+                            if (!best || genreNorm.length > best.len) {
+                                best = { len: genreNorm.length, reward };
+                            }
+                        }
+                    }
+                    if (best) blueprintReward = best.reward;
+                }
+            }
+            // Default if no specific match
+            if (blueprintReward === 0) {
+                blueprintReward = 3;
+            }
+        } else if (quest.type === '⭐ Extra Credit') {
+            blueprintReward = GAME_CONFIG.restoration.extraCreditBlueprintReward;
+        }
+        // Note: Dungeon Crawl quests do NOT award blueprints
+
+        return blueprintReward;
+    }
+
+    /**
+     * Award blueprints based on quest type
+     * @param {Object} quest - The completed quest
+     * @returns {number} Blueprint reward amount
+     */
+    awardBlueprintsForQuest(quest) {
+        const { stateAdapter } = this;
+        const blueprintReward = this.calculateBlueprintReward(quest);
+
+        if (blueprintReward > 0) {
+            stateAdapter.addDustyBlueprints(blueprintReward);
+        }
+
+        return blueprintReward;
+    }
+
+    /**
+     * Handle restoration project completion
+     * Spends blueprints and marks the project as completed
+     * @param {Object} quest - The completed quest
+     */
+    handleRestorationProjectCompletion(quest) {
+        if (quest.type !== '🔨 Restoration Project') return true;
+        
+        const { stateAdapter } = this;
+        
+        // Get project ID and cost from restorationData
+        const projectId = quest.restorationData?.projectId;
+        const cost = quest.restorationData?.cost || 0;
+        
+        if (!projectId) return true;
+        
+        // Get project data to process reward
+        const project = data.restorationProjects?.[projectId];
+        if (!project) return true;
+        
+        // Check if player has enough blueprints BEFORE processing completion
+        if (cost > 0) {
+            const currentBlueprints = stateAdapter.getDustyBlueprints();
+            if (currentBlueprints < cost) {
+                // Don't complete the project if player doesn't have enough blueprints
+                const needed = cost - currentBlueprints;
+                alert(`Cannot complete restoration project: You need ${needed} more Dusty Blueprints. (Cost: ${cost}, You have: ${currentBlueprints})`);
+                return false;
+            }
+            
+            // Spend blueprints for the project cost
+            const success = stateAdapter.spendDustyBlueprints(cost);
+            if (!success) {
+                // This shouldn't happen if we checked above, but handle it just in case
+                alert(`Cannot complete restoration project: Failed to spend ${cost} Dusty Blueprints.`);
+                return false;
+            }
+            
+            // Update the blueprints display in the UI
+            const dustyBlueprintsInput = document.getElementById('dustyBlueprints');
+            if (dustyBlueprintsInput) {
+                dustyBlueprintsInput.value = stateAdapter.getDustyBlueprints();
+            }
+        }
+        
+        // Mark project as completed in restoration state
+        stateAdapter.completeRestorationProject(projectId);
+        
+        // Process reward (create passive slot, etc.)
+        const reward = this.processRestorationProjectReward(projectId, project.reward);
+
+        // Check wing completion (Quest completion path previously didn't trigger wing completion)
+        // Determine wingId (prefer project data, fall back to quest restorationData)
+        const wingId = String(project.wingId || quest.restorationData?.wingId || '');
+        if (wingId && !stateAdapter.isWingCompleted(wingId)) {
+            const wingProjectIds = Object.entries(data.restorationProjects || {})
+                .filter(([_, p]) => String(p.wingId) === wingId)
+                .map(([id]) => id);
+
+            const allWingProjectsComplete = wingProjectIds.length > 0 &&
+                wingProjectIds.every(id => stateAdapter.isRestorationProjectCompleted(id));
+
+            if (allWingProjectsComplete) {
+                stateAdapter.completeWing(wingId);
+
+                // Award wing completion rewards (currency) if hook available
+                if (this.updateCurrency) {
+                    this.updateCurrency({
+                        xp: GAME_CONFIG.restoration.wingCompletionRewards.xp,
+                        inkDrops: GAME_CONFIG.restoration.wingCompletionRewards.inkDrops,
+                        paperScraps: GAME_CONFIG.restoration.wingCompletionRewards.paperScraps,
+                        items: []
+                    });
+                }
+
+                // Notify
+                this.showRewardNotification(
+                    `Wing Restored! +${GAME_CONFIG.restoration.wingCompletionRewards.xp} XP, ` +
+                    `+${GAME_CONFIG.restoration.wingCompletionRewards.inkDrops} Ink Drops, ` +
+                    `+${GAME_CONFIG.restoration.wingCompletionRewards.paperScraps} Paper Scraps`
+                );
+            }
+        }
+        
+        // Show reward notification
+        if (reward) {
+            const rewardText = this.getRestorationRewardText(reward);
+            this.showRewardNotification(`Restoration Project Complete! ${rewardText}`);
+        }
+
+        return true;
+    }
+
+    /**
+     * Process restoration project reward (create passive slots, etc.)
+     * @param {string} projectId - Project ID
+     * @param {Object} reward - Reward configuration
+     * @returns {Object} Processed reward details
+     */
+    processRestorationProjectReward(projectId, reward) {
+        if (!reward) return null;
+
+        const result = { type: reward.type };
+
+        switch (reward.type) {
+            case 'passiveItemSlot':
+                const itemSlotId = `item-slot-${projectId}`;
+                this.stateAdapter.addPassiveItemSlot(itemSlotId, projectId);
+                result.slotId = itemSlotId;
+                result.suggestedItems = reward.suggestedItems;
+                break;
+
+            case 'passiveFamiliarSlot':
+                const familiarSlotId = `familiar-slot-${projectId}`;
+                this.stateAdapter.addPassiveFamiliarSlot(familiarSlotId, projectId);
+                result.slotId = familiarSlotId;
+                result.suggestedItems = reward.suggestedItems;
+                break;
+
+            case 'special':
+                result.description = reward.description;
+                result.bonusMultiplier = reward.bonusMultiplier;
+                if (reward.title) {
+                    result.title = reward.title;
+                }
+                break;
+        }
+
+        return result;
+    }
+
+    /**
+     * Get human-readable reward text for restoration projects
+     * @param {Object} reward - Processed reward object
+     * @returns {string} Reward description
+     */
+    getRestorationRewardText(reward) {
+        if (!reward) return 'Unknown reward';
+        
+        switch (reward.type) {
+            case 'passiveItemSlot':
+                return 'Unlocked a display slot';
+            case 'passiveFamiliarSlot':
+                return 'Unlocked an adoption slot';
+            case 'special':
+                return reward.description || 'Special reward';
+            default:
+                return 'Reward unlocked';
+        }
+    }
+
+    /**
+     * Show a reward notification
+     * @param {string} message - Notification message
+     */
+    showRewardNotification(message) {
+        // Show alert for now (matches character sheet pattern)
+        alert(message);
+        console.log('Reward:', message);
+    }
+
     /**
      * Re-render tables on dungeons/quests pages after quest completion
      */
@@ -662,6 +1105,14 @@ export class QuestController extends BaseController {
         if (this.questTypeSelect) {
             this.questTypeSelect.dispatchEvent(new Event('change'));
         }
+        
+        // Ensure restoration container is visible when editing restoration quests
+        if (quest.type === '🔨 Restoration Project') {
+            const restorationContainer = document.getElementById('restoration-prompt-container');
+            if (restorationContainer) {
+                restorationContainer.style.display = 'flex';
+            }
+        }
 
         // Show correct prompt field for editing
         if (quest.type === '♠ Dungeon Crawl' && this.dungeonRoomSelect) {
@@ -692,6 +1143,20 @@ export class QuestController extends BaseController {
             this.genreQuestSelect.value = quest.prompt;
         } else if (quest.type === '♣ Side Quest' && this.sideQuestSelect) {
             this.sideQuestSelect.value = quest.prompt;
+        } else if (quest.type === '🔨 Restoration Project' && quest.restorationData) {
+            // Populate restoration wing and project dropdowns
+            if (this.restorationWingSelect && quest.restorationData.wingId) {
+                // First populate the wing dropdown (trigger change to populate projects)
+                this.restorationWingSelect.value = quest.restorationData.wingId;
+                this.restorationWingSelect.dispatchEvent(new Event('change'));
+                
+                // Then set the project after a brief delay to allow project dropdown to populate
+                setTimeout(() => {
+                    if (this.restorationProjectSelect && quest.restorationData.projectId) {
+                        this.restorationProjectSelect.value = quest.restorationData.projectId;
+                    }
+                }, 50);
+            }
         }
 
         // Set editing state

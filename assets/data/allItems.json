@@ -3,121 +3,302 @@
         "type": "Wearable",
         "img": "assets/images/rewards/librarians-compass.png",
         "bonus": "Earn a +20 Ink Drop bonus for any book by a new-to-you author.",
-        "rewardModifier": { "inkDrops": 20 }
+        "passiveBonus": "Earn a +10 Ink Drop bonus for any book by a new-to-you author (passive).",
+        "rewardModifier": { "inkDrops": 20 },
+        "passiveRewardModifier": { "inkDrops": 10 }
     },
     "Amulet of Duality": {
         "type": "Wearable",
         "img": "assets/images/rewards/amulet-of-duality.png",
         "bonus": "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators.",
-        "rewardModifier": { "inkDrops": 15 }
+        "passiveBonus": "Earn a +7 Ink Drop bonus on books with multiple POVs (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
     },
     "Scatter Brain Scarab": {
         "type": "Wearable",
         "img": "assets/images/rewards/scatter-brain-scarab.png",
         "bonus": "When equipped, gain a x3 Ink Drop bonus for reading three books at the same time.",
-        "rewardModifier": { "inkDropsMultiplier": 3 }
+        "passiveBonus": "Gain a x1.5 Ink Drop bonus for reading multiple books (passive).",
+        "rewardModifier": { "inkDropsMultiplier": 3 },
+        "passiveRewardModifier": { "inkDropsMultiplier": 1.5 }
     },
     "Cloak of the Story-Weaver": {
         "type": "Wearable",
         "img": "assets/images/rewards/cloak-of-the-story-weaver.png",
         "bonus": "Earn a permanent +10 Ink Drop bonus for books that are part of a series.",
-        "rewardModifier": { "inkDrops": 10 }
+        "passiveBonus": "Earn a +5 Ink Drop bonus for series books (passive).",
+        "rewardModifier": { "inkDrops": 10 },
+        "passiveRewardModifier": { "inkDrops": 5 }
     },
     "Blood Fury Tattoo": {
         "type": "Wearable",
         "img": "assets/images/rewards/blood-fury-tattoo.png",
         "bonus": "Earn a +15 Ink Drop bonus for your next book in a series.",
-        "rewardModifier": { "inkDrops": 15 }
+        "passiveBonus": "Earn a +7 Ink Drop bonus for series continuations (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
     },
     "The Bookwyrm's Scale": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/bookwyrms-scale.png",
         "bonus": "For every book over 500 pages, gain a +10 Ink Drop bonus.",
-        "rewardModifier": { "inkDrops": 10 }
+        "passiveBonus": "Gain a +5 Ink Drop bonus for books over 500 pages (passive).",
+        "rewardModifier": { "inkDrops": 10 },
+        "passiveRewardModifier": { "inkDrops": 5 }
     },
     "Key of the Archive": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/key-of-the-archive.png",
         "bonus": "Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively.",
-        "rewardModifier": { "inkDrops": 15 }
+        "passiveBonus": "Earn a +7 Ink Drop bonus on unlock-themed books (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
     },
     "Tome of Potential": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/tome-of-potential.png",
         "bonus": "Earn a x3 Ink Drop bonus for books over 400 pages.",
-        "rewardModifier": { "inkDropsMultiplier": 3 }
+        "passiveBonus": "Earn a x1.5 Ink Drop bonus for books over 400 pages (passive).",
+        "rewardModifier": { "inkDropsMultiplier": 3 },
+        "passiveRewardModifier": { "inkDropsMultiplier": 1.5 }
     },
     "Librarian's Quill": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/librarians-quill.png",
         "bonus": "Earn a permanent +2 Paper Scraps bonus for every book you journal about after finishing.",
-        "rewardModifier": { "paperScraps": 2 }
+        "passiveBonus": "Earn +1 Paper Scrap for journaling (passive).",
+        "rewardModifier": { "paperScraps": 2 },
+        "passiveRewardModifier": { "paperScraps": 1 }
     },
     "Chalice of Restoration": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/chalice-of-restoration.png",
         "bonus": "Once per month, you may use this item to remove a Worn Page penalty.",
-        "rewardModifier": {}
+        "passiveBonus": "Once every 2 months, you may use this item to remove a Worn Page penalty (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {}
     },
     "Lantern of Foresight": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/lantern-of-foresight.png",
         "bonus": "Once per month, you may re-roll a prompt or a die roll to get a new result, and you must keep the new result.",
-        "rewardModifier": {}
+        "passiveBonus": "Once every 2 months, you may re-roll a prompt or a die roll (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {}
     },
     "The Scepter of Knowledge": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/scepter-of-knowledge.png",
         "bonus": "Once per month, you may switch the genre of any quest you roll to Non-Fiction.",
-        "rewardModifier": {}
+        "passiveBonus": "Once every 2 months, you may switch any quest to Non-Fiction (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {}
     },
     "Gilded Painting": {
         "type": "Non-Wearable",
         "img": "assets/images/rewards/gilded-painting.png",
-        "bonus": "Earn +1 Ink Drop when reading in an ornate location.",
-        "rewardModifier": { "inkDrops": 1 }
+        "bonus": "Earn +2 Ink Drops when reading in an ornate location.",
+        "passiveBonus": "Earn +1 Ink Drop for reading in ornate locations (passive).",
+        "rewardModifier": { "inkDrops": 2 },
+        "passiveRewardModifier": { "inkDrops": 1 }
     },
     "Celestial Koi Fish": {
         "type": "Familiar",
         "img": "assets/images/rewards/celestial-koi-fish.png",
         "bonus": "Once per month, you may use this familiar's insight to switch a genre-based quest to its opposing genre.",
-        "rewardModifier": {}
+        "passiveBonus": "Once every 2 months, you may switch a genre quest to its opposing genre (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {}
     },
     "Tome-Bound Cat": {
         "type": "Familiar",
         "img": "assets/images/rewards/tome-bound-cat.png",
         "bonus": "When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect.",
-        "rewardModifier": {}
+        "passiveBonus": "Atmospheric Buffs grant +3 Ink Drops (passive, not multiplied).",
+        "rewardModifier": {},
+        "passiveRewardModifier": { "inkDrops": 3 }
     },
     "Pocket Dragon": {
         "type": "Familiar",
         "img": "assets/images/rewards/pocket-dragon.png",
         "bonus": "Earn a +20 Ink Drop bonus for books in a fantasy series.",
-        "rewardModifier": { "inkDrops": 20 }
+        "passiveBonus": "Fantasy series books grant +10 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 20 },
+        "passiveRewardModifier": { "inkDrops": 10 }
     },
     "Garden Gnome": {
         "type": "Familiar",
         "img": "assets/images/rewards/garden-gnome.png",
-        "bonus": "Earn +1 Ink Drop on any day where you read outside in nature or in a plant filled room.",
-        "rewardModifier": { "inkDrops": 1 }
+        "bonus": "Earn +2 Ink Drops on any day where you read outside in nature or in a plant-filled room.",
+        "passiveBonus": "Earn +1 Ink Drop for reading in nature or with plants (passive).",
+        "rewardModifier": { "inkDrops": 2 },
+        "passiveRewardModifier": { "inkDrops": 1 }
     },
     "Mystical Moth": {
         "type": "Familiar",
         "img": "assets/images/rewards/mystical-moth.png",
-        "bonus": "Earn +1 Ink Drop on nights when you read by lamplight.",
-        "rewardModifier": { "inkDrops": 1 }
+        "bonus": "Earn +2 Ink Drops on nights when you read by lamplight.",
+        "passiveBonus": "Earn +1 Ink Drop for reading by lamplight (passive).",
+        "rewardModifier": { "inkDrops": 2 },
+        "passiveRewardModifier": { "inkDrops": 1 }
     },
     "Page Sprite": {
         "type": "Familiar",
         "img": "assets/images/rewards/page-sprite.png",
         "bonus": "Earn a x2 Ink Drop bonus on any book under 300 pages.",
-        "rewardModifier": { "inkDropsMultiplier": 2 }
+        "passiveBonus": "Short books grant x1.5 Ink Drops (passive).",
+        "rewardModifier": { "inkDropsMultiplier": 2 },
+        "passiveRewardModifier": { "inkDropsMultiplier": 1.5 }
     },
     "The Grand Key": {
         "type": "Quest",
         "img": "assets/images/rewards/grand-key.png",
         "bonus": "You find a master key for a special, rare quest.",
         "rewardModifier": {}
+    },
+    "Crystal Sprite": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/crystal-sprite.png",
+        "bonus": "Books with beautiful prose grant +15 Paper Scraps.",
+        "passiveBonus": "Literary fiction grants +7 Paper Scraps (passive).",
+        "rewardModifier": { "paperScraps": 15 },
+        "passiveRewardModifier": { "paperScraps": 7 }
+    },
+    "Reading Glasses": {
+        "type": "Wearable",
+        "img": "assets/images/rewards/reading-glasses.png",
+        "bonus": "Dense or challenging texts grant +20 XP.",
+        "passiveBonus": "Complex books grant +10 XP (passive).",
+        "rewardModifier": { "xp": 20 },
+        "passiveRewardModifier": { "xp": 10 }
+    },
+    "Baby Hollyphant": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/baby-hollyphant.png",
+        "bonus": "Books exploring faith, spirituality, or philosophical themes grant +15 XP and +5 Paper Scraps.",
+        "passiveBonus": "Thought-provoking books grant +7 XP (passive).",
+        "rewardModifier": { "xp": 15, "paperScraps": 5 },
+        "passiveRewardModifier": { "xp": 7 }
+    },
+    "Coffee Elemental": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/coffee-elemental.png",
+        "bonus": "Cozy reads or books enjoyed with a hot beverage grant +10 Ink Drops.",
+        "passiveBonus": "Cozy books grant +5 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 10 },
+        "passiveRewardModifier": { "inkDrops": 5 }
+    },
+    "Lab Assistant Automaton": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/lab-assistant-automaton.png",
+        "bonus": "Books featuring robots, AI, or helpful technology grant +15 Ink Drops.",
+        "passiveBonus": "Tech-themed books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Temporal Sprite": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/temporal-sprite.png",
+        "bonus": "Books with non-linear storytelling or time jumps grant +20 Ink Drops.",
+        "passiveBonus": "Non-linear narratives grant +10 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 20 },
+        "passiveRewardModifier": { "inkDrops": 10 }
+    },
+    "Ingredient Sprite": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/ingredient-sprite.png",
+        "bonus": "Books with interesting magical systems grant +15 Ink Drops.",
+        "passiveBonus": "Magic system books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Herb Dragon": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/herb-dragon.png",
+        "bonus": "Books with nature magic, plants, or green covers grant +15 Ink Drops.",
+        "passiveBonus": "Nature-themed books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Dancing Shoes": {
+        "type": "Wearable",
+        "img": "assets/images/rewards/dancing-shoes.png",
+        "bonus": "Romance or contemporary fiction with social gatherings grants +10 Ink Drops and +5 Paper Scraps.",
+        "passiveBonus": "Social scene books grant +5 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 10, "paperScraps": 5 },
+        "passiveRewardModifier": { "inkDrops": 5 }
+    },
+    "Dragon Fang": {
+        "type": "Wearable",
+        "img": "assets/images/rewards/dragon-fang-necklace.png",
+        "bonus": "Books with dragons or legendary creatures grant +20 Ink Drops.",
+        "passiveBonus": "Dragon or creature books grant +10 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 20 },
+        "passiveRewardModifier": { "inkDrops": 10 }
+    },
+    "Romance Reader's Ribbon": {
+        "type": "Wearable",
+        "img": "assets/images/rewards/romance-readers-ribbon.png",
+        "bonus": "Romance or romantasy books grant +15 Ink Drops.",
+        "passiveBonus": "Romance books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Star Navigator's Chart": {
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/star-navigators-chart.png",
+        "bonus": "Sci-fi books grant +15 Ink Drops (always active).",
+        "passiveBonus": "Sci-fi books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Fae-Touched Crystal": {
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/fae-touched-crystal.png",
+        "bonus": "Fantasy with fae or nature magic grants +15 Ink Drops.",
+        "passiveBonus": "Fae fantasy books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Warding Candle": {
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/warding-candle.png",
+        "bonus": "Horror or dark fantasy books grant +15 Ink Drops.",
+        "passiveBonus": "Horror books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Literary Medallion": {
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/literary-medallion.png",
+        "bonus": "Classics or literary fiction grant +20 XP.",
+        "passiveBonus": "Literary fiction grants +10 XP (passive).",
+        "rewardModifier": { "xp": 20 },
+        "passiveRewardModifier": { "xp": 10 }
+    },
+    "Golden Pen": {
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/golden-pen.png",
+        "bonus": "Extensive journaling after a book grants +10 Paper Scraps.",
+        "passiveBonus": "Journaling grants +5 Paper Scraps (passive).",
+        "rewardModifier": { "paperScraps": 10 },
+        "passiveRewardModifier": { "paperScraps": 5 }
+    },
+    "Detective's Magnifying Glass": {
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/detectives-magnifying-glass.png",
+        "bonus": "Mystery or crime books with puzzles grant +15 Ink Drops.",
+        "passiveBonus": "Mystery books grant +7 Ink Drops (passive).",
+        "rewardModifier": { "inkDrops": 15 },
+        "passiveRewardModifier": { "inkDrops": 7 }
+    },
+    "Raven Familiar": {
+        "type": "Familiar",
+        "img": "assets/images/rewards/raven-familiar.png",
+        "bonus": "Once per month, remove one Worn Page penalty.",
+        "passiveBonus": "Once every 2 months, remove one Worn Page penalty (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {}
     }
 }
-

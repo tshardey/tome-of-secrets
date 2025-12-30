@@ -320,6 +320,18 @@
     color: #e57373;
 }
 
+.restoration-wing-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    margin-left: 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: bold;
+    white-space: nowrap;
+    border: 1px solid;
+    /* Colors are applied inline from wing colorPalette.accent */
+}
+
 .quest-card-book {
     margin-top: 4px;
 }

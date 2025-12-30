@@ -5,15 +5,18 @@
 
 import * as data from '../character-sheet/data.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { characterState } from '../character-sheet/state.js';
+import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 
 /**
  * Represents a reward package with XP, currency, and items
  */
 export class Reward {
-    constructor({ xp = 0, inkDrops = 0, paperScraps = 0, items = [], modifiedBy = [] } = {}) {
+    constructor({ xp = 0, inkDrops = 0, paperScraps = 0, blueprints = 0, items = [], modifiedBy = [] } = {}) {
         this.xp = xp;
         this.inkDrops = inkDrops;
         this.paperScraps = paperScraps;
+        this.blueprints = blueprints;
         this.items = Array.isArray(items) ? items : [];
         this.modifiedBy = Array.isArray(modifiedBy) ? modifiedBy : []; // Track what modifiers were applied
     }
@@ -26,6 +29,7 @@ export class Reward {
             xp: this.xp,
             inkDrops: this.inkDrops,
             paperScraps: this.paperScraps,
+            blueprints: this.blueprints,
             items: [...this.items]
         });
         cloned.modifiedBy = [...this.modifiedBy];
@@ -40,6 +44,7 @@ export class Reward {
             xp: this.xp,
             inkDrops: this.inkDrops,
             paperScraps: this.paperScraps,
+            blueprints: this.blueprints,
             items: this.items,
             modifiedBy: this.modifiedBy
         };
@@ -58,7 +63,7 @@ export class RewardCalculator {
      * @returns {Reward}
      */
     static getBaseRewards(type, prompt, options = {}) {
-        const { isEncounter = false, roomNumber = null, encounterName = null } = options;
+        const { isEncounter = false, roomNumber = null, encounterName = null, isBefriend = true } = options;
 
         // Extra Credit - only paper scraps
         if (type === '⭐ Extra Credit') {
@@ -80,7 +85,7 @@ export class RewardCalculator {
 
         // Dungeon Crawl
         if (type === '♠ Dungeon Crawl') {
-            return this._getDungeonRewards(isEncounter, roomNumber, encounterName);
+            return this._getDungeonRewards(isEncounter, roomNumber, encounterName, isBefriend);
         }
 
         // Default fallback
@@ -105,7 +110,7 @@ export class RewardCalculator {
      * Get rewards for a dungeon crawl
      * @private
      */
-    static _getDungeonRewards(isEncounter, roomNumber, encounterName) {
+    static _getDungeonRewards(isEncounter, roomNumber, encounterName, isBefriend = true) {
         if (!roomNumber) {
             return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
         }
@@ -119,7 +124,16 @@ export class RewardCalculator {
         if (isEncounter && encounterName && room.encountersDetailed) {
             const encounter = room.encountersDetailed.find(e => e.name === encounterName);
             if (encounter?.rewards) {
-                return new Reward(encounter.rewards);
+                const rewards = new Reward(encounter.rewards);
+                
+                // For Familiar type encounters, add the familiar to items if not already present
+                // This handles the case where befriending a familiar should reward the familiar itself
+                // Only add if it's a befriend action
+                if (encounter.type === 'Familiar' && encounterName && isBefriend && !rewards.items.includes(encounterName)) {
+                    rewards.items.push(encounterName);
+                }
+                
+                return rewards;
             }
 
             // Fallback based on encounter type
@@ -128,7 +142,12 @@ export class RewardCalculator {
             } else if (encounter?.type === 'Friendly Creature') {
                 return new Reward({ inkDrops: GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops });
             } else if (encounter?.type === 'Familiar') {
-                return new Reward({ paperScraps: GAME_CONFIG.rewards.encounter.familiar.paperScraps });
+                // For familiars, only include the familiar name in items if befriended
+                const items = (encounterName && isBefriend) ? [encounterName] : [];
+                return new Reward({ 
+                    paperScraps: GAME_CONFIG.rewards.encounter.familiar.paperScraps,
+                    items: items
+                });
             }
         }
 
@@ -270,7 +289,26 @@ export class RewardCalculator {
 
         // Item modifiers
         if (isItem && data.allItems[cleanName]) {
-            return data.allItems[cleanName].rewardModifier;
+            const item = data.allItems[cleanName];
+            
+            // Check if this item is currently in a passive slot (not equipped)
+            // If so, use passiveRewardModifier; otherwise use rewardModifier
+            const passiveItemSlots = characterState?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+            const passiveFamiliarSlots = characterState?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+            const isInPassiveSlot = passiveItemSlots.some(slot => slot.itemName === cleanName) ||
+                                   passiveFamiliarSlots.some(slot => slot.itemName === cleanName);
+            
+            // Check if item is also equipped (if so, use active modifier)
+            const equippedItems = characterState?.[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
+            const isEquipped = equippedItems.some(equipped => equipped.name === cleanName);
+            
+            // If item is in a passive slot AND not equipped, use passiveRewardModifier
+            if (isInPassiveSlot && !isEquipped && item.passiveRewardModifier) {
+                return item.passiveRewardModifier;
+            }
+            
+            // Otherwise use the regular rewardModifier
+            return item.rewardModifier;
         }
 
         // Temporary buff modifiers (check both new and legacy sources)

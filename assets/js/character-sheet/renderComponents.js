@@ -99,17 +99,41 @@ export function renderQuestRow(quest, index, listType = 'active') {
  * @param {number} index - Item index
  * @param {Object} options - Options for rendering
  * @param {boolean} options.showEquip - Show equip button
- * @param {boolean} options.showUnequip - Show unequip button
+ * @param {boolean} options.showUnequip - Show unequip button (item is equipped)
  * @param {boolean} options.showDelete - Show delete button
+ * @param {boolean} options.isInPassiveSlot - Whether item is in a passive slot
+ * @param {boolean} options.showDisplay - Show "Display" button for passive item slots
+ * @param {boolean} options.showAdopt - Show "Adopt" button for passive familiar slots
  * @returns {HTMLElement} The rendered item card element
  */
 export function renderItemCard(item, index, options = {}) {
-    const { showEquip = false, showUnequip = false, showDelete = false } = options;
+    const { 
+        showEquip = false, 
+        showUnequip = false, 
+        showDelete = false, 
+        isInPassiveSlot = false,
+        showDisplay = false,
+        showAdopt = false
+    } = options;
     
-    // Quest type items cannot be equipped
+    // Quest type items cannot be equipped or put in passive slots
     const canEquip = showEquip && item.type !== 'Quest';
+    const canDisplay = showDisplay && item.type !== 'Quest' && (item.type === 'Wearable' || item.type === 'Non-Wearable');
+    const canAdopt = showAdopt && item.type === 'Familiar';
+    
+    // Determine bonus display logic:
+    // - In passive slot: show only passive bonus
+    // - Equipped: show only active bonus
+    // - In inventory (neither): show both active and passive bonuses
+    const isEquipped = showUnequip;
+    const showActiveBonus = !isInPassiveSlot; // Show active bonus unless in passive slot
+    const showPassiveBonus = !isEquipped && !isInPassiveSlot && item.passiveBonus; // Show passive bonus only when in inventory (not equipped, not in passive slot)
+    const showOnlyPassiveBonus = isInPassiveSlot && item.passiveBonus; // Show only passive bonus when in passive slot
     
     const card = createElement('div', { class: 'item-card' });
+    if (isInPassiveSlot) {
+        card.classList.add('item-in-passive-slot');
+    }
     
     // Item image
     if (item.img) {
@@ -125,6 +149,14 @@ export function renderItemCard(item, index, options = {}) {
     
     const name = createElement('h4');
     name.textContent = item.name || '';
+    if (isInPassiveSlot) {
+        const passiveBadge = createElement('span', { 
+            class: 'passive-slot-badge',
+            style: 'background: rgba(184, 159, 98, 0.2); color: #b89f62; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-left: 8px;'
+        });
+        passiveBadge.textContent = '🌟 Passive';
+        name.appendChild(passiveBadge);
+    }
     info.appendChild(name);
     
     if (item.type) {
@@ -133,10 +165,29 @@ export function renderItemCard(item, index, options = {}) {
         info.appendChild(type);
     }
     
-    if (item.bonus) {
-        const bonus = createElement('p');
-        bonus.textContent = item.bonus;
-        info.appendChild(bonus);
+    // Show bonuses based on item state
+    if (showOnlyPassiveBonus) {
+        // In passive slot: show only passive bonus
+        const passiveBonus = createElement('p');
+        passiveBonus.textContent = item.passiveBonus;
+        info.appendChild(passiveBonus);
+    } else {
+        // Not in passive slot: show active bonus if available
+        if (showActiveBonus && item.bonus) {
+            const bonus = createElement('p');
+            bonus.textContent = item.bonus;
+            info.appendChild(bonus);
+        }
+        
+        // In inventory: also show passive bonus
+        if (showPassiveBonus) {
+            const passiveBonus = createElement('p');
+            passiveBonus.style.fontStyle = 'italic';
+            passiveBonus.style.color = '#8a7a61';
+            passiveBonus.style.fontSize = '0.9em';
+            passiveBonus.textContent = `Passive: ${item.passiveBonus}`;
+            info.appendChild(passiveBonus);
+        }
     }
     
     // Action buttons
@@ -145,6 +196,12 @@ export function renderItemCard(item, index, options = {}) {
     }
     if (showUnequip) {
         info.appendChild(createActionButton('Unequip', 'unequip-btn', index));
+    }
+    if (canDisplay) {
+        info.appendChild(createActionButton('Display', 'display-item-btn', index));
+    }
+    if (canAdopt) {
+        info.appendChild(createActionButton('Adopt', 'adopt-familiar-btn', index));
     }
     if (showDelete) {
         info.appendChild(createActionButton('Delete', 'delete-item-btn', index));
@@ -397,6 +454,18 @@ export function renderQuestCard(quest, index, listType = 'active') {
     // Get encounter action (befriend/defeat) for dungeon encounters
     const encounterAction = getEncounterAction(quest);
     
+    // Get wing name and color for restoration quests
+    let wingName = null;
+    let wingAccentColor = null;
+    if (quest.type === '🔨 Restoration Project' && quest.restorationData?.wingId) {
+        const wingId = quest.restorationData.wingId;
+        const wing = data.wings?.[wingId];
+        if (wing) {
+            wingName = quest.restorationData.wingName || wing.name;
+            wingAccentColor = wing.colorPalette?.accent;
+        }
+    }
+    
     // Card header
     const header = createElement('div', { class: 'quest-card-header' });
     
@@ -417,6 +486,23 @@ export function renderQuestCard(quest, index, listType = 'active') {
         });
         actionBadge.textContent = encounterAction === 'befriend' ? '🤝 Befriended' : '⚔️ Defeated';
         meta.appendChild(actionBadge);
+    }
+    
+    // Wing badge for restoration quests
+    if (wingName) {
+        const wingBadge = createElement('span', { 
+            class: 'restoration-wing-badge' 
+        });
+        // textContent automatically handles escaping, but we need to decode HTML entities first if present
+        // Since wingName comes from restorationData which might have encoded entities, decode it
+        wingBadge.textContent = decodeHtmlEntities(wingName);
+        // Apply the wing's accent color if available
+        if (wingAccentColor) {
+            wingBadge.style.backgroundColor = `${wingAccentColor}30`; // Add transparency (hex 30 = ~19% opacity)
+            wingBadge.style.borderColor = `${wingAccentColor}66`; // Add transparency (hex 66 = ~40% opacity)
+            wingBadge.style.color = wingAccentColor;
+        }
+        meta.appendChild(wingBadge);
     }
     
     header.appendChild(meta);
@@ -477,6 +563,12 @@ export function renderQuestCard(quest, index, listType = 'active') {
         rewardsGrid.appendChild(idReward);
     }
     
+    if (rewards.blueprints > 0) {
+        const bpReward = createElement('div', { class: 'reward-item blueprints-reward' });
+        bpReward.innerHTML = `<span class="reward-label">📜</span><span class="reward-value">+${rewards.blueprints}${rewardIndicator}</span>`;
+        rewardsGrid.appendChild(bpReward);
+    }
+    
     if (rewards.items && rewards.items.length > 0) {
         // Render each item separately with its image if available
         rewards.items.forEach(itemName => {
@@ -501,6 +593,24 @@ export function renderQuestCard(quest, index, listType = 'active') {
             
             rewardsGrid.appendChild(itemReward);
         });
+    }
+
+    // Restoration Projects: show slot unlock as a reward even if there are no currency/item rewards yet
+    if (quest.type === '🔨 Restoration Project' && rewardsGrid.children.length === 0) {
+        const rewardType = quest.restorationData?.rewardType;
+        if (rewardType === 'passiveItemSlot' || rewardType === 'passiveFamiliarSlot') {
+            const slotReward = createElement('div', { class: 'reward-item slot-reward' });
+            const label = createElement('span', { class: 'reward-label' });
+            // Empty box emoji stands in for a “slot” icon and matches the inline reward style
+            label.textContent = '⬜';
+            slotReward.appendChild(label);
+
+            const value = createElement('span', { class: 'reward-value' });
+            value.textContent = rewardType === 'passiveItemSlot' ? 'Display Slot' : 'Adoption Slot';
+            slotReward.appendChild(value);
+
+            rewardsGrid.appendChild(slotReward);
+        }
     }
     
     if (rewardsGrid.children.length === 0) {

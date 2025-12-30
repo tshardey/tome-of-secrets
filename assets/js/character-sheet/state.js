@@ -11,14 +11,16 @@ export const characterState = createEmptyCharacterState();
  * 
  * **CRITICAL:** Never loses player data. Invalid data is fixed or uses safe defaults.
  */
-export function loadState(form) {
-    // Load and validate form data
-    const characterData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
-    if (characterData) {
-        const validatedFormData = validateFormDataSafe(characterData);
-        for (const key in validatedFormData) {
-            if (form.elements[key]) {
-                form.elements[key].value = validatedFormData[key];
+export function loadState(form = null) {
+    // Load and validate form data only if a form is provided
+    if (form) {
+        const characterData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
+        if (characterData) {
+            const validatedFormData = validateFormDataSafe(characterData);
+            for (const key in validatedFormData) {
+                if (form.elements[key]) {
+                    form.elements[key].value = validatedFormData[key];
+                }
             }
         }
     }

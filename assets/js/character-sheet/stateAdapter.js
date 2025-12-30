@@ -12,7 +12,13 @@ const EVENTS = Object.freeze({
     COMPLETED_CURSES_CHANGED: 'completedCursesChanged',
     TEMPORARY_BUFFS_CHANGED: 'temporaryBuffsChanged',
     LEARNED_ABILITIES_CHANGED: 'learnedAbilitiesChanged',
-    ATMOSPHERIC_BUFFS_CHANGED: 'atmosphericBuffsChanged'
+    ATMOSPHERIC_BUFFS_CHANGED: 'atmosphericBuffsChanged',
+    // Library Restoration Expansion events
+    DUSTY_BLUEPRINTS_CHANGED: 'dustyBlueprintsChanged',
+    COMPLETED_RESTORATION_PROJECTS_CHANGED: 'completedRestorationProjectsChanged',
+    COMPLETED_WINGS_CHANGED: 'completedWingsChanged',
+    PASSIVE_ITEM_SLOTS_CHANGED: 'passiveItemSlotsChanged',
+    PASSIVE_FAMILIAR_SLOTS_CHANGED: 'passiveFamiliarSlotsChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -24,7 +30,12 @@ const LIST_EVENTS = Object.freeze({
     [STORAGE_KEYS.ACTIVE_CURSES]: EVENTS.ACTIVE_CURSES_CHANGED,
     [STORAGE_KEYS.COMPLETED_CURSES]: EVENTS.COMPLETED_CURSES_CHANGED,
     [STORAGE_KEYS.TEMPORARY_BUFFS]: EVENTS.TEMPORARY_BUFFS_CHANGED,
-    [STORAGE_KEYS.LEARNED_ABILITIES]: EVENTS.LEARNED_ABILITIES_CHANGED
+    [STORAGE_KEYS.LEARNED_ABILITIES]: EVENTS.LEARNED_ABILITIES_CHANGED,
+    // Library Restoration Expansion
+    [STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS]: EVENTS.COMPLETED_RESTORATION_PROJECTS_CHANGED,
+    [STORAGE_KEYS.COMPLETED_WINGS]: EVENTS.COMPLETED_WINGS_CHANGED,
+    [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: EVENTS.PASSIVE_ITEM_SLOTS_CHANGED,
+    [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: EVENTS.PASSIVE_FAMILIAR_SLOTS_CHANGED
 });
 
 function sanitizeGenreList(genres) {
@@ -499,6 +510,162 @@ export class StateAdapter {
         this.state[STORAGE_KEYS.BUFF_MONTH_COUNTER] = newValue;
         safeSetJSON(STORAGE_KEYS.BUFF_MONTH_COUNTER, newValue);
         return newValue;
+    }
+
+    // ==========================================
+    // Library Restoration Expansion Methods
+    // ==========================================
+
+    // Dusty Blueprints (currency)
+    getDustyBlueprints() {
+        return this.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] || 0;
+    }
+
+    addDustyBlueprints(amount) {
+        if (typeof amount !== 'number' || amount <= 0) return this.getDustyBlueprints();
+        const current = this.getDustyBlueprints();
+        const newValue = current + amount;
+        this.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
+        safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
+        this.emit(EVENTS.DUSTY_BLUEPRINTS_CHANGED, newValue);
+        return newValue;
+    }
+
+    spendDustyBlueprints(amount) {
+        if (typeof amount !== 'number' || amount <= 0) return false;
+        const current = this.getDustyBlueprints();
+        if (current < amount) return false;
+        const newValue = current - amount;
+        this.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
+        safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
+        this.emit(EVENTS.DUSTY_BLUEPRINTS_CHANGED, newValue);
+        return true;
+    }
+
+    // Completed Restoration Projects
+    getCompletedRestorationProjects() {
+        return this.state[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] || [];
+    }
+
+    completeRestorationProject(projectId) {
+        const { value } = this._mutateList(STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS, list => {
+            if (!projectId || typeof projectId !== 'string') {
+                return { changed: false };
+            }
+            // Don't add duplicates
+            if (list.includes(projectId)) {
+                return { changed: false };
+            }
+            list.push(projectId);
+            return { changed: true, value: projectId };
+        });
+        return value || null;
+    }
+
+    isRestorationProjectCompleted(projectId) {
+        const completed = this.getCompletedRestorationProjects();
+        return completed.includes(projectId);
+    }
+
+    // Completed Wings
+    getCompletedWings() {
+        return this.state[STORAGE_KEYS.COMPLETED_WINGS] || [];
+    }
+
+    completeWing(wingId) {
+        const { value } = this._mutateList(STORAGE_KEYS.COMPLETED_WINGS, list => {
+            if (!wingId || typeof wingId !== 'string') {
+                return { changed: false };
+            }
+            // Don't add duplicates
+            if (list.includes(wingId)) {
+                return { changed: false };
+            }
+            list.push(wingId);
+            return { changed: true, value: wingId };
+        });
+        return value || null;
+    }
+
+    isWingCompleted(wingId) {
+        const completed = this.getCompletedWings();
+        return completed.includes(wingId);
+    }
+
+    // Passive Item Slots
+    getPassiveItemSlots() {
+        return this.state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    }
+
+    addPassiveItemSlot(slotId, unlockedFrom = null) {
+        const { value } = this._mutateList(STORAGE_KEYS.PASSIVE_ITEM_SLOTS, list => {
+            if (!slotId || typeof slotId !== 'string') {
+                return { changed: false };
+            }
+            // Don't add duplicate slots with same ID
+            if (list.some(slot => slot.slotId === slotId)) {
+                return { changed: false };
+            }
+            const newSlot = {
+                slotId,
+                itemName: null,
+                unlockedFrom,
+                unlockedAt: new Date().toISOString()
+            };
+            list.push(newSlot);
+            return { changed: true, value: newSlot };
+        });
+        return value || null;
+    }
+
+    setPassiveSlotItem(slotId, itemName) {
+        const { value } = this._mutateList(STORAGE_KEYS.PASSIVE_ITEM_SLOTS, list => {
+            const slotIndex = list.findIndex(slot => slot.slotId === slotId);
+            if (slotIndex === -1) {
+                return { changed: false };
+            }
+            list[slotIndex].itemName = itemName || null;
+            return { changed: true, value: list[slotIndex] };
+        });
+        return value || null;
+    }
+
+    // Passive Familiar Slots
+    getPassiveFamiliarSlots() {
+        return this.state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    }
+
+    addPassiveFamiliarSlot(slotId, unlockedFrom = null) {
+        const { value } = this._mutateList(STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS, list => {
+            if (!slotId || typeof slotId !== 'string') {
+                return { changed: false };
+            }
+            // Don't add duplicate slots with same ID
+            if (list.some(slot => slot.slotId === slotId)) {
+                return { changed: false };
+            }
+            const newSlot = {
+                slotId,
+                itemName: null,
+                unlockedFrom,
+                unlockedAt: new Date().toISOString()
+            };
+            list.push(newSlot);
+            return { changed: true, value: newSlot };
+        });
+        return value || null;
+    }
+
+    setPassiveFamiliarSlotItem(slotId, familiarName) {
+        const { value } = this._mutateList(STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS, list => {
+            const slotIndex = list.findIndex(slot => slot.slotId === slotId);
+            if (slotIndex === -1) {
+                return { changed: false };
+            }
+            list[slotIndex].itemName = familiarName || null;
+            return { changed: true, value: list[slotIndex] };
+        });
+        return value || null;
     }
 }
 
