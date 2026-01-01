@@ -11,7 +11,7 @@ import { initializeCharacterSheet } from '../assets/js/character-sheet.js';
 import { characterState, loadState, saveState } from '../assets/js/character-sheet/state.js';
 
 describe('Character Sheet', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear localStorage and reset the in-memory state before each test
     // This prevents state from one test leaking into another.
     localStorage.clear();
@@ -28,7 +28,7 @@ describe('Character Sheet', () => {
 
     // Initialize the event listeners and dynamic content
     // This function would be the entry point of your character sheet's JavaScript
-    initializeCharacterSheet();
+    await initializeCharacterSheet();
   });
 
   describe('JSON wiring smoke tests', () => {
@@ -709,13 +709,13 @@ describe('Character Sheet', () => {
       expect(encounterQuest.rewards.modifiedBy).toContain('Biblioslinker');
     });
 
-    it('should handle Organize the Stacks quest type correctly', () => {
+    it('should handle Organize the Stacks quest type correctly', async () => {
       // Set up some genres in localStorage
       const genres = ['Fantasy', 'Sci-Fi', 'Romance'];
       localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to load the genres
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       // Fill out the quest form
       document.getElementById('quest-month').value = 'December';
@@ -736,12 +736,12 @@ describe('Character Sheet', () => {
       expect(options).toContain('3: Romance');
     });
 
-    it('should fall back to default genres when no custom genres are selected', () => {
+    it('should fall back to default genres when no custom genres are selected', async () => {
       // Clear localStorage to ensure no custom genres
       localStorage.clear();
       
       // Re-initialize
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       // Select the Organize the Stacks quest type
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -947,25 +947,25 @@ describe('Character Sheet', () => {
   });
 
   describe('Selected Genres Display', () => {
-    it('should display placeholder text when no genres are selected', () => {
+    it('should display placeholder text when no genres are selected', async () => {
       // Clear localStorage to ensure no genres are selected
       localStorage.clear();
       
       // Re-initialize to load the empty state
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       const display = document.getElementById('selected-genres-display');
       expect(display.textContent).toContain('No genres selected yet');
       expect(display.innerHTML).toContain('Choose your genres here');
     });
 
-    it('should display selected genres from localStorage', () => {
+    it('should display selected genres from localStorage', async () => {
       // Set up some genres in localStorage
       const genres = ['Fantasy', 'Sci-Fi', 'Romance', 'Mystery', 'Thriller', 'Classic'];
       localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to load the genres
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       const display = document.getElementById('selected-genres-display');
       
@@ -980,10 +980,10 @@ describe('Character Sheet', () => {
       expect(display.textContent).toContain('3.');
     });
 
-    it('should update when localStorage changes', () => {
+    it('should update when localStorage changes', async () => {
       // Start with no genres
       localStorage.clear();
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       let display = document.getElementById('selected-genres-display');
       expect(display.textContent).toContain('No genres selected yet');
@@ -993,24 +993,24 @@ describe('Character Sheet', () => {
       localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
       
       // Re-initialize to pick up the changes
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       display = document.getElementById('selected-genres-display');
       expect(display.textContent).toContain('Fantasy');
       expect(display.textContent).toContain('Sci-Fi');
     });
 
-    it('should handle empty localStorage gracefully', () => {
+    it('should handle empty localStorage gracefully', async () => {
       localStorage.clear();
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       const display = document.getElementById('selected-genres-display');
       expect(display.textContent).toContain('No genres selected yet');
     });
 
-    it('should handle invalid JSON in localStorage gracefully', () => {
+    it('should handle invalid JSON in localStorage gracefully', async () => {
       localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, 'invalid json');
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       const display = document.getElementById('selected-genres-display');
       expect(display.textContent).toContain('No genres selected yet');
@@ -1630,7 +1630,7 @@ describe('Character Sheet', () => {
   });
 
   describe('Currency Unsaved Changes Warning', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Set up saved currency values
       const formData = {
         inkDrops: '100',
@@ -1641,7 +1641,7 @@ describe('Character Sheet', () => {
       // Reload state to sync with saved values
       const form = document.getElementById('character-sheet');
       if (form) {
-        loadState(form);
+        await loadState(form);
         // Wait for async operations to complete
         return new Promise(resolve => setTimeout(resolve, 10));
       }
@@ -1662,7 +1662,7 @@ describe('Character Sheet', () => {
       
       // Reload the page HTML and reinitialize
       loadHTML('character-sheet.md');
-      initializeCharacterSheet();
+      await initializeCharacterSheet();
       
       // Wait for initialization to complete
       await new Promise(resolve => setTimeout(resolve, 50));

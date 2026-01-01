@@ -47,7 +47,7 @@ describe('Table Renderer', () => {
             expect(html).toContain('rewards.html');
         });
 
-        test('initializeTables should process links when rendering to DOM', () => {
+        test('initializeTables should process links when rendering to DOM', async () => {
             // Set up DOM elements
             document.body.innerHTML = `
                 <div id="dungeon-rooms-table"></div>
@@ -56,6 +56,8 @@ describe('Table Renderer', () => {
 
             // Initialize tables
             initializeTables();
+            // initializeTables now loads state asynchronously (IndexedDB-backed in browsers)
+            await new Promise(resolve => setTimeout(resolve, 0));
 
             // Check that the template syntax was replaced
             const dungeonRoomsEl = document.getElementById('dungeon-rooms-table');
@@ -68,7 +70,7 @@ describe('Table Renderer', () => {
             expect(sideQuestsEl.innerHTML).toContain('/tome-of-secrets/rewards.html');
         });
 
-        test('initializeTables should handle missing meta tag by inferring from URL', () => {
+        test('initializeTables should handle missing meta tag by inferring from URL', async () => {
             // Remove meta tag
             document.head.innerHTML = '';
             
@@ -81,6 +83,7 @@ describe('Table Renderer', () => {
 
             // Initialize tables
             initializeTables();
+            await new Promise(resolve => setTimeout(resolve, 0));
 
             const dungeonRoomsEl = document.getElementById('dungeon-rooms-table');
             
@@ -89,7 +92,7 @@ describe('Table Renderer', () => {
             expect(dungeonRoomsEl.innerHTML).toContain('/tome-of-secrets/rewards.html');
         });
 
-        test('initializeTables should use empty baseurl for root-level sites', () => {
+        test('initializeTables should use empty baseurl for root-level sites', async () => {
             // Remove meta tag
             document.head.innerHTML = '';
             
@@ -102,6 +105,7 @@ describe('Table Renderer', () => {
 
             // Initialize tables
             initializeTables();
+            await new Promise(resolve => setTimeout(resolve, 0));
 
             const dungeonRoomsEl = document.getElementById('dungeon-rooms-table');
             
@@ -291,7 +295,7 @@ describe('Table Renderer', () => {
     });
 
     describe('initializeTables Integration', () => {
-        test('should only render tables that have corresponding DOM elements', () => {
+        test('should only render tables that have corresponding DOM elements', async () => {
             // Only create some of the table containers
             document.body.innerHTML = `
                 <div id="genre-quests-table"></div>
@@ -300,6 +304,8 @@ describe('Table Renderer', () => {
 
             // Should not throw error for missing containers
             expect(() => initializeTables()).not.toThrow();
+            // initializeTables renders asynchronously (it may load state first)
+            await new Promise(resolve => setTimeout(resolve, 0));
 
             // Should populate the tables that exist
             expect(document.getElementById('genre-quests-table').innerHTML).not.toBe('');

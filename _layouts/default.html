@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="baseurl" content="{{ site.baseurl }}">
+    <meta name="supabase-url" content="{{ site.supabase_url }}">
+    <meta name="supabase-publishable-key" content="{{ site.supabase_publishable_key }}">
+    <meta name="supabase-anon-key" content="{{ site.supabase_anon_key }}">
     <title>{{ page.title }} | {{ site.title }}</title>
     
     <!-- Favicon Links -->
@@ -52,6 +55,19 @@
                     <li><a href="{{ site.baseurl }}/character-sheet.html">Character Sheet</a></li>
                 </ul>
             </nav>
+
+            <div class="auth-panel" id="auth-panel">
+                <div class="auth-panel__title">Cloud Save</div>
+                <div class="auth-panel__status" id="auth-status">Signed out</div>
+                <div class="auth-panel__meta" id="auth-last-sync"></div>
+                <div class="auth-panel__buttons">
+                    <input type="email" class="auth-panel__input" id="auth-email" placeholder="Email for magic link" autocomplete="email" inputmode="email" />
+                    <button type="button" class="auth-panel__button" id="auth-sign-in" disabled>Send magic link</button>
+                    <button type="button" class="auth-panel__button" id="auth-sync-now" disabled>Sync now</button>
+                    <button type="button" class="auth-panel__button" id="auth-sign-out" disabled>Sign out</button>
+                </div>
+                <div class="auth-panel__hint" id="auth-hint"></div>
+            </div>
             </aside>
             <main>
                 <article>

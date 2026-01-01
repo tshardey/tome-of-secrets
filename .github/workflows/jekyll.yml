@@ -46,9 +46,17 @@ jobs:
         with:
           ruby-version: '3.2'
           bundler-cache: true
+
+      - name: Create Supabase config override (from repo secrets)
+        run: |
+          cat > _config.supabase.yml << 'EOF'
+          supabase_url: "${{ secrets.SUPABASE_URL }}"
+          supabase_publishable_key: "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
+          EOF
+          echo "Wrote _config.supabase.yml (values hidden)."
       
       - name: Build Jekyll site
-        run: bundle exec jekyll build
+        run: bundle exec jekyll build --config _config.yml,_config.supabase.yml
         env:
           JEKYLL_ENV: production
       

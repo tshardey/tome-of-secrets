@@ -21,12 +21,11 @@ import { QuestController } from './controllers/QuestController.js';
 import { CurseController } from './controllers/CurseController.js';
 import { BuffController } from './controllers/BuffController.js';
 import { EndOfMonthController } from './controllers/EndOfMonthController.js';
-import { DataExportController } from './controllers/DataExportController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
 
-export function initializeCharacterSheet() {
+export async function initializeCharacterSheet() {
     // --- FORM ELEMENTS ---
     const form = document.getElementById('character-sheet');
     if (!form) {
@@ -34,6 +33,9 @@ export function initializeCharacterSheet() {
         // This is important for testing and for other pages on the site.
         return;
     }
+
+    // --- INITIAL LOAD (may be async due to IndexedDB-backed storage) ---
+    await loadState(form);
 
     const stateAdapter = new StateAdapter(characterState);
 
@@ -324,7 +326,6 @@ export function initializeCharacterSheet() {
     const curseController = new CurseController(stateAdapter, form, dependencies);
     const buffController = new BuffController(stateAdapter, form, dependencies);
     const endOfMonthController = new EndOfMonthController(stateAdapter, form, dependencies);
-    const dataExportController = new DataExportController(stateAdapter, form, dependencies);
 
     // Initialize controllers
     characterController.initialize();
@@ -334,7 +335,6 @@ export function initializeCharacterSheet() {
     curseController.initialize();
     buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
-    dataExportController.initialize();
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
@@ -459,9 +459,9 @@ export function initializeCharacterSheet() {
     }
 
     // Form submit handler
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        saveState(form);
+        await saveState(form);
         alert('Character sheet saved!');
         // Hide currency warning after save
         checkCurrencyUnsavedChanges();
@@ -585,8 +585,7 @@ export function initializeCharacterSheet() {
         });
     }
 
-    // --- INITIAL LOAD ---
-    loadState(form);
+    // --- INITIALIZE STATE-DEPENDENT UI ---
     initializeCompletedBooksSet();
     
     // Fix any completed restoration projects that don't have passive slots created

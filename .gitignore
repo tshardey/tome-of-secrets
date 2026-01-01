@@ -18,3 +18,6 @@ vendor/bundle/
 
 # Planning files
 planning/
+
+# Supabase local override config (contains project-specific values)
+_config.supabase.yml
