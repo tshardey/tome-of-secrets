@@ -27,7 +27,8 @@ export class BaseController {
     saveState() {
         // Use saveState from dependencies (passed from main init)
         if (this.dependencies.saveState) {
-            this.dependencies.saveState(this.form);
+            // saveState may be async (IndexedDB-backed). Controllers shouldn't block on persistence.
+            void this.dependencies.saveState(this.form);
         }
     }
 

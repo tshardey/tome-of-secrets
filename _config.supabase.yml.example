@@ -1,0 +1,10 @@
+# Optional Supabase config override (DO NOT COMMIT real credentials)
+#
+# Copy this file to `_config.supabase.yml` (which is git-ignored) and fill in values.
+# Then run Jekyll with:
+#   bundle exec jekyll serve --config _config.yml,_config.supabase.yml
+#
+supabase_url: "https://YOUR_PROJECT_REF.supabase.co"
+supabase_publishable_key: "sb_publishable_..."
+
+

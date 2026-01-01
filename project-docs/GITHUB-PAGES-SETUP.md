@@ -23,9 +23,13 @@ Since `data.json-exports.js` is auto-generated (and is in `.gitignore`), you mus
 ### What This Does
 
 The `.github/workflows/jekyll.yml` workflow will:
+
 1. ✅ Generate `data.json-exports.js` from JSON files using `node scripts/generate-data.js`
 2. ✅ Build the Jekyll site (which includes the generated file)
 3. ✅ Deploy to GitHub Pages
+
+It can also inject environment-specific configuration at build time (e.g., Supabase Cloud Save),
+without committing instance credentials to git.
 
 ### Why This Is Necessary
 
@@ -37,6 +41,7 @@ The `.github/workflows/jekyll.yml` workflow will:
 ### Verification
 
 After configuring GitHub Pages to use Actions:
+
 1. Push a commit to `main` branch
 2. Check the "Actions" tab - you should see a workflow running
 3. The workflow will generate the file, build Jekyll, and deploy
@@ -53,14 +58,15 @@ After configuring GitHub Pages to use Actions:
 If you prefer to use GitHub Pages' native Jekyll build (simpler, no workflow needed):
 
 1. **Remove the GitHub Actions workflow**: Delete `.github/workflows/jekyll.yml`
-2. **Remove from .gitignore**: Remove `assets/js/character-sheet/data.json-exports.js` from `.gitignore`
-3. **Generate and commit the file**:
-   ```bash
-   node scripts/generate-data.js
-   git add assets/js/character-sheet/data.json-exports.js
-   git commit -m "Add generated data exports file"
-   ```
-4. **Configure GitHub Pages**: In Repository Settings → Pages → Source, select your branch (e.g., `main` or `gh-pages`)
+1. **Remove from .gitignore**: Remove `assets/js/character-sheet/data.json-exports.js` from `.gitignore`
+1. **Generate and commit the file**:
+
+```bash
+node scripts/generate-data.js
+git add assets/js/character-sheet/data.json-exports.js
+git commit -m "Add generated data exports file"
+```
+
+1. **Configure GitHub Pages**: In Repository Settings → Pages → Source, select your branch (e.g., `main` or `gh-pages`)
 
 **Note:** You'll need to manually regenerate and commit `data.json-exports.js` whenever you edit JSON files in `assets/data/`.
-

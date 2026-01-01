@@ -24,8 +24,12 @@ let restorationController = null;
  * Initialize the library page
  */
 export function initializeLibraryPage() {
-    // Load state and create controller
-    loadState();
+    // Load state and create controller (may be async due to IndexedDB-backed storage)
+    void initializeLibraryPageAsync();
+}
+
+async function initializeLibraryPageAsync() {
+    await loadState();
     const stateAdapter = new StateAdapter(characterState);
     restorationController = new RestorationController(stateAdapter, null, { 
         data: { allItems },

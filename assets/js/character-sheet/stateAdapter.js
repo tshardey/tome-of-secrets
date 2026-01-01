@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from './storageKeys.js';
-import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
+import { safeGetJSON } from '../utils/storage.js';
+import { setStateKey } from './persistence.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -75,7 +76,8 @@ export class StateAdapter {
         const changed = Boolean(result.changed);
 
         if (changed) {
-            safeSetJSON(key, list);
+            // Persist (large keys go to IndexedDB, small keys remain in localStorage for now)
+            void setStateKey(key, list);
             const eventName = LIST_EVENTS[key];
             if (eventName) {
                 this.emit(eventName, [...list]);
@@ -97,7 +99,7 @@ export class StateAdapter {
 
         const previous = this.state[key];
         this.state[key] = newList;
-        safeSetJSON(key, newList);
+        void setStateKey(key, newList);
 
         const eventName = LIST_EVENTS[key];
         if (eventName) {
@@ -141,7 +143,7 @@ export class StateAdapter {
         const previous = this.getSelectedGenres();
 
         this.state[STORAGE_KEYS.SELECTED_GENRES] = sanitized;
-        safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, sanitized);
+        void setStateKey(STORAGE_KEYS.SELECTED_GENRES, sanitized);
 
         if (!arraysEqual(previous, sanitized)) {
             this.emit(EVENTS.SELECTED_GENRES_CHANGED, this.getSelectedGenres());
@@ -485,7 +487,7 @@ export class StateAdapter {
             Object.assign(currentBuffs[buffName], updates);
         }
 
-        safeSetJSON(STORAGE_KEYS.ATMOSPHERIC_BUFFS, currentBuffs);
+        void setStateKey(STORAGE_KEYS.ATMOSPHERIC_BUFFS, currentBuffs);
         this.emit(EVENTS.ATMOSPHERIC_BUFFS_CHANGED, this.getAtmosphericBuffs());
 
         return currentBuffs[buffName];
@@ -508,7 +510,7 @@ export class StateAdapter {
         const current = this.getBuffMonthCounter();
         const newValue = current + 1;
         this.state[STORAGE_KEYS.BUFF_MONTH_COUNTER] = newValue;
-        safeSetJSON(STORAGE_KEYS.BUFF_MONTH_COUNTER, newValue);
+        void setStateKey(STORAGE_KEYS.BUFF_MONTH_COUNTER, newValue);
         return newValue;
     }
 
@@ -526,7 +528,7 @@ export class StateAdapter {
         const current = this.getDustyBlueprints();
         const newValue = current + amount;
         this.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
-        safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
+        void setStateKey(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
         this.emit(EVENTS.DUSTY_BLUEPRINTS_CHANGED, newValue);
         return newValue;
     }
@@ -537,7 +539,7 @@ export class StateAdapter {
         if (current < amount) return false;
         const newValue = current - amount;
         this.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
-        safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
+        void setStateKey(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
         this.emit(EVENTS.DUSTY_BLUEPRINTS_CHANGED, newValue);
         return true;
     }

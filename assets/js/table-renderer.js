@@ -14,6 +14,7 @@ import {
 } from './character-sheet/data.js';
 import { slugifyId } from './utils/slug.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
+import { characterState, loadState } from './character-sheet/state.js';
 import { safeGetJSON } from './utils/storage.js';
 
 function escapeRegExp(str) {
@@ -37,11 +38,18 @@ function linkifyItems(text) {
 }
 
 /**
- * Get completed quests from localStorage
+ * Get completed quests from in-memory state
  * @returns {Array} Array of completed quest objects
  */
 function getCompletedQuests() {
-    return safeGetJSON(STORAGE_KEYS.COMPLETED_QUESTS, []);
+    // Prefer localStorage if the legacy key exists (tests and pre-migration saves).
+    // After migration, `completedQuests` is removed from localStorage and we fall back to in-memory state
+    // (which was loaded from IndexedDB via `loadState()`).
+    const legacy = safeGetJSON(STORAGE_KEYS.COMPLETED_QUESTS, null);
+    if (legacy !== null) {
+        return Array.isArray(legacy) ? legacy : [];
+    }
+    return characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
 }
 
 /**
@@ -631,6 +639,15 @@ function processLinks(html) {
  * Initialize all tables on the page
  */
 export function initializeTables() {
+    // Note: this is now async internally (IndexedDB-backed state load), but we keep the API
+    // compatible by delegating to an async worker.
+    void initializeTablesAsync();
+}
+
+async function initializeTablesAsync() {
+    // Ensure character state is loaded before we read completion data for table highlighting.
+    await loadState();
+
     // Dungeon page
     const dungeonRewardsEl = document.getElementById('dungeon-rewards-table');
     if (dungeonRewardsEl) {

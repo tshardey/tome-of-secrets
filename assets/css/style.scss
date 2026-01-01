@@ -80,6 +80,81 @@ h6 {
     font-style: italic;
 }
 
+/* ==============================
+   Cloud Save (Supabase) panel
+   ============================== */
+.auth-panel {
+    margin-top: 18px;
+    padding: 12px;
+    border: 1px solid rgba(212, 200, 176, 0.22);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.14);
+}
+
+.auth-panel__title {
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    color: #b89f62;
+    margin-bottom: 6px;
+}
+
+.auth-panel__status {
+    font-size: 0.95em;
+    opacity: 0.92;
+    margin-bottom: 10px;
+}
+
+.auth-panel__meta {
+    font-size: 0.85em;
+    opacity: 0.85;
+    margin-bottom: 10px;
+    line-height: 1.25;
+}
+
+.auth-panel__buttons {
+    display: grid;
+    gap: 8px;
+}
+
+.auth-panel__input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(212, 200, 176, 0.26);
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.auth-panel__input::placeholder {
+    opacity: 0.8;
+}
+
+.auth-panel__button {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(212, 200, 176, 0.26);
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.auth-panel__button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-panel__hint {
+    margin-top: 10px;
+    font-size: 0.9em;
+    opacity: 0.9;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
 .sidebar nav a:hover {
     background-color: #3e352f;
     color: #cca352;
@@ -650,48 +725,6 @@ article th:first-child {
 .form-buttons button:hover {
     background-color: #cca352;
     /* Brighter gold on hover */
-}
-
-/* ==========================================================================
-   Data Management Section Styles
-   ========================================================================== */
-
-.data-management-section {
-    margin-top: 20px;
-    border-top: 1px solid #54483b;
-    /* Match border color from theme */
-    padding-top: 20px;
-}
-
-.data-management-buttons {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.data-management-buttons button {
-    background-color: #b89f62;
-    /* Muted gold - match form-buttons */
-    color: #2a231d;
-    /* Deep brown text - match form-buttons */
-    border: none;
-    padding: 10px 20px;
-    font-family: 'Lora', serif;
-    font-size: 1em;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.data-management-buttons button:hover {
-    background-color: #cca352;
-    /* Brighter gold on hover - match form-buttons */
-}
-
-.data-management-buttons input[type="file"] {
-    display: none;
-    /* Hide the file input */
 }
 
 /* ==========================================================================

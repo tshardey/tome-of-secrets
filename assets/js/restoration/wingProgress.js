@@ -7,14 +7,14 @@
 
 import { wings, dungeonRooms, restorationProjects } from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
-import { safeGetJSON } from '../utils/storage.js';
+import { characterState } from '../character-sheet/state.js';
 
 /**
- * Get all completed quests from localStorage
+ * Get all completed quests from in-memory state
  * @returns {Array} Array of completed quest objects
  */
 function getCompletedQuests() {
-    return safeGetJSON(STORAGE_KEYS.COMPLETED_QUESTS, []);
+    return characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
 }
 
 /**

@@ -4,6 +4,16 @@ description: A solo TBR journaling game, inspired by solo role playing games.
 baseurl: "/tome-of-secrets" 
 url: "https://tshardey.github.io"
 
+# ==============================
+# Supabase (optional cloud sync)
+# ==============================
+# These are safe to publish (publishable/anon key is public). Leave blank to disable auth/sync UI.
+supabase_url: ""
+
+# Supabase renamed "anon" -> "publishable" in the UI. Either works; publishable is preferred.
+supabase_publishable_key: ""
+supabase_anon_key: ""
+
 exclude:
   - Gemfile
   - Gemfile.lock
