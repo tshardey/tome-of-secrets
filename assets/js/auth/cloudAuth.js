@@ -91,6 +91,7 @@ export async function initializeCloudAuth() {
   setEnabled('auth-sign-in', true);
 
   let autoSyncTimer = null;
+  let autoSyncVisibilityHandler = null;
   let autoSyncInFlight = false;
   let lastAutoStatus = '';
 
@@ -142,20 +143,26 @@ export async function initializeCloudAuth() {
   }
 
   function startAutoSync() {
-    if (autoSyncTimer) return;
+    // Prevent duplicate listeners: check both timer and handler
+    if (autoSyncTimer || autoSyncVisibilityHandler) return;
     // Light touch: poll periodically and also sync when the tab becomes visible.
     autoSyncTimer = window.setInterval(() => void runAutoSyncOnce(), 30_000);
-    document.addEventListener('visibilitychange', () => {
+    autoSyncVisibilityHandler = () => {
       if (document.visibilityState === 'visible') {
         void runAutoSyncOnce();
       }
-    });
+    };
+    document.addEventListener('visibilitychange', autoSyncVisibilityHandler);
   }
 
   function stopAutoSync() {
     if (autoSyncTimer) {
       window.clearInterval(autoSyncTimer);
       autoSyncTimer = null;
+    }
+    if (autoSyncVisibilityHandler) {
+      document.removeEventListener('visibilitychange', autoSyncVisibilityHandler);
+      autoSyncVisibilityHandler = null;
     }
   }
 
