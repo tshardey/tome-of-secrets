@@ -12,6 +12,7 @@ import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { StateAdapter, STATE_EVENTS } from './character-sheet/stateAdapter.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
+import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 
 // Import controllers
 import { CharacterController } from './controllers/CharacterController.js';
@@ -34,8 +35,39 @@ export async function initializeCharacterSheet() {
         return;
     }
 
+    // --- POPULATE DROPDOWNS FIRST (before loadState) ---
+    // Populate keeper background dropdown
+    ui.populateBackgroundDropdown();
+
+    // Populate wizard school dropdown
+    const wizardSchoolSelect = document.getElementById('wizardSchool');
+    if (wizardSchoolSelect && dataModule.schoolBenefits) {
+        wizardSchoolSelect.innerHTML = '<option value="">-- Select a School --</option>';
+        Object.keys(dataModule.schoolBenefits).forEach(schoolName => {
+            const opt = document.createElement('option');
+            opt.value = schoolName;
+            opt.textContent = schoolName;
+            wizardSchoolSelect.appendChild(opt);
+        });
+    }
+
+    // Populate library sanctum dropdown
+    const librarySanctumSelect = document.getElementById('librarySanctum');
+    if (librarySanctumSelect && dataModule.sanctumBenefits) {
+        librarySanctumSelect.innerHTML = '<option value="">-- Select a Sanctum --</option>';
+        Object.keys(dataModule.sanctumBenefits).forEach(sanctumName => {
+            const opt = document.createElement('option');
+            opt.value = sanctumName;
+            opt.textContent = sanctumName;
+            librarySanctumSelect.appendChild(opt);
+        });
+    }
+
     // --- INITIAL LOAD (may be async due to IndexedDB-backed storage) ---
     await loadState(form);
+
+    // Initialize form persistence (auto-save on input/change)
+    initializeFormPersistence(form);
 
     const stateAdapter = new StateAdapter(characterState);
 
@@ -462,7 +494,7 @@ export async function initializeCharacterSheet() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         await saveState(form);
-        alert('Character sheet saved!');
+        showSaveIndicator();
         // Hide currency warning after save
         checkCurrencyUnsavedChanges();
     });
@@ -556,33 +588,6 @@ export async function initializeCharacterSheet() {
             option.textContent = name;
             itemSelect.appendChild(option);
         }
-    }
-
-    // Populate keeper background dropdown
-    ui.populateBackgroundDropdown();
-
-    // Populate wizard school dropdown
-    const wizardSchoolSelect = document.getElementById('wizardSchool');
-    if (wizardSchoolSelect && dataModule.schoolBenefits) {
-        wizardSchoolSelect.innerHTML = '<option value="">-- Select a School --</option>';
-        Object.keys(dataModule.schoolBenefits).forEach(schoolName => {
-            const opt = document.createElement('option');
-            opt.value = schoolName;
-            opt.textContent = schoolName;
-            wizardSchoolSelect.appendChild(opt);
-        });
-    }
-
-    // Populate library sanctum dropdown
-    const librarySanctumSelect = document.getElementById('librarySanctum');
-    if (librarySanctumSelect && dataModule.sanctumBenefits) {
-        librarySanctumSelect.innerHTML = '<option value="">-- Select a Sanctum --</option>';
-        Object.keys(dataModule.sanctumBenefits).forEach(sanctumName => {
-            const opt = document.createElement('option');
-            opt.value = sanctumName;
-            opt.textContent = sanctumName;
-            librarySanctumSelect.appendChild(opt);
-        });
     }
 
     // --- INITIALIZE STATE-DEPENDENT UI ---

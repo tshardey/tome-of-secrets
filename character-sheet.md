@@ -519,5 +519,9 @@ permalink: /character-sheet.html
     <div class="form-buttons no-print">
     <button type="submit">Save Character Info</button>
     <button type="button" id="print-button">Print</button>
+    <span id="save-indicator" class="save-indicator hidden">
+        <img src="{{ site.baseurl }}/assets/images/icons/save-icon.png" alt="Saved" class="save-icon" />
+        <span class="save-text">Saved</span>
+    </span>
     </div>
 </form>
