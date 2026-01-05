@@ -533,3 +533,39 @@
 #completed-reads-shelf path[id^="shelf-book-"] {
     transition: fill 0.3s ease;
 }
+
+/* ==========================================================================
+   Save Indicator
+   ========================================================================== */
+
+.save-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 15px;
+    padding: 8px 12px;
+    color: #b89f62;
+    font-family: 'Lora', serif;
+    font-size: 0.9em;
+    font-style: italic;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    visibility: visible;
+}
+
+.save-indicator.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.save-indicator .save-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.save-indicator .save-text {
+    display: inline-block;
+}

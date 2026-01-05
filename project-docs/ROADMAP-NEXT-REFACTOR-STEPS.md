@@ -46,7 +46,9 @@ It assumes you’ll spend a few days/weeks validating Cloud Save in production f
 
 ---
 
-## Phase 1 — Make “character info” truly local-first (no Save button required)
+## Phase 1 — Make "character info" truly local-first (no Save button required) ✅ COMPLETE
+
+**Status:** ✅ Implemented and tested
 
 Right now, some inputs only persist when the user clicks **Save Character Info**.
 
@@ -54,18 +56,32 @@ Right now, some inputs only persist when the user clicks **Save Character Info**
 - Any meaningful edit should persist locally immediately (or with a small debounce).
 - Cloud auto-sync then becomes much more intuitive.
 
-### Approach (incremental)
-- **Add a debounced “form persistence” layer**:
-  - Listen for `input`/`change` events on `#character-sheet`.
-  - Maintain an allowlist of persistent form fields (exclude transient inputs like quest creation fields).
-  - Save to `STORAGE_KEYS.CHARACTER_SHEET_FORM` with a debounce (e.g., 500ms).
+### Implementation
+- **Added debounced "form persistence" layer** (`assets/js/character-sheet/formPersistence.js`):
+  - Listens for `input`/`change` events on `#character-sheet`.
+  - Uses allowlist approach to exclude transient inputs (quest creation fields, dropdown selects, etc.).
+  - Saves to `STORAGE_KEYS.CHARACTER_SHEET_FORM` with 500ms debounce.
+  - Emits `tos:localStateChanged` event for Phase 2 preparation.
+- **Save indicator** added to UI:
+  - Shows icon + "Saved" text briefly (2 seconds) after auto-save.
+  - Positioned next to "Save Character Info" button.
+- **Save button** updated:
+  - Removed alert popup, now shows save indicator instead.
+  - Still functional for manual saves.
+- **Dropdown population order** fixed:
+  - Dropdowns (background, school, sanctum) now populate before `loadState()` to ensure saved values load correctly.
 
 ### Notes
-- Keep “Save Character Info” button as optional UI affordance at first (or convert it into a “force sync now” button).
-- Add a small “Saved” indicator near the form buttons if desired.
+- "Save Character Info" button remains functional but is no longer required for form fields.
+- Save indicator provides visual feedback for auto-saves.
+- All quest creation fields properly excluded from auto-save.
 
 ### Tests
-- Add a focused Jest test: typing into `keeperName` persists without clicking Save.
+- ✅ Jest tests added in `tests/formPersistence.test.js`:
+  - Typing into `keeperName` persists without clicking Save.
+  - Transient fields (`new-quest-*`, dropdowns) do not trigger saves.
+  - Debounce prevents rapid successive saves.
+  - `tos:localStateChanged` event fires after save.
 
 ---
 
@@ -159,7 +175,7 @@ Current model is one snapshot per user. This is correct for “solo game”.
 
 ## Suggested “next work session” order
 
-1. Phase 1: Auto-persist character info inputs (debounced).
+1. ✅ **Phase 1: Auto-persist character info inputs (debounced).** — COMPLETE
 2. Phase 2: Event-driven auto-sync (debounced on change).
 3. Phase 3: Expansion manifest + data validation script.
 4. Phase 4: UX improvements (toasts, status indicators).
