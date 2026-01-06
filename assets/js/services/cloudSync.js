@@ -79,13 +79,14 @@ export async function applySnapshot(snapshot) {
 
   // Back-compat: older cloud saves may include activeCharacterTab; ignore it.
 
-  safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, data.formData || {});
-  safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, Array.isArray(data.monthlyCompletedBooks) ? data.monthlyCompletedBooks : []);
+  // Suppress events when applying cloud snapshots to prevent sync loops
+  safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, data.formData || {}, true);
+  safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, Array.isArray(data.monthlyCompletedBooks) ? data.monthlyCompletedBooks : [], true);
 
   const state = data.characterState || {};
   for (const key of CHARACTER_STATE_KEYS) {
     if (key in state) {
-      await setStateKey(key, state[key]);
+      await setStateKey(key, state[key], true); // suppressEvents = true
     }
   }
 }
