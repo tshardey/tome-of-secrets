@@ -15,11 +15,16 @@ It assumes you’ll spend a few days/weeks validating Cloud Save in production f
 
 ### Cloud save (Supabase)
 - Sidebar **Cloud Save** panel (magic link email auth).
-- “Sync now” supports push/pull + conflict prompts.
-- **Auto-sync**:
+- "Sync now" supports push/pull + conflict prompts.
+- **Event-driven auto-sync**:
+  - Triggers within 3-5 seconds of local state changes (not on a timer).
   - Auto-push when safe (no cloud changes since last sync).
   - Auto-pull when safe (local unchanged since last sync) — no forced reload.
-- Hashing uses canonical key ordering to avoid “false diffs” from JSON key order.
+  - Cross-tab detection via localStorage `storage` events.
+  - Visibility change triggers immediate sync (catches stale sessions).
+  - Polling fallback reduced to 3 minutes (safety net).
+- Hashing uses canonical key ordering to avoid "false diffs" from JSON key order.
+- Concurrency protection prevents manual and auto syncs from running simultaneously.
 
 ### UX cleanups
 - Removed the old **Data Management** (download/upload) section.
@@ -85,22 +90,55 @@ Right now, some inputs only persist when the user clicks **Save Character Info**
 
 ---
 
-## Phase 2 — Event-driven auto-sync (less polling, more “just works”)
+## Phase 2 — Event-driven auto-sync (less polling, more "just works") ✅ COMPLETE
 
-The current auto-sync is a conservative polling loop.
+**Status:** ✅ Implemented and tested
+
+The previous auto-sync was a conservative polling loop (30-second intervals).
 
 ### Goal
 - Auto-sync shortly after local data changes, not on a timer.
 
-### Approach
-- Emit a lightweight “local state changed” signal from:
-  - `setStateKey()` (IndexedDB/localStorage writes)
-  - form persistence (Phase 1)
-- In `cloudAuth`, debounce and call `syncAuto()` after changes (e.g., 2–5s).
+### Implementation
+- **Created `autoSyncScheduler.js` module** (`assets/js/auth/autoSyncScheduler.js`):
+  - Centralized sync scheduler with 3-second debouncing
+  - Concurrency guard prevents overlapping syncs
+  - Methods for immediate sync (visibility changes) and flush (manual sync)
+- **Event emission from storage layer** (`assets/js/utils/storage.js`):
+  - `safeSetJSON()` emits `tos:localStateChanged` for cloud-synced keys
+  - Allowlist approach prevents unnecessary syncs for UI-only keys
+  - `suppressEvents` parameter prevents loops during cloud snapshot application
+- **Event emission from persistence layer** (`assets/js/character-sheet/persistence.js`):
+  - `setStateKey()` emits events for IndexedDB writes
+  - Supports `suppressEvents` for loop prevention
+- **Loop prevention in cloud sync** (`assets/js/services/cloudSync.js`):
+  - `applySnapshot()` passes `suppressEvents: true` when applying cloud snapshots
+  - Prevents infinite sync loops when cloud data is applied locally
+- **Event-driven sync integration** (`assets/js/auth/cloudAuth.js`):
+  - Replaced 30-second polling with event-driven triggers
+  - Added listeners for:
+    - `tos:localStateChanged` (local state changes)
+    - `storage` (cross-tab localStorage changes)
+    - `visibilitychange` (immediate sync when tab becomes visible)
+  - Reduced polling fallback to 3 minutes (safety net)
+  - Manual sync cancels pending auto-sync and waits for in-progress syncs
+  - Shared `syncInProgress` flag prevents concurrent manual and auto syncs
 
-### Guardrails
-- Never auto-push if conflict is possible.
-- Never auto-pull if local has unsynced changes.
+### Notes
+- Cloud sync now triggers within 3-5 seconds of local state changes automatically
+- Multiple rapid changes are debounced into a single sync
+- Cross-tab localStorage changes trigger sync in other tabs
+- Cloud snapshot application doesn't trigger sync loops (events suppressed)
+- Manual sync takes priority and waits for any in-progress auto-sync
+- Polling fallback still works (reduced to 3 minutes) for edge cases
+- All existing guardrails preserved (conflict detection, etc.)
+
+### Tests
+- ✅ Jest tests added:
+  - `tests/eventEmission.test.js` - Event emission from storage and persistence layers
+  - `tests/autoSyncScheduler.test.js` - Debouncing, concurrency, and scheduler methods
+  - `tests/eventDrivenSync.test.js` - Integration tests for end-to-end event flow
+  - `tests/cloudSync.test.js` - Loop prevention in `applySnapshot()`
 
 ---
 
@@ -173,10 +211,10 @@ Current model is one snapshot per user. This is correct for “solo game”.
 
 ---
 
-## Suggested “next work session” order
+## Suggested "next work session" order
 
 1. ✅ **Phase 1: Auto-persist character info inputs (debounced).** — COMPLETE
-2. Phase 2: Event-driven auto-sync (debounced on change).
+2. ✅ **Phase 2: Event-driven auto-sync (debounced on change).** — COMPLETE
 3. Phase 3: Expansion manifest + data validation script.
 4. Phase 4: UX improvements (toasts, status indicators).
 

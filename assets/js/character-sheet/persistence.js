@@ -116,21 +116,35 @@ export async function getStateKey(key, defaultValue = null) {
  * Persist a key.
  * - For LARGE_STATE_KEYS: write to IndexedDB, and remove legacy localStorage copy if successful
  * - For others: localStorage only (for now)
+ * @param {string} key - The storage key
+ * @param {*} value - The value to store
+ * @param {boolean} suppressEvents - If true, do not emit sync events (default: false)
+ * @returns {Promise<boolean>} True if successful, false otherwise
  */
-export async function setStateKey(key, value) {
+export async function setStateKey(key, value, suppressEvents = false) {
     if (LARGE_STATE_KEYS.has(key) && isIndexedDBAvailable()) {
         try {
             await idbSet(key, value);
             // Keep localStorage from ballooning / hitting quota
             safeRemoveJSON(key);
+            
+            // Emit event for IndexedDB writes (unless suppressed)
+            if (!suppressEvents) {
+                window.dispatchEvent(new CustomEvent('tos:localStateChanged', {
+                    detail: { source: 'indexedDB', key }
+                }));
+            }
+            
             return true;
         } catch (error) {
             console.error(`Failed to write "${key}" to IndexedDB, falling back to localStorage.`, error);
-            return safeSetJSON(key, value);
+            // Fallback to localStorage (will emit via safeSetJSON unless suppressed)
+            return safeSetJSON(key, value, suppressEvents);
         }
     }
 
-    return safeSetJSON(key, value);
+    // For non-large keys, use localStorage (will emit via safeSetJSON unless suppressed)
+    return safeSetJSON(key, value, suppressEvents);
 }
 
 export async function removeStateKey(key) {
