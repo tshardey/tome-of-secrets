@@ -1,0 +1,58 @@
+{
+  "core": {
+    "version": "1.0.0",
+    "enabled": true,
+    "features": [
+      "quests",
+      "items",
+      "dungeons",
+      "curses",
+      "abilities",
+      "atmosphericBuffs",
+      "shopping"
+    ],
+    "dataFiles": [
+      "xpLevels.json",
+      "permanentBonuses.json",
+      "atmosphericBuffs.json",
+      "schoolBenefits.json",
+      "sanctumBenefits.json",
+      "keeperBackgrounds.json",
+      "allItems.json",
+      "dungeonRooms.json",
+      "masteryAbilities.json",
+      "dungeonRewards.json",
+      "dungeonCompletionRewards.json",
+      "genreQuests.json",
+      "extraCreditRewards.json",
+      "sideQuestsDetailed.json",
+      "curseTableDetailed.json",
+      "temporaryBuffs.json",
+      "temporaryBuffsFromRewards.json",
+      "levelRewards.json",
+      "shoppingOptions.json"
+    ]
+  },
+  "expansions": {
+    "library-restoration": {
+      "version": "1.0.0",
+      "enabled": true,
+      "requires": ["core"],
+      "features": [
+        "restorationProjects",
+        "passiveSlots",
+        "wings",
+        "blueprints"
+      ],
+      "dataFiles": [
+        "wings.json",
+        "restorationProjects.json"
+      ],
+      "services": [
+        "restorationService.js"
+      ],
+      "description": "Library Restoration expansion - restore wings, unlock passive slots, earn blueprints"
+    }
+  }
+}
+

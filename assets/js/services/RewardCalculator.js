@@ -19,6 +19,13 @@ export class Reward {
         this.blueprints = blueprints;
         this.items = Array.isArray(items) ? items : [];
         this.modifiedBy = Array.isArray(modifiedBy) ? modifiedBy : []; // Track what modifiers were applied
+        
+        // Calculation receipt/breakdown for transparency
+        this.receipt = {
+            base: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0 },
+            modifiers: [], // Array of { source, type, value, description, currency }
+            final: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0 }
+        };
     }
 
     /**
@@ -33,7 +40,27 @@ export class Reward {
             items: [...this.items]
         });
         cloned.modifiedBy = [...this.modifiedBy];
+        // Deep clone receipt
+        cloned.receipt = {
+            base: { ...this.receipt.base },
+            modifiers: [...this.receipt.modifiers],
+            final: { ...this.receipt.final }
+        };
         return cloned;
+    }
+    
+    /**
+     * Get calculation receipt/breakdown
+     * @returns {Object} Receipt object with base, modifiers, and final values
+     */
+    getReceipt() {
+        return {
+            base: { ...this.receipt.base },
+            modifiers: [...this.receipt.modifiers],
+            final: { ...this.receipt.final },
+            items: [...this.items],
+            modifiedBy: [...this.modifiedBy]
+        };
     }
 
     /**
@@ -64,32 +91,39 @@ export class RewardCalculator {
      */
     static getBaseRewards(type, prompt, options = {}) {
         const { isEncounter = false, roomNumber = null, encounterName = null, isBefriend = true } = options;
+        let reward;
 
         // Extra Credit - only paper scraps
         if (type === '⭐ Extra Credit') {
-            return new Reward({ paperScraps: GAME_CONFIG.rewards.extraCredit.paperScraps });
+            reward = new Reward({ paperScraps: GAME_CONFIG.rewards.extraCredit.paperScraps });
+            reward.receipt.base.paperScraps = GAME_CONFIG.rewards.extraCredit.paperScraps;
         }
-
         // Organize the Stacks (Genre quests)
-        if (type === '♥ Organize the Stacks') {
-            return new Reward({
+        else if (type === '♥ Organize the Stacks') {
+            reward = new Reward({
                 xp: GAME_CONFIG.rewards.organizeTheStacks.xp,
                 inkDrops: GAME_CONFIG.rewards.organizeTheStacks.inkDrops
             });
+            reward.receipt.base.xp = GAME_CONFIG.rewards.organizeTheStacks.xp;
+            reward.receipt.base.inkDrops = GAME_CONFIG.rewards.organizeTheStacks.inkDrops;
         }
-
         // Side Quests
-        if (type === '♣ Side Quest') {
-            return this._getSideQuestRewards(prompt);
+        else if (type === '♣ Side Quest') {
+            reward = this._getSideQuestRewards(prompt);
         }
-
         // Dungeon Crawl
-        if (type === '♠ Dungeon Crawl') {
-            return this._getDungeonRewards(isEncounter, roomNumber, encounterName, isBefriend);
+        else if (type === '♠ Dungeon Crawl') {
+            reward = this._getDungeonRewards(isEncounter, roomNumber, encounterName, isBefriend);
         }
-
         // Default fallback
-        return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+        else {
+            reward = new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+            reward.receipt.base.inkDrops = GAME_CONFIG.rewards.defaultFallback.inkDrops;
+        }
+        
+        // Initialize final values from base
+        reward.receipt.final = { ...reward.receipt.base };
+        return reward;
     }
 
     /**
@@ -100,10 +134,20 @@ export class RewardCalculator {
         for (const key in data.sideQuestsDetailed) {
             const sideQuest = data.sideQuestsDetailed[key];
             if (prompt.includes(sideQuest.prompt) || prompt.includes(sideQuest.name)) {
-                return new Reward(sideQuest.rewards);
+                const reward = new Reward(sideQuest.rewards);
+                // Set receipt base values from the actual reward values (from constructor)
+                reward.receipt.base.xp = reward.xp;
+                reward.receipt.base.inkDrops = reward.inkDrops;
+                reward.receipt.base.paperScraps = reward.paperScraps;
+                reward.receipt.base.blueprints = reward.blueprints;
+                reward.receipt.final = { ...reward.receipt.base };
+                return reward;
             }
         }
-        return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+        const reward = new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+        reward.receipt.base.inkDrops = GAME_CONFIG.rewards.defaultFallback.inkDrops;
+        reward.receipt.final = { ...reward.receipt.base };
+        return reward;
     }
 
     /**
@@ -112,12 +156,18 @@ export class RewardCalculator {
      */
     static _getDungeonRewards(isEncounter, roomNumber, encounterName, isBefriend = true) {
         if (!roomNumber) {
-            return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+            const reward = new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+            reward.receipt.base.inkDrops = GAME_CONFIG.rewards.defaultFallback.inkDrops;
+            reward.receipt.final = { ...reward.receipt.base };
+            return reward;
         }
 
         const room = data.dungeonRooms[roomNumber];
         if (!room) {
-            return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+            const reward = new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+            reward.receipt.base.inkDrops = GAME_CONFIG.rewards.defaultFallback.inkDrops;
+            reward.receipt.final = { ...reward.receipt.base };
+            return reward;
         }
 
         // Encounter rewards
@@ -125,6 +175,12 @@ export class RewardCalculator {
             const encounter = room.encountersDetailed.find(e => e.name === encounterName);
             if (encounter?.rewards) {
                 const rewards = new Reward(encounter.rewards);
+                // Set receipt base values from the actual reward values (from constructor)
+                // This ensures the receipt reflects what the Reward object actually has
+                rewards.receipt.base.xp = rewards.xp;
+                rewards.receipt.base.inkDrops = rewards.inkDrops;
+                rewards.receipt.base.paperScraps = rewards.paperScraps;
+                rewards.receipt.base.blueprints = rewards.blueprints;
                 
                 // For Familiar type encounters, add the familiar to items if not already present
                 // This handles the case where befriending a familiar should reward the familiar itself
@@ -133,30 +189,50 @@ export class RewardCalculator {
                     rewards.items.push(encounterName);
                 }
                 
+                rewards.receipt.final = { ...rewards.receipt.base };
                 return rewards;
             }
 
             // Fallback based on encounter type
             if (encounter?.type === 'Monster') {
-                return new Reward({ xp: GAME_CONFIG.rewards.encounter.monster.xp });
+                const reward = new Reward({ xp: GAME_CONFIG.rewards.encounter.monster.xp });
+                reward.receipt.base.xp = GAME_CONFIG.rewards.encounter.monster.xp;
+                reward.receipt.final = { ...reward.receipt.base };
+                return reward;
             } else if (encounter?.type === 'Friendly Creature') {
-                return new Reward({ inkDrops: GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops });
+                const reward = new Reward({ inkDrops: GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops });
+                reward.receipt.base.inkDrops = GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops;
+                reward.receipt.final = { ...reward.receipt.base };
+                return reward;
             } else if (encounter?.type === 'Familiar') {
                 // For familiars, only include the familiar name in items if befriended
                 const items = (encounterName && isBefriend) ? [encounterName] : [];
-                return new Reward({ 
+                const reward = new Reward({ 
                     paperScraps: GAME_CONFIG.rewards.encounter.familiar.paperScraps,
                     items: items
                 });
+                reward.receipt.base.paperScraps = GAME_CONFIG.rewards.encounter.familiar.paperScraps;
+                reward.receipt.final = { ...reward.receipt.base };
+                return reward;
             }
         }
 
         // Room challenge rewards
         if (room.roomRewards) {
-            return new Reward(room.roomRewards);
+            const reward = new Reward(room.roomRewards);
+            // Set receipt base values from the actual reward values (from constructor)
+            reward.receipt.base.xp = reward.xp;
+            reward.receipt.base.inkDrops = reward.inkDrops;
+            reward.receipt.base.paperScraps = reward.paperScraps;
+            reward.receipt.base.blueprints = reward.blueprints;
+            reward.receipt.final = { ...reward.receipt.base };
+            return reward;
         }
 
-        return new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+        const reward = new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
+        reward.receipt.base.inkDrops = GAME_CONFIG.rewards.defaultFallback.inkDrops;
+        reward.receipt.final = { ...reward.receipt.base };
+        return reward;
     }
 
     /**
@@ -179,33 +255,85 @@ export class RewardCalculator {
             const modifier = this._getModifier(cleanName, isItem, isBackground);
 
             if (modifier) {
+                // Track modifier application in receipt
+                const modifierEntry = {
+                    source: cleanName,
+                    type: isItem ? 'item' : (isBackground ? 'background' : 'buff'),
+                    value: null,
+                    description: '',
+                    currency: null
+                };
+
                 // Apply additive bonuses
                 if (modifier.xp) {
+                    const before = modified.xp;
                     modified.xp += modifier.xp;
+                    modifierEntry.currency = 'xp';
+                    modifierEntry.value = modifier.xp;
+                    modifierEntry.description = `+${modifier.xp} XP`;
                 }
                 if (modifier.inkDrops) {
+                    const before = modified.inkDrops;
                     modified.inkDrops += modifier.inkDrops;
+                    if (!modifierEntry.currency) {
+                        modifierEntry.currency = 'inkDrops';
+                        modifierEntry.value = modifier.inkDrops;
+                        modifierEntry.description = `+${modifier.inkDrops} Ink Drops`;
+                    } else {
+                        // Multiple currencies, update description
+                        modifierEntry.description += `, +${modifier.inkDrops} Ink Drops`;
+                    }
                 }
                 if (modifier.paperScraps) {
                     modified.paperScraps += modifier.paperScraps;
+                    if (!modifierEntry.currency) {
+                        modifierEntry.currency = 'paperScraps';
+                        modifierEntry.value = modifier.paperScraps;
+                        modifierEntry.description = `+${modifier.paperScraps} Paper Scraps`;
+                    } else {
+                        modifierEntry.description += `, +${modifier.paperScraps} Paper Scraps`;
+                    }
                 }
 
                 // Track multipliers for second pass
                 if (modifier.inkDropsMultiplier) {
-                    multipliers.push(modifier.inkDropsMultiplier);
+                    multipliers.push({
+                        value: modifier.inkDropsMultiplier,
+                        source: cleanName
+                    });
+                    modifierEntry.currency = 'inkDrops';
+                    modifierEntry.type = 'multiplier';
+                    modifierEntry.value = modifier.inkDropsMultiplier;
+                    modifierEntry.description = `×${modifier.inkDropsMultiplier} Ink Drops`;
                 }
 
-                // Track what was applied
+                // Add to receipt if there's a valid modifier
                 if (modifier.xp || modifier.inkDrops || modifier.paperScraps || modifier.inkDropsMultiplier) {
                     modified.modifiedBy.push(cleanName);
+                    modified.receipt.modifiers.push(modifierEntry);
                 }
             }
         });
 
         // Second pass: Apply multipliers (after all additive bonuses)
-        multipliers.forEach(multiplier => {
+        multipliers.forEach(({ value: multiplier, source }) => {
+            const beforeInkDrops = modified.inkDrops;
             modified.inkDrops = Math.floor(modified.inkDrops * multiplier);
+            const actualChange = modified.inkDrops - beforeInkDrops;
+            
+            // Update or add multiplier entry in receipt
+            const multiplierEntry = modified.receipt.modifiers.find(m => m.source === source && m.type === 'multiplier');
+            if (multiplierEntry) {
+                multiplierEntry.value = actualChange;
+                multiplierEntry.description = `×${multiplier} (${actualChange > 0 ? '+' : ''}${actualChange} Ink Drops)`;
+            }
         });
+
+        // Update final values in receipt
+        modified.receipt.final.xp = modified.xp;
+        modified.receipt.final.inkDrops = modified.inkDrops;
+        modified.receipt.final.paperScraps = modified.paperScraps;
+        modified.receipt.final.blueprints = modified.blueprints;
 
         return modified;
     }
@@ -226,8 +354,17 @@ export class RewardCalculator {
 
         // Biblioslinker: Bonus Paper Scraps for Dungeon Crawls
         if (background === 'biblioslinker' && quest.type === '♠ Dungeon Crawl') {
-            modified.paperScraps += GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps;
+            const bonus = GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps;
+            modified.paperScraps += bonus;
             modified.modifiedBy.push('Biblioslinker');
+            modified.receipt.modifiers.push({
+                source: 'Biblioslinker',
+                type: 'background',
+                value: bonus,
+                description: `+${bonus} Paper Scraps`,
+                currency: 'paperScraps'
+            });
+            modified.receipt.final.paperScraps = modified.paperScraps;
         }
 
         // Note: Grove Tender's bonus is handled by atmospheric buff system
@@ -255,8 +392,18 @@ export class RewardCalculator {
             // Only apply if there's base XP to multiply (monster encounters give 30 XP)
             if (modified.xp > 0) {
                 const originalXP = modified.xp;
-                modified.xp = Math.floor(modified.xp * 1.5);
+                const newXP = Math.floor(modified.xp * 1.5);
+                const bonusXP = newXP - originalXP;
+                modified.xp = newXP;
                 modified.modifiedBy.push('School of Enchantment');
+                modified.receipt.modifiers.push({
+                    source: 'School of Enchantment',
+                    type: 'school',
+                    value: bonusXP,
+                    description: `×1.5 XP (+${bonusXP} XP)`,
+                    currency: 'xp'
+                });
+                modified.receipt.final.xp = modified.xp;
             }
         }
 
@@ -337,11 +484,12 @@ export class RewardCalculator {
             quest = {},
             isEncounter = false,
             roomNumber = null,
-            encounterName = null
+            encounterName = null,
+            isBefriend = true
         } = options;
 
         // Get base rewards
-        let rewards = this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName });
+        let rewards = this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName, isBefriend });
 
         // Apply buff/item modifiers
         if (appliedBuffs.length > 0) {
@@ -358,6 +506,12 @@ export class RewardCalculator {
             rewards = this.applySchoolBonuses(rewards, quest, wizardSchool);
         }
 
+        // Ensure final values in receipt are up to date
+        rewards.receipt.final.xp = rewards.xp;
+        rewards.receipt.final.inkDrops = rewards.inkDrops;
+        rewards.receipt.final.paperScraps = rewards.paperScraps;
+        rewards.receipt.final.blueprints = rewards.blueprints;
+
         return rewards;
     }
 
@@ -370,7 +524,17 @@ export class RewardCalculator {
      */
     static calculateBookCompletionRewards(booksCompleted) {
         const xp = Math.max(0, booksCompleted) * GAME_CONFIG.endOfMonth.bookCompletionXP;
-        return new Reward({ xp, inkDrops: 0, paperScraps: 0, items: [] });
+        const reward = new Reward({ xp, inkDrops: 0, paperScraps: 0, items: [] });
+        reward.receipt.base.xp = xp;
+        reward.receipt.final.xp = xp;
+        reward.receipt.modifiers.push({
+            source: 'End of Month - Book Completion',
+            type: 'system',
+            value: xp,
+            description: `${booksCompleted} books × ${GAME_CONFIG.endOfMonth.bookCompletionXP} XP`,
+            currency: 'xp'
+        });
+        return reward;
     }
 
     /**
@@ -383,23 +547,50 @@ export class RewardCalculator {
      */
     static calculateJournalEntryRewards(journalEntries, background = '') {
         let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
+        const baseTotal = Math.max(0, journalEntries) * papersPerEntry;
         
         // Apply Scribe's Acolyte bonus
+        let bonusTotal = 0;
         if (background === 'scribe') {
             papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
+            bonusTotal = Math.max(0, journalEntries) * GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
         }
         
         const paperScraps = Math.max(0, journalEntries) * papersPerEntry;
-        // Only track Scribe bonus if it was actually applied (paperScraps > 0)
         const modifiedBy = (background === 'scribe' && paperScraps > 0) ? ['Scribe\'s Acolyte'] : [];
         
-        return new Reward({ 
+        const reward = new Reward({ 
             xp: 0, 
             inkDrops: 0, 
             paperScraps, 
             items: [],
             modifiedBy 
         });
+        
+        reward.receipt.base.paperScraps = baseTotal;
+        reward.receipt.final.paperScraps = paperScraps;
+        
+        if (baseTotal > 0) {
+            reward.receipt.modifiers.push({
+                source: 'End of Month - Journal Entry',
+                type: 'system',
+                value: baseTotal,
+                description: `${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps} Paper Scraps`,
+                currency: 'paperScraps'
+            });
+        }
+        
+        if (bonusTotal > 0) {
+            reward.receipt.modifiers.push({
+                source: 'Scribe\'s Acolyte',
+                type: 'background',
+                value: bonusTotal,
+                description: `+${bonusTotal} Paper Scraps (${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.scribeBonus} bonus)`,
+                currency: 'paperScraps'
+            });
+        }
+        
+        return reward;
     }
 
     /**
@@ -415,6 +606,13 @@ export class RewardCalculator {
     static calculateAtmosphericBuffRewards(atmosphericBuffs = {}, associatedBuffs = []) {
         let totalInkDrops = 0;
         const processedBuffs = [];
+        const reward = new Reward({ 
+            xp: 0, 
+            inkDrops: 0, 
+            paperScraps: 0, 
+            items: [],
+            modifiedBy: [] 
+        });
 
         for (const buffName in atmosphericBuffs) {
             const buff = atmosphericBuffs[buffName];
@@ -428,17 +626,23 @@ export class RewardCalculator {
                 
                 if (buffTotal > 0) {
                     processedBuffs.push(buffName);
+                    reward.receipt.modifiers.push({
+                        source: buffName,
+                        type: 'atmospheric',
+                        value: buffTotal,
+                        description: `${buff.daysUsed} days × ${dailyValue} Ink Drops${isAssociated ? ' (Sanctum bonus)' : ''}`,
+                        currency: 'inkDrops'
+                    });
                 }
             }
         }
 
-        return new Reward({ 
-            xp: 0, 
-            inkDrops: totalInkDrops, 
-            paperScraps: 0, 
-            items: [],
-            modifiedBy: processedBuffs 
-        });
+        reward.inkDrops = totalInkDrops;
+        reward.modifiedBy = processedBuffs;
+        reward.receipt.base.inkDrops = 0; // No base, all from modifiers
+        reward.receipt.final.inkDrops = totalInkDrops;
+
+        return reward;
     }
 }
 

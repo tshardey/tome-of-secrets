@@ -13,6 +13,7 @@ import { parseIntOr } from '../utils/helpers.js';
 import { clearFormError, showFormError } from '../utils/formErrors.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import * as data from '../character-sheet/data.js';
+import { getSlotLimits } from '../services/SlotService.js';
 
 export class InventoryController extends BaseController {
     initialize() {
@@ -116,61 +117,70 @@ export class InventoryController extends BaseController {
             
             if (!slot || !slot.itemName) return true;
             
-            // Find the item in inventory
+            // Get item data for adding to inventory if needed
+            const itemName = slot.itemName;
+            const itemData = data.allItems?.[itemName];
+            
+            // Ensure item is in inventory (items in passive slots are removed from inventory)
             const inventoryItems = stateAdapter.getInventoryItems();
-            const itemIndex = inventoryItems.findIndex(item => item.name === slot.itemName);
+            const itemIndex = inventoryItems.findIndex(item => item.name === itemName);
             
             if (itemIndex === -1) {
-                // Item not in inventory, need to add it first
-                const itemData = data.allItems?.[slot.itemName];
-                stateAdapter.addInventoryItem(itemData ? { name: slot.itemName, ...itemData } : { name: slot.itemName });
+                // Item not in inventory, add it first
+                stateAdapter.addInventoryItem(itemData ? { name: itemName, ...itemData } : { name: itemName });
             }
             
-            // Now equip it (this will handle removing from passive slot via clearItemFromPassiveSlots)
+            // Now find the item in inventory (it should be there now)
             const updatedInventoryItems = stateAdapter.getInventoryItems();
-            const updatedItemIndex = updatedInventoryItems.findIndex(item => item.name === slot.itemName);
+            const updatedItemIndex = updatedInventoryItems.findIndex(item => item.name === itemName);
             
-            if (updatedItemIndex !== -1) {
+            if (updatedItemIndex === -1) {
+                // This shouldn't happen, but handle gracefully
+                return true;
+            }
+            
                 const itemToEquip = updatedInventoryItems[updatedItemIndex];
-                const slotLimits = uiModule.getSlotLimits(
+                const slotLimits = getSlotLimits(
                     slotInputs.wearableSlotsInput,
                     slotInputs.nonWearableSlotsInput,
                     slotInputs.familiarSlotsInput
                 );
-                // Get items in passive slots to exclude from count
-                const passiveItemSlots = stateAdapter.getPassiveItemSlots() || [];
-                const passiveFamiliarSlots = stateAdapter.getPassiveFamiliarSlots() || [];
-                const itemsInPassiveSlots = new Set([
-                    ...passiveItemSlots.map(slot => slot.itemName).filter(Boolean),
-                    ...passiveFamiliarSlots.map(slot => slot.itemName).filter(Boolean)
-                ]);
-                
-                const equippedCountForType = stateAdapter.getEquippedItems()
-                    .filter(item => item.type === itemToEquip.type && 
-                           !itemsInPassiveSlots.has(item.name)).length;
-                
-                if (equippedCountForType < slotLimits[itemToEquip.type]) {
-                    // Clear from passive slot first
-                    if (slotType === 'item') {
-                        stateAdapter.setPassiveSlotItem(slotId, null);
-                    } else {
-                        stateAdapter.setPassiveFamiliarSlotItem(slotId, null);
-                    }
-                    
-                    // Then equip it
-                    if (stateAdapter.moveInventoryItemToEquipped(updatedItemIndex)) {
-                        renderLoadout();
-                        if (uiModule.renderPassiveEquipment) {
-                            uiModule.renderPassiveEquipment();
-                        }
-                        this.saveState();
-                    }
+            
+            // Get items in passive slots to exclude from count (for slot limit checking)
+            const itemsInPassiveSlots = new Set([
+                ...passiveItemSlots.map(s => s.itemName).filter(Boolean),
+                ...passiveFamiliarSlots.map(s => s.itemName).filter(Boolean)
+            ]);
+            
+            const equippedCountForType = stateAdapter.getEquippedItems()
+                .filter(item => item.type === itemToEquip.type && 
+                       !itemsInPassiveSlots.has(item.name)).length;
+            
+            if (equippedCountForType < slotLimits[itemToEquip.type]) {
+                // Clear from passive slot first (this doesn't automatically add to inventory, but we already added it)
+                if (slotType === 'item') {
+                    stateAdapter.setPassiveSlotItem(slotId, null);
                 } else {
-                    const container = document.querySelector('.passive-equipment-section');
-                    if (container) {
-                        clearFormError(container);
-                        showFormError(container, `No empty ${itemToEquip.type} slots available!`);
+                    stateAdapter.setPassiveFamiliarSlotItem(slotId, null);
+                }
+                
+                // Now equip it from inventory
+                // Re-find index after clearing slot in case order changed
+                const finalInventoryItems = stateAdapter.getInventoryItems();
+                const finalItemIndex = finalInventoryItems.findIndex(item => item.name === itemName);
+                
+                if (finalItemIndex !== -1 && stateAdapter.moveInventoryItemToEquipped(finalItemIndex)) {
+                    renderLoadout();
+                    if (uiModule.renderPassiveEquipment) {
+                        uiModule.renderPassiveEquipment();
                     }
+                    this.saveState();
+                }
+            } else {
+                const container = document.querySelector('.passive-equipment-section');
+                if (container) {
+                    clearFormError(container);
+                    showFormError(container, `No empty ${itemToEquip.type} slots available!`);
                 }
             }
             
@@ -196,7 +206,7 @@ export class InventoryController extends BaseController {
                 return true;
             }
 
-            const slotLimits = uiModule.getSlotLimits(
+            const slotLimits = getSlotLimits(
                 slotInputs.wearableSlotsInput,
                 slotInputs.nonWearableSlotsInput,
                 slotInputs.familiarSlotsInput
@@ -204,10 +214,8 @@ export class InventoryController extends BaseController {
             const equippedCountForType = stateAdapter.getEquippedItems().filter(item => item.type === itemToEquip.type).length;
             
             if (equippedCountForType < slotLimits[itemToEquip.type]) {
+                // StateAdapter automatically enforces invariant: removes item from passive slots
                 if (stateAdapter.moveInventoryItemToEquipped(index)) {
-                    // Clear this item from any passive slots if it was assigned
-                    this.clearItemFromPassiveSlots(itemToEquip.name);
-                    
                     renderLoadout();
                     // Refresh passive equipment if it exists
                     if (uiModule.renderPassiveEquipment) {
@@ -254,13 +262,7 @@ export class InventoryController extends BaseController {
             const emptySlot = passiveItemSlots.find(slot => !slot.itemName);
             
             if (emptySlot) {
-                // Remove from equipped if it's there
-                const equippedItems = stateAdapter.getEquippedItems();
-                const equippedIndex = equippedItems.findIndex(item => item.name === itemToDisplay.name);
-                if (equippedIndex !== -1) {
-                    stateAdapter.removeEquippedItem(equippedIndex);
-                }
-                
+                // StateAdapter automatically enforces invariant: unequips item if equipped
                 // Assign to passive slot
                 stateAdapter.setPassiveSlotItem(emptySlot.slotId, itemToDisplay.name);
 
@@ -292,13 +294,7 @@ export class InventoryController extends BaseController {
             const emptySlot = passiveFamiliarSlots.find(slot => !slot.itemName);
             
             if (emptySlot) {
-                // Remove from equipped if it's there
-                const equippedItems = stateAdapter.getEquippedItems();
-                const equippedIndex = equippedItems.findIndex(item => item.name === familiarToAdopt.name);
-                if (equippedIndex !== -1) {
-                    stateAdapter.removeEquippedItem(equippedIndex);
-                }
-                
+                // StateAdapter automatically enforces invariant: unequips familiar if equipped
                 // Assign to passive slot
                 stateAdapter.setPassiveFamiliarSlotItem(emptySlot.slotId, familiarToAdopt.name);
 
@@ -327,24 +323,5 @@ export class InventoryController extends BaseController {
      * Clear an item from all passive slots (when it's equipped)
      * @param {string} itemName - Name of the item to clear
      */
-    clearItemFromPassiveSlots(itemName) {
-        const { stateAdapter } = this;
-        
-        // Clear from passive item slots
-        const passiveItemSlots = stateAdapter.getPassiveItemSlots() || [];
-        passiveItemSlots.forEach(slot => {
-            if (slot.itemName === itemName) {
-                stateAdapter.setPassiveSlotItem(slot.slotId, null);
-            }
-        });
-        
-        // Clear from passive familiar slots
-        const passiveFamiliarSlots = stateAdapter.getPassiveFamiliarSlots() || [];
-        passiveFamiliarSlots.forEach(slot => {
-            if (slot.itemName === itemName) {
-                stateAdapter.setPassiveFamiliarSlotItem(slot.slotId, null);
-            }
-        });
-    }
 }
 

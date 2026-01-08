@@ -1,10 +1,12 @@
 {
     "Long Read Focus": {
+        "id": "long-read-focus",
+        "name": "Long Read Focus",
         "description": "+10 Ink Drops per 100 pages over 300",
         "duration": "one-time",
         "source": "Side Quest: The Arcane Grimoire",
-        "rewardModifier": { "inkDrops": 10 }
+        "rewardModifier": {
+            "inkDrops": 10
+        }
     }
 }
-
-

@@ -1,5 +1,6 @@
 {
     "restore-card-catalog": {
+        "id": "restore-card-catalog",
         "wingId": "1",
         "name": "Restore the Card Catalog System",
         "cost": 25,
@@ -7,10 +8,15 @@
         "completionPrompt": "Read a non-fiction book and create an index card entry for it with key facts.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Ancient Bookmark", "Reading Glasses", "Archive Seal"]
+            "suggestedItems": [
+                "Ancient Bookmark",
+                "Reading Glasses",
+                "Archive Seal"
+            ]
         }
     },
     "repair-reading-desks": {
+        "id": "repair-reading-desks",
         "wingId": "1",
         "name": "Repair the Reading Desks",
         "cost": 30,
@@ -18,10 +24,15 @@
         "completionPrompt": "Annotate or take notes on the next book you read.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Scholar's Lamp", "Wise Owl", "Academic Mouse"]
+            "suggestedItems": [
+                "Scholar's Lamp",
+                "Wise Owl",
+                "Academic Mouse"
+            ]
         }
     },
     "polish-globe-collection": {
+        "id": "polish-globe-collection",
         "wingId": "1",
         "name": "Polish the Globe Collection",
         "cost": 35,
@@ -29,10 +40,15 @@
         "completionPrompt": "Read a book that contains a map.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Cartographer's Compass", "Historian's Monocle", "Globe of Knowledge"]
+            "suggestedItems": [
+                "Cartographer's Compass",
+                "Historian's Monocle",
+                "Globe of Knowledge"
+            ]
         }
     },
     "restore-stained-glass": {
+        "id": "restore-stained-glass",
         "wingId": "2",
         "name": "Restore the Stained Glass Windows",
         "cost": 25,
@@ -40,10 +56,15 @@
         "completionPrompt": "Read a book about something broken being transformed into something even more beautiful.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Romance Reader's Ribbon", "Butterfly of Change", "Heartbreak Locket"]
+            "suggestedItems": [
+                "Romance Reader's Ribbon",
+                "Butterfly of Change",
+                "Heartbreak Locket"
+            ]
         }
     },
     "refinish-dance-floor": {
+        "id": "refinish-dance-floor",
         "wingId": "2",
         "name": "Refinish the Dance Floor",
         "cost": 35,
@@ -51,10 +72,15 @@
         "completionPrompt": "Read a book set in an iconic era (1920s, Victorian, Regency, Ancient Egypt, etc.).",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Dancing Shoes", "Drama Cat", "Music Box"]
+            "suggestedItems": [
+                "Dancing Shoes",
+                "Drama Cat",
+                "Music Box"
+            ]
         }
     },
     "repair-tea-service": {
+        "id": "repair-tea-service",
         "wingId": "2",
         "name": "Repair the Tea Service",
         "cost": 30,
@@ -62,10 +88,14 @@
         "completionPrompt": "Read a cozy book in a comfortable setting.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Porcelain Teacup", "Tea Spirit"]
+            "suggestedItems": [
+                "Porcelain Teacup",
+                "Tea Spirit"
+            ]
         }
     },
     "calibrate-orrery": {
+        "id": "calibrate-orrery",
         "wingId": "3",
         "name": "Calibrate the Orrery",
         "cost": 30,
@@ -73,10 +103,15 @@
         "completionPrompt": "Read a book where you've seen another adaptation (movie, TV show, play, etc.).",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Star Navigator's Chart", "Astro Compass", "Theater Ticket"]
+            "suggestedItems": [
+                "Star Navigator's Chart",
+                "Astro Compass",
+                "Theater Ticket"
+            ]
         }
     },
     "restore-telescope-array": {
+        "id": "restore-telescope-array",
         "wingId": "3",
         "name": "Restore the Telescope Array",
         "cost": 40,
@@ -84,10 +119,14 @@
         "completionPrompt": "Read a book with stars on the cover.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Star Fox", "Temporal Sprite"]
+            "suggestedItems": [
+                "Star Fox",
+                "Temporal Sprite"
+            ]
         }
     },
     "repair-computing-engine": {
+        "id": "repair-computing-engine",
         "wingId": "3",
         "name": "Repair the Computing Engine",
         "cost": 35,
@@ -95,10 +134,15 @@
         "completionPrompt": "Read a new release (published this year).",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Logic Circuit", "Data Crystal", "Engineer's Wrench"]
+            "suggestedItems": [
+                "Logic Circuit",
+                "Data Crystal",
+                "Engineer's Wrench"
+            ]
         }
     },
     "revitalize-fairy-circle": {
+        "id": "revitalize-fairy-circle",
         "wingId": "4",
         "name": "Revitalize the Fairy Circle",
         "cost": 30,
@@ -106,10 +150,15 @@
         "completionPrompt": "Read a book with a circle on the cover.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Fae-Touched Crystal", "Fairy Companion", "Enchanted Feather"]
+            "suggestedItems": [
+                "Fae-Touched Crystal",
+                "Fairy Companion",
+                "Enchanted Feather"
+            ]
         }
     },
     "restore-potion-laboratory": {
+        "id": "restore-potion-laboratory",
         "wingId": "4",
         "name": "Restore the Potion Laboratory",
         "cost": 35,
@@ -117,10 +166,14 @@
         "completionPrompt": "Read a book that has witchy vibes or mystical iconography on the cover.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Ingredient Sprite", "Herb Dragon"]
+            "suggestedItems": [
+                "Ingredient Sprite",
+                "Herb Dragon"
+            ]
         }
     },
     "repair-crystal-chandeliers": {
+        "id": "repair-crystal-chandeliers",
         "wingId": "4",
         "name": "Repair the Crystal Chandeliers",
         "cost": 40,
@@ -128,10 +181,15 @@
         "completionPrompt": "Read an epic fantasy or high fantasy book.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Crystal Prism", "Dragon Scale", "Magic Ink"]
+            "suggestedItems": [
+                "Crystal Prism",
+                "Dragon Scale",
+                "Magic Ink"
+            ]
         }
     },
     "seal-cursed-vault": {
+        "id": "seal-cursed-vault",
         "wingId": "5",
         "name": "Seal the Cursed Vault",
         "cost": 40,
@@ -139,10 +197,15 @@
         "completionPrompt": "Read a book featuring curses or dark magic.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Warding Candle", "Shadow Hound", "Raven Familiar"]
+            "suggestedItems": [
+                "Warding Candle",
+                "Shadow Hound",
+                "Raven Familiar"
+            ]
         }
     },
     "cleanse-darkened-halls": {
+        "id": "cleanse-darkened-halls",
         "wingId": "5",
         "name": "Cleanse the Darkened Halls",
         "cost": 35,
@@ -150,10 +213,15 @@
         "completionPrompt": "Read a book that has a silhouette on the cover.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Purifying Incense", "Detective's Magnifying Glass", "Blood Moon Charm"]
+            "suggestedItems": [
+                "Purifying Incense",
+                "Detective's Magnifying Glass",
+                "Blood Moon Charm"
+            ]
         }
     },
     "restore-protective-wards": {
+        "id": "restore-protective-wards",
         "wingId": "5",
         "name": "Restore the Protective Wards",
         "cost": 45,
@@ -161,10 +229,15 @@
         "completionPrompt": "Read a book where characters protect themselves or others from danger.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Runic Shield", "Shadow Cloak", "Cursed Coin"]
+            "suggestedItems": [
+                "Runic Shield",
+                "Shadow Cloak",
+                "Cursed Coin"
+            ]
         }
     },
     "restore-grand-entrance": {
+        "id": "restore-grand-entrance",
         "wingId": "6",
         "name": "Restore the Grand Entrance",
         "cost": 20,
@@ -172,10 +245,15 @@
         "completionPrompt": "Read the first book in a new-to-you series or by a new-to-you author.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Welcome Mat", "Library Mouse", "Genre-Hopper Chameleon"]
+            "suggestedItems": [
+                "Welcome Mat",
+                "Library Mouse",
+                "Genre-Hopper Chameleon"
+            ]
         }
     },
     "repair-front-desk": {
+        "id": "repair-front-desk",
         "wingId": "6",
         "name": "Repair the Front Desk",
         "cost": 25,
@@ -183,10 +261,15 @@
         "completionPrompt": "Read a book by a marginalized or BIPOC author.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Astral Passport", "Library Certificate", "Globe of Knowledge"]
+            "suggestedItems": [
+                "Astral Passport",
+                "Library Certificate",
+                "Globe of Knowledge"
+            ]
         }
     },
     "create-cozy-nooks": {
+        "id": "create-cozy-nooks",
         "wingId": "6",
         "name": "Create Cozy Reading Nooks",
         "cost": 30,
@@ -194,10 +277,14 @@
         "completionPrompt": "Read a book in an especially comfortable or cozy location.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Cozy Blanket", "Reading Chair"]
+            "suggestedItems": [
+                "Cozy Blanket",
+                "Reading Chair"
+            ]
         }
     },
     "restore-main-catalog": {
+        "id": "restore-main-catalog",
         "wingId": "6",
         "name": "Restore the Main Card Catalog",
         "cost": 35,
@@ -205,10 +292,14 @@
         "completionPrompt": "Read a book from a popular reading list or book club.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": ["Master Catalog", "Literary Medallion"]
+            "suggestedItems": [
+                "Master Catalog",
+                "Literary Medallion"
+            ]
         }
     },
     "polish-grand-chandelier": {
+        "id": "polish-grand-chandelier",
         "wingId": "6",
         "name": "Polish the Grand Chandelier",
         "cost": 40,
@@ -216,7 +307,10 @@
         "completionPrompt": "Read a classic or award-winning book.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": ["Library Owl", "Classic Bookmark"]
+            "suggestedItems": [
+                "Library Owl",
+                "Classic Bookmark"
+            ]
         }
     }
 }

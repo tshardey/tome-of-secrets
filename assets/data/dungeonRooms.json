@@ -1,10 +1,16 @@
 {
     "1": {
+        "id": "dungeon-room-the-hall-of-whispers",
         "name": "The Hall of Whispers",
         "wingId": "5",
         "description": "Echoes of unread tales drift endlessly through this vaulted chamber. The walls hum with voices too faint to catch, yet heavy with longing.",
         "challenge": "The Hall of Whispers: Read in a quiet space without music.",
-        "roomRewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 5,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -13,7 +19,12 @@
                 "type": "Friendly Creature",
                 "description": "A gentle ghost flickering with lantern light.",
                 "befriend": "Read a book with a ghost-like being or a mystery.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -21,7 +32,12 @@
                 "type": "Monster",
                 "description": "Glittering lights that lure you astray.",
                 "defeat": "Read a book that involves fated destiny or a newly revealed path.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -34,11 +50,17 @@
         }
     },
     "2": {
+        "id": "dungeon-room-the-glimmering-pools",
         "name": "The Glimmering Pools",
         "wingId": "4",
         "description": "Shallow pools glow like liquid starlight, each ripple whispering a forgotten secret. Step wrong, and the ink clings like chains.",
         "challenge": "The Glimmering Pools: Read a book with a beautiful or unique cover (+10 Ink Drops).",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -47,7 +69,12 @@
                 "type": "Friendly Creature",
                 "description": "Her laughter shimmers across the water.",
                 "befriend": "Read a book that explores allure or transformation. Roll even for Amulet of Duality, odd for Worn Page curse.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -55,7 +82,12 @@
                 "type": "Friendly Creature",
                 "description": "Flitting overhead, scattering glowing droplets.",
                 "befriend": "Read a book where a character discovers unexpected magic or hidden talents.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -68,11 +100,17 @@
         }
     },
     "3": {
+        "id": "dungeon-room-the-lost-garden",
         "name": "The Lost Garden",
         "wingId": "2",
         "description": "Trees and vines reclaim toppled shelves, their blossoms glowing faintly in the dark. Forgotten statues weep with moss.",
         "challenge": "The Lost Garden: Read a book with a magical garden or a hidden realm.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -81,7 +119,12 @@
                 "type": "Friendly Creature",
                 "description": "Whispers secrets of roots and rivers.",
                 "befriend": "Read a book with a natural or wilderness setting.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -89,7 +132,12 @@
                 "type": "Friendly Creature",
                 "description": "Slow and steady, branches heavy with books as fruit.",
                 "befriend": "Read a book where things aren't what they seem, or the setting is much more than it appears to be.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -102,11 +150,17 @@
         }
     },
     "4": {
+        "id": "dungeon-room-the-cursed-tome",
         "name": "The Cursed Tome",
         "wingId": "5",
         "description": "A massive volume chained to a pedestal, its pages leaking mist and sorrow. The air grows cold with each breath.",
         "challenge": "The Cursed Tome: Read a book with a curse or a dark theme.",
-        "roomRewards": { "xp": 50, "inkDrops": 0, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 50,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -116,7 +170,12 @@
                 "description": "Clawing free from the ink, groaning for stories unfinished.",
                 "defeat": "Read a book that deals with themes of death, rebirth, or the afterlife.",
                 "befriend": "Read a book where a character finds hope or humanity in a dark, hopeless situation.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -125,7 +184,12 @@
                 "description": "Wails through the halls, scattering loose pages like autumn leaves.",
                 "defeat": "Read a book with a ghost-like being or a death theme.",
                 "befriend": "Read a book with a character that finds a way to move on from a tragic event.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -140,11 +204,17 @@
         }
     },
     "5": {
+        "id": "dungeon-room-the-archivists-riddle",
         "name": "The Archivist's Riddle",
         "wingId": "1",
         "description": "A spectral figure waits, quill in hand, offering only riddles for passage. Its eyes gleam with the weight of endless catalogues.",
         "challenge": "The Archivist's Riddle: Read a book that has a mystery or secret at its core (+50 XP).",
-        "roomRewards": { "xp": 50, "inkDrops": 0, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 50,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -154,8 +224,16 @@
                 "description": "Purrs wisdom between riddles.",
                 "befriend": "Read a book with a cozy or comforting vibe.",
                 "hasLink": true,
-                "link": { "text": "Tome-Bound Cat", "url": "{{ site.baseurl }}/rewards.html#tome-bound-cat" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Tome-Bound Cat",
+                    "url": "{{ site.baseurl }}/rewards.html#tome-bound-cat"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -163,7 +241,12 @@
                 "type": "Friendly Creature",
                 "description": "Its feathers ink-black, gazing knowingly.",
                 "befriend": "Read a book that teaches you something new.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -176,11 +259,17 @@
         }
     },
     "6": {
+        "id": "dungeon-room-the-starlit-observatory",
         "name": "The Starlit Observatory",
         "wingId": "3",
         "description": "A domed chamber where stars drift across the ceiling like a living sky. Telescopes of brass and crystal point toward unknown worlds.",
         "challenge": "The Starlit Observatory: Read a book with a cosmic or future setting (+10 Ink Drops).",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -190,8 +279,16 @@
                 "description": "Tiny but fierce, curling around an astrolabe.",
                 "befriend": "Read a book with a dragon or a fire element.",
                 "hasLink": true,
-                "link": { "text": "Pocket Dragon", "url": "{{ site.baseurl }}/rewards.html#pocket-dragon" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Pocket Dragon",
+                    "url": "{{ site.baseurl }}/rewards.html#pocket-dragon"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -200,7 +297,12 @@
                 "description": "Towering and terrible, offering honeyed bargains.",
                 "defeat": "Read a book with a morally gray love interest or a deceptive character.",
                 "befriend": "Read a book where power is the main theme.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -214,11 +316,17 @@
         }
     },
     "7": {
+        "id": "dungeon-room-the-neglected-archives",
         "name": "The Neglected Archives",
         "wingId": "5",
         "description": "Stacks of dust-caked scrolls sag in forgotten alcoves, watched by shadowy eyes.",
         "challenge": "The Neglected Archives: Read a book with a ghost-like being or a death theme.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -228,7 +336,12 @@
                 "description": "Lingering over half-burned records.",
                 "defeat": "Read a book with a ghost-like being or a death theme.",
                 "befriend": "Read a book where a character finds a way to move on from a tragic event.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -237,7 +350,12 @@
                 "description": "Rising from the dust with hunger and grace.",
                 "defeat": "Read a book with an immortal or night-dwelling creature.",
                 "befriend": "Read a book where desire or temptation plays a major role.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -252,20 +370,32 @@
         }
     },
     "8": {
+        "id": "dungeon-room-the-authors-study",
         "name": "The Author's Study",
         "wingId": "1",
         "description": "Candles gutter beside ink-stained desks, their wax frozen mid-drip. Drafts lie unfinished, quills snapped in haste.",
         "challenge": "The Author's Study: Read a book by the author you think used this study. Optional journaling: describe whose study this might be.",
-        "roomRewards": { "xp": 0, "inkDrops": 0, "paperScraps": 10, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 10,
+            "items": []
+        },
         "encountersDetailed": [],
         "encounters": {}
     },
     "9": {
+        "id": "dungeon-room-the-endless-corridor",
         "name": "The Endless Corridor",
         "wingId": "4",
         "description": "Door after door stretches into eternity, each pulsing with unread stories. The echo of your steps threatens to never end.",
         "challenge": "The Endless Corridor: Read a book that is part of a series you have not started.",
-        "roomRewards": { "xp": 0, "inkDrops": 15, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 15,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -274,7 +404,12 @@
                 "type": "Friendly Creature",
                 "description": "Darting from door to door.",
                 "befriend": "Read a book you've been putting off for a fun, easy-to-read, or relaxing read.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -282,7 +417,12 @@
                 "type": "Monster",
                 "description": "Slithering down the walls, devouring titles whole.",
                 "defeat": "Read a book with a character who overcomes a seemingly impossible obstacle.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -295,11 +435,19 @@
         }
     },
     "10": {
+        "id": "dungeon-room-the-grand-gallery",
         "name": "The Grand Gallery",
         "wingId": "1",
         "description": "Oil paintings leer from gilded frames, their subjects shifting when you look away.",
         "challenge": "The Grand Gallery: Read a book you've had on your TBR for over a year.",
-        "roomRewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Gilded Painting"] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Gilded Painting"
+            ]
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -309,8 +457,16 @@
                 "description": "Wings glowing faintly like painted glass.",
                 "befriend": "Read a book with something hidden or nocturnal.",
                 "hasLink": true,
-                "link": { "text": "Mystical Moth", "url": "{{ site.baseurl }}/rewards.html#mystical-moth" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Mystical Moth",
+                    "url": "{{ site.baseurl }}/rewards.html#mystical-moth"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -318,7 +474,12 @@
                 "type": "Monster",
                 "description": "Clattering from its frame. (Cannot be befriended).",
                 "defeat": "Read a book with a foiled cover.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -331,11 +492,18 @@
         }
     },
     "11": {
+        "id": "dungeon-room-the-shrouds-heart",
         "name": "The Shroud's Heart",
         "wingId": "5",
         "description": "Here the air is thick, trembling with the Shroud's presence. Shadows twist like ink smoke.",
         "challenge": "The Shroud's Heart: Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty.",
-        "roomRewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": [], "special": "Remove one Worn Page penalty if book is 5 stars" },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [],
+            "special": "Remove one Worn Page penalty if book is 5 stars"
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -345,7 +513,12 @@
                 "description": "Hulking, its voice a storm of curses.",
                 "defeat": "Read a book containing a curse or a monster-like being.",
                 "befriend": "Read a book where the main character must accept a tragic flaw.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -354,8 +527,16 @@
                 "description": "Flitting nervously, clutching half-burned parchment.",
                 "befriend": "Read a book that is 300 pages or less.",
                 "hasLink": true,
-                "link": { "text": "Page Sprite", "url": "{{ site.baseurl }}/rewards.html#page-sprite" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Page Sprite",
+                    "url": "{{ site.baseurl }}/rewards.html#page-sprite"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -369,18 +550,29 @@
         }
     },
     "12": {
+        "id": "dungeon-room-the-mimics-lair",
         "name": "The Mimic's Lair",
         "wingId": "5",
         "description": "Shelves and chairs twitch with hidden hunger, waiting for you to turn your back.",
         "challenge": "The Mimic's Lair: Read a book that subverts a common trope.",
-        "roomRewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 5,
+            "items": []
+        },
         "encountersDetailed": [
             {
                 "name": "Mimic",
                 "type": "Monster",
                 "description": "Lunging from false bindings. (Cannot be befriended).",
                 "defeat": "Read a book that feels deceptive or has a major twist.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -390,11 +582,17 @@
         }
     },
     "13": {
+        "id": "dungeon-room-the-philosophy-alcove",
         "name": "The Philosophy Alcove",
         "wingId": "1",
         "description": "A quiet corner where ancient philosophers once debated. Busts of forgotten thinkers line the walls, their stone eyes seeming to follow you. Dusty scrolls containing ethical arguments lie scattered across reading tables.",
         "challenge": "The Philosophy Alcove: Read a philosophy book, memoir, or thought-provoking non-fiction.",
-        "roomRewards": { "xp": 50, "inkDrops": 0, "paperScraps": 5, "items": [] },
+        "roomRewards": {
+            "xp": 50,
+            "inkDrops": 0,
+            "paperScraps": 5,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -404,8 +602,16 @@
                 "description": "A tiny celestial elephant with golden wings, seeking wisdom.",
                 "befriend": "Read a book that explores faith, religious ideology, or spiritual themes.",
                 "hasLink": true,
-                "link": { "text": "Baby Hollyphant", "url": "{{ site.baseurl }}/rewards.html#baby-hollyphant" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Baby Hollyphant",
+                    "url": "{{ site.baseurl }}/rewards.html#baby-hollyphant"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -413,7 +619,12 @@
                 "type": "Monster",
                 "description": "A swirling mass of words and competing ideas.",
                 "defeat": "Read a book with strong arguments or persuasive writing.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -426,11 +637,19 @@
         }
     },
     "14": {
+        "id": "dungeon-room-the-ballroom",
         "name": "The Ballroom",
         "wingId": "2",
         "description": "A once-grand hall where characters from countless romance novels seem to have left their echoes. The parquet floor is scuffed but still beautiful, and ghostly music drifts through the air.",
         "challenge": "The Ballroom: Read a romance novel with a ball, party, or social gathering scene.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 5, "items": ["Dancing Shoes"] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 5,
+            "items": [
+                "Dancing Shoes"
+            ]
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -439,7 +658,12 @@
                 "type": "Friendly Creature",
                 "description": "A beautiful and dangerous fae noble from the courts beyond.",
                 "befriend": "Read a book featuring fae courts or fae romance.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -448,7 +672,12 @@
                 "description": "A creature that tangles emotions into painful knots.",
                 "defeat": "Read a book with a happy or hopeful romantic ending.",
                 "befriend": "Read a book that explores heartbreak with compassion.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -462,11 +691,17 @@
         }
     },
     "15": {
+        "id": "dungeon-room-the-tearoom",
         "name": "The Tearoom",
         "wingId": "2",
         "description": "Delicate china sits on dusty shelves, and comfortable armchairs circle small tables. This space whispers of intimate conversations and quiet contemporary moments.",
         "challenge": "The Tearoom: Read a book set involving a café, restaurant, or domestic setting.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -476,8 +711,16 @@
                 "description": "A swirling, aromatic spirit that smells of comfort.",
                 "befriend": "Read a cozy book.",
                 "hasLink": true,
-                "link": { "text": "Coffee Elemental", "url": "{{ site.baseurl }}/rewards.html#coffee-elemental" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Coffee Elemental",
+                    "url": "{{ site.baseurl }}/rewards.html#coffee-elemental"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -485,7 +728,12 @@
                 "type": "Friendly Creature",
                 "description": "Means well but can't help meddling in everyone's affairs.",
                 "befriend": "Read a book about a character who had to live up to unrelenting expectations.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -498,11 +746,17 @@
         }
     },
     "16": {
+        "id": "dungeon-room-the-stage",
         "name": "The Stage",
         "wingId": "2",
         "description": "Velvet curtains hang in tatters, and the stage boards creak with phantom footsteps. This is where dramatic stories reach their crescendo, where emotions run raw and real.",
         "challenge": "The Stage: Read a book with high emotional stakes or dramatic conflict.",
-        "roomRewards": { "xp": 50, "inkDrops": 0, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 50,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -511,7 +765,12 @@
                 "type": "Friendly Creature",
                 "description": "Displays emotional scenes in its magnificent tail.",
                 "befriend": "Read a play or a book based on or inspired by a popular play.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -519,7 +778,12 @@
                 "type": "Monster",
                 "description": "An animated cursed mask that feeds on sorrow.",
                 "defeat": "Judge a book by its cover - pick a book you think will be good based solely on the cover.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -532,11 +796,17 @@
         }
     },
     "17": {
+        "id": "dungeon-room-the-laboratory",
         "name": "The Laboratory",
         "wingId": "3",
         "description": "Glass beakers and copper tubes snake across tables. Crystallized experiments sit frozen mid-reaction. This is where curiosity meets methodology, where science awakens wonder.",
         "challenge": "The Laboratory: Read a book featuring scientific discovery, research, or experimentation.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 5, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 5,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -546,8 +816,16 @@
                 "description": "A helpful mechanical being still following its protocols.",
                 "befriend": "Read a book with robots, AI, or helpful technology.",
                 "hasLink": true,
-                "link": { "text": "Lab Assistant Automaton", "url": "{{ site.baseurl }}/rewards.html#lab-assistant-automaton" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Lab Assistant Automaton",
+                    "url": "{{ site.baseurl }}/rewards.html#lab-assistant-automaton"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -555,7 +833,12 @@
                 "type": "Monster",
                 "description": "A volatile reaction given terrible sentience.",
                 "defeat": "Read a book where science or technology goes awry.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -568,11 +851,17 @@
         }
     },
     "18": {
+        "id": "dungeon-room-the-clockwork-chamber",
         "name": "The Clockwork Chamber",
         "wingId": "3",
         "description": "Massive gears tick in impossible patterns. Time seems to flow strangely here—forwards, backwards, sideways. Pocket watches hang suspended in mid-air, their hands spinning wildly.",
         "challenge": "The Clockwork Chamber: Read a book involving time travel, alternate timelines, or temporal paradoxes.",
-        "roomRewards": { "xp": 50, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 50,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -582,7 +871,12 @@
                 "description": "Guards the flow of time with mechanical precision.",
                 "defeat": "Read a book where characters must race against time.",
                 "befriend": "Read a book with numbers in the title.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -591,8 +885,16 @@
                 "description": "Exists in multiple moments simultaneously.",
                 "befriend": "Read a book with non-linear storytelling or time jumps.",
                 "hasLink": true,
-                "link": { "text": "Temporal Sprite", "url": "{{ site.baseurl }}/rewards.html#temporal-sprite" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Temporal Sprite",
+                    "url": "{{ site.baseurl }}/rewards.html#temporal-sprite"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -606,11 +908,17 @@
         }
     },
     "19": {
+        "id": "dungeon-room-the-astral-archives",
         "name": "The Astral Archives",
         "wingId": "3",
         "description": "A chamber that seems to float in the void between stars. Holographic star maps rotate slowly, and gravity feels optional. Through crystalline windows, distant galaxies wheel in impossible colors.",
         "challenge": "The Astral Archives: Read a book set in space or featuring space exploration.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -619,7 +927,12 @@
                 "type": "Friendly Creature",
                 "description": "A being made of starlight and calculation.",
                 "befriend": "Read a book about characters who are lost.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -627,7 +940,12 @@
                 "type": "Monster",
                 "description": "A dangerous distortion in space-time itself.",
                 "defeat": "Read a book where things are not as they seem.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -640,11 +958,17 @@
         }
     },
     "20": {
+        "id": "dungeon-room-the-apothecary",
         "name": "The Apothecary",
         "wingId": "4",
         "description": "Dried herbs hang from the rafters, and glass bottles line every shelf. The air is thick with the scent of lavender and possibility. Mortar and pestle sit ready, waiting to grind ingredients into something transformative.",
         "challenge": "The Apothecary: Enjoy your favorite brew or potion while reading this book.",
-        "roomRewards": { "xp": 0, "inkDrops": 10, "paperScraps": 5, "items": [] },
+        "roomRewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 5,
+            "items": []
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -654,8 +978,16 @@
                 "description": "A tiny fairy that organizes reagents and whispers recipes.",
                 "befriend": "Read a book with an interesting magical system.",
                 "hasLink": true,
-                "link": { "text": "Ingredient Sprite", "url": "{{ site.baseurl }}/rewards.html#ingredient-sprite" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Ingredient Sprite",
+                    "url": "{{ site.baseurl }}/rewards.html#ingredient-sprite"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -664,8 +996,16 @@
                 "description": "A small dragon whose scales are made of dried flowers.",
                 "befriend": "Read a book that is green or has plants on the cover.",
                 "hasLink": true,
-                "link": { "text": "Herb Dragon", "url": "{{ site.baseurl }}/rewards.html#herb-dragon" },
-                "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 5, "items": [] }
+                "link": {
+                    "text": "Herb Dragon",
+                    "url": "{{ site.baseurl }}/rewards.html#herb-dragon"
+                },
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "items": []
+                }
             }
         ],
         "encounters": {
@@ -678,11 +1018,19 @@
         }
     },
     "21": {
+        "id": "dungeon-room-the-throne-room",
         "name": "The Throne Room",
         "wingId": "4",
         "description": "A towering space where power and magic intertwine. The throne sits empty, waiting for its rightful ruler—or perhaps its conqueror. Fae lights dance across vaulted ceilings, and the walls remember the weight of crowns.",
         "challenge": "The Throne Room: Read an epic fantasy or romantasy book featuring royalty, courts, or kingdoms.",
-        "roomRewards": { "xp": 50, "inkDrops": 10, "paperScraps": 0, "items": ["Dragon Fang"] },
+        "roomRewards": {
+            "xp": 50,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": [
+                "Dragon Fang"
+            ]
+        },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
             {
@@ -691,7 +1039,12 @@
                 "type": "Friendly Creature",
                 "description": "A witty fool who sees truths others miss.",
                 "befriend": "Read a fantasy that doesn't take itself too seriously or is humorous.",
-                "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 10,
+                    "paperScraps": 0,
+                    "items": []
+                }
             },
             {
                 "roll": "[3-4]",
@@ -700,7 +1053,12 @@
                 "description": "Ancient protector that tests worthiness.",
                 "defeat": "Read a book where characters claim their power or throne.",
                 "befriend": "Read a book where characters reject power for something more important.",
-                "rewards": { "xp": 30, "inkDrops": 0, "paperScraps": 0, "items": [] }
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "items": []
+                }
             }
         ],
         "encounters": {

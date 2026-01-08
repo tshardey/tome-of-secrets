@@ -1,27 +1,42 @@
 {
   "The Candlight Study": {
+    "id": "the-candlight-study",
+    "name": "The Candlight Study",
     "description": "Light a [scented] candle while you read."
   },
   "The Herbalist's Nook": {
+    "id": "the-herbalists-nook",
+    "name": "The Herbalist's Nook",
     "description": "Brew a special cup of tea or a hot beverage to enjoy with your book."
   },
   "The Soundscape Spire": {
+    "id": "the-soundscape-spire",
+    "name": "The Soundscape Spire",
     "description": "Create a vibe with ambient music or a 'bookish vibe' video on YouTube."
   },
   "The Excavation": {
+    "id": "the-excavation",
+    "name": "The Excavation",
     "description": "Clean and organize your reading space before you read."
   },
   "The Cozy Hearth": {
+    "id": "the-cozy-hearth",
+    "name": "The Cozy Hearth",
     "description": "Sit by a fire, real or from a television."
   },
   "The Soaking in Nature": {
+    "id": "the-soaking-in-nature",
+    "name": "The Soaking in Nature",
     "description": "Read outside in the grass or in your garden."
   },
   "The Wanderer's Path": {
+    "id": "the-wanderers-path",
+    "name": "The Wanderer's Path",
     "description": "Read in a new place, either in your home or somewhere new entirely."
   },
   "Head in the Clouds": {
+    "id": "head-in-the-clouds",
+    "name": "Head in the Clouds",
     "description": "Read in a cozy, overstuffed chair, bed, or another favorite comfortable spot."
   }
 }
-

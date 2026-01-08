@@ -38,8 +38,20 @@ jobs:
         with:
           node-version: 'lts/*'
       
+      - name: Install test dependencies
+        working-directory: ./tests
+        run: npm install
+      
+      - name: Validate game data
+        working-directory: ./tests
+        run: npm run validate-data
+      
       - name: Generate data exports
         run: node scripts/generate-data.js
+      
+      - name: Run tests
+        working-directory: ./tests
+        run: npm test
       
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1

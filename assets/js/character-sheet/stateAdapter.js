@@ -307,9 +307,20 @@ export class StateAdapter {
         return value || null;
     }
 
+    /**
+     * Move item from inventory to equipped
+     * Enforces invariants: automatically removes item from passive slots
+     * @param {number} index - Index of item in inventory
+     * @returns {Object|null} The moved item, or null if failed
+     */
     moveInventoryItemToEquipped(index) {
         const item = this.removeInventoryItem(index);
         if (!item) return null;
+        
+        // Enforce invariant: item cannot be equipped AND in passive slot
+        // Automatically remove from passive slots
+        this._removeItemFromPassiveSlots(item.name);
+        
         this.addEquippedItem(item);
         return item;
     }
@@ -620,7 +631,20 @@ export class StateAdapter {
         return value || null;
     }
 
+    /**
+     * Set item in passive item slot
+     * Enforces invariants: automatically unequips item if it's equipped
+     * @param {string} slotId - Slot ID
+     * @param {string|null} itemName - Item name to assign (or null to clear)
+     * @returns {Object|null} Updated slot or null if failed
+     */
     setPassiveSlotItem(slotId, itemName) {
+        // Enforce invariant: item cannot be equipped AND in passive slot
+        // Automatically unequip if item is being assigned to passive slot
+        if (itemName) {
+            this._unequipItemByName(itemName);
+        }
+        
         const { value } = this._mutateList(STORAGE_KEYS.PASSIVE_ITEM_SLOTS, list => {
             const slotIndex = list.findIndex(slot => slot.slotId === slotId);
             if (slotIndex === -1) {
@@ -658,7 +682,20 @@ export class StateAdapter {
         return value || null;
     }
 
+    /**
+     * Set familiar in passive familiar slot
+     * Enforces invariants: automatically unequips familiar if it's equipped
+     * @param {string} slotId - Slot ID
+     * @param {string|null} familiarName - Familiar name to assign (or null to clear)
+     * @returns {Object|null} Updated slot or null if failed
+     */
     setPassiveFamiliarSlotItem(slotId, familiarName) {
+        // Enforce invariant: familiar cannot be equipped AND in passive slot
+        // Automatically unequip if familiar is being assigned to passive slot
+        if (familiarName) {
+            this._unequipItemByName(familiarName);
+        }
+        
         const { value } = this._mutateList(STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS, list => {
             const slotIndex = list.findIndex(slot => slot.slotId === slotId);
             if (slotIndex === -1) {
@@ -668,6 +705,70 @@ export class StateAdapter {
             return { changed: true, value: list[slotIndex] };
         });
         return value || null;
+    }
+    
+    /**
+     * Check if an item is currently equipped
+     * @param {string} itemName - Item name to check
+     * @returns {boolean}
+     */
+    isEquipped(itemName) {
+        const equippedItems = this.getEquippedItems();
+        return equippedItems.some(item => item.name === itemName);
+    }
+    
+    /**
+     * Unequip an item by name (helper for invariant enforcement)
+     * @private
+     * @param {string} itemName - Item name to unequip
+     * @returns {Object|null} The unequipped item, or null if not found
+     */
+    _unequipItemByName(itemName) {
+        const equippedItems = this.getEquippedItems();
+        const equippedIndex = equippedItems.findIndex(item => item.name === itemName);
+        if (equippedIndex !== -1) {
+            const item = this.removeEquippedItem(equippedIndex);
+            // Ensure item is in inventory after unequipping
+            if (item) {
+                const inventoryItems = this.getInventoryItems();
+                const inInventory = inventoryItems.some(i => i.name === itemName);
+                if (!inInventory) {
+                    this.addInventoryItem(item);
+                }
+            }
+            return item;
+        }
+        return null;
+    }
+    
+    /**
+     * Remove item from all passive slots (helper for invariant enforcement)
+     * @private
+     * @param {string} itemName - Item name to remove
+     */
+    _removeItemFromPassiveSlots(itemName) {
+        // Directly mutate lists to avoid recursion (setPassiveSlotItem would trigger unequip logic)
+        this._mutateList(STORAGE_KEYS.PASSIVE_ITEM_SLOTS, list => {
+            let changed = false;
+            for (const slot of list) {
+                if (slot.itemName === itemName) {
+                    slot.itemName = null;
+                    changed = true;
+                }
+            }
+            return { changed };
+        });
+        
+        this._mutateList(STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS, list => {
+            let changed = false;
+            for (const slot of list) {
+                if (slot.itemName === itemName) {
+                    slot.itemName = null;
+                    changed = true;
+                }
+            }
+            return { changed };
+        });
     }
 }
 

@@ -1,39 +1,60 @@
 {
     "The Librarian's Hoard": {
+        "id": "the-librarians-hoard",
+        "name": "The Librarian's Hoard",
         "description": "Gain +150 Ink Drops and +20 Paper Scraps.",
         "duration": "one-time",
         "source": "Dungeon Completion Reward",
-        "rewardModifier": { "inkDrops": 150, "paperScraps": 20 }
+        "rewardModifier": {
+            "inkDrops": 150,
+            "paperScraps": 20
+        }
     },
     "Long Read Focus": {
+        "id": "long-read-focus",
+        "name": "Long Read Focus",
         "description": "+10 Ink Drops per 100 pages over 300",
         "duration": "one-time",
         "source": "Side Quest: The Arcane Grimoire",
-        "rewardModifier": { "inkDrops": 10 }
+        "rewardModifier": {
+            "inkDrops": 10
+        }
     },
     "Disjointed Perception": {
+        "id": "disjointed-perception",
+        "name": "Disjointed Perception",
         "description": "+10 Ink Drops, +5 Paper Scraps",
         "duration": "one-time",
         "source": "Side Quest: The Scarecrow's Cornfield",
-        "rewardModifier": { "inkDrops": 10, "paperScraps": 5 }
+        "rewardModifier": {
+            "inkDrops": 10,
+            "paperScraps": 5
+        }
     },
     "Librarian's Blessing": {
+        "id": "librarians-blessing",
+        "name": "Librarian's Blessing",
         "description": "You may remove up to two Worn Page penalties.",
         "duration": "one-time",
         "source": "Dungeon Completion Reward",
         "rewardModifier": {}
     },
     "Enchanted Focus": {
+        "id": "enchanted-focus",
+        "name": "Enchanted Focus",
         "description": "The next three books you complete grant a x1.5 Ink Drop bonus.",
         "duration": "one-time",
         "source": "Dungeon Completion Reward",
-        "rewardModifier": { "inkDropsMultiplier": 1.5 }
+        "rewardModifier": {
+            "inkDropsMultiplier": 1.5
+        }
     },
     "Unwavering Resolve": {
+        "id": "unwavering-resolve",
+        "name": "Unwavering Resolve",
         "description": "For the next month, you are immune to Worn Page penalties.",
         "duration": "until-end-month",
         "source": "Dungeon Completion Reward",
         "rewardModifier": {}
     }
 }
-

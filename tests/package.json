@@ -4,7 +4,8 @@
   "description": "A solo TBR journaling game inspired by an assortment of role playing games.",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "validate-data": "node ../scripts/validate-data.js"
   },
   "keywords": [
     "jekyll",

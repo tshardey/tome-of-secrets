@@ -20,6 +20,7 @@ import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import * as data from '../character-sheet/data.js';
 import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
+import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
 
 export class QuestController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -537,10 +538,7 @@ export class QuestController extends BaseController {
 
                 // Calculate and add blueprint rewards to quests before storing
                 quests.forEach(quest => {
-                    const blueprintReward = this.calculateBlueprintReward(quest);
-                    if (blueprintReward > 0 && quest.rewards) {
-                        quest.rewards.blueprints = blueprintReward;
-                    }
+                    applyBlueprintRewardToQuest(quest);
                 });
 
                 // Handle restoration project completion BEFORE adding to completed history.
@@ -680,10 +678,7 @@ export class QuestController extends BaseController {
         const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool);
 
         // Calculate and add blueprints to rewards BEFORE storing the quest
-        const blueprintReward = this.calculateBlueprintReward(completedQuest);
-        if (blueprintReward > 0 && completedQuest.rewards) {
-            completedQuest.rewards.blueprints = blueprintReward;
-        }
+        applyBlueprintRewardToQuest(completedQuest);
 
         // Handle restoration project completion BEFORE moving quest to completed history.
         // This prevents inconsistent state if blueprint spend fails (e.g., player spent blueprints elsewhere).
@@ -707,6 +702,15 @@ export class QuestController extends BaseController {
 
         // Award blueprints to state (currency)
         this.awardBlueprintsForQuest(completedQuest);
+        
+        // Display calculation receipt if available
+        if (completedQuest.receipt && uiModule.displayCalculationReceipt) {
+            uiModule.displayCalculationReceipt(
+                completedQuest.receipt,
+                completedQuest.type,
+                completedQuest.prompt
+            );
+        }
         
         // Update currency with finalized rewards
         if (this.updateCurrency) {
@@ -767,72 +771,13 @@ export class QuestController extends BaseController {
     }
     
     /**
-     * Calculate blueprint reward for a quest type
-     * @param {Object} quest - The quest
-     * @returns {number} Blueprint reward amount
-     */
-    calculateBlueprintReward(quest) {
-        let blueprintReward = 0;
-
-        if (quest.type === '♥ Organize the Stacks') {
-            // Genre quest - check genreQuests for blueprint reward
-            if (data.genreQuests) {
-                const normalize = (value) => String(value ?? '').trim().toLowerCase();
-                // Some historical prompts may include extra text like "Fantasy: Read ..."
-                const extractGenreFromPrompt = (prompt) => String(prompt ?? '').split(':')[0].trim();
-
-                const promptRaw = String(quest.prompt ?? '');
-                const promptGenre = normalize(extractGenreFromPrompt(promptRaw));
-
-                // Prefer exact genre equality (prevents substring collisions like "Fiction" vs "Speculative Fiction")
-                for (const genreQuest of Object.values(data.genreQuests)) {
-                    if (!genreQuest) continue;
-                    if (promptGenre && normalize(genreQuest.genre) === promptGenre) {
-                        blueprintReward = genreQuest.blueprintReward || 3;
-                        break;
-                    }
-                }
-
-                // Fallback: if we didn't find an exact match, allow a contained match but choose the longest genre match.
-                // This keeps compatibility with any prompts that include the genre inside longer text without being
-                // vulnerable to "shorter genre" matches hijacking longer ones.
-                if (blueprintReward === 0 && promptRaw) {
-                    let best = null; // { len: number, reward: number }
-                    const promptNorm = normalize(promptRaw);
-                    for (const genreQuest of Object.values(data.genreQuests)) {
-                        if (!genreQuest?.genre) continue;
-                        const genreNorm = normalize(genreQuest.genre);
-                        if (!genreNorm) continue;
-                        if (promptNorm.includes(genreNorm)) {
-                            const reward = genreQuest.blueprintReward || 3;
-                            if (!best || genreNorm.length > best.len) {
-                                best = { len: genreNorm.length, reward };
-                            }
-                        }
-                    }
-                    if (best) blueprintReward = best.reward;
-                }
-            }
-            // Default if no specific match
-            if (blueprintReward === 0) {
-                blueprintReward = 3;
-            }
-        } else if (quest.type === '⭐ Extra Credit') {
-            blueprintReward = GAME_CONFIG.restoration.extraCreditBlueprintReward;
-        }
-        // Note: Dungeon Crawl quests do NOT award blueprints
-
-        return blueprintReward;
-    }
-
-    /**
      * Award blueprints based on quest type
      * @param {Object} quest - The completed quest
      * @returns {number} Blueprint reward amount
      */
     awardBlueprintsForQuest(quest) {
         const { stateAdapter } = this;
-        const blueprintReward = this.calculateBlueprintReward(quest);
+        const blueprintReward = calculateBlueprintReward(quest);
 
         if (blueprintReward > 0) {
             stateAdapter.addDustyBlueprints(blueprintReward);

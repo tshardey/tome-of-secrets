@@ -29,6 +29,15 @@ It assumes you’ll spend a few days/weeks validating Cloud Save in production f
 ### UX cleanups
 - Removed the old **Data Management** (download/upload) section.
 
+### Phase 3: Comprehensive Refactor ✅ COMPLETE
+- **Expansion manifest system** - `expansions.json` and `contentRegistry.js` for feature gating
+- **Stable IDs** - All content files now have stable kebab-case IDs with backward-compatible lookups
+- **Data validation** - Automated validation script with CI/CD integration
+- **Calculation transparency** - Reward receipts show full breakdown of all calculations
+- **Service extraction** - All business logic extracted from UI into testable service modules
+- **UI/logic separation** - All UI functions refactored to pure renderers using view models
+- **Comprehensive testing** - 68+ tests covering all new services and view models
+
 ---
 
 ## Phase 0 — Production validation checklist (do this first)
@@ -142,29 +151,132 @@ The previous auto-sync was a conservative polling loop (30-second intervals).
 
 ---
 
-## Phase 3 — Make expansions data-driven and painless
+## Phase 3 — Make expansions data-driven and painless ✅ COMPLETE
 
-The expansion “ordeal” is usually caused by mixing:
+**Status:** ✅ Implemented and tested
+
+The expansion "ordeal" is usually caused by mixing:
 - engine rules + UI logic + content data + save state changes
 
 ### Goal
-- Adding expansions becomes: “add JSON data + optional renderer + optional migrations”.
+- Adding expansions becomes: "add JSON data + optional renderer + optional migrations".
 
-### Tasks
-- **Content manifest**:
-  - Add a data file that declares installed expansions and version(s).
-  - Use it to conditionally render features and avoid “spooky action at a distance”.
-- **Save schema versioning**:
-  - You already have schema versioning; continue using it aggressively.
-  - Add explicit migration steps for each expansion.
-- **IDs everywhere**:
-  - Prefer stable IDs for quests/projects/items instead of relying on display strings.
+### Implementation
 
-### Optional
-- Build a small “data audit” script that validates:
-  - required IDs exist
-  - no duplicates
-  - item references resolve
+#### Content Manifest System
+- **Created `assets/data/expansions.json`**:
+  - Declares core game and all expansions (currently `library-restoration`)
+  - Each expansion specifies version, enabled status, features, and data files
+  - All expansions enabled by default for players
+- **Created `assets/js/config/contentRegistry.js`**:
+  - Runtime registry for querying expansion status
+  - Provides functions: `isExpansionEnabled()`, `getExpansionVersion()`, `getEnabledFeatures()`, etc.
+  - Exported via `scripts/generate-data.js`
+
+#### Stable IDs System
+- **Added stable kebab-case IDs to all content files**:
+  - `allItems.json` - Added `id` and `name` fields to all items
+  - `genreQuests.json` - Added `id` fields
+  - `sideQuestsDetailed.json` - Added `id` fields
+  - `curseTableDetailed.json` - Added `id` fields
+  - `masteryAbilities.json` - Added `id` and `name` fields
+  - `atmosphericBuffs.json` - Added `id` and `name` fields
+  - `temporaryBuffs.json` - Added `id` and `name` fields
+  - `temporaryBuffsFromRewards.json` - Added `id` and `name` fields
+  - `dungeonRooms.json` - Added `id` fields
+  - `wings.json` - IDs already existed
+  - `restorationProjects.json` - Keys used as IDs
+- **Updated `assets/js/character-sheet/data.js`**:
+  - Added ID lookup helpers for all content types (e.g., `itemsById`, `getItem()`, `getGenreQuest()`, etc.)
+  - Maintains backward compatibility with name-based lookups
+  - All lookups support both ID and name resolution
+
+#### Data Validation Script
+- **Created `scripts/validate-data.js`**:
+  - Validates unique IDs within categories
+  - Validates kebab-case format for IDs
+  - Validates item references in quest rewards
+  - Validates quest references
+  - Validates required fields and types
+  - Validates cross-references (expansion features reference valid data)
+  - Detects duplicate display names that could cause confusion
+- **Integrated into CI/CD**:
+  - Added to `.github/workflows/jekyll.yml` to run on every push
+  - Runs before tests and build
+  - Fails build if validation errors are found
+
+#### Calculation Trust & Transparency
+- **Enhanced `RewardCalculator.js`**:
+  - Added calculation receipt system to `Reward` class
+  - Receipts track base values, modifiers (with sources), and final totals
+  - All calculation methods populate receipt accurately
+- **Receipt display in UI**:
+  - Tooltips on reward indicators show detailed breakdown
+  - Modal dialog displays full calculation receipt on quest completion
+  - Receipts stored with completed quests for later review
+- **Comprehensive test coverage**:
+  - Created `tests/RewardCalculatorReceipts.test.js` with 20+ test cases
+  - Tests verify receipt accuracy for all calculation scenarios
+
+#### Service Extraction & Business Logic Separation
+- **Created service modules**:
+  - `RewardCalculator.js` - Centralized all reward calculations (already existed, enhanced)
+  - `QuestRewardService.js` - Blueprint reward calculations
+  - `QuestService.js` - Quest-related calculations and formatting
+  - `InventoryService.js` - Inventory item hydration and filtering
+  - `SlotService.js` - Slot limit calculations
+  - `AbilityService.js` - Ability filtering and formatting
+  - `AtmosphericBuffService.js` - Atmospheric buff calculations and logic
+- **Post-load repairs**:
+  - Created `assets/js/character-sheet/postLoadRepair.js`
+  - Moved repair logic from `character-sheet.js`
+  - Contains `repairCompletedRestorationProjects()` and `repairCompletedFamiliarEncounters()`
+  - Called after `loadState()` to apply all necessary repairs
+- **Invariant enforcement**:
+  - Enhanced `StateAdapter` to enforce state invariants
+  - Items cannot be both equipped and in passive slots
+  - Automatic unequipping when items moved to passive slots
+  - Removed duplicate logic from controllers
+
+#### UI/Logic Separation & View Models
+- **Refactored all UI rendering functions** to be pure renderers:
+  - `renderLoadout()` - Now accepts view model, performs no calculations
+  - `renderActiveAssignments()`, `renderCompletedQuests()`, `renderDiscardedQuests()` - Use view models
+  - `renderMasteryAbilities()` - Uses view model
+  - `renderAtmosphericBuffs()` - Uses view model
+  - `renderActiveCurses()`, `renderCompletedCurses()` - Use view models
+  - `renderBenefits()`, `renderPermanentBonuses()` - Use view models
+- **Created view model layer**:
+  - `inventoryViewModel.js` - Transforms state + services into UI-ready inventory data
+  - `questViewModel.js` - Transforms quest state into UI-ready quest data
+  - `abilityViewModel.js` - Transforms ability state into UI-ready data
+  - `atmosphericBuffViewModel.js` - Transforms buff state into UI-ready data
+  - `curseViewModel.js` - Transforms curse state into UI-ready data
+  - `generalInfoViewModel.js` - Transforms character info into UI-ready data
+- **Backward compatibility maintained**:
+  - All UI functions have backward-compatible wrappers
+  - Existing code continues to work without changes
+  - Gradual migration path for future updates
+
+### Tests
+- ✅ Comprehensive test suite created:
+  - `tests/services/AbilityService.test.js` - 18 tests
+  - `tests/services/AtmosphericBuffService.test.js` - 14 tests
+  - `tests/viewModels/abilityViewModel.test.js` - 6 tests
+  - `tests/viewModels/atmosphericBuffViewModel.test.js` - 6 tests
+  - `tests/viewModels/curseViewModel.test.js` - 5 tests
+  - `tests/viewModels/generalInfoViewModel.test.js` - 10 tests
+  - `tests/RewardCalculatorReceipts.test.js` - 20+ tests
+  - All 68+ tests passing
+
+### Notes
+- All expansion content enabled by default
+- Stable IDs prevent display name issues
+- Calculation receipts provide full transparency for reward calculations
+- UI functions are now pure renderers with no business logic
+- All business logic is in testable service modules
+- State access consistently uses storage keys
+- Architecture is consistent across all components
 
 ---
 
@@ -215,8 +327,10 @@ Current model is one snapshot per user. This is correct for “solo game”.
 
 1. ✅ **Phase 1: Auto-persist character info inputs (debounced).** — COMPLETE
 2. ✅ **Phase 2: Event-driven auto-sync (debounced on change).** — COMPLETE
-3. Phase 3: Expansion manifest + data validation script.
-4. Phase 4: UX improvements (toasts, status indicators).
+3. ✅ **Phase 3: Expansion manifest + data validation + UI/logic separation.** — COMPLETE
+4. **Phase 4: UX improvements (toasts, status indicators).** — NEXT
+5. Phase 5: Optional - Move from Jekyll-as-app to "app shell"
+6. Phase 6: Cloud save evolution (multiple save slots, history)
 
 ---
 
