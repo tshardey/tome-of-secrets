@@ -74,7 +74,8 @@ function saveFormData(form) {
     }
     
     // Save to localStorage (same storage key as saveState uses for form data)
-    const saved = safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData);
+    // Suppress events from safeSetJSON so we can emit with the correct source
+    const saved = safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData, true);
     if (!saved) {
         console.warn('Form persistence: Failed to save form data to localStorage');
         return;
@@ -83,11 +84,14 @@ function saveFormData(form) {
     // Show save indicator
     showSaveIndicator();
     
-    // Emit local state changed event (prep for Phase 2 event-driven sync)
+    // Emit local state changed event with source: 'form' (more descriptive than 'localStorage')
     window.dispatchEvent(new CustomEvent('tos:localStateChanged', { 
         detail: { source: 'form' } 
     }));
 }
+
+// Store timeout ID so we can clear it if showSaveIndicator is called multiple times
+let saveIndicatorTimeout = null;
 
 /**
  * Shows the save indicator briefly
@@ -99,12 +103,19 @@ export function showSaveIndicator() {
         return;
     }
     
+    // Clear any existing timeout to extend visibility
+    if (saveIndicatorTimeout !== null) {
+        clearTimeout(saveIndicatorTimeout);
+        saveIndicatorTimeout = null;
+    }
+    
     // Remove hidden class to show
     indicator.classList.remove('hidden');
     
     // Hide after 2 seconds
-    setTimeout(() => {
+    saveIndicatorTimeout = setTimeout(() => {
         indicator.classList.add('hidden');
+        saveIndicatorTimeout = null;
     }, 2000);
 }
 

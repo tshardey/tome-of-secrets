@@ -154,7 +154,7 @@ export class BaseQuestHandler {
     static completeActiveQuest(quest, background, wizardSchool = null) {
         // Recalculate base rewards from scratch to ensure receipt base values are correct
         // This is important because stored rewards are plain JSON objects that don't have receipt info
-        const baseRewards = RewardCalculator.getBaseRewards(
+        let baseRewards = RewardCalculator.getBaseRewards(
             quest.type,
             quest.prompt || '',
             {
@@ -164,6 +164,38 @@ export class BaseQuestHandler {
                 isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true
             }
         );
+        
+        // If recalculation resulted in a fallback reward (e.g., dungeon quest without roomNumber)
+        // and we have stored rewards that look more complete, use stored rewards as base instead
+        // This handles legacy quests and test cases that don't have full quest metadata
+        if (quest.rewards && quest.type === '♠ Dungeon Crawl' && !quest.roomNumber) {
+            // Check if we got a fallback reward (only default inkDrops, no XP/paperScraps)
+            const isFallbackReward = baseRewards.inkDrops === 10 && 
+                                     baseRewards.xp === 0 && 
+                                     baseRewards.paperScraps === 0 &&
+                                     baseRewards.blueprints === 0;
+            
+            // Check if stored rewards look like actual quest rewards (not just defaults)
+            const storedHasContent = (quest.rewards.xp > 0 || quest.rewards.inkDrops > 0 || 
+                                     quest.rewards.paperScraps > 0 || quest.rewards.blueprints > 0);
+            
+            if (isFallbackReward && storedHasContent) {
+                // Use stored rewards as base, but create a proper Reward object with receipt
+                baseRewards = new Reward({
+                    xp: quest.rewards.xp || 0,
+                    inkDrops: quest.rewards.inkDrops || 0,
+                    paperScraps: quest.rewards.paperScraps || 0,
+                    blueprints: quest.rewards.blueprints || 0,
+                    items: quest.rewards.items || []
+                });
+                // Set receipt base values from the stored rewards
+                baseRewards.receipt.base.xp = baseRewards.xp;
+                baseRewards.receipt.base.inkDrops = baseRewards.inkDrops;
+                baseRewards.receipt.base.paperScraps = baseRewards.paperScraps;
+                baseRewards.receipt.base.blueprints = baseRewards.blueprints;
+                baseRewards.receipt.final = { ...baseRewards.receipt.base };
+            }
+        }
         
         // Preserve any items that were already in the quest (e.g., from side quests)
         if (quest.rewards?.items && Array.isArray(quest.rewards.items)) {
