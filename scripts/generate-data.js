@@ -19,6 +19,7 @@ const OUTPUT_FILE = path.join(__dirname, '../assets/js/character-sheet/data.json
 
 // Map of JSON files to export names
 const JSON_EXPORTS = {
+    'expansions.json': 'expansions',
     'xpLevels.json': 'xpLevels',
     'permanentBonuses.json': 'permanentBonuses',
     'atmosphericBuffs.json': 'atmosphericBuffs',

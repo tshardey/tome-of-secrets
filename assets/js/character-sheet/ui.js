@@ -15,6 +15,13 @@ import {
     renderTemporaryBuffRow,
     renderAbilityCard
 } from './renderComponents.js';
+import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
+import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
+import { createQuestListViewModel } from '../viewModels/questViewModel.js';
+import { createCurseListViewModel } from '../viewModels/curseViewModel.js';
+import { createAbilityViewModel } from '../viewModels/abilityViewModel.js';
+import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffViewModel.js';
+import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
     const currentLevel = parseIntOr(levelInput.value, 1);
@@ -25,19 +32,18 @@ export function renderPermanentBonuses(levelInput) {
     const bonusList = document.getElementById('permanentBonusesList');
     const currentLevel = parseIntOr(levelInput.value, 1);
     clearElement(bonusList);
-    let bonusesFound = false;
-
-    for (const level in data.permanentBonuses) {
-        if (currentLevel >= level) {
-            bonusesFound = true;
+    
+    // Create view model
+    const viewModel = createPermanentBonusesViewModel(currentLevel);
+    
+    if (viewModel.hasBonuses) {
+        viewModel.bonuses.forEach(({ content }) => {
             const li = document.createElement('li');
             // Permanent bonuses from JSON are trusted content
-            li.innerHTML = data.permanentBonuses[level];
+            li.innerHTML = content;
             bonusList.appendChild(li);
-        }
-    }
-
-    if (!bonusesFound) {
+        });
+    } else {
         const li = document.createElement('li');
         li.textContent = '-- No bonuses unlocked at this level --';
         bonusList.appendChild(li);
@@ -45,46 +51,53 @@ export function renderPermanentBonuses(levelInput) {
 }
 
 export function renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect) {
+    const selectedBackground = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+    const selectedSchool = wizardSchoolSelect ? wizardSchoolSelect.value : '';
+    const selectedSanctum = librarySanctumSelect ? librarySanctumSelect.value : '';
+    
+    // Create view model
+    const viewModel = createBenefitsViewModel(selectedBackground, selectedSchool, selectedSanctum);
+    
     // Render Keeper Background
     const backgroundDescriptionDisplay = document.getElementById('keeperBackgroundDescriptionDisplay');
     const backgroundBenefitDisplay = document.getElementById('keeperBackgroundBenefitDisplay');
-    
-    const selectedBackground = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-    if (selectedBackground && keeperBackgrounds[selectedBackground]) {
-        // JSON data is trusted content
-        backgroundDescriptionDisplay.innerHTML = keeperBackgrounds[selectedBackground].description;
-        backgroundBenefitDisplay.innerHTML = keeperBackgrounds[selectedBackground].benefit;
-    } else {
-        backgroundDescriptionDisplay.textContent = '-- Select a background to see its description --';
-        backgroundBenefitDisplay.textContent = '-- Select a background to see its benefit --';
+    if (backgroundDescriptionDisplay && backgroundBenefitDisplay) {
+        if (viewModel.background.hasSelection) {
+            // JSON data is trusted content
+            backgroundDescriptionDisplay.innerHTML = viewModel.background.description;
+            backgroundBenefitDisplay.innerHTML = viewModel.background.benefit;
+        } else {
+            backgroundDescriptionDisplay.textContent = viewModel.background.description;
+            backgroundBenefitDisplay.textContent = viewModel.background.benefit;
+        }
     }
 
     // Render School Benefits
     const schoolDescriptionDisplay = document.getElementById('magicalSchoolDescriptionDisplay');
     const schoolBenefitDisplay = document.getElementById('magicalSchoolBenefitDisplay');
-
-    const selectedSchool = wizardSchoolSelect.value;
-    if (selectedSchool && data.schoolBenefits[selectedSchool]) {
-        // JSON data is trusted content
-        schoolDescriptionDisplay.innerHTML = data.schoolBenefits[selectedSchool].description;
-        schoolBenefitDisplay.innerHTML = data.schoolBenefits[selectedSchool].benefit;
-    } else {
-        schoolDescriptionDisplay.textContent = '-- Select a school to see its description --';
-        schoolBenefitDisplay.textContent = '-- Select a school to see its benefit --';
+    if (schoolDescriptionDisplay && schoolBenefitDisplay) {
+        if (viewModel.school.hasSelection) {
+            // JSON data is trusted content
+            schoolDescriptionDisplay.innerHTML = viewModel.school.description;
+            schoolBenefitDisplay.innerHTML = viewModel.school.benefit;
+        } else {
+            schoolDescriptionDisplay.textContent = viewModel.school.description;
+            schoolBenefitDisplay.textContent = viewModel.school.benefit;
+        }
     }
 
     // Render Sanctum Benefits
     const sanctumDescriptionDisplay = document.getElementById('librarySanctumDescriptionDisplay');
     const sanctumBenefitDisplay = document.getElementById('librarySanctumBenefitDisplay');
-    
-    const selectedSanctum = librarySanctumSelect.value;
-    if (selectedSanctum && data.sanctumBenefits[selectedSanctum]) {
-        // JSON data is trusted content
-        sanctumDescriptionDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].description;
-        sanctumBenefitDisplay.innerHTML = data.sanctumBenefits[selectedSanctum].benefit;
-    } else {
-        sanctumDescriptionDisplay.textContent = '-- Select a sanctum to see its description --';
-        sanctumBenefitDisplay.textContent = '-- Select a sanctum to see its benefit --';
+    if (sanctumDescriptionDisplay && sanctumBenefitDisplay) {
+        if (viewModel.sanctum.hasSelection) {
+            // JSON data is trusted content
+            sanctumDescriptionDisplay.innerHTML = viewModel.sanctum.description;
+            sanctumBenefitDisplay.innerHTML = viewModel.sanctum.benefit;
+        } else {
+            sanctumDescriptionDisplay.textContent = viewModel.sanctum.description;
+            sanctumBenefitDisplay.textContent = viewModel.sanctum.benefit;
+        }
     }
 }
 
@@ -94,8 +107,11 @@ export function renderMasteryAbilities(smpInput) {
     const learnedList = document.getElementById('learned-abilities-list');
     const currentSmp = parseIntOr(smpInput.value, 0);
     
-    smpDisplay.textContent = currentSmp;
-    clearElement(learnedList);
+    // Create view model
+    const viewModel = createAbilityViewModel(characterState, currentSmp);
+    
+    // Update SMP display
+    smpDisplay.textContent = viewModel.currentSmp;
     
     // Clear and reset ability select
     clearElement(abilitySelect);
@@ -103,121 +119,81 @@ export function renderMasteryAbilities(smpInput) {
     defaultOption.value = '';
     defaultOption.textContent = '-- Select an ability to learn --';
     abilitySelect.appendChild(defaultOption);
+    
+    // Clear learned abilities list
+    clearElement(learnedList);
 
     // Render learned abilities using component
-    characterState.learnedAbilities.forEach((abilityName, index) => {
-        const ability = data.masteryAbilities[abilityName];
-        if (ability) {
-            const card = renderAbilityCard(abilityName, ability, index);
-            learnedList.appendChild(card);
-        }
+    viewModel.learnedAbilities.forEach(({ name, ability, index }) => {
+        const card = renderAbilityCard(name, ability, index);
+        learnedList.appendChild(card);
     });
 
     // Populate dropdown with unlearned abilities
-    for (const name in data.masteryAbilities) {
-        if (!characterState.learnedAbilities.includes(name)) {
-            const option = document.createElement('option');
-            option.value = name;
-            const ability = data.masteryAbilities[name];
-            option.textContent = `${escapeHtml(name)} (${escapeHtml(ability.school)}, ${ability.cost} SMP)`;
-            abilitySelect.appendChild(option);
-        }
-    }
+    viewModel.unlearnedOptions.forEach(optionData => {
+        const option = document.createElement('option');
+        option.value = optionData.value;
+        option.textContent = escapeHtml(optionData.text);
+        abilitySelect.appendChild(option);
+    });
 }
 
+/**
+ * Get slot limits from form inputs
+ * @deprecated Use SlotService.getSlotLimits instead
+ */
 export function getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
-    const wearable = parseIntOr(wearableSlotsInput.value, 0);
-    const nonWearable = parseIntOr(nonWearableSlotsInput.value, 0);
-    const familiar = parseIntOr(familiarSlotsInput.value, 0);
-    return { 'Wearable': wearable, 'Non-Wearable': nonWearable, 'Familiar': familiar, 'total': wearable + nonWearable + familiar };
+    return slotServiceGetSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
 }
 
-export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
+/**
+ * Render loadout (equipped items and inventory) - Pure rendering function
+ * Accepts view model, performs no calculations
+ * @param {Object} viewModel - View model from createInventoryViewModel
+ */
+function renderLoadoutPure(viewModel) {
     const equippedList = document.getElementById('equipped-items-list');
     const inventoryList = document.getElementById('inventory-list');
     const slotManagement = document.querySelector('.slot-management');
     clearElement(equippedList);
     clearElement(inventoryList);
 
-    const slotLimits = getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-    const equippedCounts = { 'Wearable': 0, 'Non-Wearable': 0, 'Familiar': 0 };
-
-    // Get items in passive slots to filter them out from equipped
-    const passiveItemSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
-    const passiveFamiliarSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
-    const itemsInPassiveSlots = new Set([
-        ...passiveItemSlots.map(slot => slot.itemName).filter(Boolean),
-        ...passiveFamiliarSlots.map(slot => slot.itemName).filter(Boolean)
-    ]);
-    
-    // Clean up: Remove items from equipped if they're in passive slots
-    const equippedItems = characterState[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
-    // Filter out items that are in passive slots (iterate backwards to avoid index issues when splicing)
-    let needsCleanup = false;
-    for (let i = equippedItems.length - 1; i >= 0; i--) {
-        if (itemsInPassiveSlots.has(equippedItems[i].name)) {
-            // Item is in passive slot but still in equipped - remove it
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS].splice(i, 1);
-            needsCleanup = true;
-        }
-    }
-    
-    // If cleanup happened, save the state
-    if (needsCleanup) {
-        safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, characterState[STORAGE_KEYS.EQUIPPED_ITEMS]);
-    }
-
-    // Helper: hydrate item objects with canonical data (fixes older saved inventory entries missing fields like passiveBonus)
-    const hydrateItem = (item) => {
-        if (!item || !item.name) return item;
-        const canonical = allItems[item.name];
-        if (canonical) return { ...item, ...canonical, name: item.name };
-        // Case-insensitive fallback
-        const key = Object.keys(allItems).find(k => k.toLowerCase() === String(item.name).toLowerCase());
-        if (key) return { ...item, ...allItems[key], name: item.name };
-        return item;
-    };
-
-    // Render equipped items using component (exclude items in passive slots)
-    characterState.equippedItems.forEach((item, index) => {
-        // Skip items that are in passive slots
-        if (itemsInPassiveSlots.has(item.name)) {
-            return;
-        }
-        equippedCounts[item.type]++;
-        const card = renderItemCard(hydrateItem(item), index, { showUnequip: true });
+    // Render equipped items using component
+    viewModel.equippedItems.forEach((item, index) => {
+        const card = renderItemCard(item, index, { showUnequip: true });
         equippedList.appendChild(card);
     });
 
     // Render empty slots
-    for (let i = equippedCounts['Wearable']; i < slotLimits['Wearable']; i++) {
+    for (let i = viewModel.equippedCounts['Wearable']; i < viewModel.slotLimits['Wearable']; i++) {
         equippedList.appendChild(renderEmptySlot('Wearable'));
     }
-    for (let i = equippedCounts['Non-Wearable']; i < slotLimits['Non-Wearable']; i++) {
+    for (let i = viewModel.equippedCounts['Non-Wearable']; i < viewModel.slotLimits['Non-Wearable']; i++) {
         equippedList.appendChild(renderEmptySlot('Non-Wearable'));
     }
-    for (let i = equippedCounts['Familiar']; i < slotLimits['Familiar']; i++) {
+    for (let i = viewModel.equippedCounts['Familiar']; i < viewModel.slotLimits['Familiar']; i++) {
         equippedList.appendChild(renderEmptySlot('Familiar'));
     }
 
-    
-    // Get equipped item names for checking (using already declared equippedItems variable above)
-    const equippedItemNames = new Set((characterState[STORAGE_KEYS.EQUIPPED_ITEMS] || []).map(item => item.name));
-    
-    // Check if there are available passive slots
-    const hasAvailableItemSlots = passiveItemSlots.some(slot => !slot.itemName);
-    const hasAvailableFamiliarSlots = passiveFamiliarSlots.some(slot => !slot.itemName);
-
     // Render inventory items
-    if (characterState.inventoryItems.length > 0) {
-        characterState.inventoryItems.forEach((item, index) => {
-            // If an item is in a passive slot, it should NOT appear in inventory
-            if (itemsInPassiveSlots.has(item.name)) return;
+    if (viewModel.inventoryItems.length > 0) {
+        // Find original index in raw inventory for button handlers
+        // Note: This is a temporary workaround until we refactor button handlers to use item names instead of indices
+        const rawInventoryItems = characterState[STORAGE_KEYS.INVENTORY_ITEMS] || [];
+        const itemsInPassiveSlots = new Set([
+            ...viewModel.passiveItemSlots.map(slot => slot.itemName).filter(Boolean),
+            ...viewModel.passiveFamiliarSlots.map(slot => slot.itemName).filter(Boolean)
+        ]);
+        
+        viewModel.inventoryItems.forEach((item) => {
+            // Find original index in raw inventory
+            const originalIndex = rawInventoryItems.findIndex(i => i.name === item.name);
+            if (originalIndex === -1) return; // Skip if not found (shouldn't happen)
 
-            const showDisplay = hasAvailableItemSlots && !equippedItemNames.has(item.name);
-            const showAdopt = hasAvailableFamiliarSlots && !equippedItemNames.has(item.name);
+            const showDisplay = viewModel.hasAvailableItemSlots && !viewModel.equippedItemNames.has(item.name);
+            const showAdopt = viewModel.hasAvailableFamiliarSlots && !viewModel.equippedItemNames.has(item.name);
             
-            const card = renderItemCard(hydrateItem(item), index, { 
+            const card = renderItemCard(item, originalIndex, { 
                 showEquip: true, 
                 showDelete: true,
                 showDisplay,
@@ -232,29 +208,11 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
         inventoryList.appendChild(message);
     }
     
-    document.getElementById('equipped-summary').textContent = `Equipped Items (${characterState.equippedItems.length}/${slotLimits.total} Slots Used)`;
-    
-    // Calculate expected vs actual slots to show unallocated slots warning
-    const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
-    const currentLevel = parseIntOr(formData.level || document.getElementById('level')?.value, 1);
-    
-    // Calculate expected total slots: base 3 at level 1, plus slots from leveling
-    let expectedTotalSlots = 3; // Starting slots at level 1
-    if (data.levelRewards && currentLevel > 1) {
-        for (let level = 2; level <= currentLevel; level++) {
-            const levelStr = String(level);
-            const rewards = data.levelRewards[levelStr];
-            if (rewards && rewards.inventorySlot) {
-                expectedTotalSlots += rewards.inventorySlot;
-            }
-        }
+    // Update equipped summary
+    const equippedSummary = document.getElementById('equipped-summary');
+    if (equippedSummary) {
+        equippedSummary.textContent = `Equipped Items (${viewModel.totalEquippedSlots}/${viewModel.slotLimits.total} Slots Used)`;
     }
-    
-    // Calculate current total slots
-    const currentTotalSlots = slotLimits.total;
-    
-    // Calculate unallocated slots (difference between expected and current)
-    const unallocatedSlots = expectedTotalSlots - currentTotalSlots;
     
     // Remove existing note if present
     const existingNote = document.getElementById('unallocated-slots-note');
@@ -263,14 +221,27 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
     }
     
     // Add note if there are unallocated slots
-    if (unallocatedSlots > 0 && slotManagement) {
+    if (viewModel.unallocatedSlots > 0 && slotManagement) {
         const note = document.createElement('p');
         note.id = 'unallocated-slots-note';
         note.className = 'unallocated-slots-note';
         note.style.cssText = 'color: #b89f62; font-weight: bold; margin-top: 10px; padding: 10px; background: rgba(184, 159, 98, 0.1); border: 1px solid #b89f62; border-radius: 4px;';
-        note.textContent = `⚠️ You have ${unallocatedSlots} unallocated inventory slot${unallocatedSlots > 1 ? 's' : ''} available. Increase one of your slot types above to allocate ${unallocatedSlots > 1 ? 'them' : 'it'}.`;
+        note.textContent = `⚠️ You have ${viewModel.unallocatedSlots} unallocated inventory slot${viewModel.unallocatedSlots > 1 ? 's' : ''} available. Increase one of your slot types above to allocate ${viewModel.unallocatedSlots > 1 ? 'them' : 'it'}.`;
         slotManagement.appendChild(note);
     }
+}
+
+/**
+ * Render loadout - maintains backward compatibility with existing callers
+ * Creates view model internally and calls pure renderer
+ * @param {HTMLInputElement} wearableSlotsInput - Wearable slots input element
+ * @param {HTMLInputElement} nonWearableSlotsInput - Non-wearable slots input element
+ * @param {HTMLInputElement} familiarSlotsInput - Familiar slots input element
+ */
+export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
+    const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+    const viewModel = createInventoryViewModel(characterState, formData, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    renderLoadoutPure(viewModel);
 }
 
 export function renderAtmosphericBuffs(librarySanctumSelect) {
@@ -278,33 +249,25 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
     clearElement(tbody);
 
     const selectedSanctum = librarySanctumSelect.value;
-    const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
     
-    // Check if Grove Tender background is selected
+    // Get background from DOM
     const keeperBackgroundSelect = document.getElementById('keeperBackground');
-    const isGroveTender = keeperBackgroundSelect && keeperBackgroundSelect.value === 'groveTender';
+    const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
+    
+    // Create view model
+    const buffViewModels = createAtmosphericBuffViewModel(characterState, selectedSanctum, background);
 
-    for (const buffName in data.atmosphericBuffs) {
-        const isAssociated = associatedBuffs.includes(buffName);
-        const dailyValue = isAssociated ? 2 : 1;
-        const daysUsed = characterState.atmosphericBuffs[buffName]?.daysUsed || 0;
-        let isActive = characterState.atmosphericBuffs[buffName]?.isActive || false;
-        
-        // Grove Tender always has "The Soaking in Nature" active
-        const isGroveBuffActive = isGroveTender && buffName === 'The Soaking in Nature';
-        if (isGroveBuffActive) {
-            isActive = true;
-        }
-
+    // Render each buff row using view model
+    buffViewModels.forEach(buffVM => {
         const row = tbody.insertRow();
-        if (isAssociated || isGroveBuffActive) {
+        if (buffVM.isHighlighted) {
             row.classList.add('highlight');
         }
 
         // Buff name cell
         const nameCell = document.createElement('td');
-        nameCell.textContent = buffName;
-        if (isGroveBuffActive) {
+        nameCell.textContent = buffVM.name;
+        if (buffVM.isGroveBuff) {
             const star = document.createElement('span');
             star.style.color = '#b89f62';
             star.textContent = ' ★';
@@ -314,7 +277,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
 
         // Daily value cell
         const valueCell = document.createElement('td');
-        valueCell.textContent = dailyValue;
+        valueCell.textContent = buffVM.dailyValue;
         row.appendChild(valueCell);
 
         // Checkbox cell
@@ -322,9 +285,9 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'buff-active-check';
-        checkbox.dataset.buffName = buffName;
-        checkbox.checked = isActive;
-        if (isGroveBuffActive) {
+        checkbox.dataset.buffName = buffVM.name;
+        checkbox.checked = buffVM.isActive;
+        if (buffVM.isDisabled) {
             checkbox.disabled = true;
             checkbox.title = 'Always active (Grove Tender)';
         }
@@ -336,19 +299,19 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         const daysInput = document.createElement('input');
         daysInput.type = 'number';
         daysInput.className = 'buff-days-input';
-        daysInput.value = daysUsed;
+        daysInput.value = buffVM.daysUsed;
         daysInput.min = 0;
-        daysInput.dataset.buffName = buffName;
-        daysInput.dataset.dailyValue = dailyValue;
+        daysInput.dataset.buffName = buffVM.name;
+        daysInput.dataset.dailyValue = buffVM.dailyValue;
         daysCell.appendChild(daysInput);
         row.appendChild(daysCell);
 
         // Total cell
         const totalCell = document.createElement('td');
-        totalCell.id = `total-${buffName.replace(/\s+/g, '')}`;
-        totalCell.textContent = daysUsed * dailyValue;
+        totalCell.id = `total-${buffVM.name.replace(/\s+/g, '')}`;
+        totalCell.textContent = buffVM.total;
         row.appendChild(totalCell);
-    }
+    });
 }
 
 export function updateBuffTotal(inputElement) {
@@ -365,14 +328,27 @@ export function renderActiveAssignments() {
     
     clearElement(cardsContainer);
     
-    characterState.activeAssignments.forEach((quest, index) => {
-        const card = renderQuestCard(quest, index, 'active');
+    // Get background and wizard school from DOM for receipt calculations
+    const bgSelect = document.getElementById('keeperBackground');
+    const schoolSelect = document.getElementById('wizardSchool');
+    const background = bgSelect ? bgSelect.value : '';
+    const wizardSchool = schoolSelect ? schoolSelect.value : '';
+    
+    // Get quests from state using storage key
+    const activeQuests = characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
+    
+    // Create view models for all active quests
+    const viewModels = createQuestListViewModel(activeQuests, 'active', background, wizardSchool);
+    
+    // Render using view models (renderQuestCard still accepts quest directly for now)
+    viewModels.forEach((viewModel) => {
+        const card = renderQuestCard(viewModel.quest, viewModel.index, 'active');
         cardsContainer.appendChild(card);
     });
     
     const summary = document.getElementById('active-summary');
     if (summary) {
-        summary.textContent = `Active Book Assignments (${characterState.activeAssignments.length} Remaining)`;
+        summary.textContent = `Active Book Assignments (${activeQuests.length} Remaining)`;
     }
 }
 
@@ -383,14 +359,27 @@ export function renderCompletedQuests() {
     
     clearElement(cardsContainer);
     
-    characterState.completedQuests.forEach((quest, index) => {
-        const card = renderQuestCard(quest, index, 'completed');
+    // Get background and wizard school from DOM for receipt calculations
+    const bgSelect = document.getElementById('keeperBackground');
+    const schoolSelect = document.getElementById('wizardSchool');
+    const background = bgSelect ? bgSelect.value : '';
+    const wizardSchool = schoolSelect ? schoolSelect.value : '';
+    
+    // Get quests from state using storage key
+    const completedQuests = characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
+    
+    // Create view models for all completed quests
+    const viewModels = createQuestListViewModel(completedQuests, 'completed', background, wizardSchool);
+    
+    // Render using view models (renderQuestCard still accepts quest directly for now)
+    viewModels.forEach((viewModel) => {
+        const card = renderQuestCard(viewModel.quest, viewModel.index, 'completed');
         cardsContainer.appendChild(card);
     });
     
     const summary = document.getElementById('completed-summary');
     if (summary) {
-        summary.textContent = `Completed Quests (${characterState.completedQuests.length} Books Read)`;
+        summary.textContent = `Completed Quests (${completedQuests.length} Books Read)`;
     }
 }
 
@@ -401,14 +390,21 @@ export function renderDiscardedQuests() {
     
     clearElement(cardsContainer);
     
-    characterState.discardedQuests.forEach((quest, index) => {
-        const card = renderQuestCard(quest, index, 'discarded');
+    // Get quests from state using storage key
+    const discardedQuests = characterState[STORAGE_KEYS.DISCARDED_QUESTS] || [];
+    
+    // Create view models for all discarded quests
+    const viewModels = createQuestListViewModel(discardedQuests, 'discarded');
+    
+    // Render using view models (renderQuestCard still accepts quest directly for now)
+    viewModels.forEach((viewModel) => {
+        const card = renderQuestCard(viewModel.quest, viewModel.index, 'discarded');
         cardsContainer.appendChild(card);
     });
     
     const summary = document.getElementById('discarded-summary');
     if (summary) {
-        summary.textContent = `Discarded Quests (${characterState.discardedQuests.length})`;
+        summary.textContent = `Discarded Quests (${discardedQuests.length})`;
     }
 }
 
@@ -418,24 +414,46 @@ export function renderActiveCurses() {
     const tbody = document.getElementById('active-curses-body');
     clearElement(tbody);
     
-    characterState.activeCurses.forEach((curse, index) => {
-        const row = renderCurseRow(curse, index, 'Active');
+    // Get curses from state using storage key
+    const activeCurses = characterState[STORAGE_KEYS.ACTIVE_CURSES] || [];
+    
+    // Create view model
+    const viewModel = createCurseListViewModel(activeCurses, 'Active');
+    
+    // Render using view model
+    viewModel.curses.forEach(({ curse, index, listType }) => {
+        const row = renderCurseRow(curse, index, listType);
         tbody.appendChild(row);
     });
     
-    document.getElementById('active-curses-summary').textContent = `Active Curse Penalties (${characterState.activeCurses.length})`;
+    // Update summary
+    const summaryEl = document.getElementById('active-curses-summary');
+    if (summaryEl) {
+        summaryEl.textContent = viewModel.summaryText;
+    }
 }
 
 export function renderCompletedCurses() {
     const tbody = document.getElementById('completed-curses-body');
     clearElement(tbody);
     
-    characterState.completedCurses.forEach((curse, index) => {
-        const row = renderCurseRow(curse, index, 'Completed');
+    // Get curses from state using storage key
+    const completedCurses = characterState[STORAGE_KEYS.COMPLETED_CURSES] || [];
+    
+    // Create view model
+    const viewModel = createCurseListViewModel(completedCurses, 'Completed');
+    
+    // Render using view model
+    viewModel.curses.forEach(({ curse, index, listType }) => {
+        const row = renderCurseRow(curse, index, listType);
         tbody.appendChild(row);
     });
     
-    document.getElementById('completed-curses-summary').textContent = `Completed Curse Penalties (${characterState.completedCurses.length})`;
+    // Update summary
+    const summaryEl = document.getElementById('completed-curses-summary');
+    if (summaryEl) {
+        summaryEl.textContent = viewModel.summaryText;
+    }
 }
 
 export function renderTemporaryBuffs() {
@@ -840,4 +858,233 @@ export function renderShelfBooks(booksCompleted, shelfColors = []) {
             bookPath.setAttribute('fill', 'transparent');
         }
     }
+}
+
+/**
+ * Display calculation receipt breakdown for a completed quest
+ * @param {Object} receipt - Receipt object from Reward.getReceipt()
+ * @param {string} questType - Quest type for context
+ * @param {string} questPrompt - Quest prompt for context
+ */
+export function displayCalculationReceipt(receipt, questType = '', questPrompt = '') {
+    if (!receipt || !receipt.base) {
+        return; // No receipt to display
+    }
+
+    // Create receipt container
+    const receiptContainer = document.createElement('div');
+    receiptContainer.className = 'calculation-receipt';
+    receiptContainer.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #2C1810;
+        border: 2px solid #8B7355;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        z-index: 10000;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        font-family: 'Crimson Text', serif;
+        color: #E8DCC6;
+    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #8B7355; padding-bottom: 10px;';
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Reward Calculation Breakdown';
+    title.style.cssText = 'margin: 0; color: #D4A574; font-size: 1.2em;';
+    header.appendChild(title);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+        background: transparent;
+        border: 1px solid #8B7355;
+        color: #E8DCC6;
+        width: 30px;
+        height: 30px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1.5em;
+        line-height: 1;
+    `;
+    closeBtn.onclick = () => receiptContainer.remove();
+    closeBtn.onmouseover = () => closeBtn.style.background = '#8B7355';
+    closeBtn.onmouseout = () => closeBtn.style.background = 'transparent';
+    header.appendChild(closeBtn);
+
+    receiptContainer.appendChild(header);
+
+    // Quest info (if provided)
+    if (questType || questPrompt) {
+        const questInfo = document.createElement('div');
+        questInfo.style.cssText = 'margin-bottom: 15px; padding: 10px; background: rgba(139, 115, 85, 0.2); border-radius: 4px;';
+        if (questType) {
+            const typeEl = document.createElement('div');
+            typeEl.textContent = `Quest: ${questType}`;
+            typeEl.style.cssText = 'font-weight: bold; margin-bottom: 5px;';
+            questInfo.appendChild(typeEl);
+        }
+        if (questPrompt) {
+            const promptEl = document.createElement('div');
+            promptEl.textContent = `Prompt: ${questPrompt}`;
+            promptEl.style.cssText = 'font-style: italic; color: #D4A574;';
+            questInfo.appendChild(promptEl);
+        }
+        receiptContainer.appendChild(questInfo);
+    }
+
+    // Base rewards
+    const baseSection = document.createElement('div');
+    baseSection.style.cssText = 'margin-bottom: 15px;';
+    const baseTitle = document.createElement('h4');
+    baseTitle.textContent = 'Base Rewards';
+    baseTitle.style.cssText = 'margin: 0 0 10px 0; color: #D4A574; font-size: 1em;';
+    baseSection.appendChild(baseTitle);
+
+    const baseList = document.createElement('ul');
+    baseList.style.cssText = 'list-style: none; padding: 0; margin: 0;';
+    
+    if (receipt.base.xp > 0) {
+        const li = document.createElement('li');
+        li.textContent = `XP: +${receipt.base.xp}`;
+        li.style.cssText = 'padding: 5px 0;';
+        baseList.appendChild(li);
+    }
+    if (receipt.base.inkDrops > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Ink Drops: +${receipt.base.inkDrops}`;
+        li.style.cssText = 'padding: 5px 0;';
+        baseList.appendChild(li);
+    }
+    if (receipt.base.paperScraps > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Paper Scraps: +${receipt.base.paperScraps}`;
+        li.style.cssText = 'padding: 5px 0;';
+        baseList.appendChild(li);
+    }
+    if (receipt.base.blueprints > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Dusty Blueprints: +${receipt.base.blueprints}`;
+        li.style.cssText = 'padding: 5px 0;';
+        baseList.appendChild(li);
+    }
+    if (baseList.children.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'No base rewards';
+        li.style.cssText = 'padding: 5px 0; color: #8B7355; font-style: italic;';
+        baseList.appendChild(li);
+    }
+
+    baseSection.appendChild(baseList);
+    receiptContainer.appendChild(baseSection);
+
+    // Modifiers
+    if (receipt.modifiers && receipt.modifiers.length > 0) {
+        const modifiersSection = document.createElement('div');
+        modifiersSection.style.cssText = 'margin-bottom: 15px;';
+        const modifiersTitle = document.createElement('h4');
+        modifiersTitle.textContent = 'Applied Modifiers';
+        modifiersTitle.style.cssText = 'margin: 0 0 10px 0; color: #D4A574; font-size: 1em;';
+        modifiersSection.appendChild(modifiersTitle);
+
+        const modifiersList = document.createElement('ul');
+        modifiersList.style.cssText = 'list-style: none; padding: 0; margin: 0;';
+
+        receipt.modifiers.forEach(modifier => {
+            const li = document.createElement('li');
+            li.style.cssText = 'padding: 8px; margin-bottom: 5px; background: rgba(139, 115, 85, 0.15); border-left: 3px solid #D4A574; border-radius: 4px;';
+            
+            const source = document.createElement('div');
+            source.textContent = modifier.source;
+            source.style.cssText = 'font-weight: bold; color: #D4A574; margin-bottom: 3px;';
+            li.appendChild(source);
+
+            const description = document.createElement('div');
+            description.textContent = modifier.description;
+            description.style.cssText = 'font-size: 0.9em; color: #E8DCC6;';
+            li.appendChild(description);
+
+            modifiersList.appendChild(li);
+        });
+
+        modifiersSection.appendChild(modifiersList);
+        receiptContainer.appendChild(modifiersSection);
+    }
+
+    // Final rewards
+    const finalSection = document.createElement('div');
+    finalSection.style.cssText = 'margin-top: 15px; padding: 15px; background: rgba(212, 165, 116, 0.1); border-radius: 4px; border: 1px solid #D4A574;';
+    const finalTitle = document.createElement('h4');
+    finalTitle.textContent = 'Final Rewards';
+    finalTitle.style.cssText = 'margin: 0 0 10px 0; color: #D4A574; font-size: 1.1em;';
+    finalSection.appendChild(finalTitle);
+
+    const finalList = document.createElement('ul');
+    finalList.style.cssText = 'list-style: none; padding: 0; margin: 0;';
+
+    if (receipt.final.xp > 0) {
+        const li = document.createElement('li');
+        li.textContent = `XP: +${receipt.final.xp}`;
+        li.style.cssText = 'padding: 5px 0; font-weight: bold;';
+        finalList.appendChild(li);
+    }
+    if (receipt.final.inkDrops > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Ink Drops: +${receipt.final.inkDrops}`;
+        li.style.cssText = 'padding: 5px 0; font-weight: bold;';
+        finalList.appendChild(li);
+    }
+    if (receipt.final.paperScraps > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Paper Scraps: +${receipt.final.paperScraps}`;
+        li.style.cssText = 'padding: 5px 0; font-weight: bold;';
+        finalList.appendChild(li);
+    }
+    if (receipt.final.blueprints > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Dusty Blueprints: +${receipt.final.blueprints}`;
+        li.style.cssText = 'padding: 5px 0; font-weight: bold;';
+        finalList.appendChild(li);
+    }
+    if (receipt.items && receipt.items.length > 0) {
+        const li = document.createElement('li');
+        li.textContent = `Items: ${receipt.items.join(', ')}`;
+        li.style.cssText = 'padding: 5px 0; font-weight: bold; color: #D4A574;';
+        finalList.appendChild(li);
+    }
+
+    finalSection.appendChild(finalList);
+    receiptContainer.appendChild(finalSection);
+
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+    `;
+    backdrop.onclick = () => {
+        backdrop.remove();
+        receiptContainer.remove();
+    };
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(receiptContainer);
+
+    // Auto-close after 10 seconds (optional)
+    setTimeout(() => {
+        if (backdrop.parentNode) backdrop.remove();
+        if (receiptContainer.parentNode) receiptContainer.remove();
+    }, 10000);
 }

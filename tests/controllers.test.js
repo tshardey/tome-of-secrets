@@ -16,6 +16,7 @@ import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { calculateBlueprintReward } from '../assets/js/services/QuestRewardService.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -340,8 +341,15 @@ describe('Controllers', () => {
         it('should handle equip button click', () => {
             const controller = new InventoryController(stateAdapter, form, dependencies);
             
-            dependencies.ui.getSlotLimits = jest.fn(() => ({ wearable: 5, nonWearable: 5, familiar: 5 }));
-            stateAdapter.getInventoryItems = jest.fn(() => [{ name: 'Test Item', type: 'wearable' }]);
+            // Mock slot inputs with values
+            const wearableInput = document.getElementById('wearable-slots');
+            const nonWearableInput = document.getElementById('non-wearable-slots');
+            const familiarInput = document.getElementById('familiar-slots');
+            if (wearableInput) wearableInput.value = '5';
+            if (nonWearableInput) nonWearableInput.value = '5';
+            if (familiarInput) familiarInput.value = '5';
+            
+            stateAdapter.getInventoryItems = jest.fn(() => [{ name: 'Test Item', type: 'Wearable' }]);
             stateAdapter.getEquippedItems = jest.fn(() => []);
 
             controller.initialize();
@@ -738,8 +746,7 @@ describe('Controllers', () => {
         });
 
         it('should award correct blueprint reward for Speculative Fiction (avoid Fiction substring match)', () => {
-            const controller = new QuestController(stateAdapter, form, dependencies);
-            const blueprintReward = controller.calculateBlueprintReward({
+            const blueprintReward = calculateBlueprintReward({
                 type: '♥ Organize the Stacks',
                 prompt: 'Speculative Fiction'
             });

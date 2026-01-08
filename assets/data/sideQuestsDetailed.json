@@ -1,71 +1,150 @@
 {
-    "1": { 
+    "1": {
+        "id": "side-quest-the-arcane-grimoire",
         "name": "The Arcane Grimoire",
         "description": "An ancient spellbook writes a new page.",
         "prompt": "Read the book on your TBR the longest.",
         "reward": "Temp buff: Long Read Focus (+10 Ink Drops per 100 pages over 300).",
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Long Read Focus"] }
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Long Read Focus"
+            ]
+        }
     },
-    "2": { 
+    "2": {
+        "id": "side-quest-the-blood-fury-tattoo",
         "name": "The Blood Fury Tattoo",
         "description": "Inked markings blaze across your skin.",
         "prompt": "Read a book featuring a counter culture rebellion.",
         "reward": "Receive a Blood Fury Tattoo.",
         "hasLink": true,
-        "link": { "text": "Blood Fury Tattoo", "url": "{{ site.baseurl }}/rewards.html#blood-fury-tattoo" },
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Blood Fury Tattoo"] }
+        "link": {
+            "text": "Blood Fury Tattoo",
+            "url": "{{ site.baseurl }}/rewards.html#blood-fury-tattoo"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Blood Fury Tattoo"
+            ]
+        }
     },
-    "3": { 
+    "3": {
+        "id": "side-quest-the-bag-of-holding",
         "name": "The Bag of Holding",
         "description": "A battered satchel yawns impossibly wide.",
         "prompt": "Read a story with multiple POVs.",
         "reward": "Receive a Scatter Brain Scarab.",
         "hasLink": true,
-        "link": { "text": "Scatter Brain Scarab", "url": "{{ site.baseurl }}/rewards.html#scatter-brain-scarab" },
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Scatter Brain Scarab"] }
+        "link": {
+            "text": "Scatter Brain Scarab",
+            "url": "{{ site.baseurl }}/rewards.html#scatter-brain-scarab"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Scatter Brain Scarab"
+            ]
+        }
     },
-    "4": { 
+    "4": {
+        "id": "side-quest-the-wandering-merchants-request",
         "name": "The Wandering Merchant's Request",
         "description": "A traveler draped in scarves greets you.",
         "prompt": "Read a book featuring a journey.",
         "reward": "Receive a Librarian's Compass.",
         "hasLink": true,
-        "link": { "text": "Librarian's Compass", "url": "{{ site.baseurl }}/rewards.html#librarians-compass" },
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Librarian's Compass"] }
+        "link": {
+            "text": "Librarian's Compass",
+            "url": "{{ site.baseurl }}/rewards.html#librarians-compass"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Librarian's Compass"
+            ]
+        }
     },
-    "5": { 
+    "5": {
+        "id": "side-quest-the-glimmering-pools-gift",
         "name": "The Glimmering Pools' Gift",
         "description": "A nymph rises from glowing waters.",
         "prompt": "Read a book about transformation.",
         "reward": "Roll a die: on even gain an Amulet of Duality; on odd gain one Worn Page curse.",
         "hasLink": true,
-        "link": { "text": "Amulet of Duality", "url": "{{ site.baseurl }}/rewards.html#amulet-of-duality" },
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Amulet of Duality"] }
+        "link": {
+            "text": "Amulet of Duality",
+            "url": "{{ site.baseurl }}/rewards.html#amulet-of-duality"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Amulet of Duality"
+            ]
+        }
     },
-    "6": { 
+    "6": {
+        "id": "side-quest-the-chime-of-opening",
         "name": "The Chime of Opening",
         "description": "A silver chime hums with anticipation.",
         "prompt": "Read a book where a long-hidden truth is revealed.",
         "reward": "Receive a Key of the Archive.",
         "hasLink": true,
-        "link": { "text": "Key of the Archive", "url": "{{ site.baseurl }}/rewards.html#key-of-the-archive" },
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Key of the Archive"] }
+        "link": {
+            "text": "Key of the Archive",
+            "url": "{{ site.baseurl }}/rewards.html#key-of-the-archive"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Key of the Archive"
+            ]
+        }
     },
-    "7": { 
+    "7": {
+        "id": "side-quest-the-scarecrows-cornfield",
         "name": "The Scarecrow's Cornfield",
         "description": "Rustling stalks and a grim figure loom.",
         "prompt": "Read a book with an unreliable narrator.",
         "reward": "Temp buff: Disjointed Perception (+10 Ink Drops, +5 Page Scraps).",
-        "rewards": { "xp": 0, "inkDrops": 10, "paperScraps": 5, "items": [] }
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 10,
+            "paperScraps": 5,
+            "items": []
+        }
     },
-    "8": { 
+    "8": {
+        "id": "side-quest-the-empty-shelf",
         "name": "The Empty Shelf",
         "description": "A hollow space on the stacks calls out.",
         "prompt": "Choose a book from your TBR you are most excited for.",
         "reward": "Receive a Tome of Potential.",
         "hasLink": true,
-        "link": { "text": "Tome of Potential", "url": "{{ site.baseurl }}/rewards.html#tome-of-potential" },
-        "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 0, "items": ["Tome of Potential"] }
+        "link": {
+            "text": "Tome of Potential",
+            "url": "{{ site.baseurl }}/rewards.html#tome-of-potential"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "items": [
+                "Tome of Potential"
+            ]
+        }
     }
 }
-

@@ -13,6 +13,7 @@ import { StateAdapter, STATE_EVENTS } from './character-sheet/stateAdapter.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
+import { runAllRepairs } from './character-sheet/postLoadRepair.js';
 
 // Import controllers
 import { CharacterController } from './controllers/CharacterController.js';
@@ -83,136 +84,6 @@ export async function initializeCharacterSheet() {
         safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, booksArray);
     }
 
-    /**
-     * Fix completed restoration projects that don't have passive slots created yet
-     * This handles cases where projects were completed before the slot creation logic was added
-     */
-    function fixCompletedRestorationProjects() {
-        const completedProjects = characterState[STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS] || [];
-        const passiveItemSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
-        const passiveFamiliarSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
-        
-        // Track which projects already have slots
-        const projectsWithSlots = new Set();
-        [...passiveItemSlots, ...passiveFamiliarSlots].forEach(slot => {
-            if (slot.unlockedFrom) {
-                projectsWithSlots.add(slot.unlockedFrom);
-            }
-        });
-
-        // Check each completed project
-        let fixedCount = 0;
-        for (const projectId of completedProjects) {
-            // Skip if already has a slot
-            if (projectsWithSlots.has(projectId)) continue;
-
-            // Get project data
-            const project = dataModule.restorationProjects?.[projectId];
-            if (!project || !project.reward) continue;
-
-            // Create the slot based on reward type
-            if (project.reward.type === 'passiveItemSlot') {
-                const slotId = `item-slot-${projectId}`;
-                stateAdapter.addPassiveItemSlot(slotId, projectId);
-                fixedCount++;
-            } else if (project.reward.type === 'passiveFamiliarSlot') {
-                const slotId = `familiar-slot-${projectId}`;
-                stateAdapter.addPassiveFamiliarSlot(slotId, projectId);
-                fixedCount++;
-            }
-        }
-
-        if (fixedCount > 0) {
-            console.log(`Fixed ${fixedCount} completed restoration project(s) by creating missing passive slots.`);
-            // Refresh passive equipment display if it exists
-            if (ui.renderPassiveEquipment) {
-                ui.renderPassiveEquipment();
-            }
-        }
-    }
-
-    /**
-     * Fix completed familiar encounters that don't have familiars in rewards
-     * This handles cases where familiars were befriended before the fix was applied
-     */
-    function fixCompletedFamiliarEncounters() {
-        const completedQuests = characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
-        const inventoryItems = characterState[STORAGE_KEYS.INVENTORY_ITEMS] || [];
-        const equippedItems = characterState[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
-        const ownedItemNames = new Set([...inventoryItems, ...equippedItems].map(item => item.name));
-        
-        let fixedCount = 0;
-        let checkedQuests = 0;
-        let encounterQuests = 0;
-        
-        // Check all rooms for familiar encounters
-        for (const roomNumber in dataModule.dungeonRooms) {
-            const room = dataModule.dungeonRooms[roomNumber];
-            if (!room.encountersDetailed) continue;
-            
-            for (const encounter of room.encountersDetailed) {
-                if (encounter.type !== 'Familiar') continue;
-                
-                const encounterName = encounter.name;
-                if (!encounterName || !dataModule.allItems[encounterName]) continue;
-                
-                // Skip if already owned
-                if (ownedItemNames.has(encounterName)) continue;
-                
-                // Try to find a completed quest for this encounter
-                // Check both by encounterName and by prompt (for older quests)
-                let foundQuest = false;
-                for (const quest of completedQuests) {
-                    checkedQuests++;
-                    if (quest.type !== '♠ Dungeon Crawl') continue;
-                    
-                    encounterQuests++;
-                    const isEncounter = quest.isEncounter === true || quest.isEncounter === 'true';
-                    
-                    // Check if this quest matches the encounter
-                    const matchesByName = isEncounter && quest.encounterName === encounterName;
-                    // Relaxed prompt matching - just check if the encounter name is in the prompt
-                    const matchesByPrompt = quest.prompt && quest.prompt.includes(encounterName);
-                    
-                    if (matchesByName || matchesByPrompt) {
-                        // Check if it was a befriend action (default true if not specified, for familiars)
-                        // If it's a Coffee Elemental, assume befriend if not explicitly defeat
-                        const isBefriend = quest.isBefriend !== false;
-                        
-                        if (isBefriend) {
-                            foundQuest = true;
-                            // Add the familiar to inventory
-                            stateAdapter.addInventoryItem({ 
-                                name: encounterName, 
-                                ...dataModule.allItems[encounterName] 
-                            });
-                            ownedItemNames.add(encounterName);
-                            fixedCount++;
-                            console.log(`Fixed: Added missing familiar "${encounterName}" to inventory from completed encounter quest.`);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (fixedCount > 0) {
-            console.log(`Fixed ${fixedCount} completed familiar encounter(s) by adding missing familiars to inventory.`);
-            // Refresh inventory display
-            const wearableSlotsInput = document.getElementById('wearable-slots');
-            const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
-            const familiarSlotsInput = document.getElementById('familiar-slots');
-            if (wearableSlotsInput && ui.renderLoadout) {
-                ui.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-                // Also refresh passive equipment
-                if (ui.renderPassiveEquipment) {
-                    ui.renderPassiveEquipment();
-                }
-            }
-        } else {
-            console.log(`Checked ${checkedQuests} completed quests (${encounterQuests} dungeon encounters) for missing familiars - none found.`);
-        }
-    }
 
     function updateCurrency(rewards) {
         if (!rewards) return;
@@ -593,11 +464,8 @@ export async function initializeCharacterSheet() {
     // --- INITIALIZE STATE-DEPENDENT UI ---
     initializeCompletedBooksSet();
     
-    // Fix any completed restoration projects that don't have passive slots created
-    fixCompletedRestorationProjects();
-    
-    // Fix any completed familiar encounters that are missing familiars from rewards
-    fixCompletedFamiliarEncounters();
+    // Run post-load repairs to fix any inconsistencies in saved data
+    runAllRepairs(stateAdapter, ui);
     
     // Sync dusty blueprints input from characterState (stored separately from form)
     const dustyBlueprintsInput = document.getElementById('dustyBlueprints');

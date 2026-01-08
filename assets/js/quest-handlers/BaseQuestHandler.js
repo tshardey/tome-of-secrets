@@ -152,14 +152,36 @@ export class BaseQuestHandler {
      * @returns {Object} Quest with finalized rewards
      */
     static completeActiveQuest(quest, background, wizardSchool = null) {
-        // Convert existing rewards to Reward object
-        const baseRewards = new Reward(quest.rewards || { xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
+        // Recalculate base rewards from scratch to ensure receipt base values are correct
+        // This is important because stored rewards are plain JSON objects that don't have receipt info
+        const baseRewards = RewardCalculator.getBaseRewards(
+            quest.type,
+            quest.prompt || '',
+            {
+                isEncounter: quest.isEncounter || false,
+                roomNumber: quest.roomNumber || null,
+                encounterName: quest.encounterName || null,
+                isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true
+            }
+        );
+        
+        // Preserve any items that were already in the quest (e.g., from side quests)
+        if (quest.rewards?.items && Array.isArray(quest.rewards.items)) {
+            baseRewards.items = [...baseRewards.items, ...quest.rewards.items];
+            // Remove duplicates while preserving order
+            baseRewards.items = [...new Set(baseRewards.items)];
+        }
         
         let finalRewards = baseRewards;
         
         // Apply buff modifiers if any buffs are selected
         if (quest.buffs && quest.buffs.length > 0) {
             finalRewards = RewardCalculator.applyModifiers(baseRewards, quest.buffs);
+            // Preserve items after applying modifiers
+            if (quest.rewards?.items && Array.isArray(quest.rewards.items)) {
+                finalRewards.items = [...finalRewards.items, ...quest.rewards.items];
+                finalRewards.items = [...new Set(finalRewards.items)];
+            }
         }
         
         // Always apply background bonuses (independent of buffs)
@@ -170,10 +192,14 @@ export class BaseQuestHandler {
             finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
         }
         
-        // Return quest with finalized rewards
+        // Get receipt before converting to JSON
+        const receipt = finalRewards.getReceipt();
+        
+        // Return quest with finalized rewards and receipt
         return {
             ...quest,
-            rewards: finalRewards.toJSON()
+            rewards: finalRewards.toJSON(),
+            receipt: receipt // Store receipt for UI display
         };
     }
 

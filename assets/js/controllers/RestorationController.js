@@ -187,24 +187,7 @@ export class RestorationController extends BaseController {
      * @returns {Object|null} Updated slot or null if failed
      */
     assignItemToPassiveSlot(slotId, itemName) {
-        // If assigning an item to a passive slot, remove it from equipped if it's there
-        if (itemName) {
-            const equippedItems = this.stateAdapter.getEquippedItems();
-            const equippedIndex = equippedItems.findIndex(item => item.name === itemName);
-            if (equippedIndex !== -1) {
-                // Move from equipped back to inventory (it's already in inventory, just remove from equipped)
-                const itemToMove = equippedItems[equippedIndex];
-                this.stateAdapter.removeEquippedItem(equippedIndex);
-                
-                // Ensure item is in inventory (it should already be, but just in case)
-                const inventoryItems = this.stateAdapter.getInventoryItems();
-                const inInventory = inventoryItems.some(item => item.name === itemName);
-                if (!inInventory) {
-                    this.stateAdapter.addInventoryItem(itemToMove);
-                }
-            }
-        }
-        
+        // StateAdapter automatically enforces invariant: unequips item if equipped
         const result = this.stateAdapter.setPassiveSlotItem(slotId, itemName);
         if (result) {
             this.saveState();
@@ -219,24 +202,7 @@ export class RestorationController extends BaseController {
      * @returns {Object|null} Updated slot or null if failed
      */
     assignFamiliarToPassiveSlot(slotId, familiarName) {
-        // If assigning a familiar to a passive slot, remove it from equipped if it's there
-        if (familiarName) {
-            const equippedItems = this.stateAdapter.getEquippedItems();
-            const equippedIndex = equippedItems.findIndex(item => item.name === familiarName);
-            if (equippedIndex !== -1) {
-                // Move from equipped back to inventory (it's already in inventory, just remove from equipped)
-                const familiarToMove = equippedItems[equippedIndex];
-                this.stateAdapter.removeEquippedItem(equippedIndex);
-                
-                // Ensure familiar is in inventory (it should already be, but just in case)
-                const inventoryItems = this.stateAdapter.getInventoryItems();
-                const inInventory = inventoryItems.some(item => item.name === familiarName);
-                if (!inInventory) {
-                    this.stateAdapter.addInventoryItem(familiarToMove);
-                }
-            }
-        }
-        
+        // StateAdapter automatically enforces invariant: unequips familiar if equipped
         const result = this.stateAdapter.setPassiveFamiliarSlotItem(slotId, familiarName);
         if (result) {
             this.saveState();

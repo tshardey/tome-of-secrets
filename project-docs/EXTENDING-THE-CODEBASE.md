@@ -9,8 +9,11 @@ This guide provides straightforward instructions for adding new features to the 
 1. [Adding New Game Content](#adding-new-game-content)
 2. [Adding New State/Data](#adding-new-statedata)
 3. [Adding New UI Features](#adding-new-ui-features)
-4. [Following Existing Patterns](#following-existing-patterns)
-5. [Testing Requirements](#testing-requirements)
+4. [Service Extraction Pattern](#service-extraction-pattern)
+5. [View Model Pattern](#view-model-pattern)
+6. [Pure UI Renderer Pattern](#pure-ui-renderer-pattern)
+7. [Following Existing Patterns](#following-existing-patterns)
+8. [Testing Requirements](#testing-requirements)
 
 ---
 
@@ -24,24 +27,32 @@ This guide provides straightforward instructions for adding new features to the 
 
 **Steps (JSON-first workflow):**
 1. Edit the appropriate JSON file under `assets/data/` (e.g., add an item to `allItems.json`)
+   - **Important**: All content must have a stable `id` field (kebab-case format, e.g., `"new-item-name"`)
+   - Keep existing `name` field for display purposes
+   - See [Stable IDs](#stable-ids) for more details
 2. Run the generator:
    ```bash
    node scripts/generate-data.js
    ```
-3. If UI needs to render new content, update the relevant renderer:
-   - Character Sheet: `/assets/js/character-sheet/ui.js` and `/assets/js/character-sheet.js`
-     - Example: curses dropdown is populated from `curseTableDetailed` at runtime (no hardcoded options)
+3. Run data validation to catch any issues:
+   ```bash
+   cd tests && npm run validate-data
+   ```
+4. If UI needs to render new content, update the relevant renderer:
+   - Character Sheet: Use view models and services (see [View Model Pattern](#view-model-pattern))
    - Rewards page: `/assets/js/page-renderers/rewardsRenderer.js`
    - Sanctum page: `/assets/js/page-renderers/sanctumRenderer.js`
    - Keeper page: `/assets/js/page-renderers/keeperRenderer.js`
    - Tables (Dungeons/Quests/Shroud): `/assets/js/table-renderer.js`
-4. Add tests in `/tests/*.test.js` as needed
+5. Add tests in `/tests/*.test.js` as needed
 
 **Example - Adding a New Item:**
 ```json
 // In assets/data/allItems.json
 {
   "New Item Name": {
+    "id": "new-item-name",
+    "name": "New Item Name",
     "type": "Wearable",
     "img": "assets/images/rewards/new-item-name.png",
     "bonus": "Description of the item's bonus."
@@ -52,6 +63,29 @@ This guide provides straightforward instructions for adding new features to the 
 Then run:
 ```bash
 node scripts/generate-data.js
+cd tests && npm run validate-data
+```
+
+### Stable IDs
+
+**All content must have stable kebab-case IDs** for reliable references across expansions and refactoring.
+
+**ID Requirements:**
+- **Format**: kebab-case (lowercase, hyphens for spaces, e.g., `"library-restoration"`)
+- **Uniqueness**: Must be unique within the content category (e.g., all items, all quests)
+- **Stability**: Once assigned, never change (used for saved data references)
+
+**Lookup Pattern:**
+- Use `getItem(idOrName)` from `data.js` - supports both ID and name lookup for backward compatibility
+- Similar helpers exist: `getGenreQuest()`, `getSideQuest()`, `getCurse()`, `getAbility()`, etc.
+
+**Example:**
+```javascript
+import * as data from './character-sheet/data.js';
+
+// Both work (backward compatibility):
+const item1 = data.getItem('new-item-name');  // By ID (preferred)
+const item2 = data.getItem('New Item Name');  // By name (legacy)
 ```
 
 ---
@@ -390,18 +424,264 @@ if (simpleFeatureButton) {
 
 ### UI Rendering
 
-**Location:** `/assets/js/character-sheet/ui.js`
+**Location:** `/assets/js/character-sheet/ui.js` and `/assets/js/character-sheet/renderComponents.js`
+
+**Architecture Pattern (Phase 3 Refactor):**
+
+The UI layer follows a **pure renderer pattern** with **view models** and **services**:
+
+```
+┌─────────────────┐
+│  Character      │
+│  State          │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Services      │  ← Business logic, calculations
+│   (Pure)        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  View Models    │  ← Transform state + services → UI data
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  UI Renderers   │  ← Pure rendering (DOM manipulation only)
+│  (Pure)         │
+└─────────────────┘
+```
 
 **Pattern:**
-- Export functions that render specific UI sections
-- Use template literals for HTML generation
-- Access state through `characterState` or StateAdapter
-- Keep rendering logic separate from business logic
-- Prefer dedicated page renderers for content hydration:
+- **UI functions are pure renderers** - They accept view models and only manipulate DOM
+- **No business logic in UI functions** - All calculations happen in services
+- **View models transform data** - They prepare state + services into UI-ready formats
+- **Services contain business logic** - Calculations, filtering, formatting
+
+**Prefer dedicated page renderers for content hydration:**
   - `assets/js/page-renderers/rewardsRenderer.js`
   - `assets/js/page-renderers/sanctumRenderer.js`
   - `assets/js/page-renderers/keeperRenderer.js`
   - `assets/js/table-renderer.js` for rules tables across pages
+
+---
+
+## Service Extraction Pattern
+
+**When to create a service:**
+- Extract business logic from UI functions or controllers
+- Calculations that need to be testable in isolation
+- Data transformations or formatting logic
+- Reusable logic used by multiple components
+
+**Service Pattern:**
+1. Create a service module in `/assets/js/services/`
+2. Export pure functions (no side effects, no DOM manipulation)
+3. Functions should be easily testable
+4. Services can import other services but should not import UI modules
+
+**Example - Creating a Service:**
+```javascript
+// assets/js/services/NewFeatureService.js
+/**
+ * NewFeatureService - Handles new feature calculations and logic
+ */
+
+/**
+ * Calculate something based on state
+ * @param {Object} state - Character state
+ * @param {Object} options - Calculation options
+ * @returns {Object} Calculation result
+ */
+export function calculateNewFeature(state, options = {}) {
+    // Pure calculation logic, no side effects
+    const baseValue = state.someValue || 0;
+    const multiplier = options.multiplier || 1;
+    
+    return {
+        base: baseValue,
+        multiplier: multiplier,
+        total: baseValue * multiplier
+    };
+}
+
+/**
+ * Format data for display
+ * @param {Object} data - Raw data
+ * @returns {string} Formatted string
+ */
+export function formatNewFeature(data) {
+    return `${data.name}: ${data.value}`;
+}
+```
+
+**Testing Services:**
+- Create tests in `/tests/services/[ServiceName].test.js`
+- Test all calculation paths
+- Test edge cases and error handling
+- Services should have 90%+ test coverage
+
+**Existing Services:**
+- `RewardCalculator.js` - All reward calculations
+- `QuestService.js` - Quest-related calculations and formatting
+- `QuestRewardService.js` - Blueprint reward calculations
+- `InventoryService.js` - Inventory item hydration and filtering
+- `SlotService.js` - Slot limit calculations
+- `AbilityService.js` - Ability filtering and formatting
+- `AtmosphericBuffService.js` - Atmospheric buff calculations
+
+---
+
+## View Model Pattern
+
+**When to create a view model:**
+- Transform state + services into UI-ready data structures
+- Aggregate data from multiple sources for a single UI component
+- Format data for display (dates, numbers, strings)
+- Calculate derived values for UI rendering
+
+**View Model Pattern:**
+1. Create a view model module in `/assets/js/viewModels/`
+2. Export functions that accept state and return view model objects
+3. View models should be pure functions (deterministic, no side effects)
+4. View models can call services for calculations
+
+**Example - Creating a View Model:**
+```javascript
+// assets/js/viewModels/newFeatureViewModel.js
+/**
+ * NewFeatureViewModel - Creates view models for new feature rendering
+ */
+
+import { calculateNewFeature, formatNewFeature } from '../services/NewFeatureService.js';
+import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+
+/**
+ * Create view model for new feature rendering
+ * @param {Object} state - Character state object
+ * @param {Object} options - Optional parameters
+ * @returns {Object} View model with all data needed for rendering
+ */
+export function createNewFeatureViewModel(state, options = {}) {
+    // Get data from state using storage keys
+    const rawData = state[STORAGE_KEYS.NEW_FEATURE_DATA] || [];
+    
+    // Use services for calculations
+    const calculation = calculateNewFeature(state, options);
+    
+    // Transform data for UI
+    const formattedItems = rawData.map(item => ({
+        ...item,
+        displayText: formatNewFeature(item),
+        isHighlighted: item.value > 100
+    }));
+    
+    // Return view model
+    return {
+        items: formattedItems,
+        calculation,
+        summary: {
+            total: calculation.total,
+            count: formattedItems.length,
+            hasItems: formattedItems.length > 0
+        }
+    };
+}
+```
+
+**Using View Models in Controllers:**
+```javascript
+// In controller or character-sheet.js
+import { createNewFeatureViewModel } from '../viewModels/newFeatureViewModel.js';
+
+// Create view model
+const viewModel = createNewFeatureViewModel(characterState, { multiplier: 2 });
+
+// Pass to UI renderer
+uiModule.renderNewFeature(viewModel);
+```
+
+**Testing View Models:**
+- Create tests in `/tests/viewModels/[ViewModelName].test.js`
+- Test view model creation with various state inputs
+- Verify calculations are correct
+- Test edge cases (empty state, missing fields, etc.)
+
+**Existing View Models:**
+- `inventoryViewModel.js` - Inventory and loadout UI data
+- `questViewModel.js` - Quest list UI data
+- `abilityViewModel.js` - Abilities UI data
+- `atmosphericBuffViewModel.js` - Atmospheric buffs UI data
+- `curseViewModel.js` - Curses UI data
+- `generalInfoViewModel.js` - Character info UI data
+
+---
+
+## Pure UI Renderer Pattern
+
+**UI functions should be pure renderers** - They accept data and render DOM, nothing else.
+
+**Pure Renderer Pattern:**
+1. **Accept view models, not raw state** - UI functions receive pre-calculated, UI-ready data
+2. **No business logic** - No calculations, filtering, or data transformations
+3. **No state mutations** - Never modify character state directly
+4. **Only DOM manipulation** - Create, update, or remove DOM elements
+
+**Example - Pure Renderer Function:**
+```javascript
+// ✅ GOOD: Pure renderer
+export function renderNewFeature(viewModel) {
+    const container = document.getElementById('new-feature-container');
+    clearElement(container);
+    
+    // Use view model data directly - no calculations here
+    viewModel.items.forEach(item => {
+        const element = document.createElement('div');
+        element.textContent = item.displayText; // Already formatted
+        if (item.isHighlighted) {
+            element.classList.add('highlight'); // Already calculated
+        }
+        container.appendChild(element);
+    });
+    
+    // Display summary from view model
+    const summaryEl = document.getElementById('new-feature-summary');
+    if (summaryEl) {
+        summaryEl.textContent = `${viewModel.summary.count} items (Total: ${viewModel.summary.total})`;
+    }
+}
+```
+
+**Backward Compatibility Wrapper:**
+When refactoring existing UI functions, create a wrapper for backward compatibility:
+
+```javascript
+// Backward-compatible wrapper (creates view model internally)
+export function renderNewFeature(stateOrViewModel, options) {
+    // Check if first argument is already a view model
+    if (stateOrViewModel && stateOrViewModel.items && stateOrViewModel.summary) {
+        // It's already a view model, render directly
+        renderNewFeaturePure(stateOrViewModel);
+    } else {
+        // It's raw state, create view model first
+        const viewModel = createNewFeatureViewModel(stateOrViewModel, options);
+        renderNewFeaturePure(viewModel);
+    }
+}
+
+// Pure renderer (internal, accepts view model only)
+function renderNewFeaturePure(viewModel) {
+    // Pure rendering logic (see above)
+}
+```
+
+**Testing UI Renderers:**
+- Focus on DOM structure and content
+- Test with various view model inputs
+- Verify correct elements are created/updated
+- Test edge cases (empty data, missing elements)
 
 ---
 
@@ -430,10 +710,40 @@ const reward = 10; // Magic number
 ### Data Shapes and Derivations
 
 - Keep detailed JSON as the source of truth (e.g., `sideQuestsDetailed.json`, `curseTableDetailed.json`).
+- **All content must have stable IDs** - See [Stable IDs](#stable-ids) section
 - If legacy/flattened shapes are needed by existing code, derive them in `assets/js/character-sheet/data.js` rather than duplicating JSON files.
 - Example derivations implemented:
   - `sideQuests`: built from `sideQuestsDetailed` for dropdown labels
-  - `curseTable`: built from `curseTableDetailed` with normalized `requirement` values (strips “You must ” prefix and trailing period)
+  - `curseTable`: built from `curseTableDetailed` with normalized `requirement` values (strips "You must " prefix and trailing period)
+
+### Calculation Receipts
+
+**All reward calculations produce detailed receipts** showing how rewards were calculated.
+
+**Receipt Structure:**
+```javascript
+{
+  base: { xp: 30, inkDrops: 10, paperScraps: 0, blueprints: 0 },
+  modifiers: [
+    { source: 'Cartographer Bonus', type: 'background', value: 15, description: '+15 Ink Drops', currency: 'inkDrops' },
+    { source: 'Page Sprite', type: 'item', value: 15, description: '×2 (+15 Ink Drops)', currency: 'inkDrops' }
+  ],
+  final: { xp: 30, inkDrops: 40, paperScraps: 0, blueprints: 0 },
+  items: ['Item Name'],
+  modifiedBy: ['Cartographer Bonus', 'Page Sprite']
+}
+```
+
+**Using Receipts:**
+- Receipts are automatically created by `RewardCalculator`
+- Store receipts with completed quests for review
+- Display receipts in tooltips and modal dialogs
+- Use receipts to debug calculation issues
+
+**When adding new reward sources:**
+- Update `RewardCalculator` to populate receipt base values
+- Add modifier entries to receipt when applying bonuses
+- Update final values in receipt after all calculations
 
 ### State Mutations
 
@@ -494,6 +804,32 @@ const name = input.value.trim(); // No null check
 const data = JSON.parse(localStorage.getItem('myData')) || []; // Unsafe
 ```
 
+### Data Validation
+
+**All game data is validated automatically** via `scripts/validate-data.js`.
+
+**Validation Checks:**
+- Unique IDs within each content category
+- Kebab-case format for all IDs
+- Item references in quest rewards resolve
+- Quest references are valid
+- Required fields present
+- Type validation (numbers, strings, arrays)
+- Cross-reference validation
+- Duplicate display name detection
+
+**Running Validation:**
+```bash
+cd tests && npm run validate-data
+```
+
+**Validation runs automatically in CI/CD** (GitHub Actions) before tests and build.
+
+**When adding new content:**
+- Always run validation after editing JSON files
+- Fix any validation errors before committing
+- Validation errors will fail the build in CI/CD
+
 ---
 
 ## Testing Requirements
@@ -536,14 +872,34 @@ When adding a new feature:
 - [ ] **Add validation in `dataValidator.js`** (if persistent state - REQUIRED)
 - [ ] Add StateAdapter methods (if state mutations needed)
 - [ ] Update `loadState()`/`saveState()` (if new persistent state - validation is automatic)
-- [ ] Add UI rendering functions to `ui.js` (if UI changes)
+- [ ] **Extract business logic to services** (if calculations needed)
+  - Create service module in `/assets/js/services/`
+  - Make functions pure and testable
+  - Add tests in `/tests/services/[ServiceName].test.js`
+- [ ] **Create view model** (if UI needs complex data transformation)
+  - Create view model module in `/assets/js/viewModels/`
+  - Transform state + services into UI-ready data
+  - Add tests in `/tests/viewModels/[ViewModelName].test.js`
+- [ ] **Create pure UI renderer** (for UI changes)
+  - Accept view model, not raw state
+  - No business logic, only DOM manipulation
+  - Add backward-compatible wrapper if needed
 - [ ] Create a controller in `/assets/js/controllers/` (if feature has multiple interactions)
   - OR wire up event listeners directly in `character-sheet.js` (for simple features)
 - [ ] Register controller in `character-sheet.js` (if using a controller)
 - [ ] Add delegated click handler if needed (for dynamically generated elements)
 - [ ] Write tests for new functionality (including validation tests, controller tests if applicable)
+- [ ] Run data validation: `cd tests && npm run validate-data`
 - [ ] Run full test suite: `cd tests && npm test`
 - [ ] Verify manual testing in browser
+
+When adding new game content:
+
+- [ ] Add stable `id` field (kebab-case) to content JSON
+- [ ] Add `name` field for display purposes
+- [ ] Run `node scripts/generate-data.js`
+- [ ] Run `cd tests && npm run validate-data` to check for errors
+- [ ] Update lookup helpers in `data.js` if needed (usually automatic)
 
 When changing data structure (schema change):
 
@@ -591,10 +947,87 @@ When changing data structure (schema change):
 
 ---
 
+## Phase 3 Architecture Summary
+
+**Current Architecture (Post-Phase 3 Refactor):**
+
+The codebase follows a **clean separation of concerns**:
+
+1. **Content Layer** (`assets/data/*.json`)
+   - Pure JSON data files with stable IDs
+   - Single source of truth for game content
+   - Validated via `scripts/validate-data.js`
+
+2. **Domain Logic Layer** (`assets/js/services/*.js`)
+   - Pure functions for calculations and business logic
+   - No side effects, easily testable
+   - Examples: `RewardCalculator`, `QuestService`, `InventoryService`
+
+3. **State Layer** (`assets/js/character-sheet/stateAdapter.js`, `dataValidator.js`)
+   - State mutations and persistence
+   - Data validation and migrations
+   - Invariant enforcement
+
+4. **View Layer** (`assets/js/viewModels/*.js` + `ui.js`)
+   - View models transform state + services → UI data
+   - UI functions are pure renderers (DOM only)
+   - Controllers handle user interactions
+
+**Key Principles:**
+- ✅ UI functions contain **zero business logic**
+- ✅ All calculations happen in **services** (testable)
+- ✅ Data transformation happens in **view models**
+- ✅ State mutations only via **StateAdapter**
+- ✅ All content has **stable IDs** for reliable references
+- ✅ All calculations produce **receipts** for transparency
+
+---
+
 ## Remember
 
 - **Keep it simple** - Follow existing patterns rather than inventing new ones
-- **Test your changes** - Run the test suite before committing
+- **Test your changes** - Run the test suite and data validation before committing
+- **Extract to services** - Business logic belongs in services, not UI
+- **Use view models** - Transform data before rendering, keep UI pure
+- **Stable IDs** - All content must have kebab-case IDs
 - **Update documentation** - If you add a new pattern, document it here
 - **Maintain consistency** - Use the established patterns and conventions
+
+---
+
+## Future Work / Remaining Phase 3 Items
+
+### Completed ✅
+- ✅ Expansion manifest system (`expansions.json` + `contentRegistry.js`)
+- ✅ Stable IDs added to all content files
+- ✅ Data validation script (`scripts/validate-data.js`)
+- ✅ Calculation receipt system (full transparency)
+- ✅ Service extraction (all business logic in services)
+- ✅ Post-load repairs (`postLoadRepair.js`)
+- ✅ Invariant enforcement (StateAdapter)
+- ✅ UI/logic separation (pure renderers)
+- ✅ View model layer (data transformation)
+- ✅ Comprehensive test coverage
+
+### Optional Future Enhancements
+
+1. **UI Modernization** (Phase 4)
+   - Replace alerts with inline toasts/snackbars
+   - Improve Cloud Save status indicators
+   - Add dedicated Settings panel
+
+2. **Expansion System Enhancements**
+   - Expansion dependencies (e.g., expansion B requires expansion A)
+   - Expansion versioning with automatic migrations
+   - Expansion feature flags (for testing/development)
+
+3. **Calculation Receipt Enhancements**
+   - Visual diff view for receipt comparison
+   - Receipt history/audit trail
+   - Export receipts for debugging
+
+4. **Documentation**
+   - Expand examples in this guide
+   - Add video tutorials for common tasks
+   - Create architecture decision records (ADRs)
 

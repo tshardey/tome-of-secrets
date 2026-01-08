@@ -8,61 +8,31 @@
 import { escapeHtml, decodeHtmlEntities } from '../utils/sanitize.js';
 import { createElement } from '../utils/domHelpers.js';
 import * as data from './data.js';
+import { formatReceiptTooltip, calculateActiveQuestReceipt } from '../services/QuestService.js';
+import { createQuestRowViewModel } from '../viewModels/questViewModel.js';
 
 /**
- * Renders a quest row for tables
- * @param {Object} quest - Quest object
- * @param {number} index - Quest index
- * @param {string} listType - Type of list ('active', 'completed', 'discarded')
+ * Pure rendering function for quest row - accepts view model
+ * @param {Object} viewModel - Quest row view model from createQuestRowViewModel
  * @returns {HTMLTableRowElement} The rendered row element
  */
-export function renderQuestRow(quest, index, listType = 'active') {
+function renderQuestRowPure(viewModel) {
+    const { quest, index, listType } = viewModel;
     const row = document.createElement('tr');
-    const rewards = quest.rewards || {};
     
-    // Format buffs to remove prefixes for display
-    const buffs = quest.buffs && quest.buffs.length > 0 
-        ? quest.buffs.map(b => {
-            const decoded = decodeHtmlEntities(b.replace(/^\[(Buff|Item|Background)\] /, ''));
-            return escapeHtml(decoded);
-        }).join(', ') 
-        : '-';
-    
-    // Add indicator if quest will receive buffs (for active) or was modified (for completed)
-    let rewardIndicator = '';
-    if (listType === 'active' && quest.buffs && quest.buffs.length > 0) {
-        rewardIndicator = ' <span style="color: #b89f62;">*</span>';
-    } else if (listType === 'completed' && rewards.modifiedBy && rewards.modifiedBy.length > 0) {
-        const modifiedBy = rewards.modifiedBy.map(m => {
-            const decoded = decodeHtmlEntities(m);
-            return escapeHtml(decoded);
-        }).join(', ');
-        rewardIndicator = ` <span style="color: #b89f62;" title="Modified by: ${modifiedBy}">✓</span>`;
-    }
-    
-    // For Extra Credit, don't show prompt
-    // Decode HTML entities first, then escape for innerHTML safety
-    const rawPrompt = quest.type === '⭐ Extra Credit' ? '-' : (quest.prompt || '');
-    const promptDisplay = rawPrompt === '-' ? '-' : escapeHtml(decodeHtmlEntities(rawPrompt));
-    
-    // Build cells - decode HTML entities first, then escape for innerHTML
+    // Build cells using view model data (already formatted and sanitized)
     const cells = [
-        escapeHtml(decodeHtmlEntities(quest.month || '')),
-        escapeHtml(decodeHtmlEntities(quest.year || '')),
-        escapeHtml(decodeHtmlEntities(quest.type || '')),
-        promptDisplay,
-        escapeHtml(decodeHtmlEntities(quest.book || '')),
-        rewards.xp > 0 ? `+${rewards.xp}${rewardIndicator}` : '-',
-        rewards.paperScraps > 0 ? `+${rewards.paperScraps}${rewardIndicator}` : '-',
-        rewards.inkDrops > 0 ? `+${rewards.inkDrops}${rewardIndicator}` : '-',
-        rewards.items && rewards.items.length > 0 
-            ? rewards.items.map(item => {
-                const decoded = decodeHtmlEntities(item);
-                return escapeHtml(decoded);
-            }).join(', ') 
-            : '-',
-        buffs,
-        escapeHtml(decodeHtmlEntities(quest.notes || ''))
+        escapeHtml(viewModel.month),
+        escapeHtml(viewModel.year),
+        escapeHtml(viewModel.type),
+        escapeHtml(viewModel.prompt),
+        escapeHtml(viewModel.book),
+        viewModel.xp, // Already formatted with indicator
+        viewModel.paperScraps, // Already formatted with indicator
+        viewModel.inkDrops, // Already formatted with indicator
+        escapeHtml(viewModel.items),
+        escapeHtml(viewModel.buffs),
+        escapeHtml(viewModel.notes)
     ];
     
     cells.forEach(cellContent => {
@@ -75,22 +45,48 @@ export function renderQuestRow(quest, index, listType = 'active') {
     const actionCell = document.createElement('td');
     actionCell.className = 'no-print action-cell';
     
-    // Determine list name for edit button
-    const listName = listType === 'active' ? 'activeAssignments' : 
-                     listType === 'completed' ? 'completedQuests' : 
-                     'discardedQuests';
-    
-    if (listType === 'active') {
+    if (viewModel.showComplete) {
         actionCell.appendChild(createActionButton('Complete', 'complete-quest-btn', index));
+    }
+    if (viewModel.showDiscard) {
         actionCell.appendChild(createActionButton('Discard', 'discard-quest-btn', index));
     }
-    
-    actionCell.appendChild(createActionButton('Delete', 'delete-btn', index, { 'data-list': listType === 'active' ? 'active' : listType }));
-    actionCell.appendChild(createActionButton('Edit', 'edit-quest-btn', index, { 'data-list': listName }));
+    if (viewModel.showDelete) {
+        actionCell.appendChild(createActionButton('Delete', 'delete-btn', index, { 'data-list': listType === 'active' ? 'active' : listType }));
+    }
+    if (viewModel.showEdit) {
+        actionCell.appendChild(createActionButton('Edit', 'edit-quest-btn', index, { 'data-list': viewModel.listName }));
+    }
     
     row.appendChild(actionCell);
     
     return row;
+}
+
+/**
+ * Renders a quest row for tables - maintains backward compatibility
+ * Accepts either a view model or (quest, index, listType) for legacy calls
+ * @param {Object|Object} questOrViewModel - Quest object or view model
+ * @param {number} [index] - Quest index (for legacy calls)
+ * @param {string} [listType] - Type of list ('active', 'completed', 'discarded') (for legacy calls)
+ * @returns {HTMLTableRowElement} The rendered row element
+ */
+export function renderQuestRow(questOrViewModel, index, listType = 'active') {
+    // Check if first param is a view model (has quest property) or a quest object
+    if (questOrViewModel && typeof questOrViewModel === 'object' && questOrViewModel.quest !== undefined) {
+        // It's a view model, use it directly
+        return renderQuestRowPure(questOrViewModel);
+    } else {
+        // Legacy call - create view model
+        const quest = questOrViewModel;
+        const bgSelect = document.getElementById('keeperBackground');
+        const schoolSelect = document.getElementById('wizardSchool');
+        const background = bgSelect ? bgSelect.value : '';
+        const wizardSchool = schoolSelect ? schoolSelect.value : '';
+        
+        const viewModel = createQuestRowViewModel(quest, index, listType, background, wizardSchool);
+        return renderQuestRowPure(viewModel);
+    }
 }
 
 /**
@@ -434,16 +430,27 @@ export function renderQuestCard(quest, index, listType = 'active') {
         }).join(', ') 
         : null;
     
+    // Calculate receipt for tooltip
+    let receipt = null;
+    if (listType === 'active' && (quest.buffs && quest.buffs.length > 0)) {
+        // Calculate preview receipt for active quests with buffs
+        receipt = calculateActiveQuestReceipt(quest);
+    } else if (listType === 'completed' && quest.receipt) {
+        // Use stored receipt for completed quests
+        receipt = quest.receipt;
+    }
+    
+    // Format receipt as tooltip text
+    const tooltipText = receipt ? formatReceiptTooltip(receipt, listType) : null;
+    
     // Add indicator if quest will receive buffs (for active) or was modified (for completed)
     let rewardIndicator = '';
     if (listType === 'active' && quest.buffs && quest.buffs.length > 0) {
-        rewardIndicator = ' <span class="reward-indicator" title="Will receive buffs">*</span>';
-    } else if (listType === 'completed' && rewards.modifiedBy && rewards.modifiedBy.length > 0) {
-        const modifiedBy = rewards.modifiedBy.map(m => {
-            const decoded = decodeHtmlEntities(m);
-            return escapeHtml(decoded);
-        }).join(', ');
-        rewardIndicator = ` <span class="reward-indicator" title="Modified by: ${modifiedBy}">✓</span>`;
+        const tooltip = tooltipText || 'Will receive buffs';
+        rewardIndicator = ` <span class="reward-indicator" style="cursor: help;" title="${escapeHtml(tooltip)}">*</span>`;
+    } else if (listType === 'completed' && (rewards.modifiedBy && rewards.modifiedBy.length > 0 || receipt)) {
+        const tooltip = tooltipText || (rewards.modifiedBy ? `Modified by: ${rewards.modifiedBy.map(m => escapeHtml(decodeHtmlEntities(m))).join(', ')}` : 'Modified');
+        rewardIndicator = ` <span class="reward-indicator" style="cursor: help;" title="${escapeHtml(tooltip)}">✓</span>`;
     }
     
     // For Extra Credit, don't show prompt
