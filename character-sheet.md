@@ -228,6 +228,12 @@ permalink: /character-sheet.html
         <h2>🌿 Reading Environment</h2>
         <p class="description">Manage your temporary buffs and atmospheric conditions to enhance your reading experience. Future: Decorate your study to unlock permanent bonuses!</p>
 
+        <div class="form-row" style="margin-bottom: 20px;">
+            <button type="button" class="open-table-overlay-btn" data-table="atmospheric-buffs">
+                🎲 View Atmospheric Buffs Table (d8)
+            </button>
+        </div>
+
         <div id="temporary-buffs-container">
             <h3>✨ Active Temporary Buffs</h3>
             <p class="description"><strong>Remember:</strong> Don't forget to roll on the <a href="{{ site.baseurl }}/dungeons.html#dungeon-completion-rewards">Dungeon Completion Rewards</a> table when you complete all dungeon rooms! Some rewards are temporary buffs that will be automatically added.</p>
@@ -368,6 +374,18 @@ permalink: /character-sheet.html
         <p class="description" style="margin-top: -10px; margin-bottom: 20px;">
             <strong>End of Month:</strong> Awards 15 XP per book completed, 5 Paper Scraps per journal entry (+3 for Scribe's Acolyte), processes atmospheric buffs, and resets all monthly counters.
         </p>
+
+        <div class="form-row" style="margin-bottom: 20px; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="open-table-overlay-btn" data-table="genre-quests">
+                🎲 View Genre Quests Table
+            </button>
+            <button type="button" class="open-table-overlay-btn" data-table="side-quests">
+                🎲 View Side Quests Table (d8)
+            </button>
+            <button type="button" class="open-table-overlay-btn" data-table="dungeon-rooms">
+                🎲 View Dungeon Rooms Table (d12)
+            </button>
+        </div>
 
         <div class="add-quest-form">
             <div class="form-row">
@@ -515,6 +533,16 @@ permalink: /character-sheet.html
 
 </div>
 <!-- END TAB CONTAINER -->
+
+<!-- Table Overlay Panels -->
+<div id="table-overlay-backdrop" class="table-overlay-backdrop"></div>
+<div id="table-overlay-panel" class="table-overlay-panel" style="display: none;">
+    <button class="close-table-overlay-btn" id="close-table-overlay" aria-label="Close table overlay">&times;</button>
+    <div id="table-overlay-content">
+        <!-- Table content will be rendered here -->
+    </div>
+</div>
+
 
     <div class="form-buttons no-print">
     <button type="submit">Save Character Info</button>

@@ -16,6 +16,7 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { safeSetJSON } from '../utils/storage.js';
 import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
+import { toast } from '../ui/toast.js';
 
 export class EndOfMonthController extends BaseController {
     initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency) {
@@ -81,7 +82,7 @@ export class EndOfMonthController extends BaseController {
                     if (background === 'scribe') {
                         const papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps +
                                               GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-                        alert(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
+                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
                     }
                 }
 
@@ -110,7 +111,7 @@ export class EndOfMonthController extends BaseController {
             this.saveState();
 
             // Show success notification
-            alert('End of Month processed! Rewards distributed and counters reset.');
+            toast.success('End of Month processed! Rewards distributed and counters reset.');
         };
 
         // Attach the handler to all "End of Month" buttons

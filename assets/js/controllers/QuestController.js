@@ -21,6 +21,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import * as data from '../character-sheet/data.js';
 import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
+import { toast } from '../ui/toast.js';
 
 export class QuestController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -812,7 +813,7 @@ export class QuestController extends BaseController {
             if (currentBlueprints < cost) {
                 // Don't complete the project if player doesn't have enough blueprints
                 const needed = cost - currentBlueprints;
-                alert(`Cannot complete restoration project: You need ${needed} more Dusty Blueprints. (Cost: ${cost}, You have: ${currentBlueprints})`);
+                toast.error(`Cannot complete restoration project: You need ${needed} more Dusty Blueprints. (Cost: ${cost}, You have: ${currentBlueprints})`);
                 return false;
             }
             
@@ -820,7 +821,7 @@ export class QuestController extends BaseController {
             const success = stateAdapter.spendDustyBlueprints(cost);
             if (!success) {
                 // This shouldn't happen if we checked above, but handle it just in case
-                alert(`Cannot complete restoration project: Failed to spend ${cost} Dusty Blueprints.`);
+                toast.error(`Cannot complete restoration project: Failed to spend ${cost} Dusty Blueprints.`);
                 return false;
             }
             
@@ -942,8 +943,7 @@ export class QuestController extends BaseController {
      * @param {string} message - Notification message
      */
     showRewardNotification(message) {
-        // Show alert for now (matches character sheet pattern)
-        alert(message);
+        toast.success(message, 5000); // 5 second duration for rewards
         console.log('Reward:', message);
     }
 

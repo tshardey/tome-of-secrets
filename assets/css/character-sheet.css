@@ -1,3 +1,190 @@
+/* Table Overlay Button */
+.open-table-overlay-btn {
+    background-color: rgba(184, 159, 98, 0.2);
+    border: 2px solid #b89f62;
+    border-radius: 6px;
+    padding: 12px 20px;
+    color: #b89f62;
+    cursor: pointer;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.open-table-overlay-btn:hover {
+    background-color: rgba(184, 159, 98, 0.3);
+    border-color: #cca352;
+    color: #cca352;
+    transform: translateY(-2px);
+}
+
+.open-table-overlay-btn:focus {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+}
+
+/* Table Overlay Backdrop */
+.table-overlay-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+}
+
+.table-overlay-backdrop.active {
+    display: block;
+}
+
+/* Table Overlay Panel (Side Panel) */
+.table-overlay-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 50%;
+    max-width: 700px;
+    height: 100vh;
+    background-color: #2a231d;
+    border-left: 2px solid #54483b;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow-y: auto;
+    animation: slideInRight 0.3s ease;
+}
+
+/* Increase overlay size on very large monitors */
+@media (min-width: 1400px) {
+    .table-overlay-panel {
+        width: 60%;
+        max-width: 900px;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+.close-table-overlay-btn {
+    position: sticky;
+    top: 0;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: rgba(84, 72, 59, 0.5);
+    border-radius: 50%;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #d4c8b0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    float: right;
+    margin: 10px;
+    z-index: 1001;
+}
+
+.close-table-overlay-btn:hover {
+    background-color: rgba(184, 159, 98, 0.3);
+    color: #b89f62;
+}
+
+.close-table-overlay-btn:focus {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+}
+
+.table-overlay-header {
+    padding: 20px;
+    border-bottom: 2px solid #54483b;
+    background-color: rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #2a231d;
+}
+
+.table-overlay-header h2 {
+    margin: 0;
+    font-family: 'Lora', serif;
+    color: #b89f62;
+    font-size: 1.5em;
+}
+
+.table-overlay-body {
+    padding: 20px;
+}
+
+.table-overlay-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.table-overlay-body table th,
+.table-overlay-body table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #54483b;
+}
+
+.table-overlay-body table th {
+    background-color: rgba(84, 72, 59, 0.3);
+    color: #b89f62;
+    font-family: 'Lora', serif;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.table-overlay-body table td {
+    color: #d4c8b0;
+}
+
+.table-overlay-body table tr:last-child td {
+    border-bottom: none;
+}
+
+.table-overlay-body table tr.completed-quest {
+    opacity: 0.6;
+    color: #999;
+}
+
+.table-overlay-body table tr.completed-quest td {
+    color: #999;
+}
+
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .table-overlay-panel {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .table-overlay-body {
+        padding: 15px;
+    }
+    
+    .table-overlay-body table {
+        font-size: 0.9em;
+    }
+    
+    .table-overlay-body table th,
+    .table-overlay-body table td {
+        padding: 8px 10px;
+    }
+}
+
 /* General Table Styling */
 .tracker-table input[type="number"] {
     width: 60px; /* Give number inputs a consistent width */

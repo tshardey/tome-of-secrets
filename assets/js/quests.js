@@ -2,6 +2,7 @@ import * as data from './character-sheet/data.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr } from './utils/helpers.js';
+import { toast } from './ui/toast.js';
 
 // Map dice types to their max values
 const DICE_LIMITS = {
@@ -246,12 +247,12 @@ function setupEventListeners() {
                 : selectedGenres.length >= maxGenres;
             
             if (isAtMax) {
-                alert(`You can only select ${diceType === 'd20' ? 'all' : maxGenres} ${maxGenres === 1 ? 'genre' : 'genres'} maximum.`);
+                toast.warning(`You can only select ${diceType === 'd20' ? 'all' : maxGenres} ${maxGenres === 1 ? 'genre' : 'genres'} maximum.`);
                 return;
             }
             
             if (selectedGenres.includes(selectedGenre)) {
-                alert('This genre is already selected.');
+                toast.warning('This genre is already selected.');
                 return;
             }
             

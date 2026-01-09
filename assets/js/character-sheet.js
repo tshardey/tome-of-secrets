@@ -531,6 +531,470 @@ export async function initializeCharacterSheet() {
 
     ui.renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     initializeGenreSelection();
+    
+    // Initialize rolling tables in Quests tab
+    await initializeRollingTables();
+}
+
+/**
+ * Initialize rolling tables as side overlays
+ */
+async function initializeRollingTables() {
+    // Import table renderer functions
+    const tableRenderer = await import('./table-renderer.js');
+    const { renderGenreQuestsTable, renderAtmosphericBuffsTable, renderSideQuestsTable, renderDungeonRoomsTable } = tableRenderer;
+    
+    // Import state adapter for genre selection
+    const { StateAdapter } = await import('./character-sheet/stateAdapter.js');
+    const { characterState } = await import('./character-sheet/state.js');
+    const stateAdapter = new StateAdapter(characterState);
+    
+    // Import data module for allGenres
+    const dataModule = await import('./character-sheet/data.js');
+    const allGenres = dataModule.allGenres;
+    
+    // Helper function to process links (similar to processLinks in table-renderer)
+    function processLinks(html) {
+        const metaBase = document.querySelector('meta[name="baseurl"]');
+        const baseurl = metaBase ? metaBase.content : '';
+        return html.replace(/\{\{\s*site\.baseurl\s*\}\}/g, baseurl);
+    }
+    
+    // Get overlay elements
+    const overlayBackdrop = document.getElementById('table-overlay-backdrop');
+    const overlayPanel = document.getElementById('table-overlay-panel');
+    const overlayContent = document.getElementById('table-overlay-content');
+    const closeButton = document.getElementById('close-table-overlay');
+    
+    if (!overlayPanel || !overlayContent) return;
+    
+    // Table titles mapping
+    const tableTitles = {
+        'genre-quests': 'Genre Quests Table',
+        'atmospheric-buffs': 'Atmospheric Buffs Table',
+        'side-quests': 'Side Quests Table (d8)',
+        'dungeon-rooms': 'Dungeon Rooms Table (d12)'
+    };
+    
+    // Import storage utilities
+    const { safeGetJSON, safeSetJSON } = await import('./utils/storage.js');
+    const { STORAGE_KEYS } = await import('./character-sheet/storageKeys.js');
+    
+    // Function to render selected genres table
+    function renderSelectedGenresTable() {
+        const selectedGenres = stateAdapter.getSelectedGenres();
+        
+        if (selectedGenres.length === 0) {
+            return '<p class="no-genres-message">No genres selected. Use the genre selection controls below to add genres.</p>';
+        }
+        
+        let html = `<table>
+  <thead>
+    <tr>
+      <th>Roll</th>
+      <th>Quest Description</th>
+    </tr>
+  </thead>
+  <tbody>`;
+        
+        selectedGenres.forEach((genre, index) => {
+            html += `
+    <tr>
+      <td><strong>${index + 1}</strong></td>
+      <td><strong>${genre}:</strong> ${allGenres[genre] || 'No description'}</td>
+    </tr>`;
+        });
+        
+        html += `
+  </tbody>
+</table>`;
+        
+        return html;
+    }
+    
+    // Function to render genre selection UI
+    function renderGenreSelectionUI() {
+        const selectedGenres = stateAdapter.getSelectedGenres();
+        const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+        const allGenreKeys = Object.keys(allGenres);
+        const DICE_LIMITS = { 'd4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20 };
+        const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+        
+        // Get available genres (not yet selected)
+        const availableGenres = allGenreKeys.filter(g => !selectedGenres.includes(g));
+        
+        let html = `
+            <div class="genre-selection-overlay-section">
+                <h3>📚 Choose Your Genres</h3>
+                <p class="description">Select how many genres you want for your "Organize the Stacks" quests. Choose a dice type to determine how many genres you can select. If you choose d20, all genres will be automatically selected.</p>
+                
+                <div class="dice-selection-controls" style="margin-bottom: 15px;">
+                    <label for="overlay-genre-dice-selector"><strong>Number of Genres (Dice Type):</strong></label>
+                    <select id="overlay-genre-dice-selector" style="padding: 5px; margin-left: 10px;">
+                        <option value="d4" ${diceType === 'd4' ? 'selected' : ''}>d4 (4 genres)</option>
+                        <option value="d6" ${diceType === 'd6' ? 'selected' : ''}>d6 (6 genres)</option>
+                        <option value="d8" ${diceType === 'd8' ? 'selected' : ''}>d8 (8 genres)</option>
+                        <option value="d10" ${diceType === 'd10' ? 'selected' : ''}>d10 (10 genres)</option>
+                        <option value="d12" ${diceType === 'd12' ? 'selected' : ''}>d12 (12 genres)</option>
+                        <option value="d20" ${diceType === 'd20' ? 'selected' : ''}>d20 (all genres)</option>
+                    </select>
+                </div>
+                
+                <div class="selected-genres-display-overlay" style="margin-bottom: 15px; min-height: 50px; padding: 10px; background: rgba(84, 72, 59, 0.2); border-radius: 4px;">
+                    <strong>Selected Genres (${selectedGenres.length}/${maxGenres}):</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                        ${selectedGenres.length === 0 
+                            ? '<span style="color: #999; font-style: italic;">No genres selected yet.</span>'
+                            : selectedGenres.map((genre, idx) => `
+                                <span class="selected-genre-tag" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(184, 159, 98, 0.3); border: 1px solid #b89f62; border-radius: 4px;">
+                                    ${genre}
+                                    <button type="button" class="remove-genre-overlay-btn" data-index="${idx}" style="background: none; border: none; color: #b89f62; cursor: pointer; font-size: 1.2em; padding: 0; width: 20px; height: 20px; line-height: 1;">×</button>
+                                </span>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+                
+                <div class="genre-selection-controls-overlay" style="margin-bottom: 15px;">
+                    <label for="overlay-genre-selector"><strong>Add Genre:</strong></label>
+                    <select id="overlay-genre-selector" style="padding: 5px; margin: 0 10px;">
+                        <option value="">-- Select a genre to add --</option>
+                        ${availableGenres.map(genre => `<option value="${genre}">${genre}</option>`).join('')}
+                    </select>
+                    <button type="button" id="overlay-add-genre-button" ${selectedGenres.length >= maxGenres ? 'disabled' : ''} style="padding: 5px 15px; background: rgba(184, 159, 98, 0.3); border: 1px solid #b89f62; color: #b89f62; border-radius: 4px; cursor: pointer;">Add Genre</button>
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    // Function to open overlay with a specific table
+    function openTableOverlay(tableId) {
+        let tableHtml = '';
+        let title = tableTitles[tableId] || 'Rolling Table';
+        let showGenreSelection = false;
+        
+        switch (tableId) {
+            case 'genre-quests':
+                tableHtml = processLinks(renderSelectedGenresTable());
+                showGenreSelection = true;
+                break;
+            case 'atmospheric-buffs':
+                tableHtml = processLinks(renderAtmosphericBuffsTable());
+                break;
+            case 'side-quests':
+                tableHtml = processLinks(renderSideQuestsTable());
+                break;
+            case 'dungeon-rooms':
+                tableHtml = processLinks(renderDungeonRoomsTable());
+                break;
+            default:
+                return;
+        }
+        
+        // Render table in overlay
+        let contentHtml = `
+            <div class="table-overlay-header">
+                <h2>${title}</h2>
+            </div>
+            <div class="table-overlay-body">
+                ${tableHtml}
+            </div>
+        `;
+        
+        // Add genre selection UI if needed
+        if (showGenreSelection) {
+            contentHtml += renderGenreSelectionUI();
+        }
+        
+        overlayContent.innerHTML = contentHtml;
+        
+        // Set up genre selection event listeners if needed
+        if (showGenreSelection) {
+            setupGenreSelectionListeners();
+        }
+        
+        // Show overlay and backdrop
+        if (overlayBackdrop) {
+            overlayBackdrop.classList.add('active');
+        }
+        overlayPanel.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+    
+    // Track if we're currently processing a removal to prevent double-firing
+    // This needs to be outside the function so it persists across calls
+    let isRemovingGenre = false;
+    
+    // Function to setup genre selection event listeners
+    function setupGenreSelectionListeners() {
+        const diceSelector = document.getElementById('overlay-genre-dice-selector');
+        const genreSelector = document.getElementById('overlay-genre-selector');
+        const addButton = document.getElementById('overlay-add-genre-button');
+        
+        const DICE_LIMITS = { 'd4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20 };
+        const allGenreKeys = Object.keys(allGenres);
+        
+        function updateGenreSelectionUI() {
+            const selectedGenres = stateAdapter.getSelectedGenres();
+            const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+            const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+            const availableGenres = allGenreKeys.filter(g => !selectedGenres.includes(g));
+            
+            // Update selected genres display
+            const displayDiv = document.querySelector('.selected-genres-display-overlay');
+            if (displayDiv) {
+                displayDiv.innerHTML = `
+                    <strong>Selected Genres (${selectedGenres.length}/${maxGenres}):</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                        ${selectedGenres.length === 0 
+                            ? '<span style="color: #999; font-style: italic;">No genres selected yet.</span>'
+                            : selectedGenres.map((genre, idx) => `
+                                <span class="selected-genre-tag" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(184, 159, 98, 0.3); border: 1px solid #b89f62; border-radius: 4px;">
+                                    ${genre}
+                                    <button type="button" class="remove-genre-overlay-btn" data-index="${idx}" style="background: none; border: none; color: #b89f62; cursor: pointer; font-size: 1.2em; padding: 0; width: 20px; height: 20px; line-height: 1;">×</button>
+                                </span>
+                            `).join('')
+                        }
+                    </div>
+                `;
+                
+                // Re-attach remove button listeners
+                displayDiv.querySelectorAll('.remove-genre-overlay-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const index = parseInt(btn.dataset.index);
+                        const selectedGenres = stateAdapter.getSelectedGenres();
+                        selectedGenres.splice(index, 1);
+                        stateAdapter.setSelectedGenres(selectedGenres);
+                        updateGenreSelectionUI();
+                        // Re-render table
+                        const tableHtml = processLinks(renderSelectedGenresTable());
+                        const tableBody = document.querySelector('.table-overlay-body');
+                        if (tableBody) {
+                            tableBody.innerHTML = tableHtml;
+                        }
+                    });
+                });
+            }
+            
+            // Update genre selector dropdown
+            if (genreSelector) {
+                genreSelector.innerHTML = '<option value="">-- Select a genre to add --</option>';
+                availableGenres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = genre;
+                    option.textContent = genre;
+                    genreSelector.appendChild(option);
+                });
+            }
+            
+            // Update add button state
+            if (addButton) {
+                addButton.disabled = selectedGenres.length >= maxGenres;
+            }
+        }
+        
+        // Remove previous listeners if they exist
+        if (diceSelector && diceSelector._diceChangeHandler) {
+            diceSelector.removeEventListener('change', diceSelector._diceChangeHandler);
+        }
+        if (addButton && addButton._addButtonHandler) {
+            addButton.removeEventListener('click', addButton._addButtonHandler);
+        }
+        if (genreSelector && genreSelector._genreSelectorChangeHandler) {
+            genreSelector.removeEventListener('change', genreSelector._genreSelectorChangeHandler);
+        }
+        
+        // Dice selector change
+        if (diceSelector) {
+            diceSelector._diceChangeHandler = () => {
+                const newDiceType = diceSelector.value;
+                safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, newDiceType);
+                
+                let selectedGenres = stateAdapter.getSelectedGenres();
+                const maxGenres = newDiceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[newDiceType] || 6;
+                
+                // If d20, auto-select all genres
+                if (newDiceType === 'd20') {
+                    const genresToAdd = allGenreKeys.filter(g => !selectedGenres.includes(g));
+                    selectedGenres.push(...genresToAdd);
+                    stateAdapter.setSelectedGenres(selectedGenres);
+                } else if (selectedGenres.length > maxGenres) {
+                    // Trim to new max
+                    selectedGenres.splice(maxGenres);
+                    stateAdapter.setSelectedGenres(selectedGenres);
+                }
+                
+                updateGenreSelectionUI();
+                // Re-render table
+                const tableHtml = processLinks(renderSelectedGenresTable());
+                const tableBody = document.querySelector('.table-overlay-body');
+                if (tableBody) {
+                    tableBody.innerHTML = tableHtml;
+                }
+            };
+            diceSelector.addEventListener('change', diceSelector._diceChangeHandler);
+        }
+        
+        // Add genre button
+        if (addButton && genreSelector) {
+            addButton._addButtonHandler = async () => {
+                const selectedGenre = genreSelector.value;
+                if (!selectedGenre) return;
+                
+                const selectedGenres = stateAdapter.getSelectedGenres();
+                const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+                const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+                
+                // Check if already at max (even if button is enabled, check again)
+                if (selectedGenres.length >= maxGenres) {
+                    const { toast } = await import('./ui/toast.js');
+                    toast.warning(`You can only select ${diceType === 'd20' ? 'all' : maxGenres} ${maxGenres === 1 ? 'genre' : 'genres'} maximum.`);
+                    return;
+                }
+                
+                if (selectedGenres.includes(selectedGenre)) {
+                    const { toast } = await import('./ui/toast.js');
+                    toast.warning('This genre is already selected.');
+                    return;
+                }
+                
+                selectedGenres.push(selectedGenre);
+                stateAdapter.setSelectedGenres(selectedGenres);
+                genreSelector.value = '';
+                updateGenreSelectionUI();
+                // Re-render table
+                const tableHtml = processLinks(renderSelectedGenresTable());
+                const tableBody = document.querySelector('.table-overlay-body');
+                if (tableBody) {
+                    tableBody.innerHTML = tableHtml;
+                }
+            };
+            addButton.addEventListener('click', addButton._addButtonHandler);
+            
+            // Also check on genre selector change to show toast if trying to add when at max
+            genreSelector._genreSelectorChangeHandler = async () => {
+                const selectedGenre = genreSelector.value;
+                if (!selectedGenre) return;
+                
+                const selectedGenres = stateAdapter.getSelectedGenres();
+                const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+                const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+                
+                // If at max and trying to select a genre, show warning
+                if (selectedGenres.length >= maxGenres && !selectedGenres.includes(selectedGenre)) {
+                    const { toast } = await import('./ui/toast.js');
+                    toast.warning(`You can only select ${diceType === 'd20' ? 'all' : maxGenres} ${maxGenres === 1 ? 'genre' : 'genres'} maximum. Remove a genre first to add a new one.`);
+                    genreSelector.value = '';
+                }
+            };
+            genreSelector.addEventListener('change', genreSelector._genreSelectorChangeHandler);
+        }
+        
+        // Remove genre buttons (using event delegation)
+        // Use overlayContent for event delegation to handle dynamically created buttons
+        // Remove any existing listener first to avoid duplicates
+        if (overlayContent._removeGenreHandler) {
+            overlayContent.removeEventListener('click', overlayContent._removeGenreHandler);
+        }
+        
+        overlayContent._removeGenreHandler = (e) => {
+            // Check if the clicked element or its parent is the remove button
+            let removeBtn = e.target;
+            if (!removeBtn.classList || !removeBtn.classList.contains('remove-genre-overlay-btn')) {
+                removeBtn = e.target.closest('.remove-genre-overlay-btn');
+            }
+            
+            if (removeBtn && removeBtn.dataset && removeBtn.dataset.index !== undefined) {
+                // Prevent double-firing
+                if (isRemovingGenre) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const index = parseInt(removeBtn.dataset.index);
+                if (!isNaN(index) && index >= 0) {
+                    const selectedGenres = stateAdapter.getSelectedGenres();
+                    // Double-check we have genres and the index is valid
+                    if (selectedGenres.length > 0 && index < selectedGenres.length) {
+                        isRemovingGenre = true;
+                        
+                        // Create a new array to avoid mutation issues
+                        const newGenres = [...selectedGenres];
+                        newGenres.splice(index, 1);
+                        stateAdapter.setSelectedGenres(newGenres);
+                        updateGenreSelectionUI();
+                        // Re-render table
+                        const tableHtml = processLinks(renderSelectedGenresTable());
+                        const tableBody = document.querySelector('.table-overlay-body');
+                        if (tableBody) {
+                            tableBody.innerHTML = tableHtml;
+                        }
+                        
+                        // Reset flag after a short delay to allow UI to update
+                        setTimeout(() => {
+                            isRemovingGenre = false;
+                        }, 200);
+                    }
+                }
+            }
+        };
+        
+        // Attach to overlayContent for event delegation
+        overlayContent.addEventListener('click', overlayContent._removeGenreHandler);
+        
+        // Initial UI update
+        updateGenreSelectionUI();
+    }
+    
+    // Function to close overlay
+    function closeTableOverlay() {
+        if (overlayBackdrop) {
+            overlayBackdrop.classList.remove('active');
+        }
+        overlayPanel.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+    
+    // Set up open buttons
+    const openButtons = document.querySelectorAll('.open-table-overlay-btn');
+    openButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tableId = button.dataset.table;
+            if (tableId) {
+                openTableOverlay(tableId);
+            }
+        });
+    });
+    
+    // Set up close button
+    if (closeButton) {
+        closeButton.addEventListener('click', closeTableOverlay);
+    }
+    
+    // Close overlay when clicking on backdrop
+    if (overlayBackdrop) {
+        overlayBackdrop.addEventListener('click', closeTableOverlay);
+    }
+    
+    // Close overlay when clicking outside panel (on panel itself, not content)
+    overlayPanel.addEventListener('click', (e) => {
+        if (e.target === overlayPanel) {
+            closeTableOverlay();
+        }
+    });
+    
+    // Close overlay on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlayPanel.style.display === 'block') {
+            closeTableOverlay();
+        }
+    });
 }
 
 // Run the initialization when the DOM is fully loaded

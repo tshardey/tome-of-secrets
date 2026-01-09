@@ -6,41 +6,7 @@ title: Quests and Challenges
 ## ♥️ Organize the Stacks (Roll a die)
 Completing an Organize the Stacks quest rewards you with **+15 XP** and **+10 Ink Drops**
 
-<div class="genre-selection-container">
-    <h3 id="genre-selection-title">📚 Choose Your Genres</h3>
-    <p class="description">Select how many genres you want for your "Organize the Stacks" quests. Choose a dice type (d4, d6, d8, d10, d12, or d20) to determine how many genres you can select. If you choose d20, all genres will be automatically selected. You can change these anytime without affecting your existing quest tracker entries.</p>
-    
-    <div class="dice-selection-controls">
-        <label for="genre-dice-selector"><strong>Number of Genres (Dice Type):</strong></label>
-        <select id="genre-dice-selector">
-            <option value="d4">d4 (4 genres)</option>
-            <option value="d6" selected>d6 (6 genres)</option>
-            <option value="d8">d8 (8 genres)</option>
-            <option value="d10">d10 (10 genres)</option>
-            <option value="d12">d12 (12 genres)</option>
-            <option value="d20">d20 (all genres)</option>
-        </select>
-    </div>
-    
-    <div class="selected-genres-grid" id="selected-genres-display">
-        <!-- Selected genres will be displayed here -->
-    </div>
-    
-    <div class="genre-selection-controls">
-        <label for="genre-selector"><strong>Add Genre:</strong></label>
-        <select id="genre-selector">
-            <option value="">-- Select a genre to add --</option>
-        </select>
-        <button type="button" id="add-genre-button">Add Genre</button>
-    </div>
-    
-    <div class="genre-quests-preview">
-        <h3 id="genre-quests-title">Your Custom Genre Quests (Roll a d6)</h3>
-        <div id="custom-genre-quests-display">
-            <!-- Custom genre quests will be displayed here -->
-        </div>
-    </div>
-</div>
+> **Note:** Genre selection for "Organize the Stacks" quests has been moved to the Character Sheet. Open the Character Sheet and go to the Quests tab, then click "View Genre Quests Table" to select your genres.
 
 ### Journaling: Organize the Stacks
 
@@ -78,7 +44,5 @@ These involve interactions with the Library's denizens. You are not alone here; 
 
 <script type="module">
   import { initializeTables } from '{{ site.baseurl }}/assets/js/table-renderer.js';
-  import { initializeQuestsPage } from '{{ site.baseurl }}/assets/js/quests.js';
   initializeTables();
-  initializeQuestsPage();
 </script>

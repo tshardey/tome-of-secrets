@@ -1,0 +1,340 @@
+/* Status Widget - Floating character status display */
+
+.status-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    font-family: 'Source Serif Pro', serif;
+}
+
+/* Collapsed toggle button */
+.status-widget__toggle {
+    background-color: #2a231d;
+    border: 2px solid #54483b;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #d4c8b0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+    font-family: inherit;
+    font-size: 1em;
+}
+
+.status-widget__toggle:hover {
+    background-color: #3e352f;
+    border-color: #b89f62;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.status-widget__toggle:focus {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+}
+
+.status-widget__level-badge {
+    font-weight: 700;
+    color: #b89f62;
+    font-size: 1.2em;
+    font-family: 'Lora', serif;
+}
+
+.status-widget__currency-icons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.status-widget__icon {
+    font-size: 0.95em;
+    white-space: nowrap;
+    opacity: 0.9;
+}
+
+/* Expanded panel */
+.status-widget__panel {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    width: 320px;
+    background-color: #2a231d;
+    border: 2px solid #54483b;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.status-widget--expanded .status-widget__panel {
+    display: block;
+}
+
+.status-widget__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid #54483b;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.status-widget__title {
+    margin: 0;
+    font-family: 'Lora', serif;
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #b89f62;
+}
+
+.status-widget__close {
+    background: none;
+    border: none;
+    color: #d4c8b0;
+    font-size: 1.5em;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.status-widget__close:hover {
+    opacity: 1;
+    color: #b89f62;
+}
+
+.status-widget__close:focus {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.status-widget__content {
+    padding: 18px;
+}
+
+.status-widget__level-section {
+    margin-bottom: 16px;
+}
+
+.status-widget__level-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.status-widget__level-label {
+    font-size: 0.9em;
+    color: #d4c8b0;
+    opacity: 0.8;
+}
+
+.status-widget__level-value {
+    font-family: 'Lora', serif;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #b89f62;
+}
+
+.status-widget__xp-section {
+    margin-top: 8px;
+}
+
+.status-widget__xp-label {
+    font-size: 0.85em;
+    color: #d4c8b0;
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+.status-widget__xp-bar-container {
+    width: 100%;
+    height: 10px;
+    background-color: #1a1510;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.status-widget__xp-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #b89f62 0%, #cca352 100%);
+    transition: width 0.5s ease;
+}
+
+.status-widget__xp-text {
+    font-size: 0.85em;
+    color: #d4c8b0;
+    text-align: right;
+}
+
+.status-widget__currencies {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #54483b;
+}
+
+.status-widget__currency {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.status-widget__currency-icon {
+    font-size: 1.2em;
+}
+
+.status-widget__currency-label {
+    font-size: 0.8em;
+    color: #d4c8b0;
+    opacity: 0.7;
+}
+
+.status-widget__currency-value {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #b89f62;
+    font-family: 'Lora', serif;
+}
+
+.status-widget__actions {
+    padding-top: 12px;
+    border-top: 1px solid #54483b;
+}
+
+.status-widget__link {
+    display: block;
+    text-align: center;
+    padding: 8px 12px;
+    background-color: rgba(184, 159, 98, 0.1);
+    border: 1px solid #b89f62;
+    border-radius: 4px;
+    color: #b89f62;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 0.9em;
+}
+
+.status-widget__link:hover {
+    background-color: rgba(184, 159, 98, 0.2);
+    border-color: #cca352;
+    color: #cca352;
+}
+
+.status-widget__link:focus {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+}
+
+/* Large screen enhancements */
+@media (min-width: 1400px) {
+    .status-widget__toggle {
+        padding: 12px 20px;
+        font-size: 1.1em;
+        gap: 14px;
+    }
+    
+    .status-widget__level-badge {
+        font-size: 1.3em;
+    }
+    
+    .status-widget__icon {
+        font-size: 1.05em;
+    }
+    
+    .status-widget__panel {
+        width: 360px;
+    }
+    
+    .status-widget__content {
+        padding: 20px;
+    }
+    
+    .status-widget__title {
+        font-size: 1.3em;
+    }
+    
+    .status-widget__level-value {
+        font-size: 2em;
+    }
+    
+    .status-widget__xp-bar-container {
+        height: 12px;
+    }
+    
+    .status-widget__currency-value {
+        font-size: 1.4em;
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .status-widget {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .status-widget__toggle {
+        width: 100%;
+        justify-content: space-between;
+        padding: 10px 14px;
+    }
+    
+    .status-widget__currency-icons {
+        gap: 6px;
+    }
+    
+    .status-widget__icon {
+        font-size: 0.8em;
+    }
+    
+    .status-widget__panel {
+        width: 100%;
+        right: 0;
+        left: 0;
+        bottom: calc(100% + 10px);
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+    }
+    
+    .status-widget__currencies {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+/* Print styles - hide widget */
+@media print {
+    .status-widget {
+        display: none;
+    }
+}
+

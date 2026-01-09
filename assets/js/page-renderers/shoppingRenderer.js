@@ -193,45 +193,9 @@ function createShoppingOptionCard(name, option) {
 }
 
 /**
- * Update the currency display on the shopping page
- */
-function updateCurrencyDisplay() {
-    const currencyDisplay = document.getElementById('shopping-currency-display');
-    if (!currencyDisplay) return;
-    
-    const current = getCurrentResources();
-    
-    const baseurl = (window.__BASEURL || '').replace(/\/+$/, '');
-    const characterSheetUrl = `${baseurl}/character-sheet.html`;
-    
-    currencyDisplay.innerHTML = `
-        <div class="currency-display-box">
-            <h3>Your Current Resources</h3>
-            <div class="currency-values">
-                <div class="currency-item">
-                    <strong>💧 Ink Drops:</strong> <span id="shopping-ink-drops-display">${current.inkDrops}</span>
-                </div>
-                <div class="currency-item">
-                    <strong>📄 Paper Scraps:</strong> <span id="shopping-paper-scraps-display">${current.paperScraps}</span>
-                </div>
-            </div>
-            <p class="currency-note"><em>These values are read-only. To update your currency, visit the <a href="${characterSheetUrl}">Character Sheet</a>.</em></p>
-        </div>
-    `;
-}
-
-/**
  * Initialize the shopping page
  */
 export function initializeShoppingPage() {
-    // Update currency display
-    updateCurrencyDisplay();
-    
-    // Set up interval to refresh currency display (in case user has character sheet open in another tab)
-    setInterval(() => {
-        updateCurrencyDisplay();
-    }, 2000); // Refresh every 2 seconds
-    
     const container = document.getElementById('shopping-options-container');
     if (!container) return;
     

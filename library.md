@@ -10,11 +10,7 @@ title: Library Restoration
 
     <div class="library-header">
         <h2>📚 Library Restoration</h2>
-        <div class="blueprint-counter">
-            <span class="blueprint-icon">📜</span>
-            <span id="blueprint-count">0</span>
-            <span class="blueprint-label">Dusty Blueprints</span>
-        </div>
+        <p class="library-header-note"><em>Check your <strong>Dusty Blueprints</strong> in the status widget (bottom-right corner).</em></p>
     </div>
 
     <div class="restoration-progress">
