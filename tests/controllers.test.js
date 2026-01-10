@@ -17,6 +17,7 @@ import * as data from '../assets/js/character-sheet/data.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { calculateBlueprintReward } from '../assets/js/services/QuestRewardService.js';
+import { toast } from '../assets/js/ui/toast.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -754,7 +755,7 @@ describe('Controllers', () => {
         });
 
         it('should not move a restoration project quest to completed if blueprint spend fails', () => {
-            window.alert = jest.fn();
+            const toastSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
 
             // Fresh, real state adapter (avoid mocked adapter from outer beforeEach)
             const state = createEmptyCharacterState();
@@ -823,9 +824,11 @@ describe('Controllers', () => {
             expect(realStateAdapter.getPassiveFamiliarSlots()).toHaveLength(0);
 
             // And the player should be notified
-            expect(window.alert).toHaveBeenCalledWith(
+            expect(toastSpy).toHaveBeenCalledWith(
                 expect.stringContaining('Cannot complete restoration project')
             );
+
+            toastSpy.mockRestore();
         });
 
         it('should resolve quest list keys correctly', () => {

@@ -24,8 +24,80 @@ import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffVie
 import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
+    const currentLevel = parseIntOr(levelInput?.value || levelInput, 1);
+    // xpLevels is keyed by strings ("1", "2", ...) from JSON
+    const xpNeeded = data.xpLevels[String(currentLevel)] ?? 0;
+    if (xpNeededInput) {
+        const xpNeededText = xpNeeded === 0 ? "Max" : xpNeeded.toString();
+        // Handle both input and span elements
+        if (xpNeededInput.tagName === 'INPUT') {
+            xpNeededInput.value = xpNeededText;
+        } else {
+            xpNeededInput.textContent = xpNeededText;
+        }
+    }
+    // Update XP progress bar
+    updateXpProgressBar();
+}
+
+/**
+ * Update the RPG-styled XP progress bar
+ */
+export function updateXpProgressBar() {
+    const xpCurrentInput = document.getElementById('xp-current');
+    const xpNeededElement = document.getElementById('xp-needed');
+    const levelInput = document.getElementById('level');
+    const progressFill = document.getElementById('rpg-xp-progress-fill');
+    const progressText = document.getElementById('rpg-xp-progress-text');
+    const levelBadge = document.getElementById('rpg-level-badge');
+    const levelNumber = document.getElementById('rpg-level-number');
+
+    if (!xpCurrentInput || !levelInput) return;
+
+    const currentXP = parseIntOr(xpCurrentInput.value, 0);
     const currentLevel = parseIntOr(levelInput.value, 1);
-    xpNeededInput.value = data.xpLevels[currentLevel] || "Max";
+    // xpLevels is keyed by strings ("1", "2", ...) from JSON
+    const xpNeeded = data.xpLevels[String(currentLevel)] ?? 0;
+
+    // Update level badge
+    if (levelBadge && levelNumber) {
+        levelNumber.textContent = currentLevel;
+    }
+
+    // Update XP needed display
+    if (xpNeededElement) {
+        const xpNeededText = xpNeeded === 0 ? "Max" : xpNeeded.toString();
+        if (xpNeededElement.tagName === 'INPUT') {
+            xpNeededElement.value = xpNeededText;
+        } else {
+            xpNeededElement.textContent = xpNeededText;
+        }
+    }
+
+    // Update progress bar
+    if (progressFill && progressText) {
+        if (xpNeeded === 0 || xpNeeded === "Max") {
+            // Max level - show 100%
+            progressFill.style.width = '100%';
+            progressText.textContent = `Level ${currentLevel} (Max)`;
+        } else {
+            const percentage = Math.min(100, Math.max(0, (currentXP / xpNeeded) * 100));
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${currentXP} / ${xpNeeded} XP`;
+        }
+    }
+
+    // Update Level Up button state
+    const levelUpBtn = document.getElementById('level-up-btn');
+    if (levelUpBtn) {
+        if (xpNeeded === 0 || xpNeeded === "Max" || currentXP < xpNeeded) {
+            // Disable if max level or not enough XP
+            levelUpBtn.disabled = true;
+        } else {
+            // Enable if enough XP to level up
+            levelUpBtn.disabled = false;
+        }
+    }
 }
 
 export function renderPermanentBonuses(levelInput) {
@@ -322,7 +394,11 @@ export function updateBuffTotal(inputElement) {
 }
 
 export function renderActiveAssignments() {
-    const container = document.getElementById('active-assignments-container');
+    // Prefer the explicit container id, but fall back to the RPG panel selector in case markup changes.
+    // This keeps rendering working even if the surrounding layout is refactored.
+    const container =
+        document.getElementById('active-assignments-container') ||
+        document.querySelector('.rpg-active-quests-panel');
     const cardsContainer = container?.querySelector('.quest-cards-container');
     if (!cardsContainer) return;
     
@@ -335,7 +411,17 @@ export function renderActiveAssignments() {
     const wizardSchool = schoolSelect ? schoolSelect.value : '';
     
     // Get quests from state using storage key
-    const activeQuests = characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
+    // Ensure we're reading from characterState directly
+    let activeQuests = Array.isArray(characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) 
+        ? characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] 
+        : [];
+    
+    // Debug: log what we found
+    if (activeQuests.length > 0) {
+        console.log(`renderActiveAssignments: Found ${activeQuests.length} active quests in characterState`);
+    } else {
+        console.warn(`renderActiveAssignments: No active quests found. characterState[${STORAGE_KEYS.ACTIVE_ASSIGNMENTS}] =`, characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
+    }
     
     // Create view models for all active quests
     const viewModels = createQuestListViewModel(activeQuests, 'active', background, wizardSchool);
@@ -479,136 +565,229 @@ export function renderTemporaryBuffs() {
     });
 }
 
-export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
-    const select = document.getElementById('quest-buffs-select');
-    if (!select) return;
+/**
+ * Render a bonus card element
+ */
+function createBonusCard(bonus, value, containerId) {
+    const card = document.createElement('div');
+    card.className = 'quest-bonus-card';
+    card.dataset.value = value;
+    card.dataset.containerId = containerId;
     
-    select.innerHTML = '';
+    const header = document.createElement('div');
+    header.className = 'quest-bonus-card-header';
     
-    let hasOptions = false;
+    // Try to get image for items
+    let imageSrc = null;
+    if (bonus.type === 'item' && bonus.itemData && bonus.itemData.img) {
+        const baseurl = (window.__BASEURL || '').replace(/\/+$/, '');
+        imageSrc = baseurl ? `${baseurl}/${bonus.itemData.img}` : bonus.itemData.img;
+    }
     
-    // Add keeper background bonuses (for manual application)
+    if (imageSrc) {
+        const img = document.createElement('img');
+        img.className = 'quest-bonus-card-image';
+        img.src = imageSrc;
+        img.alt = bonus.name;
+        header.appendChild(img);
+    } else {
+        card.classList.add('no-image');
+    }
+    
+    const titleDiv = document.createElement('div');
+    titleDiv.style.flex = '1';
+    
+    const title = document.createElement('h4');
+    title.className = 'quest-bonus-card-title';
+    title.textContent = bonus.name;
+    titleDiv.appendChild(title);
+    
+    const type = document.createElement('div');
+    type.className = 'quest-bonus-card-type';
+    type.textContent = bonus.typeLabel || bonus.type;
+    titleDiv.appendChild(type);
+    
+    header.appendChild(titleDiv);
+    card.appendChild(header);
+    
+    const description = document.createElement('p');
+    description.className = 'quest-bonus-card-description';
+    description.textContent = bonus.description;
+    card.appendChild(description);
+    
+    // Handle click to toggle selection
+    card.addEventListener('click', () => {
+        card.classList.toggle('selected');
+        updateBonusSelection(containerId);
+    });
+    
+    return card;
+}
+
+/**
+ * Update the hidden input with selected bonus values
+ */
+function updateBonusSelection(containerId) {
+    const container = document.getElementById(containerId);
+    const hiddenInput = containerId === 'quest-bonus-selection-container' 
+        ? document.getElementById('quest-buffs-select')
+        : document.getElementById('edit-quest-buffs-select');
+    
+    if (!container || !hiddenInput) return;
+    
+    const selectedCards = container.querySelectorAll('.quest-bonus-card.selected');
+    const selectedValues = Array.from(selectedCards).map(card => card.dataset.value);
+    hiddenInput.value = JSON.stringify(selectedValues);
+}
+
+/**
+ * Render bonus selection cards for a specific container
+ */
+function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
+    const container = document.getElementById(containerId);
+    const hiddenInput = document.getElementById(hiddenInputId);
+    if (!container || !hiddenInput) return;
+    
+    container.innerHTML = '';
+    
+    const bonuses = [];
+    const baseurl = (window.__BASEURL || '').replace(/\/+$/, '');
+    
+    // Add keeper background bonuses
     const keeperBackgroundSelect = document.getElementById('keeperBackground');
     const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
     
     if (background) {
-        const backgroundBonuses = [];
-        
         if (background === 'archivist') {
-            backgroundBonuses.push({
+            bonuses.push({
+                value: '[Background] Archivist Bonus',
                 name: 'Archivist Bonus',
-                description: '+10 Ink Drops (Non-Fiction/Historical Fiction)'
+                description: '+10 Ink Drops (Non-Fiction/Historical Fiction)',
+                type: 'background',
+                typeLabel: 'Background Bonus'
             });
         }
         
         if (background === 'prophet') {
-            backgroundBonuses.push({
+            bonuses.push({
+                value: '[Background] Prophet Bonus',
                 name: 'Prophet Bonus',
-                description: '+10 Ink Drops (Religious/Spiritual/Mythological)'
+                description: '+10 Ink Drops (Religious/Spiritual/Mythological)',
+                type: 'background',
+                typeLabel: 'Background Bonus'
             });
         }
         
         if (background === 'cartographer') {
-            backgroundBonuses.push({
+            bonuses.push({
+                value: '[Background] Cartographer Bonus',
                 name: 'Cartographer Bonus',
-                description: '+10 Ink Drops (First Dungeon Crawl this month)'
+                description: '+10 Ink Drops (First Dungeon Crawl this month)',
+                type: 'background',
+                typeLabel: 'Background Bonus'
             });
-        }
-        
-        if (backgroundBonuses.length > 0) {
-            const bgGroup = document.createElement('optgroup');
-            bgGroup.label = 'Background Bonuses (Apply if Eligible)';
-            backgroundBonuses.forEach((bonus) => {
-                const option = document.createElement('option');
-                option.value = `[Background] ${bonus.name}`;
-                option.textContent = `${bonus.name} - ${bonus.description}`;
-                bgGroup.appendChild(option);
-                hasOptions = true;
-            });
-            select.appendChild(bgGroup);
         }
     }
     
     // Add active temporary buffs
     const activeBuffs = characterState.temporaryBuffs.filter(buff => buff.status === 'active');
-    if (activeBuffs.length > 0) {
-        // Add optgroup for temporary buffs
-        const buffGroup = document.createElement('optgroup');
-        buffGroup.label = 'Temporary Buffs';
-        activeBuffs.forEach((buff) => {
-            const option = document.createElement('option');
-            option.value = `[Buff] ${buff.name}`;
-            option.textContent = `${buff.name} - ${buff.description}`;
-            buffGroup.appendChild(option);
-            hasOptions = true;
+    activeBuffs.forEach((buff) => {
+        bonuses.push({
+            value: `[Buff] ${buff.name}`,
+            name: buff.name,
+            description: buff.description || 'Temporary buff',
+            type: 'buff',
+            typeLabel: 'Temporary Buff'
         });
-        select.appendChild(buffGroup);
-    }
+    });
     
     // Add equipped items
     if (characterState.equippedItems && characterState.equippedItems.length > 0) {
-        // Add optgroup for equipped items
-        const itemGroup = document.createElement('optgroup');
-        itemGroup.label = 'Equipped Items';
         characterState.equippedItems.forEach((item) => {
-            const option = document.createElement('option');
-            option.value = `[Item] ${item.name}`;
-            option.textContent = `${item.name} - ${item.bonus}`;
-            itemGroup.appendChild(option);
-            hasOptions = true;
+            bonuses.push({
+                value: `[Item] ${item.name}`,
+                name: item.name,
+                description: item.bonus || 'Equipped item',
+                type: 'item',
+                typeLabel: 'Equipped Item',
+                itemData: allItems[item.name]
+            });
         });
-        select.appendChild(itemGroup);
     }
     
     // Add passive item slot items
     const passiveItemSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
     const passiveItemsWithNames = passiveItemSlots.filter(slot => slot.itemName);
-    if (passiveItemsWithNames.length > 0) {
-        const passiveItemGroup = document.createElement('optgroup');
-        passiveItemGroup.label = 'Passive Items';
-        passiveItemsWithNames.forEach((slot) => {
-            const itemData = allItems[slot.itemName];
-            if (itemData && itemData.passiveBonus) {
-                const option = document.createElement('option');
-                option.value = `[Item] ${slot.itemName}`;
-                option.textContent = `${slot.itemName} - ${itemData.passiveBonus}`;
-                passiveItemGroup.appendChild(option);
-                hasOptions = true;
-            }
-        });
-        if (passiveItemGroup.children.length > 0) {
-            select.appendChild(passiveItemGroup);
+    passiveItemsWithNames.forEach((slot) => {
+        const itemData = allItems[slot.itemName];
+        if (itemData && itemData.passiveBonus) {
+            bonuses.push({
+                value: `[Item] ${slot.itemName}`,
+                name: slot.itemName,
+                description: itemData.passiveBonus,
+                type: 'item',
+                typeLabel: 'Passive Item',
+                itemData: itemData
+            });
         }
-    }
+    });
     
     // Add passive familiar slot familiars
     const passiveFamiliarSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
     const passiveFamiliarsWithNames = passiveFamiliarSlots.filter(slot => slot.itemName);
-    if (passiveFamiliarsWithNames.length > 0) {
-        const passiveFamiliarGroup = document.createElement('optgroup');
-        passiveFamiliarGroup.label = 'Passive Familiars';
-        passiveFamiliarsWithNames.forEach((slot) => {
-            const itemData = allItems[slot.itemName];
-            if (itemData && itemData.passiveBonus) {
-                const option = document.createElement('option');
-                option.value = `[Item] ${slot.itemName}`;
-                option.textContent = `${slot.itemName} - ${itemData.passiveBonus}`;
-                passiveFamiliarGroup.appendChild(option);
-                hasOptions = true;
-            }
-        });
-        if (passiveFamiliarGroup.children.length > 0) {
-            select.appendChild(passiveFamiliarGroup);
+    passiveFamiliarsWithNames.forEach((slot) => {
+        const itemData = allItems[slot.itemName];
+        if (itemData && itemData.passiveBonus) {
+            bonuses.push({
+                value: `[Item] ${slot.itemName}`,
+                name: slot.itemName,
+                description: itemData.passiveBonus,
+                type: 'item',
+                typeLabel: 'Passive Familiar',
+                itemData: itemData
+            });
         }
+    });
+    
+    if (bonuses.length === 0) {
+        const message = document.createElement('p');
+        message.className = 'no-bonuses-message';
+        message.textContent = 'No bonuses available. Equip items or activate buffs to see them here.';
+        container.appendChild(message);
+        hiddenInput.value = JSON.stringify([]);
+        return;
     }
     
-    if (!hasOptions) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No active buffs or equipped items';
-        option.disabled = true;
-        select.appendChild(option);
-    }
+    // Render bonus cards
+    bonuses.forEach(bonus => {
+        const card = createBonusCard(bonus, bonus.value, containerId);
+        
+        // Restore selection state
+        if (selectedValues.includes(bonus.value)) {
+            card.classList.add('selected');
+        }
+        
+        container.appendChild(card);
+    });
+    
+    // Update hidden input with current selection
+    updateBonusSelection(containerId);
+}
+
+/**
+ * Render bonus selection cards
+ */
+export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
+    const hiddenInput = document.getElementById('quest-buffs-select');
+    const currentSelection = hiddenInput && hiddenInput.value ? JSON.parse(hiddenInput.value) : [];
+    renderBonusCards('quest-bonus-selection-container', 'quest-buffs-select', currentSelection);
+}
+
+/**
+ * Update bonus selection for edit quest drawer
+ */
+export function updateEditQuestBuffsDropdown(selectedValues = []) {
+    renderBonusCards('edit-quest-bonus-selection-container', 'edit-quest-buffs-select', selectedValues);
 }
 
 export function populateBackgroundDropdown() {

@@ -41,9 +41,18 @@ export async function loadState(form = null) {
     const validatedState = validateCharacterState(migratedState);
     
     // Copy validated state to characterState
+    // This ensures all keys are properly set, including ACTIVE_ASSIGNMENTS
     Object.keys(validatedState).forEach(key => {
         characterState[key] = validatedState[key];
     });
+    
+    // Ensure ACTIVE_ASSIGNMENTS is always an array (safety check)
+    if (!Array.isArray(characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS])) {
+        console.warn('ACTIVE_ASSIGNMENTS was not an array after loadState, fixing...');
+        characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
+    } else {
+        console.log(`loadState: Loaded ${characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS].length} active assignments`);
+    }
 
     isStateLoaded = true;
     

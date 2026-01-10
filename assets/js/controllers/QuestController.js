@@ -21,6 +21,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import * as data from '../character-sheet/data.js';
 import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
+import { toast } from '../ui/toast.js';
 
 export class QuestController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -125,12 +126,55 @@ export class QuestController extends BaseController {
             this.handleAddQuest();
         });
 
-        // Cancel edit button
+        // Cancel edit button (still needed for form, but drawer has its own)
         if (cancelEditQuestButton) {
             this.addEventListener(cancelEditQuestButton, 'click', () => {
                 this.resetQuestForm();
             });
         }
+
+        // Quest edit drawer elements
+        const questEditDrawer = document.getElementById('quest-edit-drawer');
+        const questEditBackdrop = document.getElementById('quest-edit-backdrop');
+        const closeQuestEditBtn = document.getElementById('close-quest-edit');
+        const cancelQuestEditBtn = document.getElementById('cancel-quest-edit-btn');
+        const saveQuestChangesBtn = document.getElementById('save-quest-changes-btn');
+
+        this.questEditDrawer = questEditDrawer;
+        this.questEditBackdrop = questEditBackdrop;
+
+        // Close drawer handlers
+        if (closeQuestEditBtn) {
+            this.addEventListener(closeQuestEditBtn, 'click', () => {
+                this.closeQuestEditDrawer();
+            });
+        }
+
+        if (questEditBackdrop) {
+            this.addEventListener(questEditBackdrop, 'click', () => {
+                this.closeQuestEditDrawer();
+            });
+        }
+
+        if (cancelQuestEditBtn) {
+            this.addEventListener(cancelQuestEditBtn, 'click', () => {
+                this.closeQuestEditDrawer();
+            });
+        }
+
+        // Save changes handler
+        if (saveQuestChangesBtn) {
+            this.addEventListener(saveQuestChangesBtn, 'click', () => {
+                this.handleSaveQuestChanges();
+            });
+        }
+
+        // Close drawer on Escape key
+        this.addEventListener(document, 'keydown', (e) => {
+            if (e.key === 'Escape' && questEditDrawer && questEditDrawer.style.display !== 'none') {
+                this.closeQuestEditDrawer();
+            }
+        });
     }
 
     handleQuestTypeChange() {
@@ -353,7 +397,23 @@ export class QuestController extends BaseController {
         // Clear buff selection
         const buffsSelect = document.getElementById('quest-buffs-select');
         if (buffsSelect) {
-            Array.from(buffsSelect.options).forEach(option => option.selected = false);
+            buffsSelect.value = JSON.stringify([]);
+        }
+        const bonusContainer = document.getElementById('quest-bonus-selection-container');
+        if (bonusContainer) {
+            const selectedCards = bonusContainer.querySelectorAll('.quest-bonus-card.selected');
+            selectedCards.forEach(card => card.classList.remove('selected'));
+        }
+        
+        // Also clear edit drawer selection if it exists
+        const editBuffsSelect = document.getElementById('edit-quest-buffs-select');
+        if (editBuffsSelect) {
+            editBuffsSelect.value = JSON.stringify([]);
+        }
+        const editBonusContainer = document.getElementById('edit-quest-bonus-selection-container');
+        if (editBonusContainer) {
+            const selectedCards = editBonusContainer.querySelectorAll('.quest-bonus-card.selected');
+            selectedCards.forEach(card => card.classList.remove('selected'));
         }
 
         // Reset editing state
@@ -388,9 +448,9 @@ export class QuestController extends BaseController {
         const month = document.getElementById('quest-month')?.value || '';
         const year = document.getElementById('quest-year')?.value || '';
 
-        // Get selected buffs from multi-select
+        // Get selected buffs from hidden input (card-based selection)
         const buffsSelect = document.getElementById('quest-buffs-select');
-        const selectedBuffs = buffsSelect ? Array.from(buffsSelect.selectedOptions).map(option => option.value) : [];
+        const selectedBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
 
         if (this.editingQuestInfo) {
             // Update existing quest
@@ -525,6 +585,29 @@ export class QuestController extends BaseController {
 
             // Create quests
             const quests = handler.createQuests();
+            
+            // Validate quests were created
+            if (!quests || !Array.isArray(quests) || quests.length === 0) {
+                console.error('No quests created:', quests);
+                const questFormContainer = document.querySelector('.add-quest-form');
+                if (questFormContainer) {
+                    showFormError(questFormContainer, 'Error: Failed to create quest. Please check your inputs.');
+                }
+                return;
+            }
+            
+            // Validate quest structure
+            quests.forEach((quest, idx) => {
+                if (!quest || typeof quest !== 'object') {
+                    console.error(`Invalid quest at index ${idx}:`, quest);
+                    throw new Error(`Invalid quest structure at index ${idx}`);
+                }
+                if (!quest.type || !quest.book || !quest.month || !quest.year) {
+                    console.error(`Quest missing required fields at index ${idx}:`, quest);
+                    throw new Error(`Quest missing required fields at index ${idx}`);
+                }
+            });
+            
             const status = formElements.statusSelect?.value || 'active';
 
             // Add quests to appropriate list
@@ -812,7 +895,7 @@ export class QuestController extends BaseController {
             if (currentBlueprints < cost) {
                 // Don't complete the project if player doesn't have enough blueprints
                 const needed = cost - currentBlueprints;
-                alert(`Cannot complete restoration project: You need ${needed} more Dusty Blueprints. (Cost: ${cost}, You have: ${currentBlueprints})`);
+                toast.error(`Cannot complete restoration project: You need ${needed} more Dusty Blueprints. (Cost: ${cost}, You have: ${currentBlueprints})`);
                 return false;
             }
             
@@ -820,7 +903,7 @@ export class QuestController extends BaseController {
             const success = stateAdapter.spendDustyBlueprints(cost);
             if (!success) {
                 // This shouldn't happen if we checked above, but handle it just in case
-                alert(`Cannot complete restoration project: Failed to spend ${cost} Dusty Blueprints.`);
+                toast.error(`Cannot complete restoration project: Failed to spend ${cost} Dusty Blueprints.`);
                 return false;
             }
             
@@ -942,8 +1025,7 @@ export class QuestController extends BaseController {
      * @param {string} message - Notification message
      */
     showRewardNotification(message) {
-        // Show alert for now (matches character sheet pattern)
-        alert(message);
+        toast.success(message, 5000); // 5 second duration for rewards
         console.log('Reward:', message);
     }
 
@@ -1012,8 +1094,6 @@ export class QuestController extends BaseController {
     }
 
     handleEditQuest(target) {
-        const { ui: uiModule } = this.dependencies;
-
         const list = target.dataset.list;
         const index = parseInt(target.dataset.index, 10);
         const storageKey = this.resolveQuestListKey(list);
@@ -1021,103 +1101,181 @@ export class QuestController extends BaseController {
         const quest = questList[index];
         if (!quest) return;
 
-        // Populate form
-        const monthInput = document.getElementById('quest-month');
-        const yearInput = document.getElementById('quest-year');
-        const typeSelect = document.getElementById('new-quest-type');
-        const promptInput = document.getElementById('new-quest-prompt');
-        const bookInput = document.getElementById('new-quest-book');
-        const bookAuthorInput = document.getElementById('new-quest-book-author');
-        const notesInput = document.getElementById('new-quest-notes');
+        // Set editing state
+        this.editingQuestInfo = { list, index };
 
+        // Populate drawer fields
+        this.populateQuestEditDrawer(quest);
+
+        // Open drawer
+        this.openQuestEditDrawer(quest);
+    }
+
+    populateQuestEditDrawer(quest) {
+        // Get drawer elements
+        const headerTitle = document.getElementById('quest-edit-header-title');
+        const monthInput = document.getElementById('edit-quest-month');
+        const yearInput = document.getElementById('edit-quest-year');
+        const typeSelect = document.getElementById('edit-quest-type');
+        const statusDisplay = document.getElementById('edit-quest-status-display');
+        const promptDisplay = document.getElementById('edit-quest-prompt-display');
+        const promptSection = document.getElementById('edit-quest-prompt-section');
+        const bookInput = document.getElementById('edit-quest-book');
+        const bookAuthorInput = document.getElementById('edit-quest-book-author');
+        const notesInput = document.getElementById('edit-quest-notes');
+        const buffsSelect = document.getElementById('edit-quest-buffs-select');
+
+        const getStatusText = () => {
+            const list = this.editingQuestInfo?.list;
+            if (list === 'completedQuests' || list === 'completed') return 'Completed';
+            if (list === 'discardedQuests' || list === 'discarded') return 'Discarded';
+            return 'Active';
+        };
+
+        // Set header title
+        if (headerTitle) {
+            const statusText = getStatusText();
+            headerTitle.textContent = `Editing: ${quest.type || 'Quest'} - ${statusText}`;
+        }
+
+        // Populate basic fields
         if (monthInput) monthInput.value = quest.month || '';
         if (yearInput) yearInput.value = quest.year || '';
         if (typeSelect) typeSelect.value = quest.type || '';
-        if (promptInput) promptInput.value = quest.prompt || '';
         if (bookInput) bookInput.value = quest.book || '';
         if (bookAuthorInput) bookAuthorInput.value = quest.bookAuthor || '';
         if (notesInput) notesInput.value = quest.notes || '';
 
-        // Populate buffs selection
-        const buffsSelect = document.getElementById('quest-buffs-select');
-        if (buffsSelect && quest.buffs) {
-            Array.from(buffsSelect.options).forEach(option => {
-                option.selected = quest.buffs.includes(option.value);
-            });
+        // Set status display
+        if (statusDisplay) {
+            statusDisplay.textContent = getStatusText();
         }
 
-        // Trigger change to show correct prompt containers
-        if (this.questTypeSelect) {
-            this.questTypeSelect.dispatchEvent(new Event('change'));
+        // Display prompt (read-only in drawer)
+        if (promptDisplay && promptSection) {
+            if (quest.type === '⭐ Extra Credit') {
+                promptSection.style.display = 'none';
+            } else if (quest.prompt) {
+                promptSection.style.display = 'block';
+                promptDisplay.textContent = quest.prompt;
+            } else {
+                promptSection.style.display = 'none';
+            }
         }
+
+        // Populate buffs selection (card-based)
+        const { ui: uiModule } = this.dependencies;
+        if (uiModule && uiModule.updateEditQuestBuffsDropdown) {
+            uiModule.updateEditQuestBuffsDropdown(quest.buffs || []);
+        }
+    }
+
+    populateBuffsSelect(buffsSelect) {
+        // This function is kept for backward compatibility but is no longer used
+        // The card-based UI is now handled by updateQuestBuffsDropdown and updateEditQuestBuffsDropdown
+        // in ui.js
+    }
+
+    openQuestEditDrawer(quest) {
+        if (!this.questEditDrawer || !this.questEditBackdrop) return;
+
+        // Show drawer and backdrop
+        this.questEditDrawer.style.display = 'flex';
+        this.questEditBackdrop.classList.add('active');
+
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeQuestEditDrawer() {
+        if (!this.questEditDrawer || !this.questEditBackdrop) return;
+
+        // Hide drawer and backdrop
+        this.questEditDrawer.style.display = 'none';
+        this.questEditBackdrop.classList.remove('active');
+
+        // Restore body scroll
+        document.body.style.overflow = '';
+
+        // Clear editing state (but don't reset the Add Quest form)
+        this.editingQuestInfo = null;
+    }
+
+    handleSaveQuestChanges() {
+        if (!this.editingQuestInfo) {
+            this.closeQuestEditDrawer();
+            return;
+        }
+
+        // Get values from drawer
+        const month = document.getElementById('edit-quest-month')?.value || '';
+        const year = document.getElementById('edit-quest-year')?.value || '';
+        const book = document.getElementById('edit-quest-book')?.value || '';
+        const bookAuthor = document.getElementById('edit-quest-book-author')?.value || '';
+        const notes = document.getElementById('edit-quest-notes')?.value || '';
+        const buffsSelect = document.getElementById('edit-quest-buffs-select');
+        const selectedBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
+
+        // Get the original quest to preserve type and prompt
+        const originalQuestList = characterState[this.resolveQuestListKey(this.editingQuestInfo.list)] || [];
+        const originalQuest = originalQuestList[this.editingQuestInfo.index];
+        if (!originalQuest) {
+            this.closeQuestEditDrawer();
+            return;
+        }
+
+        const type = originalQuest.type || '';
+
+        // Update quest (preserve prompt, restorationData, etc. from original)
+        const updates = { month, year, type, book, bookAuthor, notes, buffs: selectedBuffs };
         
-        // Ensure restoration container is visible when editing restoration quests
-        if (quest.type === '🔨 Restoration Project') {
-            const restorationContainer = document.getElementById('restoration-prompt-container');
-            if (restorationContainer) {
-                restorationContainer.style.display = 'flex';
+        // Preserve prompt (quest type cannot be changed when editing)
+        if (originalQuest.prompt) {
+            updates.prompt = originalQuest.prompt;
+        }
+
+        // Preserve restorationData if it exists
+        if (originalQuest.restorationData) {
+            updates.restorationData = originalQuest.restorationData;
+        }
+
+        // Preserve other quest properties
+        if (originalQuest.isEncounter !== undefined) {
+            updates.isEncounter = originalQuest.isEncounter;
+        }
+
+        // Update the quest
+        this.stateAdapter.updateQuest(
+            this.resolveQuestListKey(this.editingQuestInfo.list),
+            this.editingQuestInfo.index,
+            updates
+        );
+
+        // Re-render the quest lists
+        const { ui: uiModule } = this.dependencies;
+        if (uiModule) {
+            const renderMap = {
+                active: () => uiModule.renderActiveAssignments(),
+                activeAssignments: () => uiModule.renderActiveAssignments(),
+                completed: () => uiModule.renderCompletedQuests(),
+                completedQuests: () => uiModule.renderCompletedQuests(),
+                discarded: () => uiModule.renderDiscardedQuests(),
+                discardedQuests: () => uiModule.renderDiscardedQuests()
+            };
+
+            if (renderMap[this.editingQuestInfo.list]) {
+                renderMap[this.editingQuestInfo.list]();
             }
         }
 
-        // Show correct prompt field for editing
-        if (quest.type === '♠ Dungeon Crawl' && this.dungeonRoomSelect) {
-            // Find the room number based on the challenge text
-            const roomNumber = Object.keys(data.dungeonRooms).find(key => {
-                if (data.dungeonRooms[key].challenge === quest.prompt) return true;
-                for (const encounterName in data.dungeonRooms[key].encounters) {
-                    const encounter = data.dungeonRooms[key].encounters[encounterName];
-                    if (encounter.defeat === quest.prompt || encounter.befriend === quest.prompt) {
-                        return true;
-                    }
-                }
-                return false;
-            });
+        // Save state
+        this.saveState();
 
-            if (roomNumber) {
-                this.dungeonRoomSelect.value = roomNumber;
-                this.dungeonRoomSelect.dispatchEvent(new Event('change'));
+        // Close drawer
+        this.closeQuestEditDrawer();
 
-                // If it's an encounter quest, select the encounter
-                if (quest.isEncounter && this.dungeonEncounterSelect) {
-                    const encounterName = quest.prompt?.split(':')[0];
-                    this.dungeonEncounterSelect.value = encounterName;
-                    this.dungeonEncounterSelect.dispatchEvent(new Event('change'));
-                }
-            }
-        } else if (quest.type === '♥ Organize the Stacks' && this.genreQuestSelect) {
-            this.genreQuestSelect.value = quest.prompt;
-        } else if (quest.type === '♣ Side Quest' && this.sideQuestSelect) {
-            this.sideQuestSelect.value = quest.prompt;
-        } else if (quest.type === '🔨 Restoration Project' && quest.restorationData) {
-            // Populate restoration wing and project dropdowns
-            if (this.restorationWingSelect && quest.restorationData.wingId) {
-                // First populate the wing dropdown (trigger change to populate projects)
-                this.restorationWingSelect.value = quest.restorationData.wingId;
-                this.restorationWingSelect.dispatchEvent(new Event('change'));
-                
-                // Then set the project after a brief delay to allow project dropdown to populate
-                setTimeout(() => {
-                    if (this.restorationProjectSelect && quest.restorationData.projectId) {
-                        this.restorationProjectSelect.value = quest.restorationData.projectId;
-                    }
-                }, 50);
-            }
-        }
-
-        // Set editing state
-        this.editingQuestInfo = { list, index };
-        if (this.addQuestButton) this.addQuestButton.textContent = 'Update Quest';
-        const statusSelect = document.getElementById('new-quest-status');
-        if (statusSelect) statusSelect.style.display = 'none';
-        if (this.cancelEditQuestButton) this.cancelEditQuestButton.style.display = 'inline-block';
-        if (this.addQuestButton) {
-            this.addQuestButton.style.width = '50%';
-            if (this.cancelEditQuestButton) this.cancelEditQuestButton.style.width = '50%';
-        }
-
-        if (this.addQuestButton && typeof this.addQuestButton.scrollIntoView === 'function') {
-            this.addQuestButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        // Show success toast
+        toast.success('Quest updated successfully');
     }
 }
 

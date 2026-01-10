@@ -34,11 +34,11 @@ The repository is organized as a standard Jekyll project.
             * `rewardsRenderer.js` (hydrates `rewards.md`)
             * `sanctumRenderer.js` (hydrates `sanctum.md`)
             * `keeperRenderer.js` (hydrates `keeper.md`)
-        *   `table-renderer.js`: Renders rules tables for `dungeons.md`, `quests.md`, `shroud.md`, and auto-linkifies item names.
+        *   `table-renderer.js`: Renders rules tables for pages like `shroud.md`, and also supports Character Sheet overlays/drawers.
     *   `images/`: All images used on the site.
 *   `assets/data/`: JSON source of truth for game data. Edit these files and run the generator to update the site data:
     * `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`, `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`, `masteryAbilities.json`, `dungeonRewards.json`, `dungeonCompletionRewards.json`, `allGenres.json`, `genreQuests.json`, `extraCreditRewards.json`, `sideQuestsDetailed.json`, `curseTableDetailed.json`, `temporaryBuffsFromRewards.json`
-*   `.md` files (root directory): These are the core content files for the game rules (e.g., `core-mechanics.md`, `quests.md`, `rewards.md`). Some of these files contain a mix of Markdown and direct HTML for layout purposes.
+*   `.md` files (root directory): These are the core content files for the game rules (e.g., `core-mechanics.md`, `rewards.md`). Some previously-standalone rules pages (like quests/leveling) have moved into the Character Sheet UI.
 *   `character-sheet.html`: The HTML file for the interactive character sheet.
 *   `README.md`: Contains detailed instructions for setting up a local development environment and running tests.
 *   `.devcontainer/`: Configuration for VS Code Dev Containers, allowing for a consistent development environment.
@@ -54,7 +54,7 @@ You can perform the following tasks. Always use the local development environmen
 #### Editing Page Content
 1.  Identify the relevant `.md` file in the root directory that corresponds to the page you need to edit.
 2.  Modify the content using standard Markdown syntax.
-3.  For pages with complex layouts like `dungeons.md` or `rewards.md`, you will be editing HTML directly within the file.
+3.  For pages with complex layouts like `rewards.md`, you will be editing HTML directly within the file.
 4.  If the changes involve game data (e.g., adding a new reward, changing an ability), update the corresponding JSON in `assets/data/` and run:
     ```
     node scripts/generate-data.js

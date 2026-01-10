@@ -38,22 +38,10 @@ async function initializeLibraryPageAsync() {
 
     // Render all components
     renderLibraryMap();
-    renderBlueprintCounter();
     renderProgressBar();
 
     // Set up event listeners
     setupEventListeners();
-}
-
-/**
- * Render the blueprint counter
- */
-function renderBlueprintCounter() {
-    const blueprintCount = document.getElementById('blueprint-count');
-    if (blueprintCount) {
-        const state = restorationController.getLibraryState();
-        blueprintCount.textContent = state.blueprints;
-    }
 }
 
 /**

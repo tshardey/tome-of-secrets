@@ -23,6 +23,24 @@ export class BaseQuestHandler {
      * @returns {Object} Common quest data
      */
     getCommonFormData() {
+        // Handle buffs from hidden input (card-based selection) or fallback to select element
+        let selectedBuffs = [];
+        if (this.formElements.buffsSelect) {
+            if (this.formElements.buffsSelect.type === 'hidden') {
+                // Card-based selection: read from hidden input JSON
+                try {
+                    const value = this.formElements.buffsSelect.value;
+                    selectedBuffs = value ? JSON.parse(value) : [];
+                } catch (e) {
+                    // If JSON parsing fails, default to empty array
+                    selectedBuffs = [];
+                }
+            } else if (this.formElements.buffsSelect.selectedOptions) {
+                // Fallback: old multi-select dropdown (for backward compatibility)
+                selectedBuffs = Array.from(this.formElements.buffsSelect.selectedOptions).map(o => o.value);
+            }
+        }
+        
         return {
             month: this.formElements.monthInput.value,
             year: this.formElements.yearInput.value,
@@ -30,7 +48,7 @@ export class BaseQuestHandler {
             bookAuthor: this.formElements.bookAuthorInput ? this.formElements.bookAuthorInput.value : '',
             notes: this.formElements.notesInput.value,
             status: this.formElements.statusSelect.value,
-            selectedBuffs: Array.from(this.formElements.buffsSelect.selectedOptions).map(o => o.value),
+            selectedBuffs: selectedBuffs,
             background: this.formElements.backgroundSelect ? this.formElements.backgroundSelect.value : '',
             wizardSchool: this.formElements.wizardSchoolSelect ? this.formElements.wizardSchoolSelect.value : ''
         };

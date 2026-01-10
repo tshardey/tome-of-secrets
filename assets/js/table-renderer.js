@@ -536,7 +536,7 @@ export function renderCurseTable() {
  */
 export function renderLevelingRewardsTable() {
     let html = `
-<table>
+<table class="tracker-table">
   <thead>
     <tr>
       <th>Level</th>
@@ -613,7 +613,7 @@ export function renderLevelingRewardsTable() {
 /**
  * Replace Jekyll template variables in links
  */
-function processLinks(html) {
+export function processLinks(html) {
     // Get the base URL from the page's meta tag or infer from current path
     let baseurl = '';
     const metaBase = document.querySelector('meta[name="baseurl"]');
