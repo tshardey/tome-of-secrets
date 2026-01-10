@@ -11,6 +11,10 @@ describe('Toast System', () => {
     });
 
     afterEach(() => {
+        // Ensure timer mode doesn't leak between tests
+        jest.useRealTimers();
+        jest.clearAllTimers();
+
         // Clean up toasts
         const container = document.getElementById('toast-container');
         if (container) {
@@ -98,10 +102,10 @@ describe('Toast System', () => {
             }, 10);
         });
 
-        it('should auto-dismiss after duration', (done) => {
+        it('should auto-dismiss after duration', () => {
             jest.useFakeTimers();
             
-            const dismiss = showToast('Test message', { duration: 1000 });
+            showToast('Test message', { duration: 1000 });
             
             const container = document.getElementById('toast-container');
             const toast = container.querySelector('.toast');
@@ -111,11 +115,7 @@ describe('Toast System', () => {
             // Fast-forward time
             jest.advanceTimersByTime(1000);
             
-            requestAnimationFrame(() => {
-                expect(toast.classList.contains('toast-hide')).toBe(true);
-                jest.useRealTimers();
-                done();
-            });
+            expect(toast.classList.contains('toast-hide')).toBe(true);
         });
 
         it('should return a dismiss function', (done) => {

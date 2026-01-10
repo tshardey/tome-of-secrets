@@ -323,30 +323,38 @@ export function renderTemporaryBuffRow(buff, index) {
  * @returns {HTMLElement} The rendered ability card element
  */
 export function renderAbilityCard(abilityName, ability, index) {
-    const card = createElement('div', { class: 'item-card' });
-    const info = createElement('div', { class: 'item-info' });
+    const card = createElement('div', { class: 'rpg-ability-card' });
     
-    const name = createElement('h4');
+    // Add badge if school exists
+    if (ability.school) {
+        const badge = createElement('span', { class: 'rpg-ability-badge' });
+        badge.textContent = ability.school;
+        card.appendChild(badge);
+    }
+    
+    // Ability name/title
+    const name = createElement('h4', { class: 'rpg-ability-title' });
     name.textContent = abilityName;
-    info.appendChild(name);
+    card.appendChild(name);
     
+    // Ability description/benefit
     if (ability.benefit) {
-        const benefit = createElement('p');
+        const benefit = createElement('p', { class: 'rpg-ability-description' });
         benefit.textContent = ability.benefit;
-        info.appendChild(benefit);
+        card.appendChild(benefit);
     }
     
-    if (ability.school || ability.cost !== undefined) {
-        const cost = createElement('p', { class: 'ability-cost' });
-        const parts = [];
-        if (ability.school) parts.push(`<strong>School:</strong> ${escapeHtml(ability.school)}`);
-        if (ability.cost !== undefined) parts.push(`<strong>Cost:</strong> ${ability.cost} SMP`);
-        cost.innerHTML = parts.join(' | ');
-        info.appendChild(cost);
+    // Cost information (if applicable)
+    if (ability.cost !== undefined) {
+        const cost = createElement('p', { class: 'rpg-ability-cost' });
+        cost.style.cssText = 'margin-top: 8px; font-size: 0.85em; color: #8a7a61; font-style: italic;';
+        cost.innerHTML = `<strong>Cost:</strong> ${ability.cost} SMP`;
+        card.appendChild(cost);
     }
     
-    info.appendChild(createActionButton('Forget', 'delete-ability-btn', index));
-    card.appendChild(info);
+    // Delete button
+    const deleteBtn = createActionButton('Forget', 'delete-ability-btn', index);
+    card.appendChild(deleteBtn);
     
     return card;
 }

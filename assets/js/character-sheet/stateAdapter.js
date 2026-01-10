@@ -66,10 +66,16 @@ export class StateAdapter {
     }
 
     _mutateList(key, mutator) {
-        const list = this.state[key];
+        let list = this.state[key];
         if (!Array.isArray(list)) {
-            console.warn(`StateAdapter: attempted to mutate non-array state key "${key}".`);
-            return { changed: false, value: undefined, list };
+            // Initialize as empty array if undefined or not an array
+            if (list === undefined || list === null) {
+                this.state[key] = [];
+                list = this.state[key];
+            } else {
+                console.warn(`StateAdapter: attempted to mutate non-array state key "${key}".`);
+                return { changed: false, value: undefined, list };
+            }
         }
 
         const result = mutator(list) || {};
@@ -177,13 +183,23 @@ export class StateAdapter {
 
     addActiveQuests(quests) {
         const questList = Array.isArray(quests) ? quests : [quests];
-        const { value } = this._mutateList(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, list => {
-            if (questList.length === 0) {
-                return { changed: false };
-            }
+        if (questList.length === 0) {
+            return [];
+        }
+        
+        const { value, changed } = this._mutateList(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, list => {
             questList.forEach(quest => list.push(quest));
             return { changed: true, value: questList };
         });
+        
+        // Ensure characterState is synced (should already be since this.state is characterState reference)
+        // But double-check to be safe
+        if (changed && this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) {
+            console.log(`addActiveQuests: Added ${questList.length} quests. Total active quests: ${this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS].length}`);
+        } else if (!changed) {
+            console.warn('addActiveQuests: No changes made. List:', this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
+        }
+        
         return value || [];
     }
 

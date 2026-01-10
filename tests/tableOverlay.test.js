@@ -25,29 +25,23 @@ describe('Table Overlay System', () => {
         
         // Load character sheet HTML
         loadHTML('character-sheet.md');
-        
-        // Add overlay elements to DOM
-        const backdrop = document.createElement('div');
-        backdrop.id = 'table-overlay-backdrop';
-        backdrop.className = 'table-overlay-backdrop';
-        document.body.appendChild(backdrop);
-        
-        const panel = document.createElement('div');
-        panel.id = 'table-overlay-panel';
-        panel.className = 'table-overlay-panel';
-        panel.style.display = 'none';
-        
-        const closeButton = document.createElement('button');
-        closeButton.id = 'close-table-overlay';
-        closeButton.className = 'close-table-overlay-btn';
-        closeButton.innerHTML = '&times;';
-        panel.appendChild(closeButton);
-        
-        const content = document.createElement('div');
-        content.id = 'table-overlay-content';
-        panel.appendChild(content);
-        
-        document.body.appendChild(panel);
+
+        // Provide explicit open buttons for the overlay system.
+        // The character sheet UI can evolve, but the overlay subsystem should still function when triggers exist.
+        const overlayButtons = [
+            { table: 'genre-quests', text: 'Genre Quests' },
+            { table: 'side-quests', text: 'Side Quests' },
+            { table: 'dungeon-rooms', text: 'Dungeon Rooms' },
+            { table: 'atmospheric-buffs', text: 'Atmospheric Buffs' }
+        ];
+        overlayButtons.forEach(({ table, text }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'open-table-overlay-btn';
+            btn.dataset.table = table;
+            btn.textContent = text;
+            document.body.appendChild(btn);
+        });
         
         // Initialize character sheet
         await initializeCharacterSheet();

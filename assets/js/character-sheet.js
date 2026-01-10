@@ -259,7 +259,7 @@ export async function initializeCharacterSheet() {
         const selectedGenres = stateAdapter.getSelectedGenres();
 
         if (selectedGenres.length === 0) {
-            display.innerHTML = '<p class="no-genres">No genres selected yet. <a href="{{ site.baseurl }}/quests.html">Choose your genres here</a>.</p>';
+            display.innerHTML = '<p class="no-genres">No genres selected yet. Open the Quests tab and click “♥ View Genre Quests” to choose your genres.</p>';
             return;
         }
 
@@ -381,21 +381,15 @@ export async function initializeCharacterSheet() {
         
         // Get saved values from localStorage
         const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
-        
-        // Normalize values for comparison (handle empty strings, undefined, null, and number/string mismatches)
-        const normalizeValue = (value) => {
-            if (value === null || value === undefined || value === '') return '';
-            return String(value).trim();
-        };
-        
-        const savedInkDrops = normalizeValue(savedData.inkDrops);
-        const savedPaperScraps = normalizeValue(savedData.paperScraps);
-        
-        // Get current form values and normalize
-        const currentInkDrops = normalizeValue(inkDropsEl.value);
-        const currentPaperScraps = normalizeValue(paperScrapsEl.value);
-        
-        // Check if there are unsaved changes
+
+        // Compare numerically so missing/empty saved values behave like 0 and
+        // don't trigger a warning on initial load.
+        const savedInkDrops = parseIntOr(savedData.inkDrops, 0);
+        const savedPaperScraps = parseIntOr(savedData.paperScraps, 0);
+
+        const currentInkDrops = parseIntOr(inkDropsEl.value, 0);
+        const currentPaperScraps = parseIntOr(paperScrapsEl.value, 0);
+
         const hasUnsavedChanges = (currentInkDrops !== savedInkDrops) || (currentPaperScraps !== savedPaperScraps);
         
         // Show or hide warning
@@ -419,6 +413,9 @@ export async function initializeCharacterSheet() {
         paperScrapsEl.addEventListener('input', checkCurrencyUnsavedChanges);
         paperScrapsEl.addEventListener('change', checkCurrencyUnsavedChanges);
     }
+
+    // Ensure warning reflects current saved vs form values on initial load
+    checkCurrencyUnsavedChanges();
 
     // Delegated click handler for all interactive elements
     form.addEventListener('click', (e) => {
@@ -530,10 +527,13 @@ export async function initializeCharacterSheet() {
     const familiarSlotsInput = document.getElementById('familiar-slots');
 
     ui.renderAll(levelInput, xpNeededInput, wizardSchoolSelect, librarySanctumSelect, smpInput, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    // Update RPG-styled XP progress bar after state is loaded
+    ui.updateXpProgressBar();
     initializeGenreSelection();
     
     // Initialize rolling tables in Quests tab
     await initializeRollingTables();
+    await initializeQuestInfoDrawers();
 }
 
 /**
@@ -759,23 +759,6 @@ async function initializeRollingTables() {
                         }
                     </div>
                 `;
-                
-                // Re-attach remove button listeners
-                displayDiv.querySelectorAll('.remove-genre-overlay-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const index = parseInt(btn.dataset.index);
-                        const selectedGenres = stateAdapter.getSelectedGenres();
-                        selectedGenres.splice(index, 1);
-                        stateAdapter.setSelectedGenres(selectedGenres);
-                        updateGenreSelectionUI();
-                        // Re-render table
-                        const tableHtml = processLinks(renderSelectedGenresTable());
-                        const tableBody = document.querySelector('.table-overlay-body');
-                        if (tableBody) {
-                            tableBody.innerHTML = tableHtml;
-                        }
-                    });
-                });
             }
             
             // Update genre selector dropdown
@@ -993,6 +976,371 @@ async function initializeRollingTables() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && overlayPanel.style.display === 'block') {
             closeTableOverlay();
+        }
+    });
+}
+
+// Initialize Quest Info Drawers
+async function initializeQuestInfoDrawers() {
+    const { renderGenreQuestsTable, renderAtmosphericBuffsTable, renderSideQuestsTable, renderDungeonRewardsTable, renderDungeonRoomsTable, renderDungeonCompletionRewardsTable, processLinks } = await import('./table-renderer.js');
+    const { StateAdapter } = await import('./character-sheet/stateAdapter.js');
+    const { characterState } = await import('./character-sheet/state.js');
+    const { safeGetJSON, safeSetJSON } = await import('./utils/storage.js');
+    const { STORAGE_KEYS } = await import('./character-sheet/storageKeys.js');
+    const dataModule = await import('./character-sheet/data.js');
+    const allGenres = dataModule.allGenres;
+    const stateAdapter = new StateAdapter(characterState);
+    
+    // Helper function to process links
+    function processLinksHelper(html) {
+        const metaBase = document.querySelector('meta[name="baseurl"]');
+        const baseurl = metaBase ? metaBase.content : '';
+        return html.replace(/\{\{\s*site\.baseurl\s*\}\}/g, baseurl);
+    }
+    
+    // Function to render selected genres table
+    function renderSelectedGenresTable() {
+        const selectedGenres = stateAdapter.getSelectedGenres();
+        
+        if (selectedGenres.length === 0) {
+            return '<p class="no-genres-message">No genres selected. Use the genre selection controls below to add genres.</p>';
+        }
+        
+        let html = `<table class="tracker-table">
+  <thead>
+    <tr>
+      <th>Roll</th>
+      <th>Quest Description</th>
+    </tr>
+  </thead>
+  <tbody>`;
+        
+        selectedGenres.forEach((genre, index) => {
+            html += `
+    <tr>
+      <td><strong>${index + 1}</strong></td>
+      <td><strong>${genre}:</strong> ${allGenres[genre] || 'No description'}</td>
+    </tr>`;
+        });
+        
+        html += `
+  </tbody>
+</table>`;
+        
+        return html;
+    }
+    
+    // Function to render genre selection UI
+    function renderGenreSelectionUI() {
+        const selectedGenres = stateAdapter.getSelectedGenres();
+        const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+        const allGenreKeys = Object.keys(allGenres);
+        const DICE_LIMITS = { 'd4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20 };
+        const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+        
+        // Get available genres (not yet selected)
+        const availableGenres = allGenreKeys.filter(g => !selectedGenres.includes(g));
+        
+        let html = `
+            <div class="genre-selection-overlay-section" style="margin-top: 24px; padding-top: 24px; border-top: 2px solid #54483b;">
+                <h3>📚 Choose Your Genres</h3>
+                <p class="description">Select how many genres you want for your "Organize the Stacks" quests. Choose a dice type to determine how many genres you can select. If you choose d20, all genres will be automatically selected.</p>
+                
+                <div class="dice-selection-controls" style="margin-bottom: 15px;">
+                    <label for="drawer-genre-dice-selector"><strong>Number of Genres (Dice Type):</strong></label>
+                    <select id="drawer-genre-dice-selector" class="rpg-select" style="padding: 5px; margin-left: 10px;">
+                        <option value="d4" ${diceType === 'd4' ? 'selected' : ''}>d4 (4 genres)</option>
+                        <option value="d6" ${diceType === 'd6' ? 'selected' : ''}>d6 (6 genres)</option>
+                        <option value="d8" ${diceType === 'd8' ? 'selected' : ''}>d8 (8 genres)</option>
+                        <option value="d10" ${diceType === 'd10' ? 'selected' : ''}>d10 (10 genres)</option>
+                        <option value="d12" ${diceType === 'd12' ? 'selected' : ''}>d12 (12 genres)</option>
+                        <option value="d20" ${diceType === 'd20' ? 'selected' : ''}>d20 (all genres)</option>
+                    </select>
+                </div>
+                
+                <div class="selected-genres-display-overlay" style="margin-bottom: 15px; min-height: 50px; padding: 10px; background: rgba(84, 72, 59, 0.2); border-radius: 4px;">
+                    <strong>Selected Genres (${selectedGenres.length}/${maxGenres}):</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                        ${selectedGenres.length === 0 
+                            ? '<span style="color: #999; font-style: italic;">No genres selected yet.</span>'
+                            : selectedGenres.map((genre, idx) => `
+                                <span class="selected-genre-tag" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(184, 159, 98, 0.3); border: 1px solid #b89f62; border-radius: 4px;">
+                                    ${genre}
+                                    <button type="button" class="remove-genre-drawer-btn" data-index="${idx}" style="background: none; border: none; color: #b89f62; cursor: pointer; font-size: 1.2em; padding: 0; width: 20px; height: 20px; line-height: 1;">×</button>
+                                </span>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+                
+                <div class="add-genre-controls" style="display: flex; gap: 10px; align-items: center;">
+                    <select id="drawer-genre-selector" class="rpg-select" style="flex: 1;">
+                        <option value="">-- Select a genre to add --</option>
+                        ${availableGenres.map(genre => `<option value="${genre}">${genre}</option>`).join('')}
+                    </select>
+                    <button type="button" id="drawer-add-genre-button" class="rpg-btn rpg-btn-primary" ${selectedGenres.length >= maxGenres ? 'disabled' : ''}>Add Genre</button>
+                </div>
+            </div>`;
+        
+        return html;
+    }
+    
+    // Function to setup genre selection listeners for drawer
+    function setupGenreSelectionListenersDrawer(container) {
+        const diceSelector = container.querySelector('#drawer-genre-dice-selector');
+        const genreSelector = container.querySelector('#drawer-genre-selector');
+        const addButton = container.querySelector('#drawer-add-genre-button');
+        
+        const DICE_LIMITS = { 'd4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20 };
+        const allGenreKeys = Object.keys(allGenres);
+        
+        function updateGenreSelectionUI() {
+            const selectedGenres = stateAdapter.getSelectedGenres();
+            const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+            const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+            const availableGenres = allGenreKeys.filter(g => !selectedGenres.includes(g));
+            
+            // Update selected genres display
+            const displayDiv = container.querySelector('.selected-genres-display-overlay');
+            if (displayDiv) {
+                displayDiv.innerHTML = `
+                    <strong>Selected Genres (${selectedGenres.length}/${maxGenres}):</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                        ${selectedGenres.length === 0 
+                            ? '<span style="color: #999; font-style: italic;">No genres selected yet.</span>'
+                            : selectedGenres.map((genre, idx) => `
+                                <span class="selected-genre-tag" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(184, 159, 98, 0.3); border: 1px solid #b89f62; border-radius: 4px;">
+                                    ${genre}
+                                    <button type="button" class="remove-genre-drawer-btn" data-index="${idx}" style="background: none; border: none; color: #b89f62; cursor: pointer; font-size: 1.2em; padding: 0; width: 20px; height: 20px; line-height: 1;">×</button>
+                                </span>
+                            `).join('')
+                        }
+                    </div>`;
+                
+                // Re-attach remove button listeners
+                displayDiv.querySelectorAll('.remove-genre-drawer-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const index = parseInt(btn.dataset.index);
+                        const selectedGenres = stateAdapter.getSelectedGenres();
+                        selectedGenres.splice(index, 1);
+                        stateAdapter.setSelectedGenres(selectedGenres);
+                        updateGenreSelectionUI();
+                        // Re-render table
+                        const tableContainer = container.querySelector('#genre-quests-table-container');
+                        if (tableContainer) {
+                            tableContainer.innerHTML = processLinksHelper(renderSelectedGenresTable());
+                        }
+                    });
+                });
+            }
+            
+            // Update genre selector dropdown
+            if (genreSelector) {
+                genreSelector.innerHTML = '<option value="">-- Select a genre to add --</option>';
+                availableGenres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = genre;
+                    option.textContent = genre;
+                    genreSelector.appendChild(option);
+                });
+            }
+            
+            // Update add button state
+            if (addButton) {
+                addButton.disabled = selectedGenres.length >= maxGenres;
+            }
+        }
+        
+        // Dice selector change handler
+        if (diceSelector) {
+            diceSelector.addEventListener('change', () => {
+                const diceType = diceSelector.value;
+                safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, diceType);
+                
+                const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+                const selectedGenres = stateAdapter.getSelectedGenres();
+                
+                // If d20, auto-select all genres
+                if (diceType === 'd20') {
+                    stateAdapter.setSelectedGenres(allGenreKeys);
+                } else {
+                    // Trim to max if over limit
+                    if (selectedGenres.length > maxGenres) {
+                        stateAdapter.setSelectedGenres(selectedGenres.slice(0, maxGenres));
+                    }
+                }
+                
+                updateGenreSelectionUI();
+                const tableContainer = container.querySelector('#genre-quests-table-container');
+                if (tableContainer) {
+                    tableContainer.innerHTML = processLinksHelper(renderSelectedGenresTable());
+                }
+            });
+        }
+        
+        // Add genre button handler
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                if (!genreSelector || !genreSelector.value) return;
+                
+                const selectedGenres = stateAdapter.getSelectedGenres();
+                const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+                const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
+                
+                if (selectedGenres.length >= maxGenres) return;
+                
+                selectedGenres.push(genreSelector.value);
+                stateAdapter.setSelectedGenres(selectedGenres);
+                genreSelector.value = '';
+                
+                updateGenreSelectionUI();
+                const tableContainer = container.querySelector('#genre-quests-table-container');
+                if (tableContainer) {
+                    tableContainer.innerHTML = processLinksHelper(renderSelectedGenresTable());
+                }
+            });
+        }
+        
+        // Initial UI update
+        updateGenreSelectionUI();
+    }
+    
+    // Drawer configuration
+    const drawerConfig = {
+        'genre-quests': {
+            backdrop: 'genre-quests-backdrop',
+            drawer: 'genre-quests-drawer',
+            closeBtn: 'close-genre-quests',
+            container: 'genre-quests-table-container',
+            renderTable: () => processLinksHelper(renderSelectedGenresTable()),
+            renderGenreUI: () => renderGenreSelectionUI(),
+            setupGenreListeners: (container) => setupGenreSelectionListenersDrawer(container)
+        },
+        'atmospheric-buffs': {
+            backdrop: 'atmospheric-buffs-info-backdrop',
+            drawer: 'atmospheric-buffs-info-drawer',
+            closeBtn: 'close-atmospheric-buffs-info',
+            container: 'atmospheric-buffs-table-container',
+            renderTable: () => processLinksHelper(renderAtmosphericBuffsTable())
+        },
+        'side-quests': {
+            backdrop: 'side-quests-info-backdrop',
+            drawer: 'side-quests-info-drawer',
+            closeBtn: 'close-side-quests-info',
+            container: 'side-quests-table-container',
+            renderTable: () => processLinksHelper(renderSideQuestsTable())
+        },
+        'dungeons': {
+            backdrop: 'dungeons-info-backdrop',
+            drawer: 'dungeons-info-drawer',
+            closeBtn: 'close-dungeons-info',
+            containers: {
+                rewards: 'dungeon-rewards-table-container',
+                rooms: 'dungeon-rooms-table-container',
+                completion: 'dungeon-completion-rewards-table-container'
+            },
+            renderTables: () => ({
+                rewards: processLinksHelper(renderDungeonRewardsTable()),
+                rooms: processLinksHelper(renderDungeonRoomsTable()),
+                completion: processLinksHelper(renderDungeonCompletionRewardsTable())
+            })
+        }
+    };
+    
+    function openDrawer(drawerId) {
+        const config = drawerConfig[drawerId];
+        if (!config) return;
+        
+        const backdrop = document.getElementById(config.backdrop);
+        const drawer = document.getElementById(config.drawer);
+        if (!backdrop || !drawer) return;
+        
+        // Render tables
+        if (drawerId === 'dungeons') {
+            const tables = config.renderTables();
+            const rewardsContainer = document.getElementById(config.containers.rewards);
+            const roomsContainer = document.getElementById(config.containers.rooms);
+            const completionContainer = document.getElementById(config.containers.completion);
+            if (rewardsContainer) rewardsContainer.innerHTML = tables.rewards;
+            if (roomsContainer) roomsContainer.innerHTML = tables.rooms;
+            if (completionContainer) completionContainer.innerHTML = tables.completion;
+        } else if (drawerId === 'genre-quests') {
+            const container = document.getElementById(config.container);
+            if (container) {
+                container.innerHTML = config.renderTable();
+                // Add genre selection UI
+                if (config.renderGenreUI) {
+                    container.insertAdjacentHTML('afterend', config.renderGenreUI());
+                }
+                // Setup genre selection listeners
+                if (config.setupGenreListeners) {
+                    const drawerBody = drawer.querySelector('.info-drawer-body');
+                    if (drawerBody) {
+                        config.setupGenreListeners(drawerBody);
+                    }
+                }
+            }
+        } else {
+            const container = document.getElementById(config.container);
+            if (container) {
+                container.innerHTML = config.renderTable();
+            }
+        }
+        
+        // Show drawer
+        drawer.style.display = 'flex';
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeDrawer(drawerId) {
+        const config = drawerConfig[drawerId];
+        if (!config) return;
+        
+        const backdrop = document.getElementById(config.backdrop);
+        const drawer = document.getElementById(config.drawer);
+        if (!backdrop || !drawer) return;
+        
+        drawer.style.display = 'none';
+        backdrop.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+    // Set up open buttons
+    const openButtons = document.querySelectorAll('.open-quest-info-drawer-btn');
+    openButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const drawerId = button.dataset.drawer;
+            if (drawerId) {
+                openDrawer(drawerId);
+            }
+        });
+    });
+    
+    // Set up close buttons and backdrop clicks
+    Object.keys(drawerConfig).forEach(drawerId => {
+        const config = drawerConfig[drawerId];
+        const closeBtn = document.getElementById(config.closeBtn);
+        const backdrop = document.getElementById(config.backdrop);
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => closeDrawer(drawerId));
+        }
+        
+        if (backdrop) {
+            backdrop.addEventListener('click', () => closeDrawer(drawerId));
+        }
+    });
+    
+    // Close drawers on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            Object.keys(drawerConfig).forEach(drawerId => {
+                const drawer = document.getElementById(drawerConfig[drawerId].drawer);
+                if (drawer && drawer.style.display === 'flex') {
+                    closeDrawer(drawerId);
+                }
+            });
         }
     });
 }

@@ -598,7 +598,7 @@ describe('Render Components', () => {
 
             const card = renderAbilityCard('Test Ability', ability, 0);
             
-            expect(card.classList.contains('item-card')).toBe(true);
+            expect(card.classList.contains('rpg-ability-card')).toBe(true);
             expect(card.querySelector('h4').textContent).toBe('Test Ability');
         });
 

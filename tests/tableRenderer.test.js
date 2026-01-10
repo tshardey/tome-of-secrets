@@ -255,7 +255,7 @@ describe('Table Renderer', () => {
             const html = renderLevelingRewardsTable();
             
             // Check table structure
-            expect(html).toContain('<table>');
+            expect(html).toContain('<table');
             expect(html).toContain('<thead>');
             expect(html).toContain('<tbody>');
             expect(html).toContain('Level');
@@ -331,7 +331,7 @@ describe('Table Renderer', () => {
             ];
 
             tables.forEach(html => {
-                expect(html).toContain('<table>');
+                expect(html).toContain('<table');
                 expect(html).toContain('</table>');
                 expect(html).toContain('<thead>');
                 expect(html).toContain('</thead>');
@@ -354,7 +354,7 @@ describe('Table Renderer', () => {
             
             expect(html).toContain('<ol>');
             expect(html).toContain('<li>');
-            expect(html).not.toContain('<table>');
+            expect(html).not.toContain('<table');
         });
     });
 

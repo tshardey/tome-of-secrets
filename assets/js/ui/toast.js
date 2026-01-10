@@ -27,12 +27,21 @@ let toastContainer = null;
  * Initialize the toast container if it doesn't exist
  */
 function ensureContainer() {
-    if (!toastContainer) {
+    // If tests or other code replace `document.body` / clear the DOM, our cached reference
+    // can become detached. Reuse an existing DOM node if present; otherwise recreate.
+    const existing = document.getElementById('toast-container');
+    if (existing) {
+        toastContainer = existing;
+        return toastContainer;
+    }
+
+    if (!toastContainer || !toastContainer.isConnected) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
         toastContainer.className = 'toast-container';
         document.body.appendChild(toastContainer);
     }
+
     return toastContainer;
 }
 

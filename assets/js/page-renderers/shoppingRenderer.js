@@ -70,6 +70,19 @@ function updateResources(newInkDrops, newPaperScraps) {
 }
 
 /**
+ * Update the shopping page currency display (if present)
+ */
+function updateCurrencyDisplay() {
+    const currencyDisplay = document.getElementById('shopping-currency-display');
+    if (!currencyDisplay) return;
+
+    const { inkDrops, paperScraps } = getCurrentResources();
+    // Note: this display is informational; editing happens on the Character Sheet.
+    currencyDisplay.textContent =
+        `Ink Drops: ${inkDrops} | Paper Scraps: ${paperScraps} (read-only — update in Character Sheet)`;
+}
+
+/**
  * Show an error message
  * @param {HTMLElement} errorContainer - The error message container element
  * @param {string} message 
@@ -212,5 +225,8 @@ export function initializeShoppingPage() {
         const card = createShoppingOptionCard(name, option);
         container.appendChild(card);
     }
+
+    // Render currency on load (shopping page)
+    updateCurrencyDisplay();
 }
 

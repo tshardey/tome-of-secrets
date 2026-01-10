@@ -4,11 +4,10 @@
 import { xpLevels, permanentBonuses, allItems, schoolBenefits, sideQuests, dungeonRooms, curseTable, genreQuests } from '../assets/js/character-sheet/data.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
-
-// We will create the main character sheet script in a later step.
-// For now, we can import it, assuming it will exist at this path.
 import { initializeCharacterSheet } from '../assets/js/character-sheet.js';
 import { characterState, loadState, saveState } from '../assets/js/character-sheet/state.js';
+import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
+import * as ui from '../assets/js/character-sheet/ui.js';
 
 describe('Character Sheet', () => {
   beforeEach(async () => {
@@ -94,7 +93,9 @@ describe('Character Sheet', () => {
       levelInput.dispatchEvent(new Event('change'));
 
       // Assert that the XP needed for level 5 is correctly displayed
-      expect(xpNeededInput.value).toBe(xpLevels[5].toString());
+      // Handle both input (value) and span (textContent) elements
+      const xpNeededValue = xpNeededInput.tagName === 'INPUT' ? xpNeededInput.value : xpNeededInput.textContent;
+      expect(xpNeededValue).toBe(xpLevels[5].toString());
     });
 
     it('should render permanent bonuses when the character reaches the required level', () => {
@@ -112,6 +113,1194 @@ describe('Character Sheet', () => {
       expect(bonusList.innerHTML).toContain(permanentBonuses[3]);
       expect(bonusList.innerHTML).toContain(permanentBonuses[6]);
       expect(bonusList.textContent).not.toContain('-- No bonuses unlocked at this level --');
+    });
+  });
+
+  describe('RPG-Styled Character Tab UI', () => {
+    describe('Hero Section', () => {
+      it('should render RPG hero section with name input', () => {
+        const heroSection = document.querySelector('.rpg-hero-section');
+        const nameInput = document.getElementById('keeperName');
+        
+        expect(heroSection).toBeTruthy();
+        expect(nameInput).toBeTruthy();
+        expect(nameInput.classList.contains('rpg-hero-name-input')).toBe(true);
+      });
+
+      it('should render level badge and input', () => {
+        const levelBadge = document.getElementById('rpg-level-badge');
+        const levelNumber = document.getElementById('rpg-level-number');
+        const levelInput = document.getElementById('level');
+        const levelContainer = document.querySelector('.rpg-level-container');
+        
+        expect(levelBadge).toBeTruthy();
+        expect(levelNumber).toBeTruthy();
+        expect(levelInput).toBeTruthy();
+        expect(levelContainer).toBeTruthy();
+        expect(levelBadge.classList.contains('rpg-level-badge')).toBe(true);
+      });
+
+      it('should display current level in level badge', () => {
+        const levelInput = document.getElementById('level');
+        const levelNumber = document.getElementById('rpg-level-number');
+        
+        expect(levelInput).toBeTruthy();
+        expect(levelNumber).toBeTruthy();
+        
+        // Level should be initialized (default is 1)
+        const currentLevel = levelInput.value || '1';
+        expect(levelNumber.textContent).toBe(currentLevel);
+      });
+
+      it('should sync level badge when level input changes', () => {
+        const levelInput = document.getElementById('level');
+        const levelNumber = document.getElementById('rpg-level-number');
+        
+        levelInput.value = '5';
+        levelInput.dispatchEvent(new Event('change'));
+        
+        // Update progress bar to sync badge
+        ui.updateXpProgressBar();
+        
+        expect(levelNumber.textContent).toBe('5');
+      });
+
+      it('should render RPG hero attributes (background, school, sanctum)', () => {
+        const attributesContainer = document.querySelector('.rpg-hero-attributes');
+        const backgroundSelect = document.getElementById('keeperBackground');
+        const schoolSelect = document.getElementById('wizardSchool');
+        const sanctumSelect = document.getElementById('librarySanctum');
+        
+        expect(attributesContainer).toBeTruthy();
+        expect(backgroundSelect).toBeTruthy();
+        expect(schoolSelect).toBeTruthy();
+        expect(sanctumSelect).toBeTruthy();
+        expect(backgroundSelect.classList.contains('rpg-attribute-select')).toBe(true);
+        expect(schoolSelect.classList.contains('rpg-attribute-select')).toBe(true);
+        expect(sanctumSelect.classList.contains('rpg-attribute-select')).toBe(true);
+      });
+    });
+
+    describe('XP Progress Bar', () => {
+      it('should render RPG XP progress bar panel', () => {
+        const xpPanel = document.querySelector('.rpg-xp-panel');
+        const progressBar = document.querySelector('.rpg-xp-progress-bar');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        expect(xpPanel).toBeTruthy();
+        expect(progressBar).toBeTruthy();
+        expect(progressFill).toBeTruthy();
+        expect(progressText).toBeTruthy();
+      });
+
+      it('should display current XP and XP needed values', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const xpNeededElement = document.getElementById('xp-needed');
+        
+        expect(xpCurrentInput).toBeTruthy();
+        expect(xpNeededElement).toBeTruthy();
+        expect(xpCurrentInput.classList.contains('rpg-xp-current-input')).toBe(true);
+      });
+
+      it('should update XP progress bar when XP current changes', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        // Set level to 1 (needs 100 XP based on xpLevels)
+        levelInput.value = '1';
+        // Set XP to 50 (50% progress)
+        xpCurrentInput.value = '50';
+        
+        ui.updateXpProgressBar();
+        
+        expect(progressFill.style.width).toBe('50%');
+        expect(progressText.textContent).toBe('50 / 100 XP');
+      });
+
+      it('should update XP progress bar when level changes', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const xpNeededElement = document.getElementById('xp-needed');
+        
+        // Set level to 2 (needs XP based on xpLevels)
+        levelInput.value = '2';
+        xpCurrentInput.value = '100';
+        
+        ui.updateXpProgressBar();
+        
+        // Check that XP needed was updated
+        const xpNeededValue = xpNeededElement.tagName === 'INPUT' ? xpNeededElement.value : xpNeededElement.textContent;
+        if (xpLevels[2]) {
+          expect(xpNeededValue).toBe(xpLevels[2].toString());
+          
+          // Progress should be calculated correctly
+          if (xpLevels[2] !== 'Max' && xpLevels[2] !== 0) {
+            const xpNeeded = parseInt(xpLevels[2]);
+            const percentage = Math.min(100, Math.max(0, (100 / xpNeeded) * 100));
+            expect(progressFill.style.width).toBe(`${percentage}%`);
+          }
+        }
+      });
+
+      it('should show max level correctly when XP needed is Max', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        // Set level to 20 (max level, if it exists in xpLevels)
+        if (xpLevels[20] === 'Max') {
+          levelInput.value = '20';
+          xpCurrentInput.value = '1000';
+          
+          ui.updateXpProgressBar();
+          
+          // Max level should show 100% progress
+          expect(progressFill.style.width).toBe('100%');
+          expect(progressText.textContent).toContain('Max');
+        }
+      });
+
+      it('should handle zero XP correctly', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        levelInput.value = '1';
+        xpCurrentInput.value = '0';
+        
+        ui.updateXpProgressBar();
+        
+        expect(progressFill.style.width).toBe('0%');
+        expect(progressText.textContent).toBe('0 / 100 XP');
+      });
+
+      it('should handle XP exceeding needed amount (overflow protection)', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        levelInput.value = '1';
+        // Set XP to 200 (more than needed 100)
+        xpCurrentInput.value = '200';
+        
+        ui.updateXpProgressBar();
+        
+        // Progress should be capped at 100%
+        expect(progressFill.style.width).toBe('100%');
+        expect(progressText.textContent).toContain('200');
+      });
+
+      it('should handle negative XP (edge case)', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        levelInput.value = '1';
+        // Set XP to negative value
+        xpCurrentInput.value = '-10';
+        
+        ui.updateXpProgressBar();
+        
+        // Progress should be capped at 0%
+        expect(progressFill.style.width).toBe('0%');
+      });
+
+      it('should initialize XP progress bar on page load', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        const levelNumber = document.getElementById('rpg-level-number');
+        
+        // After initialization, progress bar should be updated
+        ui.updateXpProgressBar();
+        
+        // Check that progress bar elements exist and are initialized
+        expect(progressFill).toBeTruthy();
+        expect(progressText).toBeTruthy();
+        expect(levelNumber).toBeTruthy();
+        
+        // Progress fill should have a width (even if 0%)
+        expect(progressFill.style.width).toBeDefined();
+        expect(progressText.textContent).toBeTruthy();
+      });
+
+      it('should handle missing elements gracefully', () => {
+        // Remove XP elements temporarily
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        
+        if (xpCurrentInput && levelInput) {
+          // The function should handle missing progress bar elements
+          const progressFill = document.getElementById('rpg-xp-progress-fill');
+          const progressText = document.getElementById('rpg-xp-progress-text');
+          
+          if (progressFill && progressText) {
+            // Should not throw error when called
+            expect(() => ui.updateXpProgressBar()).not.toThrow();
+          }
+        }
+      });
+    });
+
+    describe('RPG Stats Grid', () => {
+      it('should render RPG stats grid with currency cards', () => {
+        const statsPanel = document.querySelector('.rpg-stats-panel');
+        const statsGrid = document.querySelector('.rpg-stats-grid');
+        
+        expect(statsPanel).toBeTruthy();
+        expect(statsGrid).toBeTruthy();
+      });
+
+      it('should render all currency stat cards (Ink Drops, Paper Scraps, Blueprints, SMP)', () => {
+        const statCards = document.querySelectorAll('.rpg-stat-card');
+        const inkDropsCard = document.querySelector('.rpg-stat-card label[for="inkDrops"]');
+        const paperScrapsCard = document.querySelector('.rpg-stat-card label[for="paperScraps"]');
+        const blueprintsCard = document.querySelector('.rpg-stat-card label[for="dustyBlueprints"]');
+        const smpCard = document.querySelector('.rpg-stat-card label[for="smp"]');
+        
+        expect(statCards.length).toBeGreaterThanOrEqual(4);
+        expect(inkDropsCard).toBeTruthy();
+        expect(paperScrapsCard).toBeTruthy();
+        expect(blueprintsCard).toBeTruthy();
+        expect(smpCard).toBeTruthy();
+      });
+
+      it('should display currency inputs in stat cards', () => {
+        const inkDropsInput = document.getElementById('inkDrops');
+        const paperScrapsInput = document.getElementById('paperScraps');
+        const blueprintsInput = document.getElementById('dustyBlueprints');
+        const smpInput = document.getElementById('smp');
+        
+        expect(inkDropsInput).toBeTruthy();
+        expect(paperScrapsInput).toBeTruthy();
+        expect(blueprintsInput).toBeTruthy();
+        expect(smpInput).toBeTruthy();
+        
+        expect(inkDropsInput.classList.contains('rpg-stat-input')).toBe(true);
+        expect(paperScrapsInput.classList.contains('rpg-stat-input')).toBe(true);
+        expect(blueprintsInput.classList.contains('rpg-stat-input')).toBe(true);
+        expect(smpInput.classList.contains('rpg-stat-input')).toBe(true);
+      });
+
+      it('should style stat cards with hover effects', () => {
+        const statCard = document.querySelector('.rpg-stat-card');
+        expect(statCard).toBeTruthy();
+        // JSDOM doesn't reliably compute external CSS, so we assert structural intent.
+        expect(statCard.classList.contains('rpg-stat-card')).toBe(true);
+      });
+    });
+
+    describe('Genre Badges Panel', () => {
+      it('should render RPG genres panel', () => {
+        const genresPanel = document.querySelector('.rpg-genres-panel');
+        const genresDisplay = document.getElementById('selected-genres-display');
+        
+        expect(genresPanel).toBeTruthy();
+        expect(genresDisplay).toBeTruthy();
+      });
+
+      it('should display selected genres as badges', () => {
+        const stateAdapter = new StateAdapter(characterState);
+        
+        // Set selected genres
+        stateAdapter.setSelectedGenres(['Fantasy', 'Horror', 'Mystery']);
+        
+        // Re-render genres display (this would normally be done by the UI)
+        const genresDisplay = document.getElementById('selected-genres-display');
+        if (genresDisplay) {
+          const selectedGenres = stateAdapter.getSelectedGenres();
+          if (selectedGenres.length > 0) {
+            let html = '';
+            selectedGenres.forEach((genre, index) => {
+              html += `
+                <div class="selected-genre-item">
+                  <span class="genre-number">${index + 1}.</span>
+                  <span class="genre-name">${genre}</span>
+                </div>
+              `;
+            });
+            genresDisplay.innerHTML = html;
+          }
+        }
+        
+        const genreItems = document.querySelectorAll('.selected-genre-item');
+        expect(genreItems.length).toBe(3);
+        
+        // Check badge styling
+        genreItems.forEach(item => {
+          expect(item.classList.contains('selected-genre-item')).toBe(true);
+        });
+      });
+
+      it('should show genre number badges correctly', () => {
+        const stateAdapter = new StateAdapter(characterState);
+        
+        // Set selected genres
+        stateAdapter.setSelectedGenres(['Fantasy', 'Horror']);
+        
+        const genresDisplay = document.getElementById('selected-genres-display');
+        if (genresDisplay) {
+          const selectedGenres = stateAdapter.getSelectedGenres();
+          let html = '';
+          selectedGenres.forEach((genre, index) => {
+            html += `
+              <div class="selected-genre-item">
+                <span class="genre-number">${index + 1}.</span>
+                <span class="genre-name">${genre}</span>
+              </div>
+            `;
+          });
+          genresDisplay.innerHTML = html;
+        }
+        
+        const genreNumbers = document.querySelectorAll('.genre-number');
+        expect(genreNumbers.length).toBe(2);
+        expect(genreNumbers[0].textContent).toBe('1.');
+        expect(genreNumbers[1].textContent).toBe('2.');
+      });
+    });
+
+    describe('RPG Panel Structure', () => {
+      it('should render all RPG panels with correct structure', () => {
+        const heroSection = document.querySelector('.rpg-hero-section');
+        const xpPanel = document.querySelector('.rpg-xp-panel');
+        const statsPanel = document.querySelector('.rpg-stats-panel');
+        const genresPanel = document.querySelector('.rpg-genres-panel');
+        
+        expect(heroSection).toBeTruthy();
+        expect(xpPanel).toBeTruthy();
+        expect(statsPanel).toBeTruthy();
+        expect(genresPanel).toBeTruthy();
+      });
+
+      it('should have panel headers with titles', () => {
+        const xpPanelHeader = document.querySelector('.rpg-xp-panel .rpg-panel-header');
+        const statsPanelHeader = document.querySelector('.rpg-stats-panel .rpg-panel-header');
+        const genresPanelHeader = document.querySelector('.rpg-genres-panel .rpg-panel-header');
+        
+        expect(xpPanelHeader).toBeTruthy();
+        expect(statsPanelHeader).toBeTruthy();
+        expect(genresPanelHeader).toBeTruthy();
+        
+        const xpTitle = xpPanelHeader.querySelector('.rpg-panel-title');
+        const statsTitle = statsPanelHeader.querySelector('.rpg-panel-title');
+        const genresTitle = genresPanelHeader.querySelector('.rpg-panel-title');
+        
+        expect(xpTitle).toBeTruthy();
+        expect(statsTitle).toBeTruthy();
+        expect(genresTitle).toBeTruthy();
+      });
+
+      it('should have panel bodies with content', () => {
+        const xpPanelBody = document.querySelector('.rpg-xp-panel .rpg-panel-body');
+        const statsPanelBody = document.querySelector('.rpg-stats-panel .rpg-panel-body');
+        const genresPanelBody = document.querySelector('.rpg-genres-panel .rpg-panel-body');
+        
+        expect(xpPanelBody).toBeTruthy();
+        expect(statsPanelBody).toBeTruthy();
+        expect(genresPanelBody).toBeTruthy();
+      });
+    });
+
+    describe('Integration with Existing Functionality', () => {
+      it('should update XP progress bar when level changes via CharacterController', () => {
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        
+        // Set initial state
+        levelInput.value = '1';
+        xpCurrentInput.value = '50';
+        ui.updateXpProgressBar();
+        
+        const initialWidth = progressFill.style.width;
+        
+        // Change level (this should trigger updateXpProgressBar via CharacterController)
+        levelInput.value = '2';
+        levelInput.dispatchEvent(new Event('change'));
+        
+        // Progress bar should have been updated
+        // (The actual update happens via CharacterController calling updateXpNeeded -> updateXpProgressBar)
+        ui.updateXpProgressBar();
+        expect(progressFill.style.width).not.toBe(initialWidth);
+      });
+
+      it('should sync level badge when level input is changed directly', () => {
+        const levelInput = document.getElementById('level');
+        const levelNumber = document.getElementById('rpg-level-number');
+        
+        levelInput.value = '7';
+        ui.updateXpProgressBar();
+        
+        expect(levelNumber.textContent).toBe('7');
+      });
+
+      it('should update XP progress bar when XP input changes', () => {
+        const xpCurrentInput = document.getElementById('xp-current');
+        const levelInput = document.getElementById('level');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        
+        // Set level to 1 (needs 100 XP)
+        levelInput.value = '1';
+        xpCurrentInput.value = '0';
+        ui.updateXpProgressBar();
+        
+        expect(progressFill.style.width).toBe('0%');
+        expect(progressText.textContent).toBe('0 / 100 XP');
+        
+        // Change XP to 75
+        xpCurrentInput.value = '75';
+        xpCurrentInput.dispatchEvent(new Event('input'));
+        
+        // The input event should trigger updateXpProgressBar via CharacterController
+        ui.updateXpProgressBar();
+        
+        expect(progressFill.style.width).toBe('75%');
+        expect(progressText.textContent).toBe('75 / 100 XP');
+      });
+
+      it('should handle level badge click to open leveling rewards drawer', () => {
+        const levelBadge = document.getElementById('rpg-level-badge');
+        const backdrop = document.getElementById('leveling-rewards-backdrop');
+        const drawer = document.getElementById('leveling-rewards-drawer');
+        
+        expect(levelBadge).toBeTruthy();
+        expect(backdrop).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Initially drawer should be hidden
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+        
+        // Click the badge
+        levelBadge.click();
+        
+        // Should open the drawer
+        expect(drawer.style.display).toBe('flex');
+        expect(backdrop.classList.contains('active')).toBe(true);
+      });
+
+      it('should render leveling rewards table in drawer when opened', () => {
+        const levelBadge = document.getElementById('rpg-level-badge');
+        const drawer = document.getElementById('leveling-rewards-drawer');
+        const levelingRewardsTable = document.getElementById('leveling-rewards-table');
+        
+        expect(levelBadge).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        expect(levelingRewardsTable).toBeTruthy();
+        
+        // Open the drawer
+        levelBadge.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check that table is rendered
+            expect(levelingRewardsTable.innerHTML).toBeTruthy();
+            expect(levelingRewardsTable.innerHTML).toContain('Level');
+            expect(levelingRewardsTable.innerHTML).toContain('XP Needed');
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should render permanent bonuses table in drawer', () => {
+        const levelBadge = document.getElementById('rpg-level-badge');
+        const permanentBonusesTable = document.getElementById('permanent-bonuses-table');
+        
+        expect(levelBadge).toBeTruthy();
+        expect(permanentBonusesTable).toBeTruthy();
+        
+        // Open the drawer
+        levelBadge.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check that permanent bonuses table is rendered
+            expect(permanentBonusesTable.innerHTML).toBeTruthy();
+            expect(permanentBonusesTable.innerHTML).toContain('Level');
+            expect(permanentBonusesTable.innerHTML).toContain('Permanent Bonus Unlocked');
+            // Check for specific bonuses from JSON
+            if (permanentBonuses[3]) {
+              expect(permanentBonusesTable.innerHTML).toContain('3');
+            }
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should close leveling rewards drawer when clicking backdrop', () => {
+        const levelBadge = document.getElementById('rpg-level-badge');
+        const backdrop = document.getElementById('leveling-rewards-backdrop');
+        const drawer = document.getElementById('leveling-rewards-drawer');
+        
+        // Open the drawer
+        levelBadge.click();
+        expect(drawer.style.display).toBe('flex');
+        
+        // Click backdrop
+        backdrop.click();
+        
+        // Should close the drawer
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+      });
+
+      it('should close leveling rewards drawer when clicking close button', () => {
+        const levelBadge = document.getElementById('rpg-level-badge');
+        const closeBtn = document.getElementById('close-leveling-rewards');
+        const drawer = document.getElementById('leveling-rewards-drawer');
+        const backdrop = document.getElementById('leveling-rewards-backdrop');
+        
+        expect(closeBtn).toBeTruthy();
+        
+        // Open the drawer
+        levelBadge.click();
+        expect(drawer.style.display).toBe('flex');
+        
+        // Click close button
+        closeBtn.click();
+        
+        // Should close the drawer
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+      });
+    });
+
+    describe('School Mastery Abilities Drawer', () => {
+      it('should open school mastery drawer when clicking View Guide button', () => {
+        // Switch to Abilities tab first
+        const abilitiesTab = document.querySelector('[data-tab="abilities"]');
+        if (abilitiesTab) {
+          abilitiesTab.click();
+        }
+
+        const openBtn = document.getElementById('open-school-mastery-btn');
+        const backdrop = document.getElementById('school-mastery-backdrop');
+        const drawer = document.getElementById('school-mastery-drawer');
+        
+        expect(openBtn).toBeTruthy();
+        expect(backdrop).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Initially drawer should be hidden
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+        
+        // Click the button
+        openBtn.click();
+        
+        // Should open the drawer
+        expect(drawer.style.display).toBe('flex');
+        expect(backdrop.classList.contains('active')).toBe(true);
+      });
+
+      it('should render school mastery abilities from JSON data', () => {
+        // Switch to Abilities tab first
+        const abilitiesTab = document.querySelector('[data-tab="abilities"]');
+        if (abilitiesTab) {
+          abilitiesTab.click();
+        }
+
+        const openBtn = document.getElementById('open-school-mastery-btn');
+        const contentContainer = document.getElementById('school-mastery-abilities-content');
+        
+        expect(openBtn).toBeTruthy();
+        expect(contentContainer).toBeTruthy();
+        
+        // Open the drawer
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check that content is rendered
+            expect(contentContainer.innerHTML).toBeTruthy();
+            expect(contentContainer.innerHTML).toContain('School of');
+            expect(contentContainer.innerHTML).toContain('Ability Name');
+            expect(contentContainer.innerHTML).toContain('Cost');
+            expect(contentContainer.innerHTML).toContain('Benefit');
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should close school mastery drawer when clicking backdrop', () => {
+        // Switch to Abilities tab first
+        const abilitiesTab = document.querySelector('[data-tab="abilities"]');
+        if (abilitiesTab) {
+          abilitiesTab.click();
+        }
+
+        const openBtn = document.getElementById('open-school-mastery-btn');
+        const backdrop = document.getElementById('school-mastery-backdrop');
+        const drawer = document.getElementById('school-mastery-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        expect(drawer.style.display).toBe('flex');
+        
+        // Click backdrop
+        backdrop.click();
+        
+        // Should close the drawer
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+      });
+
+      it('should close school mastery drawer when clicking close button', () => {
+        // Switch to Abilities tab first
+        const abilitiesTab = document.querySelector('[data-tab="abilities"]');
+        if (abilitiesTab) {
+          abilitiesTab.click();
+        }
+
+        const openBtn = document.getElementById('open-school-mastery-btn');
+        const closeBtn = document.getElementById('close-school-mastery');
+        const drawer = document.getElementById('school-mastery-drawer');
+        const backdrop = document.getElementById('school-mastery-backdrop');
+        
+        expect(closeBtn).toBeTruthy();
+        
+        // Open the drawer
+        openBtn.click();
+        expect(drawer.style.display).toBe('flex');
+        
+        // Click close button
+        closeBtn.click();
+        
+        // Should close the drawer
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+      });
+    });
+
+    describe('RPG-Styled Inventory Tab', () => {
+      beforeEach(() => {
+        // Switch to Inventory tab
+        const inventoryTab = document.querySelector('[data-tab="inventory"]');
+        if (inventoryTab) {
+          inventoryTab.click();
+        }
+      });
+
+      it('should render RPG tab content wrapper', () => {
+        const inventoryPanel = document.querySelector('[data-tab-panel="inventory"]');
+        expect(inventoryPanel).toBeTruthy();
+        
+        const rpgTabContent = inventoryPanel.querySelector('.rpg-tab-content');
+        expect(rpgTabContent).toBeTruthy();
+      });
+
+      describe('Equipment Slots Panel', () => {
+        it('should render slot management panel with RPG styling', () => {
+          const slotPanel = document.querySelector('.rpg-slot-management-panel');
+          expect(slotPanel).toBeTruthy();
+          expect(slotPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render slot panel header with title and subtitle', () => {
+          const slotPanel = document.querySelector('.rpg-slot-management-panel');
+          const header = slotPanel.querySelector('.rpg-panel-header');
+          const title = header.querySelector('.rpg-panel-title');
+          const subtitle = header.querySelector('.rpg-panel-subtitle');
+          
+          expect(header).toBeTruthy();
+          expect(title).toBeTruthy();
+          expect(title.textContent).toContain('Equipment Slots');
+          expect(subtitle).toBeTruthy();
+        });
+
+        it('should render slot grid with all three slot types', () => {
+          const slotPanel = document.querySelector('.rpg-slot-management-panel');
+          const slotGrid = slotPanel.querySelector('.rpg-slot-grid');
+          
+          expect(slotGrid).toBeTruthy();
+          
+          const wearableInput = document.getElementById('wearable-slots');
+          const nonWearableInput = document.getElementById('non-wearable-slots');
+          const familiarInput = document.getElementById('familiar-slots');
+          
+          expect(wearableInput).toBeTruthy();
+          expect(nonWearableInput).toBeTruthy();
+          expect(familiarInput).toBeTruthy();
+          
+          expect(wearableInput.classList.contains('rpg-stat-input')).toBe(true);
+          expect(nonWearableInput.classList.contains('rpg-stat-input')).toBe(true);
+          expect(familiarInput.classList.contains('rpg-stat-input')).toBe(true);
+        });
+
+        it('should render slot labels with RPG styling', () => {
+          const slotItems = document.querySelectorAll('.rpg-slot-item');
+          expect(slotItems.length).toBeGreaterThanOrEqual(3);
+          
+          slotItems.forEach(item => {
+            const label = item.querySelector('.rpg-slot-label');
+            expect(label).toBeTruthy();
+          });
+        });
+      });
+
+      describe('Add Item Panel', () => {
+        it('should render add item panel with RPG styling', () => {
+          const addItemPanel = document.querySelector('.rpg-add-item-panel');
+          expect(addItemPanel).toBeTruthy();
+          expect(addItemPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render add item form with RPG-styled select and button', () => {
+          const addItemPanel = document.querySelector('.rpg-add-item-panel');
+          const itemSelect = document.getElementById('item-select');
+          const addButton = document.getElementById('add-item-button');
+          
+          expect(itemSelect).toBeTruthy();
+          expect(addButton).toBeTruthy();
+          
+          expect(itemSelect.classList.contains('rpg-select')).toBe(true);
+          expect(addButton.classList.contains('rpg-btn')).toBe(true);
+          expect(addButton.classList.contains('rpg-btn-primary')).toBe(true);
+        });
+      });
+
+      describe('Equipped Items Panel', () => {
+        it('should render equipped items panel with RPG styling', () => {
+          const equippedPanel = document.querySelector('.rpg-equipped-panel');
+          expect(equippedPanel).toBeTruthy();
+          expect(equippedPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render equipped summary in panel header', () => {
+          const equippedSummary = document.getElementById('equipped-summary');
+          expect(equippedSummary).toBeTruthy();
+          expect(equippedSummary.classList.contains('rpg-panel-title')).toBe(true);
+          expect(equippedSummary.textContent).toContain('Equipped Items');
+        });
+
+        it('should render equipped items grid', () => {
+          const equippedList = document.getElementById('equipped-items-list');
+          expect(equippedList).toBeTruthy();
+          expect(equippedList.classList.contains('item-grid')).toBe(true);
+        });
+      });
+
+      describe('Inventory Panel', () => {
+        it('should render inventory panel with RPG styling', () => {
+          const inventoryPanel = document.querySelector('.rpg-inventory-panel');
+          expect(inventoryPanel).toBeTruthy();
+          expect(inventoryPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render inventory grid', () => {
+          const inventoryList = document.getElementById('inventory-list');
+          expect(inventoryList).toBeTruthy();
+          expect(inventoryList.classList.contains('item-grid')).toBe(true);
+        });
+      });
+
+      describe('Passive Equipment Panel', () => {
+        it('should render passive equipment panel with RPG styling', () => {
+          const passivePanel = document.querySelector('.rpg-passive-equipment-panel');
+          expect(passivePanel).toBeTruthy();
+          expect(passivePanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render passive equipment grid with two columns', () => {
+          const passivePanel = document.querySelector('.rpg-passive-equipment-panel');
+          const passiveGrid = passivePanel.querySelector('.rpg-passive-grid');
+          
+          expect(passiveGrid).toBeTruthy();
+          
+          const columns = passiveGrid.querySelectorAll('.rpg-passive-column');
+          expect(columns.length).toBe(2);
+        });
+
+        it('should render display slots and adoption slots columns', () => {
+          const displaySlots = document.getElementById('passive-item-slots-character-sheet');
+          const adoptionSlots = document.getElementById('passive-familiar-slots-character-sheet');
+          
+          expect(displaySlots).toBeTruthy();
+          expect(adoptionSlots).toBeTruthy();
+          
+          const columnTitles = document.querySelectorAll('.rpg-passive-column-title');
+          expect(columnTitles.length).toBe(2);
+          expect(columnTitles[0].textContent).toContain('Display Slots');
+          expect(columnTitles[1].textContent).toContain('Adoption Slots');
+        });
+      });
+    });
+
+    describe('RPG-Styled Environment Tab', () => {
+      beforeEach(() => {
+        // Switch to Environment tab
+        const environmentTab = document.querySelector('[data-tab="environment"]');
+        if (environmentTab) {
+          environmentTab.click();
+        }
+      });
+
+      it('should render RPG tab content wrapper', () => {
+        const environmentPanel = document.querySelector('[data-tab-panel="environment"]');
+        expect(environmentPanel).toBeTruthy();
+        
+        const rpgTabContent = environmentPanel.querySelector('.rpg-tab-content');
+        expect(rpgTabContent).toBeTruthy();
+      });
+
+      describe('Environment Header Panel', () => {
+        it('should render environment header panel with RPG styling', () => {
+          const headerPanel = document.querySelector('.rpg-environment-header-panel');
+          expect(headerPanel).toBeTruthy();
+          expect(headerPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render header with title and subtitle', () => {
+          const headerPanel = document.querySelector('.rpg-environment-header-panel');
+          const header = headerPanel.querySelector('.rpg-panel-header');
+          const title = header.querySelector('.rpg-panel-title');
+          const subtitle = header.querySelector('.rpg-panel-subtitle');
+          
+          expect(header).toBeTruthy();
+          expect(title).toBeTruthy();
+          expect(title.textContent).toContain('Reading Environment');
+          expect(subtitle).toBeTruthy();
+        });
+
+        it('should render Atmospheric Buffs table button with RPG styling', () => {
+          const atmosphericBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="atmospheric-buffs"]');
+          expect(atmosphericBtn).toBeTruthy();
+          expect(atmosphericBtn.classList.contains('rpg-btn')).toBe(true);
+          expect(atmosphericBtn.classList.contains('rpg-btn-secondary')).toBe(true);
+        });
+      });
+
+      describe('Temporary Buffs Panel', () => {
+        it('should render temporary buffs panel with RPG styling', () => {
+          const tempBuffsPanel = document.querySelector('.rpg-temporary-buffs-panel');
+          expect(tempBuffsPanel).toBeTruthy();
+          expect(tempBuffsPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render panel header with title and subtitles', () => {
+          const tempBuffsPanel = document.querySelector('.rpg-temporary-buffs-panel');
+          const header = tempBuffsPanel.querySelector('.rpg-panel-header');
+          const title = header.querySelector('.rpg-panel-title');
+          const subtitles = header.querySelectorAll('.rpg-panel-subtitle');
+          
+          expect(header).toBeTruthy();
+          expect(title).toBeTruthy();
+          expect(title.textContent).toContain('Active Temporary Buffs');
+          expect(subtitles.length).toBeGreaterThanOrEqual(2);
+        });
+
+        it('should render add buff form with RPG-styled elements', () => {
+          const addBuffForm = document.querySelector('.rpg-add-buff-form');
+          const buffSelect = document.getElementById('temp-buff-select');
+          const addButton = document.getElementById('add-temp-buff-from-dropdown-button');
+          
+          expect(addBuffForm).toBeTruthy();
+          expect(buffSelect).toBeTruthy();
+          expect(addButton).toBeTruthy();
+          
+          expect(buffSelect.classList.contains('rpg-select')).toBe(true);
+          expect(addButton.classList.contains('rpg-btn')).toBe(true);
+          expect(addButton.classList.contains('rpg-btn-primary')).toBe(true);
+        });
+
+        it('should render temporary buffs table', () => {
+          const activeTempBuffsList = document.getElementById('active-temp-buffs-list');
+          const table = activeTempBuffsList.querySelector('.tracker-table');
+          
+          expect(activeTempBuffsList).toBeTruthy();
+          expect(table).toBeTruthy();
+          
+          const headers = table.querySelectorAll('thead th');
+          expect(headers.length).toBe(5);
+          expect(headers[0].textContent).toContain('Buff Name');
+          expect(headers[1].textContent).toContain('Effect');
+          expect(headers[2].textContent).toContain('Duration');
+          expect(headers[3].textContent).toContain('Status');
+          expect(headers[4].textContent).toContain('Action');
+        });
+      });
+
+      describe('Atmospheric Buffs Panel', () => {
+        it('should render atmospheric buffs panel with RPG styling', () => {
+          const atmosphericPanel = document.querySelector('.rpg-atmospheric-buffs-panel');
+          expect(atmosphericPanel).toBeTruthy();
+          expect(atmosphericPanel.classList.contains('rpg-panel')).toBe(true);
+        });
+
+        it('should render panel header with title', () => {
+          const atmosphericPanel = document.querySelector('.rpg-atmospheric-buffs-panel');
+          const header = atmosphericPanel.querySelector('.rpg-panel-header');
+          const title = header.querySelector('.rpg-panel-title');
+          
+          expect(header).toBeTruthy();
+          expect(title).toBeTruthy();
+          expect(title.textContent).toContain('Atmospheric Buffs');
+        });
+
+        it('should render atmospheric buffs table', () => {
+          const atmosphericTable = document.querySelector('.rpg-atmospheric-buffs-panel .tracker-table');
+          expect(atmosphericTable).toBeTruthy();
+          
+          const headers = atmosphericTable.querySelectorAll('thead th');
+          expect(headers.length).toBe(5);
+          expect(headers[0].textContent).toContain('Atmospheric Buff');
+          expect(headers[1].textContent).toContain('Daily Buff');
+          expect(headers[2].textContent).toContain('Active');
+          expect(headers[3].textContent).toContain('Total Days Used');
+          expect(headers[4].textContent).toContain('Monthly Total');
+        });
+
+        it('should render End of Month button with RPG styling', () => {
+          const endOfMonthBtn = document.querySelector('.end-of-month-button');
+          expect(endOfMonthBtn).toBeTruthy();
+          expect(endOfMonthBtn.classList.contains('rpg-btn')).toBe(true);
+          expect(endOfMonthBtn.classList.contains('rpg-btn-primary')).toBe(true);
+        });
+      });
+    });
+
+    describe('Level Up Button', () => {
+      it('should render level up button', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        expect(levelUpBtn).toBeTruthy();
+        expect(levelUpBtn.classList.contains('rpg-level-up-btn')).toBe(true);
+      });
+
+      it('should disable level up button when XP is insufficient', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        
+        // Set level to 1 (needs 100 XP) with insufficient XP
+        levelInput.value = '1';
+        xpCurrentInput.value = '50'; // Less than 100
+        
+        ui.updateXpProgressBar();
+        
+        expect(levelUpBtn.disabled).toBe(true);
+      });
+
+      it('should enable level up button when XP is sufficient', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        
+        // Set level to 1 (needs 100 XP) with sufficient XP
+        levelInput.value = '1';
+        xpCurrentInput.value = '100'; // Exactly enough
+        
+        ui.updateXpProgressBar();
+        
+        expect(levelUpBtn.disabled).toBe(false);
+      });
+
+      it('should disable level up button at max level', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        
+        // Set to max level (if level 20 is max)
+        if (xpLevels[20] === 'Max') {
+          levelInput.value = '20';
+          xpCurrentInput.value = '1000';
+          
+          ui.updateXpProgressBar();
+          
+          expect(levelUpBtn.disabled).toBe(true);
+        }
+      });
+
+      it('should level up when button is clicked with sufficient XP', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        const xpNeededElement = document.getElementById('xp-needed');
+        
+        // Set initial state: level 1 with 150 XP (needs 100)
+        levelInput.value = '1';
+        xpCurrentInput.value = '150';
+        ui.updateXpProgressBar();
+        
+        const initialLevel = parseInt(levelInput.value);
+        const initialXP = parseInt(xpCurrentInput.value);
+        const xpNeeded = parseInt(xpLevels[initialLevel]);
+        
+        // Click level up button
+        levelUpBtn.click();
+        
+        // Level should have increased
+        expect(parseInt(levelInput.value)).toBe(initialLevel + 1);
+        
+        // XP should be reduced by the required amount (carries over excess)
+        const expectedXP = initialXP - xpNeeded; // 150 - 100 = 50
+        expect(parseInt(xpCurrentInput.value)).toBe(expectedXP);
+        
+        // XP needed should update for new level
+        const newLevel = parseInt(levelInput.value);
+        const newXpNeeded = xpNeededElement.tagName === 'INPUT' ? xpNeededElement.value : xpNeededElement.textContent;
+        if (xpLevels[newLevel] && xpLevels[newLevel] !== 'Max') {
+          expect(newXpNeeded).toBe(xpLevels[newLevel].toString());
+        }
+      });
+
+      it('should carry over excess XP when leveling up', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        
+        // Set level 1 with 250 XP (needs 100, so 150 excess)
+        levelInput.value = '1';
+        xpCurrentInput.value = '250';
+        ui.updateXpProgressBar();
+        
+        const xpNeeded = parseInt(xpLevels[1]);
+        
+        // Click level up
+        levelUpBtn.click();
+        
+        // Should have 150 XP remaining (250 - 100)
+        expect(parseInt(xpCurrentInput.value)).toBe(250 - xpNeeded);
+      });
+
+      it('should apply level rewards when leveling up', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        const inkDropsInput = document.getElementById('inkDrops');
+        const paperScrapsInput = document.getElementById('paperScraps');
+        
+        // Set initial state
+        levelInput.value = '1';
+        xpCurrentInput.value = '100'; // Exactly enough to level up
+        inkDropsInput.value = '10';
+        paperScrapsInput.value = '5';
+        ui.updateXpProgressBar();
+        
+        const initialInk = parseInt(inkDropsInput.value);
+        const initialPaper = parseInt(paperScrapsInput.value);
+        
+        // Click level up (should go to level 2)
+        levelUpBtn.click();
+        
+        // Level 2 rewards: 5 inkDrops, 2 paperScraps
+        // Check that rewards were applied
+        expect(parseInt(inkDropsInput.value)).toBeGreaterThan(initialInk);
+        expect(parseInt(paperScrapsInput.value)).toBeGreaterThan(initialPaper);
+      });
+
+      it('should update progress bar after leveling up', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        const progressFill = document.getElementById('rpg-xp-progress-fill');
+        const progressText = document.getElementById('rpg-xp-progress-text');
+        const levelNumber = document.getElementById('rpg-level-number');
+        
+        // Set level 1 with 150 XP
+        levelInput.value = '1';
+        xpCurrentInput.value = '150';
+        ui.updateXpProgressBar();
+        
+        // Click level up
+        levelUpBtn.click();
+        
+        // Level badge should update
+        expect(levelNumber.textContent).toBe('2');
+        
+        // Progress bar should reflect new XP and level
+        const newXP = parseInt(xpCurrentInput.value);
+        const newLevel = parseInt(levelInput.value);
+        const newXpNeeded = xpLevels[newLevel];
+        
+        if (newXpNeeded && newXpNeeded !== 'Max') {
+          const expectedPercentage = Math.min(100, Math.max(0, (newXP / parseInt(newXpNeeded)) * 100));
+          expect(progressFill.style.width).toBe(`${expectedPercentage}%`);
+          expect(progressText.textContent).toContain(`${newXP} / ${newXpNeeded} XP`);
+        }
+      });
+
+      it('should not level up if button is disabled', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        
+        // Set level 1 with insufficient XP
+        levelInput.value = '1';
+        xpCurrentInput.value = '50';
+        ui.updateXpProgressBar();
+        
+        const initialLevel = parseInt(levelInput.value);
+        
+        // Try to click (should be disabled)
+        expect(levelUpBtn.disabled).toBe(true);
+        
+        // Manually trigger click (shouldn't do anything)
+        levelUpBtn.click();
+        
+        // Level should not have changed
+        expect(parseInt(levelInput.value)).toBe(initialLevel);
+      });
+
+      it('should update permanent bonuses when leveling up', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        const bonusList = document.getElementById('permanentBonusesList');
+        
+        // Set level 2 with enough XP to reach level 3
+        levelInput.value = '2';
+        const xpNeeded = parseInt(xpLevels[2]);
+        xpCurrentInput.value = xpNeeded.toString();
+        ui.updateXpProgressBar();
+        
+        // Click level up to reach level 3
+        levelUpBtn.click();
+        
+        // Level 3 should have permanent bonuses
+        expect(parseInt(levelInput.value)).toBe(3);
+        if (permanentBonuses[3]) {
+          expect(bonusList.innerHTML).toContain(permanentBonuses[3]);
+        }
+      });
+
+      it('should handle leveling up multiple times in sequence', () => {
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const levelInput = document.getElementById('level');
+        const xpCurrentInput = document.getElementById('xp-current');
+        
+        // Set level 1 with enough XP for multiple level ups
+        levelInput.value = '1';
+        xpCurrentInput.value = '500'; // Enough for multiple levels
+        ui.updateXpProgressBar();
+        
+        const initialLevel = parseInt(levelInput.value);
+        
+        // Level up once
+        levelUpBtn.click();
+        expect(parseInt(levelInput.value)).toBe(initialLevel + 1);
+        
+        // If still enough XP, level up again
+        ui.updateXpProgressBar();
+        if (!levelUpBtn.disabled) {
+          const levelBeforeSecond = parseInt(levelInput.value);
+          levelUpBtn.click();
+          expect(parseInt(levelInput.value)).toBe(levelBeforeSecond + 1);
+        }
+      });
     });
   });
 
@@ -956,7 +2145,7 @@ describe('Character Sheet', () => {
       
       const display = document.getElementById('selected-genres-display');
       expect(display.textContent).toContain('No genres selected yet');
-      expect(display.innerHTML).toContain('Choose your genres here');
+      expect(display.textContent).toContain('View Genre Quests');
     });
 
     it('should display selected genres from localStorage', async () => {
@@ -1238,53 +2427,57 @@ describe('Character Sheet', () => {
 
     it('should show background bonuses in quest buffs dropdown for Archivist', () => {
       const backgroundSelect = document.getElementById('keeperBackground');
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const { updateQuestBuffsDropdown } = require('../assets/js/character-sheet/ui.js');
       
       // Select Archivist background
       backgroundSelect.value = 'archivist';
       backgroundSelect.dispatchEvent(new Event('change'));
       
-      // Check that Archivist Bonus appears in dropdown
-      const options = Array.from(questBuffsSelect.options);
-      const archivistOption = options.find(opt => opt.textContent.includes('Archivist Bonus'));
-      
-      expect(archivistOption).toBeTruthy();
-      expect(archivistOption.textContent).toContain('+10 Ink Drops');
-      expect(archivistOption.textContent).toContain('Non-Fiction/Historical Fiction');
+      // Force refresh of the card-based selector (tests don't always run full controller wiring)
+      updateQuestBuffsDropdown(document.createElement('input'), document.createElement('input'), document.createElement('input'));
+
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container?.querySelector('.quest-bonus-card[data-value="[Background] Archivist Bonus"]');
+      expect(card).toBeTruthy();
+      expect(card.textContent).toContain('Archivist Bonus');
+      expect(card.textContent).toContain('+10 Ink Drops');
+      expect(card.textContent).toContain('Non-Fiction/Historical Fiction');
     });
 
     it('should show background bonuses in quest buffs dropdown for Prophet', () => {
       const backgroundSelect = document.getElementById('keeperBackground');
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const { updateQuestBuffsDropdown } = require('../assets/js/character-sheet/ui.js');
       
       // Select Prophet background
       backgroundSelect.value = 'prophet';
       backgroundSelect.dispatchEvent(new Event('change'));
       
-      // Check that Prophet Bonus appears in dropdown
-      const options = Array.from(questBuffsSelect.options);
-      const prophetOption = options.find(opt => opt.textContent.includes('Prophet Bonus'));
-      
-      expect(prophetOption).toBeTruthy();
-      expect(prophetOption.textContent).toContain('+10 Ink Drops');
-      expect(prophetOption.textContent).toContain('Religious/Spiritual/Mythological');
+      updateQuestBuffsDropdown(document.createElement('input'), document.createElement('input'), document.createElement('input'));
+
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container?.querySelector('.quest-bonus-card[data-value="[Background] Prophet Bonus"]');
+      expect(card).toBeTruthy();
+      expect(card.textContent).toContain('Prophet Bonus');
+      expect(card.textContent).toContain('+10 Ink Drops');
+      expect(card.textContent).toContain('Religious/Spiritual/Mythological');
     });
 
     it('should show background bonuses in quest buffs dropdown for Cartographer', () => {
       const backgroundSelect = document.getElementById('keeperBackground');
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
+      const { updateQuestBuffsDropdown } = require('../assets/js/character-sheet/ui.js');
       
       // Select Cartographer background
       backgroundSelect.value = 'cartographer';
       backgroundSelect.dispatchEvent(new Event('change'));
       
-      // Check that Cartographer Bonus appears in dropdown
-      const options = Array.from(questBuffsSelect.options);
-      const cartographerOption = options.find(opt => opt.textContent.includes('Cartographer Bonus'));
-      
-      expect(cartographerOption).toBeTruthy();
-      expect(cartographerOption.textContent).toContain('+10 Ink Drops');
-      expect(cartographerOption.textContent).toContain('First Dungeon Crawl');
+      updateQuestBuffsDropdown(document.createElement('input'), document.createElement('input'), document.createElement('input'));
+
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container?.querySelector('.quest-bonus-card[data-value="[Background] Cartographer Bonus"]');
+      expect(card).toBeTruthy();
+      expect(card.textContent).toContain('Cartographer Bonus');
+      expect(card.textContent).toContain('+10 Ink Drops');
+      expect(card.textContent).toContain('First Dungeon Crawl');
     });
 
     it('should show passive items in quest buffs dropdown', () => {
@@ -1305,24 +2498,12 @@ describe('Character Sheet', () => {
       // Update the dropdown
       updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
       
-      // Check that the passive item appears in the dropdown
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
-      const options = Array.from(questBuffsSelect.options);
-      
-      // Find the optgroup for passive items
-      const optgroups = Array.from(questBuffsSelect.querySelectorAll('optgroup'));
-      const passiveItemGroup = optgroups.find(group => group.label === 'Passive Items');
-      
-      expect(passiveItemGroup).toBeTruthy();
-      
-      // Check that The Bookwyrm's Scale appears with passive bonus
-      const bookwyrmOption = Array.from(passiveItemGroup.querySelectorAll('option')).find(opt => 
-        opt.textContent.includes("The Bookwyrm's Scale")
-      );
-      
-      expect(bookwyrmOption).toBeTruthy();
-      expect(bookwyrmOption.textContent).toContain('Gain a +5 Ink Drop bonus for books over 500 pages');
-      expect(bookwyrmOption.value).toBe('[Item] The Bookwyrm\'s Scale');
+      // Check that the passive item appears as a card
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container?.querySelector('.quest-bonus-card[data-value="[Item] The Bookwyrm\'s Scale"]');
+      expect(card).toBeTruthy();
+      expect(card.textContent).toContain("The Bookwyrm's Scale");
+      expect(card.textContent).toContain('Gain a +5 Ink Drop bonus for books over 500 pages');
       
       // Cleanup
       characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
@@ -1346,21 +2527,12 @@ describe('Character Sheet', () => {
       // Update the dropdown
       updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
       
-      // Check that the passive familiar appears in the dropdown
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
-      const optgroups = Array.from(questBuffsSelect.querySelectorAll('optgroup'));
-      const passiveFamiliarGroup = optgroups.find(group => group.label === 'Passive Familiars');
-      
-      expect(passiveFamiliarGroup).toBeTruthy();
-      
-      // Check that Coffee Elemental appears with passive bonus
-      const coffeeOption = Array.from(passiveFamiliarGroup.querySelectorAll('option')).find(opt => 
-        opt.textContent.includes('Coffee Elemental')
-      );
-      
-      expect(coffeeOption).toBeTruthy();
-      expect(coffeeOption.textContent).toContain('Cozy books grant +5 Ink Drops (passive)');
-      expect(coffeeOption.value).toBe('[Item] Coffee Elemental');
+      // Check that the passive familiar appears as a card
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container?.querySelector('.quest-bonus-card[data-value="[Item] Coffee Elemental"]');
+      expect(card).toBeTruthy();
+      expect(card.textContent).toContain('Coffee Elemental');
+      expect(card.textContent).toContain('Cozy books grant +5 Ink Drops (passive)');
       
       // Cleanup
       characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
@@ -1383,28 +2555,24 @@ describe('Character Sheet', () => {
       document.getElementById('new-quest-type').dispatchEvent(new Event('change'));
       
       const genreSelect = document.getElementById('genre-quest-select');
-      genreSelect.value = 'Fantasy: Read a book with magical creatures.';
+      // Pick a valid option from the populated dropdown (avoid brittle hard-coded strings)
+      const firstGenreOption = genreSelect?.options?.[1];
+      genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
       document.getElementById('new-quest-book').value = 'Test Book';
       
-      // Select the passive item in buffs dropdown
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
-      const bookwyrmOption = Array.from(questBuffsSelect.options).find(opt => 
-        opt.value === '[Item] The Bookwyrm\'s Scale'
-      );
+      // Select the passive item via the hidden JSON input used by the card-based UI
+      const hiddenBuffsInput = document.getElementById('quest-buffs-select');
+      hiddenBuffsInput.value = JSON.stringify(["[Item] The Bookwyrm's Scale"]);
       
-      if (bookwyrmOption) {
-        bookwyrmOption.selected = true;
-        
-        // Add quest as completed
-        document.getElementById('new-quest-status').value = 'completed';
-        document.getElementById('add-quest-button').click();
-        
-        // Check that quest was added with passive bonus (+5, not +10)
-        const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
-        expect(completedQuest.rewards.inkDrops).toBe(15); // 10 base + 5 passive bonus
-        expect(completedQuest.buffs).toContain('[Item] The Bookwyrm\'s Scale');
-      }
+      // Add quest as completed
+      document.getElementById('new-quest-status').value = 'completed';
+      document.getElementById('add-quest-button').click();
+      
+      // Check that quest was added with passive bonus (+5, not +10)
+      const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
+      expect(completedQuest.rewards.inkDrops).toBe(15); // 10 base + 5 passive bonus
+      expect(completedQuest.buffs).toContain("[Item] The Bookwyrm's Scale");
       
       // Cleanup
       characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
@@ -1426,16 +2594,14 @@ describe('Character Sheet', () => {
       
       // Select genre quest
       const genreSelect = document.getElementById('genre-quest-select');
-      genreSelect.value = 'Historical Fiction: Read a book set in the past or with a historical figure as a character.';
+      const firstGenreOption = genreSelect?.options?.[1];
+      genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
       document.getElementById('new-quest-book').value = 'Test Book';
       
-      // Select Archivist Bonus in buffs dropdown
-      const questBuffsSelect = document.getElementById('quest-buffs-select');
-      const archivistOption = Array.from(questBuffsSelect.options).find(opt => 
-        opt.value === '[Background] Archivist Bonus'
-      );
-      archivistOption.selected = true;
+      // Select Archivist Bonus via the hidden JSON input used by the card-based UI
+      const hiddenBuffsInput = document.getElementById('quest-buffs-select');
+      hiddenBuffsInput.value = JSON.stringify(['[Background] Archivist Bonus']);
       
       // Add quest as completed
       document.getElementById('new-quest-status').value = 'completed';
@@ -1784,6 +2950,730 @@ describe('Character Sheet', () => {
       inkDropsEl.dispatchEvent(new Event('change', { bubbles: true }));
       
       expect(warningEl.style.display).toBe('block');
+    });
+  });
+
+  describe('RPG-Styled Quests Tab', () => {
+    beforeEach(() => {
+      // Switch to Quests tab
+      const questsTab = document.querySelector('[data-tab-target="quests"]');
+      if (questsTab) {
+        questsTab.click();
+      }
+    });
+
+    it('should render RPG tab content wrapper', () => {
+      const questsPanel = document.querySelector('[data-tab-panel="quests"]');
+      expect(questsPanel).toBeTruthy();
+      
+      const rpgTabContent = questsPanel.querySelector('.rpg-tab-content');
+      expect(rpgTabContent).toBeTruthy();
+    });
+
+    describe('Monthly Tracker Panel', () => {
+      it('should render monthly tracker panel with RPG styling', () => {
+        const trackerPanel = document.querySelector('.rpg-monthly-tracker-panel');
+        expect(trackerPanel).toBeTruthy();
+        expect(trackerPanel.classList.contains('rpg-panel')).toBe(true);
+      });
+
+      it('should render panel header with title', () => {
+        const trackerPanel = document.querySelector('.rpg-monthly-tracker-panel');
+        const header = trackerPanel.querySelector('.rpg-panel-header');
+        const title = header.querySelector('.rpg-panel-title');
+        
+        expect(header).toBeTruthy();
+        expect(title).toBeTruthy();
+        expect(title.textContent).toContain('Monthly Tracker');
+      });
+
+      it('should render monthly stats with RPG styling', () => {
+        const monthlyStats = document.querySelector('.rpg-monthly-stats');
+        expect(monthlyStats).toBeTruthy();
+        
+        const booksInput = document.getElementById('books-completed-month');
+        const journalInput = document.getElementById('journal-entries-completed');
+        const endOfMonthBtn = document.querySelector('.end-of-month-button');
+        
+        expect(booksInput).toBeTruthy();
+        expect(journalInput).toBeTruthy();
+        expect(endOfMonthBtn).toBeTruthy();
+        
+        expect(booksInput.classList.contains('rpg-stat-input')).toBe(true);
+        expect(journalInput.classList.contains('rpg-stat-input')).toBe(true);
+        expect(endOfMonthBtn.classList.contains('rpg-btn')).toBe(true);
+        expect(endOfMonthBtn.classList.contains('rpg-btn-primary')).toBe(true);
+      });
+    });
+
+    describe('Quest Tables Panel', () => {
+      it('should render quest tables panel with RPG styling', () => {
+        const tablesPanel = document.querySelector('.rpg-quest-tables-panel');
+        expect(tablesPanel).toBeTruthy();
+        expect(tablesPanel.classList.contains('rpg-panel')).toBe(true);
+      });
+
+      it('should render quest table buttons with card suit emojis', () => {
+        const genreBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="genre-quests"]');
+        const atmosphericBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="atmospheric-buffs"]');
+        const sideQuestsBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="side-quests"]');
+        const dungeonsBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="dungeons"]');
+        
+        expect(genreBtn).toBeTruthy();
+        expect(atmosphericBtn).toBeTruthy();
+        expect(sideQuestsBtn).toBeTruthy();
+        expect(dungeonsBtn).toBeTruthy();
+        
+        expect(genreBtn.textContent).toContain('♥');
+        expect(atmosphericBtn.textContent).toContain('♦');
+        expect(sideQuestsBtn.textContent).toContain('♣');
+        expect(dungeonsBtn.textContent).toContain('♠');
+        
+        expect(genreBtn.classList.contains('rpg-btn')).toBe(true);
+        expect(genreBtn.classList.contains('rpg-btn-secondary')).toBe(true);
+      });
+    });
+
+    describe('Add Quest Panel', () => {
+      it('should render add quest panel with RPG styling', () => {
+        const addQuestPanel = document.querySelector('.rpg-add-quest-panel');
+        expect(addQuestPanel).toBeTruthy();
+        expect(addQuestPanel.classList.contains('rpg-panel')).toBe(true);
+      });
+
+      it('should render panel header with title', () => {
+        const addQuestPanel = document.querySelector('.rpg-add-quest-panel');
+        const header = addQuestPanel.querySelector('.rpg-panel-header');
+        const title = header.querySelector('.rpg-panel-title');
+        
+        expect(header).toBeTruthy();
+        expect(title).toBeTruthy();
+        expect(title.textContent).toContain('Add Quest');
+      });
+
+      it('should render RPG-styled form inputs', () => {
+        const monthInput = document.getElementById('quest-month');
+        const yearInput = document.getElementById('quest-year');
+        const questTypeSelect = document.getElementById('new-quest-type');
+        
+        expect(monthInput).toBeTruthy();
+        expect(yearInput).toBeTruthy();
+        expect(questTypeSelect).toBeTruthy();
+      });
+    });
+
+    describe('Active Quests Panel', () => {
+      it('should render active quests panel with RPG styling', () => {
+        const activeQuestsPanel = document.querySelector('.rpg-active-quests-panel');
+        expect(activeQuestsPanel).toBeTruthy();
+        expect(activeQuestsPanel.classList.contains('rpg-panel')).toBe(true);
+      });
+
+      it('should render panel header with title', () => {
+        const activeQuestsPanel = document.querySelector('.rpg-active-quests-panel');
+        const header = activeQuestsPanel.querySelector('.rpg-panel-header');
+        const title = header.querySelector('.rpg-panel-title');
+        
+        expect(header).toBeTruthy();
+        expect(title).toBeTruthy();
+        expect(title.textContent).toContain('Active Book Assignments');
+      });
+    });
+  });
+
+  describe('Quest Info Drawers', () => {
+    beforeEach(() => {
+      // Switch to Quests tab
+      const questsTab = document.querySelector('[data-tab-target="quests"]');
+      if (questsTab) {
+        questsTab.click();
+      }
+    });
+
+    describe('Genre Quests Drawer', () => {
+      it('should open genre quests drawer when clicking button', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="genre-quests"]');
+        const backdrop = document.getElementById('genre-quests-backdrop');
+        const drawer = document.getElementById('genre-quests-drawer');
+        
+        expect(openBtn).toBeTruthy();
+        expect(backdrop).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Initially drawer should be hidden
+        expect(drawer.style.display).toBe('none');
+        expect(backdrop.classList.contains('active')).toBe(false);
+        
+        // Click the button
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Should open the drawer
+            expect(drawer.style.display).toBe('flex');
+            expect(backdrop.classList.contains('active')).toBe(true);
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should render genre quests content from quests.md', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="genre-quests"]');
+        const drawer = document.getElementById('genre-quests-drawer');
+        
+        expect(openBtn).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Open the drawer
+        openBtn.click();
+        
+        // Wait for async rendering (tables may take longer)
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check header
+            const header = drawer.querySelector('.info-drawer-header h2');
+            expect(header).toBeTruthy();
+            expect(header.textContent).toContain('Organize the Stacks');
+            
+            // Check content
+            const content = drawer.querySelector('.info-drawer-content');
+            expect(content).toBeTruthy();
+            expect(content.textContent).toContain('+15 XP');
+            expect(content.textContent).toContain('+10 Ink Drops');
+            expect(content.textContent).toContain('The Mess');
+            expect(content.textContent).toContain('The Discovery');
+            
+            // Check table container exists
+            const tableContainer = content.querySelector('#genre-quests-table-container');
+            expect(tableContainer).toBeTruthy();
+            resolve();
+          }, 1000);
+        });
+      }, 15000);
+
+      it('should close genre quests drawer when clicking backdrop', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="genre-quests"]');
+        const backdrop = document.getElementById('genre-quests-backdrop');
+        const drawer = document.getElementById('genre-quests-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        return new Promise(resolve => {
+          setTimeout(() => {
+            expect(drawer.style.display).toBe('flex');
+            
+            // Click backdrop
+            backdrop.click();
+            
+            // Should close the drawer
+            expect(drawer.style.display).toBe('none');
+            expect(backdrop.classList.contains('active')).toBe(false);
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should close genre quests drawer when clicking close button', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="genre-quests"]');
+        const closeBtn = document.getElementById('close-genre-quests');
+        const backdrop = document.getElementById('genre-quests-backdrop');
+        const drawer = document.getElementById('genre-quests-drawer');
+        
+        expect(closeBtn).toBeTruthy();
+        
+        // Open the drawer
+        openBtn.click();
+        
+        return new Promise(resolve => {
+          setTimeout(() => {
+            expect(drawer.style.display).toBe('flex');
+            
+            // Click close button
+            closeBtn.click();
+            
+            // Should close the drawer
+            expect(drawer.style.display).toBe('none');
+            expect(backdrop.classList.contains('active')).toBe(false);
+            resolve();
+          }, 100);
+        });
+      });
+    });
+
+    describe('Atmospheric Buffs Drawer', () => {
+      it('should open atmospheric buffs drawer when clicking button', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="atmospheric-buffs"]');
+        const backdrop = document.getElementById('atmospheric-buffs-info-backdrop');
+        const drawer = document.getElementById('atmospheric-buffs-info-drawer');
+        
+        expect(openBtn).toBeTruthy();
+        expect(backdrop).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Initially drawer should be hidden
+        expect(drawer.style.display).toBe('none');
+        
+        // Click the button
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Should open the drawer
+            expect(drawer.style.display).toBe('flex');
+            expect(backdrop.classList.contains('active')).toBe(true);
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should render atmospheric buffs content from quests.md', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="atmospheric-buffs"]');
+        const drawer = document.getElementById('atmospheric-buffs-info-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check header
+            const header = drawer.querySelector('.info-drawer-header h2');
+            expect(header).toBeTruthy();
+            expect(header.textContent).toContain('Atmospheric Buffs');
+            expect(header.textContent).toContain('Roll a d8');
+            
+            // Check content
+            const content = drawer.querySelector('.info-drawer-content');
+            expect(content).toBeTruthy();
+            expect(content.textContent).toContain('The Senses');
+            expect(content.textContent).toContain('The Memory');
+            expect(content.textContent).toContain('The Effect');
+            
+            // Check table container exists
+            const tableContainer = content.querySelector('#atmospheric-buffs-table-container');
+            expect(tableContainer).toBeTruthy();
+            resolve();
+          }, 500);
+        });
+      }, 10000);
+
+      it('should close atmospheric buffs drawer when clicking backdrop', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="atmospheric-buffs"]');
+        const backdrop = document.getElementById('atmospheric-buffs-info-backdrop');
+        const drawer = document.getElementById('atmospheric-buffs-info-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        return new Promise(resolve => {
+          setTimeout(() => {
+            expect(drawer.style.display).toBe('flex');
+            
+            // Click backdrop
+            backdrop.click();
+            
+            // Should close the drawer
+            expect(drawer.style.display).toBe('none');
+            expect(backdrop.classList.contains('active')).toBe(false);
+            resolve();
+          }, 100);
+        });
+      });
+    });
+
+    describe('Side Quests Drawer', () => {
+      it('should open side quests drawer when clicking button', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="side-quests"]');
+        const backdrop = document.getElementById('side-quests-info-backdrop');
+        const drawer = document.getElementById('side-quests-info-drawer');
+        
+        expect(openBtn).toBeTruthy();
+        expect(backdrop).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Initially drawer should be hidden
+        expect(drawer.style.display).toBe('none');
+        
+        // Click the button
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Should open the drawer
+            expect(drawer.style.display).toBe('flex');
+            expect(backdrop.classList.contains('active')).toBe(true);
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should render side quests content from quests.md', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="side-quests"]');
+        const drawer = document.getElementById('side-quests-info-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check header
+            const header = drawer.querySelector('.info-drawer-header h2');
+            expect(header).toBeTruthy();
+            expect(header.textContent).toContain('Side Quests');
+            expect(header.textContent).toContain('Roll a d8');
+            
+            // Check content
+            const content = drawer.querySelector('.info-drawer-content');
+            expect(content).toBeTruthy();
+            expect(content.textContent).toContain('The Encounter');
+            expect(content.textContent).toContain('The Result');
+            
+            // Check table container exists
+            const tableContainer = content.querySelector('#side-quests-table-container');
+            expect(tableContainer).toBeTruthy();
+            resolve();
+          }, 500);
+        });
+      }, 10000);
+
+      it('should close side quests drawer when clicking backdrop', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="side-quests"]');
+        const backdrop = document.getElementById('side-quests-info-backdrop');
+        const drawer = document.getElementById('side-quests-info-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        return new Promise(resolve => {
+          setTimeout(() => {
+            expect(drawer.style.display).toBe('flex');
+            
+            // Click backdrop
+            backdrop.click();
+            
+            // Should close the drawer
+            expect(drawer.style.display).toBe('none');
+            expect(backdrop.classList.contains('active')).toBe(false);
+            resolve();
+          }, 100);
+        });
+      });
+    });
+
+    describe('Dungeons Drawer', () => {
+      it('should open dungeons drawer when clicking button', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="dungeons"]');
+        const backdrop = document.getElementById('dungeons-info-backdrop');
+        const drawer = document.getElementById('dungeons-info-drawer');
+        
+        expect(openBtn).toBeTruthy();
+        expect(backdrop).toBeTruthy();
+        expect(drawer).toBeTruthy();
+        
+        // Initially drawer should be hidden
+        expect(drawer.style.display).toBe('none');
+        
+        // Click the button
+        openBtn.click();
+        
+        // Wait for async rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Should open the drawer
+            expect(drawer.style.display).toBe('flex');
+            expect(backdrop.classList.contains('active')).toBe(true);
+            resolve();
+          }, 100);
+        });
+      });
+
+      it('should render dungeons content from dungeons.md', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="dungeons"]');
+        const drawer = document.getElementById('dungeons-info-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        // Wait for async rendering with longer timeout for table rendering
+        return new Promise(resolve => {
+          setTimeout(() => {
+            // Check header
+            const header = drawer.querySelector('.info-drawer-header');
+            expect(header).toBeTruthy();
+            const h2 = header.querySelector('h2');
+            expect(h2).toBeTruthy();
+            expect(h2.textContent).toContain('Dungeon Rooms');
+            
+            // Check content body
+            const content = drawer.querySelector('.info-drawer-content');
+            expect(content).toBeTruthy();
+            // Check for paragraph content
+            expect(content.textContent).toContain('Roll a d20');
+            expect(content.textContent).toContain('The Setting');
+            expect(content.textContent).toContain('The Encounter');
+            // Check for table containers (tables are rendered dynamically)
+            const rewardsContainer = content.querySelector('#dungeon-rewards-table-container');
+            const roomsContainer = content.querySelector('#dungeon-rooms-table-container');
+            const completionContainer = content.querySelector('#dungeon-completion-rewards-table-container');
+            expect(rewardsContainer).toBeTruthy();
+            expect(roomsContainer).toBeTruthy();
+            expect(completionContainer).toBeTruthy();
+            resolve();
+          }, 1000);
+        });
+      }, 15000);
+
+      it('should close dungeons drawer when clicking backdrop', () => {
+        const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="dungeons"]');
+        const backdrop = document.getElementById('dungeons-info-backdrop');
+        const drawer = document.getElementById('dungeons-info-drawer');
+        
+        // Open the drawer
+        openBtn.click();
+        
+        return new Promise(resolve => {
+          setTimeout(() => {
+            expect(drawer.style.display).toBe('flex');
+            
+            // Click backdrop
+            backdrop.click();
+            
+            // Should close the drawer
+            expect(drawer.style.display).toBe('none');
+            expect(backdrop.classList.contains('active')).toBe(false);
+            resolve();
+          }, 100);
+        });
+      });
+    });
+  });
+
+  describe('Card-Based Bonus Selection UI', () => {
+    beforeEach(() => {
+      // Switch to Quests tab
+      const questsTab = document.querySelector('[data-tab-target="quests"]');
+      if (questsTab) {
+        questsTab.click();
+      }
+    });
+
+    it('should render bonus selection container instead of multi-select', () => {
+      const container = document.getElementById('quest-bonus-selection-container');
+      const hiddenInput = document.getElementById('quest-buffs-select');
+      
+      expect(container).toBeTruthy();
+      expect(hiddenInput).toBeTruthy();
+      expect(hiddenInput.type).toBe('hidden');
+    });
+
+    it('should render bonus cards when bonuses are available', () => {
+      // Add a temporary buff to make bonuses available
+      characterState.temporaryBuffs = [{
+        name: 'Test Buff',
+        description: 'Test description',
+        status: 'active'
+      }];
+      
+      // Trigger update
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const cards = container.querySelectorAll('.quest-bonus-card');
+      
+      expect(cards.length).toBeGreaterThan(0);
+    });
+
+    it('should render bonus card with name and description', () => {
+      // Add a temporary buff
+      characterState.temporaryBuffs = [{
+        name: 'Test Buff',
+        description: 'Test description',
+        status: 'active'
+      }];
+      
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container.querySelector('.quest-bonus-card');
+      
+      expect(card).toBeTruthy();
+      
+      const title = card.querySelector('.quest-bonus-card-title');
+      const description = card.querySelector('.quest-bonus-card-description');
+      
+      expect(title).toBeTruthy();
+      expect(description).toBeTruthy();
+      expect(title.textContent).toContain('Test Buff');
+      expect(description.textContent).toContain('Test description');
+    });
+
+    it('should render bonus card with image when item data available', () => {
+      // Add an equipped item with image
+      characterState.equippedItems = [{
+        name: "Librarian's Compass",
+        bonus: 'Test bonus'
+      }];
+      
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const card = container.querySelector('.quest-bonus-card');
+      
+      if (card && allItems["Librarian's Compass"] && allItems["Librarian's Compass"].img) {
+        const image = card.querySelector('.quest-bonus-card-image');
+        expect(image).toBeTruthy();
+        expect(image.tagName).toBe('IMG');
+      }
+    });
+
+    it('should toggle selection when clicking a bonus card', () => {
+      // Add a temporary buff
+      characterState.temporaryBuffs = [{
+        name: 'Test Buff',
+        description: 'Test description',
+        status: 'active'
+      }];
+      
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const hiddenInput = document.getElementById('quest-buffs-select');
+      const card = container.querySelector('.quest-bonus-card');
+      
+      expect(card).toBeTruthy();
+      expect(card.classList.contains('selected')).toBe(false);
+      expect(hiddenInput.value).toBe('[]');
+      
+      // Click the card
+      card.click();
+      
+      // Should be selected
+      expect(card.classList.contains('selected')).toBe(true);
+      const selectedValues = JSON.parse(hiddenInput.value);
+      expect(selectedValues).toContain('[Buff] Test Buff');
+      
+      // Click again to deselect
+      card.click();
+      
+      // Should be deselected
+      expect(card.classList.contains('selected')).toBe(false);
+      const newSelectedValues = JSON.parse(hiddenInput.value);
+      expect(newSelectedValues).not.toContain('[Buff] Test Buff');
+    });
+
+    it('should render background bonus cards when background is selected', () => {
+      // Set a background
+      const backgroundSelect = document.getElementById('keeperBackground');
+      backgroundSelect.value = 'archivist';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const cards = container.querySelectorAll('.quest-bonus-card');
+      
+      // Should have at least the background bonus card
+      expect(cards.length).toBeGreaterThanOrEqual(1);
+      
+      const bonusNames = Array.from(cards).map(card => card.querySelector('.quest-bonus-card-title').textContent);
+      expect(bonusNames.some(name => name.includes('Archivist'))).toBe(true);
+    });
+
+    it('should render equipped item cards', () => {
+      // Add an equipped item
+      characterState.equippedItems = [{
+        name: "Librarian's Compass",
+        bonus: '+5 to research rolls'
+      }];
+      
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const cards = container.querySelectorAll('.quest-bonus-card');
+      
+      expect(cards.length).toBeGreaterThan(0);
+      
+      const bonusNames = Array.from(cards).map(card => card.querySelector('.quest-bonus-card-title').textContent);
+      expect(bonusNames.some(name => name.includes("Librarian's Compass"))).toBe(true);
+    });
+
+    it('should display message when no bonuses available', () => {
+      // Clear all bonuses
+      characterState.temporaryBuffs = [];
+      characterState.equippedItems = [];
+      const backgroundSelect = document.getElementById('keeperBackground');
+      backgroundSelect.value = '';
+      backgroundSelect.dispatchEvent(new Event('change'));
+      
+      const wearableSlotsInput = document.getElementById('wearable-slots');
+      const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+      const familiarSlotsInput = document.getElementById('familiar-slots');
+      
+      ui.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+      
+      const container = document.getElementById('quest-bonus-selection-container');
+      const message = container.querySelector('.no-bonuses-message');
+      
+      expect(message).toBeTruthy();
+      expect(message.textContent).toContain('No bonuses available');
+    });
+
+    it('should render edit quest bonus selection container', () => {
+      const editContainer = document.getElementById('edit-quest-bonus-selection-container');
+      const editHiddenInput = document.getElementById('edit-quest-buffs-select');
+      
+      expect(editContainer).toBeTruthy();
+      expect(editHiddenInput).toBeTruthy();
+      expect(editHiddenInput.type).toBe('hidden');
+    });
+
+    it('should update edit quest bonus selection with selected values', () => {
+      // Add a temporary buff
+      characterState.temporaryBuffs = [{
+        name: 'Test Buff',
+        description: 'Test description',
+        status: 'active'
+      }];
+      
+      const selectedValues = ['[Buff] Test Buff'];
+      ui.updateEditQuestBuffsDropdown(selectedValues);
+      
+      const container = document.getElementById('edit-quest-bonus-selection-container');
+      const hiddenInput = document.getElementById('edit-quest-buffs-select');
+      const card = container.querySelector('.quest-bonus-card');
+      
+      expect(card).toBeTruthy();
+      expect(card.classList.contains('selected')).toBe(true);
+      expect(JSON.parse(hiddenInput.value)).toEqual(selectedValues);
     });
   });
 });

@@ -19,7 +19,7 @@ The website is built from a collection of Markdown files and a few key structura
     * **`js/anchor.js`**: This script automatically adds the "#" anchor links that appear when you hover over headers, making sections easy to share.
     * **`images/`**: This folder contains all the images used on the site, including the main hero banner and the pictures for the reward items.
 
-* **Markdown Pages (`.md`)**: These are the core content files for your game (e.g., `core-mechanics.md`, `dungeons.md`, `rewards.md`, etc.). Each file uses "front matter" at the very top (the part between `---`) to tell Jekyll which layout to use and what the page's title is.
+* **Markdown Pages (`.md`)**: These are the core content files for your game (e.g., `core-mechanics.md`, `rewards.md`, etc.). Each file uses "front matter" at the very top (the part between `---`) to tell Jekyll which layout to use and what the page's title is.
 
 ---
 
@@ -28,7 +28,7 @@ The website is built from a collection of Markdown files and a few key structura
 Making changes to the website is straightforward.
 
 ### Editing Content
-To edit the text on any page, simply open the corresponding `.md` file and make your changes using standard Markdown syntax. For pages with complex layouts like `dungeons.md` or `rewards.md`, you will be editing HTML directly within the file.
+To edit the text on any page, simply open the corresponding `.md` file and make your changes using standard Markdown syntax. For pages with complex layouts like `rewards.md`, you will be editing HTML directly within the file.
 
 ### Adding a New Page
 1.  Create a new file in the root directory (e.g., `new-section.md`).
