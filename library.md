@@ -5,7 +5,11 @@ title: Library Restoration
 
 <div class="library-page">
     <div class="library-map-banner">
+        {% if site.images_cdn_base and site.images_cdn_base != "" %}
+        <img src="{{ site.images_cdn_base }}/library-renovation-wo-room-labels.png" alt="Library Restoration Map" class="library-map-image">
+        {% else %}
         <img src="{{ site.baseurl }}/assets/images/library-renovation-wo-room-labels.png" alt="Library Restoration Map" class="library-map-image">
+        {% endif %}
     </div>
 
     <div class="library-header">

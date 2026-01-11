@@ -958,7 +958,11 @@ permalink: /character-sheet.html
     <button type="submit">Save Character Info</button>
     <button type="button" id="print-button">Print</button>
     <span id="save-indicator" class="save-indicator hidden">
+        {% if site.images_cdn_base and site.images_cdn_base != "" %}
+        <img src="{{ site.images_cdn_base }}/icons/save-icon.png" alt="Saved" class="save-icon" />
+        {% else %}
         <img src="{{ site.baseurl }}/assets/images/icons/save-icon.png" alt="Saved" class="save-icon" />
+        {% endif %}
         <span class="save-text">Saved</span>
     </span>
     </div>

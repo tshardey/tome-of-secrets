@@ -6,6 +6,8 @@
  * end up with divergent slug rules.
  */
 
+import { toCdnImageUrlIfConfigured } from './imageCdn.js';
+
 /**
  * Slugify a dungeon room name into the image filename segment.
  * Matches the historical behavior used by quest cards, but also:
@@ -45,18 +47,18 @@ export function getDungeonRoomCardImage(roomData) {
   if (!roomData) return null;
 
   if (roomData.cardImage) {
-    return roomData.cardImage;
+    return toCdnImageUrlIfConfigured(roomData.cardImage);
   }
 
   const roomId = roomData.id || '';
   if (typeof roomId === 'string' && roomId.startsWith('dungeon-room-')) {
     const slug = roomId.replace('dungeon-room-', '');
-    if (slug) return `assets/images/dungeons/${slug}.png`;
+    if (slug) return toCdnImageUrlIfConfigured(`assets/images/dungeons/${slug}.png`);
   }
 
   const slug = slugifyRoomName(roomData.name);
   if (!slug) return null;
 
-  return `assets/images/dungeons/${slug}.png`;
+  return toCdnImageUrlIfConfigured(`assets/images/dungeons/${slug}.png`);
 }
 

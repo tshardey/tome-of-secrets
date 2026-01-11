@@ -15,6 +15,7 @@ import {
     renderTemporaryBuffRow,
     renderAbilityCard
 } from './renderComponents.js';
+import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
 import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
 import { createQuestListViewModel } from '../viewModels/questViewModel.js';
@@ -633,7 +634,7 @@ function createBonusCard(bonus, value, containerId) {
     let imageSrc = null;
     if (bonus.type === 'item' && bonus.itemData && bonus.itemData.img) {
         const baseurl = (window.__BASEURL || '').replace(/\/+$/, '');
-        imageSrc = baseurl ? `${baseurl}/${bonus.itemData.img}` : bonus.itemData.img;
+        imageSrc = toLocalOrCdnUrl(bonus.itemData.img, baseurl);
     }
     
     if (imageSrc) {

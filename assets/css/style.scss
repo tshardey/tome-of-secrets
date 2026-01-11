@@ -258,7 +258,11 @@ article h6:hover .anchor-link {
     /* We'll use white text on the dark image */
 
     /* --- The background image --- */
+    {% if site.images_cdn_base and site.images_cdn_base != "" %}
+    background-image: url("{{ site.images_cdn_base }}/library-hero.png");
+    {% else %}
     background-image: url("{{ site.baseurl }}/assets/images/library-hero.png");
+    {% endif %}
     background-size: cover;
     /* Cover the entire area */
     background-position: center bottom;
