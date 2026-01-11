@@ -459,11 +459,11 @@ describe('Page Renderers Hydration', () => {
       `;
     });
 
-    test('marks an obtained (inventory) item as acquired and uses border-7', () => {
+    test('marks an obtained (inventory) item as acquired and uses border-7', async () => {
       safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, [{ name: "Librarian's Compass" }]);
       safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
 
-      initializeRewardsPage();
+      await initializeRewardsPage();
 
       const heading = document.getElementById('librarians-compass');
       expect(heading).toBeTruthy();
@@ -483,11 +483,11 @@ describe('Page Renderers Hydration', () => {
       });
     });
 
-    test('marks an equipped item as acquired+equipped and uses border-9', () => {
+    test('marks an equipped item as acquired+equipped and uses border-9', async () => {
       safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
       safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, [{ name: "Librarian's Compass" }]);
 
-      initializeRewardsPage();
+      await initializeRewardsPage();
 
       const heading = document.getElementById('librarians-compass');
       expect(heading).toBeTruthy();
@@ -504,14 +504,14 @@ describe('Page Renderers Hydration', () => {
       });
     });
 
-    test('marks an acquired temporary buff (TEMPORARY_BUFFS) as acquired and uses border-7', () => {
+    test('marks an acquired temporary buff (TEMPORARY_BUFFS) as acquired and uses border-7', async () => {
       safeSetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
       safeSetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
       safeSetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, [
         { name: 'Long Read Focus', description: 'x', duration: 'two-months', monthsRemaining: 2, status: 'active' }
       ]);
 
-      initializeRewardsPage();
+      await initializeRewardsPage();
 
       const heading = document.getElementById('long-read-focus');
       expect(heading).toBeTruthy();
@@ -528,8 +528,8 @@ describe('Page Renderers Hydration', () => {
       });
     });
 
-    test('renders Quest items (e.g., The Grand Key) in the quest items section', () => {
-      initializeRewardsPage();
+    test('renders Quest items (e.g., The Grand Key) in the quest items section', async () => {
+      await initializeRewardsPage();
 
       const heading = document.getElementById('the-grand-key');
       expect(heading).toBeTruthy();

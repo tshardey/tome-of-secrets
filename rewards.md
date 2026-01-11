@@ -29,7 +29,7 @@ This document serves as a guide to the magical items and familiars you can disco
 </script>
 <script type="module">
   import { initializeRewardsPage } from '{{ site.baseurl }}/assets/js/page-renderers/rewardsRenderer.js';
-  initializeRewardsPage();
+  await initializeRewardsPage();
 </script>
 
 ### Temporary Buffs

@@ -1,19 +1,18 @@
 // Renders rewards (items and familiars) and temp buffs on rewards.md from JSON exports
 import { allItems, temporaryBuffsFromRewards } from '../character-sheet/data.js';
 import { slugifyId } from '../utils/slug.js';
-import { safeGetJSON } from '../utils/storage.js';
+import { getStateKey } from '../character-sheet/persistence.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 
 /**
  * Check if an item is acquired and its status (equipped or in inventory)
  * @param {string} itemName - Name of the item to check
+ * @param {Object} loadedState - Pre-loaded state containing inventoryItems, equippedItems, temporaryBuffs
  * @returns {{isAcquired: boolean, isEquipped: boolean}} - Status object
  */
-function getItemStatus(itemName) {
-    const inventoryItems = safeGetJSON(STORAGE_KEYS.INVENTORY_ITEMS, []);
-    const equippedItems = safeGetJSON(STORAGE_KEYS.EQUIPPED_ITEMS, []);
-    const temporaryBuffs = safeGetJSON(STORAGE_KEYS.TEMPORARY_BUFFS, []);
+function getItemStatus(itemName, loadedState) {
+    const { inventoryItems, equippedItems, temporaryBuffs } = loadedState;
     
     const equippedNames = new Set(equippedItems.map(i => i.name));
     const inventoryNames = new Set(inventoryItems.map(i => i.name));
@@ -179,7 +178,7 @@ function createTempBuffCard(baseurl, name, buff, status = { isAcquired: false, i
     return card;
 }
 
-export function initializeRewardsPage() {
+export async function initializeRewardsPage() {
     const baseurl = (window.__BASEURL || '').replace(/\/+$/, '');
     const wearableContainer = document.getElementById('rewards-wearable');
     const nonWearableContainer = document.getElementById('rewards-non-wearable');
@@ -188,6 +187,14 @@ export function initializeRewardsPage() {
     const tempBuffsContainer = document.getElementById('rewards-temp-buffs');
 
     if (!wearableContainer || !nonWearableContainer || !familiarContainer) return;
+
+    // Load state from IndexedDB (these are "large" keys stored in IndexedDB, not localStorage)
+    const [inventoryItems, equippedItems, temporaryBuffs] = await Promise.all([
+        getStateKey(STORAGE_KEYS.INVENTORY_ITEMS, []),
+        getStateKey(STORAGE_KEYS.EQUIPPED_ITEMS, []),
+        getStateKey(STORAGE_KEYS.TEMPORARY_BUFFS, [])
+    ]);
+    const loadedState = { inventoryItems, equippedItems, temporaryBuffs };
 
     // Clear containers and wrap in grid containers
     wearableContainer.innerHTML = '';
@@ -225,7 +232,7 @@ export function initializeRewardsPage() {
 
     // Create and append cards to appropriate grid containers
     for (const [name, item] of Object.entries(allItems)) {
-        const status = getItemStatus(name);
+        const status = getItemStatus(name, loadedState);
         const card = createRewardCard(baseurl, name, item, status);
         if (item.type === 'Wearable') {
             wearableGrid.appendChild(card);
@@ -246,7 +253,7 @@ export function initializeRewardsPage() {
     // Render temporary buffs if a container exists
     if (tempBuffsGrid && temporaryBuffsFromRewards) {
         for (const [name, buff] of Object.entries(temporaryBuffsFromRewards)) {
-            const status = getItemStatus(name);
+            const status = getItemStatus(name, loadedState);
             const card = createTempBuffCard(baseurl, name, buff, status);
             tempBuffsGrid.appendChild(card);
         }
