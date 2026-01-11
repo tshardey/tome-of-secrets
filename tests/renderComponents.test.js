@@ -407,6 +407,87 @@ describe('Render Components', () => {
             // Check that word-wrap CSS class is applied (handled by CSS)
             expect(titleElement.classList.contains('quest-book-title')).toBe(true);
         });
+
+        test('should render dungeon quest card image for room challenge (cardImage override)', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/character-sheet/data.js', () => ({
+                    dungeonRooms: {
+                        '1': { name: 'The Hall of Whispers', cardImage: 'assets/images/dungeons/custom-room.png' }
+                    },
+                    allItems: {},
+                    wings: {}
+                }));
+
+                const { renderQuestCard } = require('../assets/js/character-sheet/renderComponents.js');
+
+                const quest = {
+                    type: '♠ Dungeon Crawl',
+                    prompt: 'Room prompt',
+                    book: 'Test Book',
+                    month: 'January',
+                    year: '2024',
+                    isEncounter: false,
+                    roomNumber: '1',
+                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    buffs: []
+                };
+
+                const card = renderQuestCard(quest, 0, 'completed');
+                const img = card.querySelector('.quest-card-dungeon-image');
+                expect(img).toBeTruthy();
+                expect(img.getAttribute('src')).toBe('assets/images/dungeons/custom-room.png');
+                expect(img.getAttribute('alt')).toBe('The Hall of Whispers');
+            });
+        });
+
+        test('should render dungeon quest card image for encounter using encounterImageMap', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/character-sheet/data.js', () => ({
+                    dungeonRooms: {
+                        '1': { name: 'Any Room' }
+                    },
+                    allItems: {},
+                    wings: {}
+                }));
+
+                const { renderQuestCard } = require('../assets/js/character-sheet/renderComponents.js');
+
+                const quest = {
+                    type: '♠ Dungeon Crawl',
+                    prompt: 'Encounter prompt',
+                    book: 'Test Book',
+                    month: 'January',
+                    year: '2024',
+                    isEncounter: true,
+                    roomNumber: '1',
+                    encounterName: 'Mischievous Pixie',
+                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    buffs: []
+                };
+
+                const card = renderQuestCard(quest, 0, 'completed');
+                const img = card.querySelector('.quest-card-dungeon-image');
+                expect(img).toBeTruthy();
+                expect(img.getAttribute('src')).toBe('assets/images/encounters/encounter-mischevious-pixie.png');
+                expect(img.getAttribute('alt')).toBe('Mischievous Pixie');
+            });
+        });
+
+        test('wraps completed non-dungeon notes in scrollable container', () => {
+            const quest = {
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book: 'Test',
+                month: 'Jan',
+                year: '2024',
+                notes: 'Lots of notes',
+                rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            const card = renderQuestCard(quest, 0, 'completed');
+            expect(card.querySelector('.quest-card-notes-scrollable')).toBeTruthy();
+        });
     });
 
     describe('renderItemCard', () => {
