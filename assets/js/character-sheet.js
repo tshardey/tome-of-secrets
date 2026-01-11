@@ -23,6 +23,7 @@ import { QuestController } from './controllers/QuestController.js';
 import { CurseController } from './controllers/CurseController.js';
 import { BuffController } from './controllers/BuffController.js';
 import { EndOfMonthController } from './controllers/EndOfMonthController.js';
+import { DungeonDeckController } from './controllers/DungeonDeckController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -229,6 +230,7 @@ export async function initializeCharacterSheet() {
     const curseController = new CurseController(stateAdapter, form, dependencies);
     const buffController = new BuffController(stateAdapter, form, dependencies);
     const endOfMonthController = new EndOfMonthController(stateAdapter, form, dependencies);
+    const dungeonDeckController = new DungeonDeckController(stateAdapter, form, dependencies);
 
     // Initialize controllers
     characterController.initialize();
@@ -238,6 +240,7 @@ export async function initializeCharacterSheet() {
     curseController.initialize();
     buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
+    dungeonDeckController.initialize();
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
@@ -420,6 +423,25 @@ export async function initializeCharacterSheet() {
     // Delegated click handler for all interactive elements
     form.addEventListener('click', (e) => {
         const target = e.target;
+        
+        // Handle dungeon archive card clicks first (before data-index check)
+        // Check if click is on the card itself or its children (but not on buttons)
+        if (target.closest('.dungeon-archive-card') && !target.closest('button')) {
+            const card = target.closest('.dungeon-archive-card');
+            const editButton = card?.querySelector('.edit-quest-btn');
+            if (editButton && editButton.dataset.list && editButton.dataset.index) {
+                // Simulate clicking the edit button by creating a synthetic event
+                // This ensures the delegated handler processes it correctly
+                const syntheticEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                editButton.dispatchEvent(syntheticEvent);
+                return;
+            }
+        }
+        
         // Allow buttons without index if they're special buttons (delete-ability-btn, remove-passive-item-btn, equip-from-passive-btn)
         if (!target.dataset.index && 
             !target.classList.contains('delete-ability-btn') && 
@@ -513,11 +535,9 @@ export async function initializeCharacterSheet() {
         });
     }
     
-    // Check for unsaved currency changes AFTER state is loaded
-    // Use setTimeout to ensure form values are fully populated
-    setTimeout(() => {
-        checkCurrencyUnsavedChanges();
-    }, 0);
+    // Note: checkCurrencyUnsavedChanges() is already called once above after listeners
+    // are installed. Avoid scheduling an extra async check here because it can race
+    // with other initialization steps/tests and incorrectly show the warning.
 
     const levelInput = document.getElementById('level');
     const xpNeededInput = document.getElementById('xp-needed');

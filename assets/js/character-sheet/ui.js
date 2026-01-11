@@ -18,6 +18,8 @@ import {
 import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
 import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
 import { createQuestListViewModel } from '../viewModels/questViewModel.js';
+import { createDungeonArchiveCardsViewModel } from '../viewModels/dungeonArchiveCardsViewModel.js';
+import { renderDungeonArchiveCard } from './cardRenderer.js';
 import { createCurseListViewModel } from '../viewModels/curseViewModel.js';
 import { createAbilityViewModel } from '../viewModels/abilityViewModel.js';
 import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffViewModel.js';
@@ -440,9 +442,17 @@ export function renderActiveAssignments() {
 
 export function renderCompletedQuests() {
     const container = document.getElementById('completed-quests-container');
-    const cardsContainer = container?.querySelector('.quest-cards-container');
-    if (!cardsContainer) return;
+    if (!container) return;
     
+    // Get containers
+    const dungeonRoomsContainer = container.querySelector('#dungeon-rooms-archive-container');
+    const dungeonEncountersContainer = container.querySelector('#dungeon-encounters-archive-container');
+    const cardsContainer = container.querySelector('.quest-cards-container');
+    if (!dungeonRoomsContainer || !dungeonEncountersContainer || !cardsContainer) return;
+    
+    // Clear containers
+    clearElement(dungeonRoomsContainer);
+    clearElement(dungeonEncountersContainer);
     clearElement(cardsContainer);
     
     // Get background and wizard school from DOM for receipt calculations
@@ -454,14 +464,56 @@ export function renderCompletedQuests() {
     // Get quests from state using storage key
     const completedQuests = characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
     
-    // Create view models for all completed quests
-    const viewModels = createQuestListViewModel(completedQuests, 'completed', background, wizardSchool);
+    // Separate dungeon and other quests
+    const dungeonQuests = completedQuests.filter(quest => quest.type === '♠ Dungeon Crawl');
+    const otherQuests = completedQuests.filter(quest => quest.type !== '♠ Dungeon Crawl');
     
-    // Render using view models (renderQuestCard still accepts quest directly for now)
-    viewModels.forEach((viewModel) => {
-        const card = renderQuestCard(viewModel.quest, viewModel.index, 'completed');
-        cardsContainer.appendChild(card);
-    });
+    // Separate dungeon rooms from encounters
+    const dungeonRooms = dungeonQuests.filter(quest => quest.isEncounter === false);
+    const dungeonEncounters = dungeonQuests.filter(quest => quest.isEncounter === true);
+    
+    // Render dungeon room cards
+    if (dungeonRooms.length > 0) {
+        const roomViewModels = createDungeonArchiveCardsViewModel(dungeonRooms);
+        roomViewModels.forEach((viewModel) => {
+            // Find the original index in completedQuests array
+            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
+            const card = renderDungeonArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title, 'room');
+            
+            // Click handler will be handled by delegated handler via hidden edit button
+            
+            dungeonRoomsContainer.appendChild(card);
+        });
+    }
+    
+    // Render dungeon encounter cards
+    if (dungeonEncounters.length > 0) {
+        const encounterViewModels = createDungeonArchiveCardsViewModel(dungeonEncounters);
+        encounterViewModels.forEach((viewModel) => {
+            // Find the original index in completedQuests array
+            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
+            const card = renderDungeonArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title, 'encounter');
+            
+            // Click handler will be handled by delegated handler via hidden edit button
+            
+            dungeonEncountersContainer.appendChild(card);
+        });
+    }
+    
+    // Render other quest cards
+    if (otherQuests.length > 0) {
+        // Create view models for other quests (need to map to original indices)
+        const otherViewModels = otherQuests.map(quest => {
+            const originalIndex = completedQuests.findIndex(q => q === quest);
+            const viewModels = createQuestListViewModel([quest], 'completed', background, wizardSchool);
+            return { ...viewModels[0], index: originalIndex };
+        });
+        
+        otherViewModels.forEach((viewModel) => {
+            const card = renderQuestCard(viewModel.quest, viewModel.index, 'completed');
+            cardsContainer.appendChild(card);
+        });
+    }
     
     const summary = document.getElementById('completed-summary');
     if (summary) {

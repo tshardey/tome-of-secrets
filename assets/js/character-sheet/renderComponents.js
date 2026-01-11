@@ -10,6 +10,8 @@ import { createElement } from '../utils/domHelpers.js';
 import * as data from './data.js';
 import { formatReceiptTooltip, calculateActiveQuestReceipt } from '../services/QuestService.js';
 import { createQuestRowViewModel } from '../viewModels/questViewModel.js';
+import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
+import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
 
 /**
  * Pure rendering function for quest row - accepts view model
@@ -551,6 +553,34 @@ export function renderQuestCard(quest, index, listType = 'active') {
         promptSection.textContent = promptDisplay;
         card.appendChild(promptSection);
     }
+
+    // Dungeon card image (for dungeon quests)
+    if (quest.type === '♠ Dungeon Crawl' && quest.roomNumber) {
+        const roomData = data.dungeonRooms?.[quest.roomNumber];
+        if (roomData) {
+            let cardImage = null;
+            
+            if (quest.isEncounter && quest.encounterName) {
+                // Encounter quest - use encounter image
+                const filename = getEncounterImageFilename(quest.encounterName);
+                cardImage = `assets/images/encounters/${filename}`;
+            } else {
+                // Room challenge quest - use room card image
+                cardImage = getDungeonRoomCardImage(roomData);
+            }
+            
+            if (cardImage) {
+                const imageSection = createElement('div', { class: 'quest-card-image-section' });
+                const img = createElement('img', {
+                    src: cardImage,
+                    alt: quest.isEncounter ? escapeHtml(quest.encounterName || 'Encounter') : escapeHtml(roomData.name || 'Room'),
+                    class: 'quest-card-dungeon-image'
+                });
+                imageSection.appendChild(img);
+                card.appendChild(imageSection);
+            }
+        }
+    }
     
     // Rewards section
     const rewardsSection = createElement('div', { class: 'quest-card-rewards' });
@@ -644,12 +674,22 @@ export function renderQuestCard(quest, index, listType = 'active') {
         card.appendChild(buffsSection);
     }
     
-    // Notes section
+    // Notes section (with scrollable wrapper for other quests)
     if (quest.notes) {
         const notesSection = createElement('div', { class: 'quest-card-notes' });
         // Decode HTML entities first, then escape for safety
         const decodedNotes = decodeHtmlEntities(quest.notes);
-        notesSection.innerHTML = `<strong>Notes:</strong> ${escapeHtml(decodedNotes)}`;
+        // Add scrollable wrapper for non-dungeon quests
+        const notesContent = listType === 'completed' && quest.type !== '♠ Dungeon Crawl'
+            ? createElement('div', { class: 'quest-card-notes-scrollable' })
+            : null;
+        const notesHtml = `<strong>Notes:</strong> ${escapeHtml(decodedNotes)}`;
+        if (notesContent) {
+            notesContent.innerHTML = notesHtml;
+            notesSection.appendChild(notesContent);
+        } else {
+            notesSection.innerHTML = notesHtml;
+        }
         card.appendChild(notesSection);
     }
     

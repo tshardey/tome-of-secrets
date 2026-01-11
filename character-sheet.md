@@ -527,6 +527,26 @@ permalink: /character-sheet.html
         </div>
     </div>
 
+    <!-- Dungeon Card Draw Interface -->
+    <div class="rpg-panel rpg-dungeon-card-draw-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">♠ Draw Dungeon Cards</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="dungeon-deck-interface">
+                <div class="deck-section">
+                    <div id="room-deck-container" class="card-deck available"></div>
+                    <div id="encounter-deck-container" class="card-deck available" style="display: none;"></div>
+                </div>
+                <div id="drawn-card-display" class="drawn-card-area"></div>
+                <div class="deck-actions">
+                    <button type="button" id="add-quest-from-cards-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add to Active Quests</button>
+                    <button type="button" id="clear-drawn-cards-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="rpg-panel rpg-add-quest-panel">
         <div class="rpg-panel-header">
             <h3 class="rpg-panel-title">➕ Add Quest</h3>
@@ -617,7 +637,24 @@ permalink: /character-sheet.html
 
         <div id="completed-quests-container">
             <h3 id="completed-summary">Completed Quests</h3>
-            <div class="quest-cards-container"></div>
+            <div class="completed-quests-sections">
+                <!-- Dungeon Section -->
+                <div class="dungeon-archive-section">
+                    <h4>Dungeon Rooms</h4>
+                    <div id="dungeon-rooms-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <div class="dungeon-archive-section">
+                    <h4>Dungeon Encounters</h4>
+                    <div id="dungeon-encounters-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <!-- Other Quests Section -->
+                <div class="other-quests-section">
+                    <h4>Other Quests</h4>
+                    <div class="quest-cards-container"></div>
+                </div>
+            </div>
         </div>
 
         <div id="discarded-quests-container">
@@ -827,9 +864,9 @@ permalink: /character-sheet.html
     </div>
     <div class="info-drawer-body">
         <div class="info-drawer-content">
-            <p>Roll a d20 to determine your dungeon room. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards">Dungeon Completion Rewards</a> table. Each room belongs to a wing of the library—explore the <a href="{{ site.baseurl }}/library.html">Library Restoration</a> page to see how your progress unlocks restoration projects.</p>
+            <p>Draw cards to determine your dungeon room and encounter. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards">Dungeon Completion Rewards</a> table. Each room belongs to a wing of the library—explore the <a href="{{ site.baseurl }}/library.html">Library Restoration</a> page to see how your progress unlocks restoration projects.</p>
             
-            <p><strong>Note:</strong> If you roll a dungeon room that you have already completed (grayed out in the table below), you may roll again. Alternatively, if you have only completed one encounter in a room, you may opt to complete the other encounter instead of re-rolling.</p>
+            <p><strong>Note:</strong> Rooms stay in the deck until all encounters are completed. If you have only completed one encounter in a room, you may draw from that room again to complete the remaining encounters.</p>
             
             <h3>Journaling: Dungeon Crawls</h3>
             

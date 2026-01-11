@@ -1,0 +1,376 @@
+/**
+ * Card Draw Styles
+ * 
+ * Styles for the dungeon deck card draw interface
+ */
+
+/* Deck Container */
+.dungeon-deck-interface {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 20px;
+}
+
+.deck-section {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+/* Card Deck (Cardback) */
+.card-deck {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card-deck.available:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.card-deck.empty {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cardback-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 200px;
+    border-radius: 8px;
+}
+
+/* Deck count badge */
+.deck-count-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(184, 159, 98, 0.9);
+    color: #2a231d;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Drawn Card Area */
+.drawn-card-area {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    min-height: 0; /* Start small, expand when cards are drawn */
+    padding: 20px;
+}
+
+/* Card Styles */
+.card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    background-color: #2a231d;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Room Card (2:3 aspect ratio) */
+.room-card {
+    width: 300px;
+    aspect-ratio: 2 / 3;
+    max-width: 100%;
+}
+
+/* Encounter Card (1:1 aspect ratio) */
+.encounter-card {
+    width: 300px;
+    aspect-ratio: 1 / 1;
+    max-width: 100%;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.card-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(42, 35, 29, 0.95) 0%, rgba(42, 35, 29, 0.8) 70%, transparent 100%);
+    padding: 20px;
+    color: #d4c8b0;
+}
+
+.card-title {
+    font-family: 'Lora', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #b89f62;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.card-description {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 8px 0;
+    color: #d4c8b0;
+}
+
+.card-type {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #b89f62;
+    margin: 4px 0;
+}
+
+.card-challenge,
+.card-prompt {
+    font-size: 0.9rem;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(184, 159, 98, 0.3);
+}
+
+.card-challenge strong,
+.card-prompt strong {
+    color: #b89f62;
+}
+
+/* Card Flip Animation */
+.card-flip-container {
+    perspective: 1000px;
+    width: 100%;
+    height: 100%;
+}
+
+.card-flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card-flip-inner.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-flip-front,
+.card-flip-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.card-flip-back {
+    transform: rotateY(180deg);
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    .card-deck,
+    .card,
+    .card-flip-inner {
+        transition: none;
+        animation: none;
+    }
+    
+    .card-deck:hover {
+        transform: none;
+    }
+    
+    .card:hover {
+        transform: none;
+    }
+    
+    .card-flip-inner.flipped {
+        transform: none;
+    }
+}
+
+/* Deck Actions */
+.deck-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 20px 0;
+}
+
+/* Archived Dungeon Cards */
+.dungeon-archive-section {
+    margin-bottom: 32px;
+}
+
+.dungeon-archive-section h4 {
+    font-family: 'Lora', serif;
+    font-size: 1.3rem;
+    color: #b89f62;
+    margin-bottom: 16px;
+}
+
+.dungeon-archive-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+    position: relative;
+    z-index: 1;
+}
+
+.dungeon-archive-card {
+    position: relative;
+    border-radius: 8px;
+    overflow: visible;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    aspect-ratio: 2 / 3; /* Default for room cards */
+}
+
+.dungeon-archive-card.encounter {
+    aspect-ratio: 1 / 1; /* Square for encounter cards */
+}
+
+.dungeon-archive-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    z-index: 100; /* Bring the entire card to front on hover */
+}
+
+.dungeon-archive-card.clickable-card {
+    cursor: pointer;
+}
+
+.archive-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    cursor: zoom-in;
+    position: relative;
+    z-index: 1;
+    border-radius: 8px;
+}
+
+.dungeon-archive-card:hover .archive-card-image {
+    transform: scale(2);
+    z-index: 200;
+    position: relative;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+    border: 2px solid #b89f62;
+}
+
+.archive-card-title {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(42, 35, 29, 0.95) 0%, rgba(42, 35, 29, 0.8) 70%, transparent 100%);
+    padding: 12px 16px;
+    color: #d4c8b0;
+    font-family: 'Lora', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Completed Quests Sections */
+.completed-quests-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.other-quests-section h4 {
+    font-family: 'Lora', serif;
+    font-size: 1.3rem;
+    color: #b89f62;
+    margin-bottom: 16px;
+}
+
+/* Scrollable Notes/Review Section */
+.quest-card-notes-scrollable {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-top: 8px;
+}
+
+.quest-card-notes-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.quest-card-notes-scrollable::-webkit-scrollbar-track {
+    background: rgba(84, 72, 59, 0.3);
+    border-radius: 4px;
+}
+
+.quest-card-notes-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(184, 159, 98, 0.5);
+    border-radius: 4px;
+}
+
+.quest-card-notes-scrollable::-webkit-scrollbar-thumb:hover {
+    background: rgba(184, 159, 98, 0.7);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .deck-section {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .drawn-card-area {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .room-card,
+    .encounter-card {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .dungeon-archive-cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 16px;
+    }
+    
+    .deck-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .deck-actions .rpg-btn {
+        width: 100%;
+    }
+}
