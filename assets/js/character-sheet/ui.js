@@ -469,13 +469,15 @@ export function renderCompletedQuests() {
     const dungeonQuests = completedQuests.filter(quest => quest.type === '♠ Dungeon Crawl');
     const otherQuests = completedQuests.filter(quest => quest.type !== '♠ Dungeon Crawl');
     
-    // Separate dungeon rooms from encounters
-    const dungeonRooms = dungeonQuests.filter(quest => quest.isEncounter === false);
-    const dungeonEncounters = dungeonQuests.filter(quest => quest.isEncounter === true);
+    // Create view models for all dungeon quests (handles legacy quests without roomNumber/isEncounter)
+    const allDungeonViewModels = createDungeonArchiveCardsViewModel(dungeonQuests);
+    
+    // Separate into rooms and encounters based on view model analysis
+    const roomViewModels = allDungeonViewModels.filter(vm => !vm.isEncounter);
+    const encounterViewModels = allDungeonViewModels.filter(vm => vm.isEncounter);
     
     // Render dungeon room cards
-    if (dungeonRooms.length > 0) {
-        const roomViewModels = createDungeonArchiveCardsViewModel(dungeonRooms);
+    if (roomViewModels.length > 0) {
         roomViewModels.forEach((viewModel) => {
             // Find the original index in completedQuests array
             const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
@@ -488,8 +490,7 @@ export function renderCompletedQuests() {
     }
     
     // Render dungeon encounter cards
-    if (dungeonEncounters.length > 0) {
-        const encounterViewModels = createDungeonArchiveCardsViewModel(dungeonEncounters);
+    if (encounterViewModels.length > 0) {
         encounterViewModels.forEach((viewModel) => {
             // Find the original index in completedQuests array
             const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);

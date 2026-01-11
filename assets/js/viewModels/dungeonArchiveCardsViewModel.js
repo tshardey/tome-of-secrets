@@ -26,24 +26,67 @@ function getEncounterCardImage(encounterName) {
 /**
  * Get room data for a quest
  * @param {Object} quest - Quest object
- * @returns {Object|null} Room data object
+ * @returns {{roomData: Object|null, roomNumber: string|null}} Room data and room number
  */
 function getRoomDataForQuest(quest) {
-    if (!quest.roomNumber) return null;
-    return data.dungeonRooms?.[quest.roomNumber] || null;
+    // Primary: use roomNumber if available
+    if (quest.roomNumber) {
+        const roomData = data.dungeonRooms?.[quest.roomNumber] || null;
+        return { roomData, roomNumber: quest.roomNumber };
+    }
+    
+    // Fallback: search all rooms by matching prompt text (for legacy quests)
+    if (quest.prompt && data.dungeonRooms) {
+        for (const roomNumber in data.dungeonRooms) {
+            const room = data.dungeonRooms[roomNumber];
+            
+            // Check if prompt matches room challenge
+            if (room.challenge === quest.prompt) {
+                return { roomData: room, roomNumber };
+            }
+            
+            // Check if prompt matches any encounter in this room
+            if (room.encounters) {
+                for (const encounterName in room.encounters) {
+                    const encounter = room.encounters[encounterName];
+                    if (encounter.befriend === quest.prompt || encounter.defeat === quest.prompt) {
+                        return { roomData: room, roomNumber };
+                    }
+                }
+            }
+        }
+    }
+    
+    return { roomData: null, roomNumber: null };
 }
 
 /**
  * Get encounter data for a quest
  * @param {Object} quest - Quest object
  * @param {Object} roomData - Room data object
- * @returns {Object|null} Encounter data from encountersDetailed array
+ * @returns {{encounterData: Object|null, encounterName: string|null}} Encounter data and name
  */
 function getEncounterDataForQuest(quest, roomData) {
-    if (!quest.isEncounter || !quest.encounterName || !roomData) return null;
+    // Primary: use encounterName if available
+    if (quest.isEncounter && quest.encounterName && roomData) {
+        const encountersDetailed = roomData.encountersDetailed || [];
+        const encounterData = encountersDetailed.find(enc => enc.name === quest.encounterName) || null;
+        return { encounterData, encounterName: quest.encounterName };
+    }
     
-    const encountersDetailed = roomData.encountersDetailed || [];
-    return encountersDetailed.find(enc => enc.name === quest.encounterName) || null;
+    // Fallback: search by prompt text (for legacy quests)
+    if (quest.prompt && roomData && roomData.encounters) {
+        for (const encounterName in roomData.encounters) {
+            const encounter = roomData.encounters[encounterName];
+            if (encounter.befriend === quest.prompt || encounter.defeat === quest.prompt) {
+                const encountersDetailed = roomData.encountersDetailed || [];
+                const encounterData = encountersDetailed.find(enc => enc.name === encounterName) || null;
+                return { encounterData, encounterName };
+            }
+        }
+    }
+    
+    return { encounterData: null, encounterName: null };
 }
 
 /**
@@ -55,16 +98,27 @@ export function createDungeonArchiveCardsViewModel(completedQuests) {
     const dungeonQuests = completedQuests.filter(quest => quest.type === '♠ Dungeon Crawl');
     
     return dungeonQuests.map((quest, index) => {
-        const roomData = getRoomDataForQuest(quest);
-        const encounterData = getEncounterDataForQuest(quest, roomData);
+        const { roomData, roomNumber } = getRoomDataForQuest(quest);
+        const { encounterData, encounterName } = getEncounterDataForQuest(quest, roomData);
         
         let cardImage = null;
         let title = '';
         
-        if (quest.isEncounter && encounterData) {
-            // Encounter card
-            cardImage = getEncounterCardImage(quest.encounterName);
-            title = quest.encounterName || '';
+        // Determine if this is an encounter quest
+        // Primary: explicit isEncounter field from quest
+        // Fallback: encounterName was found by prompt matching
+        const isEncounter = quest.isEncounter === true || (encounterName && !quest.hasOwnProperty('isEncounter'));
+        
+        if (isEncounter) {
+            // Encounter card - use encounterName from quest or from fallback lookup
+            const effectiveEncounterName = quest.encounterName || encounterName;
+            if (effectiveEncounterName) {
+                cardImage = getEncounterCardImage(effectiveEncounterName);
+                title = effectiveEncounterName;
+            } else {
+                // No encounter name available - use prompt as title
+                title = quest.prompt || '';
+            }
         } else if (roomData) {
             // Room card
             cardImage = getDungeonRoomCardImage(roomData);
@@ -80,7 +134,8 @@ export function createDungeonArchiveCardsViewModel(completedQuests) {
             cardImage,
             title,
             roomData,
-            encounterData
+            encounterData,
+            isEncounter
         };
     });
 }
