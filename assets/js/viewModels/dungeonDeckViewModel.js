@@ -14,6 +14,7 @@ import {
 } from '../services/DungeonDeckService.js';
 import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
 import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
+import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
 
 /**
  * Derive card image path from encounter data
@@ -25,7 +26,7 @@ function getEncounterCardImage(encounterData) {
     
     // Use image map to get correct filename
     const filename = getEncounterImageFilename(encounterData.name);
-    return `assets/images/encounters/${filename}`;
+    return toCdnImageUrlIfConfigured(`assets/images/encounters/${filename}`);
 }
 
 /**
@@ -46,14 +47,14 @@ export function createDungeonDeckViewModel(state, drawnRoomNumber = null) {
         roomDeck: {
             available: availableRooms.length > 0,
             availableCount: availableRooms.length,
-            cardbackImage: 'assets/images/dungeons/tos-cardback-dungeon-rooms.png'
+            cardbackImage: toCdnImageUrlIfConfigured('assets/images/dungeons/tos-cardback-dungeon-rooms.png')
         },
         
         // Encounter deck state
         encounterDeck: {
             available: availableEncounters.length > 0 && drawnRoomNumber !== null,
             availableCount: availableEncounters.length,
-            cardbackImage: 'assets/images/encounters/tos-cardback-encounters.png'
+            cardbackImage: toCdnImageUrlIfConfigured('assets/images/encounters/tos-cardback-encounters.png')
         },
         
         // Drawn cards

@@ -14,6 +14,14 @@ supabase_url: ""
 supabase_publishable_key: ""
 supabase_anon_key: ""
 
+# ==============================
+# Images CDN (optional)
+# ==============================
+# If set, `assets/images/...` paths will be served from this base instead of the repo.
+# Example (public bucket):
+#   https://<project_ref>.supabase.co/storage/v1/object/public/tome-of-secrets-images
+images_cdn_base: ""
+
 exclude:
   - Gemfile
   - Gemfile.lock

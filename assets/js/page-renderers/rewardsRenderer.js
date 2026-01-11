@@ -3,6 +3,7 @@ import { allItems, temporaryBuffsFromRewards } from '../character-sheet/data.js'
 import { slugifyId } from '../utils/slug.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 
 /**
  * Check if an item is acquired and its status (equipped or in inventory)
@@ -35,7 +36,7 @@ function getItemStatus(itemName) {
 function getBorderImage(baseurl, isEquipped) {
     // border-7 for obtained (inventory), border-9 for equipped
     const borderNum = isEquipped ? 9 : 7;
-    return `${baseurl}/assets/images/borders/border-${borderNum}.PNG`;
+    return toLocalOrCdnUrl(`assets/images/borders/border-${borderNum}.PNG`, baseurl);
 }
 
 function createRewardCard(baseurl, name, item, status = { isAcquired: false, isEquipped: false }) {
@@ -92,7 +93,9 @@ function createRewardCard(baseurl, name, item, status = { isAcquired: false, isE
     const imageDiv = document.createElement('div');
     imageDiv.className = 'reward-image';
     const img = document.createElement('img');
-    img.src = `${baseurl}/${item.img}`;
+    img.src = toLocalOrCdnUrl(item.img, baseurl);
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.alt = name;
     imageDiv.appendChild(img);
     inner.appendChild(imageDiv);
@@ -160,7 +163,9 @@ function createTempBuffCard(baseurl, name, buff, status = { isAcquired: false, i
     imageDiv.className = 'reward-image';
     const img = document.createElement('img');
     // Use conventional image path by slug; existing assets follow this pattern
-    img.src = `${baseurl}/assets/images/rewards/${slug}.png`;
+    img.src = toLocalOrCdnUrl(`assets/images/rewards/${slug}.png`, baseurl);
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.alt = name;
     imageDiv.appendChild(img);
     inner.appendChild(imageDiv);

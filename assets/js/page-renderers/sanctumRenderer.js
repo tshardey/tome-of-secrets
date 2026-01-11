@@ -1,5 +1,6 @@
 import { sanctumBenefits } from '../character-sheet/data.js';
 import { slugifyId } from '../utils/slug.js';
+import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 
 function getSanctumHeroImage(name) {
     const mapping = {
@@ -16,7 +17,7 @@ function createSanctumHero(baseurl, name) {
 
     const hero = document.createElement('div');
     hero.className = 'sanctum-hero';
-    hero.style.backgroundImage = `url(${baseurl}/assets/images/${heroImage})`;
+    hero.style.backgroundImage = `url(${toLocalOrCdnUrl(`assets/images/${heroImage}`, baseurl)})`;
 
     return hero;
 }

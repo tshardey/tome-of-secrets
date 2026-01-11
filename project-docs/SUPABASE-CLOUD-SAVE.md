@@ -103,6 +103,10 @@ This repo builds via `.github/workflows/jekyll.yml`. Configure these **repositor
 - `SUPABASE_URL` = your Supabase project URL (e.g. `https://<ref>.supabase.co`)
 - `SUPABASE_PUBLISHABLE_KEY` = your Supabase publishable key (`sb_publishable_...`)
 
+Optional (for serving images from a CDN / Supabase Storage public bucket):
+
+- `IMAGES_CDN_BASE` = repository **variable** (not secret), e.g. `https://<ref>.supabase.co/storage/v1/object/public/tome-of-secrets-images`
+
 The workflow writes a temporary `_config.supabase.yml` during the build and runs:
 
 - `bundle exec jekyll build --config _config.yml,_config.supabase.yml`

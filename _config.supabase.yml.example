@@ -7,4 +7,9 @@
 supabase_url: "https://YOUR_PROJECT_REF.supabase.co"
 supabase_publishable_key: "sb_publishable_..."
 
+# Optional: serve images from a CDN base (e.g., Supabase Storage public bucket)
+# Example:
+#   https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/tome-of-secrets-images
+images_cdn_base: ""
+
 

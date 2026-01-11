@@ -12,6 +12,7 @@ import { formatReceiptTooltip, calculateActiveQuestReceipt } from '../services/Q
 import { createQuestRowViewModel } from '../viewModels/questViewModel.js';
 import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
 import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
+import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
 
 /**
  * Pure rendering function for quest row - accepts view model
@@ -136,7 +137,9 @@ export function renderItemCard(item, index, options = {}) {
     // Item image
     if (item.img) {
         const img = createElement('img', { 
-            src: escapeHtml(item.img), 
+            src: escapeHtml(toCdnImageUrlIfConfigured(item.img)), 
+            loading: 'lazy',
+            decoding: 'async',
             alt: escapeHtml(item.name || '') 
         });
         card.appendChild(img);
@@ -563,7 +566,7 @@ export function renderQuestCard(quest, index, listType = 'active') {
             if (quest.isEncounter && quest.encounterName) {
                 // Encounter quest - use encounter image
                 const filename = getEncounterImageFilename(quest.encounterName);
-                cardImage = `assets/images/encounters/${filename}`;
+                cardImage = toCdnImageUrlIfConfigured(`assets/images/encounters/${filename}`);
             } else {
                 // Room challenge quest - use room card image
                 cardImage = getDungeonRoomCardImage(roomData);
@@ -573,6 +576,8 @@ export function renderQuestCard(quest, index, listType = 'active') {
                 const imageSection = createElement('div', { class: 'quest-card-image-section' });
                 const img = createElement('img', {
                     src: cardImage,
+                    loading: 'lazy',
+                    decoding: 'async',
                     alt: quest.isEncounter ? escapeHtml(quest.encounterName || 'Encounter') : escapeHtml(roomData.name || 'Room'),
                     class: 'quest-card-dungeon-image'
                 });
@@ -625,7 +630,9 @@ export function renderQuestCard(quest, index, listType = 'active') {
             if (itemImg) {
                 const itemImage = createElement('img', {
                     class: 'reward-item-image',
-                    src: itemImg,
+                    src: toCdnImageUrlIfConfigured(itemImg),
+                    loading: 'lazy',
+                    decoding: 'async',
                     alt: escapeHtml(itemName),
                     title: escapeHtml(itemName)
                 });

@@ -64,6 +64,9 @@ jobs:
           cat > _config.supabase.yml << 'EOF'
           supabase_url: "${{ secrets.SUPABASE_URL }}"
           supabase_publishable_key: "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
+          # Optional: images CDN base (e.g., Supabase Storage public bucket URL)
+          # Prefer repository variables for non-secret values.
+          images_cdn_base: "${{ vars.IMAGES_CDN_BASE }}"
           EOF
           echo "Wrote _config.supabase.yml (values hidden)."
       

@@ -8,6 +8,7 @@ import * as data from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
 import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
+import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
 
 /**
  * Derive card image path from encounter data
@@ -19,7 +20,7 @@ function getEncounterCardImage(encounterName) {
     
     // Use image map to get correct filename
     const filename = getEncounterImageFilename(encounterName);
-    return `assets/images/encounters/${filename}`;
+    return toCdnImageUrlIfConfigured(`assets/images/encounters/${filename}`);
 }
 
 /**
