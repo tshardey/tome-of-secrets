@@ -24,6 +24,21 @@ function getEncounterCardImage(encounterName) {
 }
 
 /**
+ * Extract the room/encounter name from a prompt string
+ * e.g., "The Archivist's Riddle: Read a book..." -> "The Archivist's Riddle"
+ * @param {string} prompt - Quest prompt
+ * @returns {string|null} Extracted name or null
+ */
+function extractNameFromPrompt(prompt) {
+    if (!prompt || typeof prompt !== 'string') return null;
+    const colonIndex = prompt.indexOf(':');
+    if (colonIndex > 0) {
+        return prompt.substring(0, colonIndex).trim();
+    }
+    return null;
+}
+
+/**
  * Get room data for a quest
  * @param {Object} quest - Quest object
  * @returns {{roomData: Object|null, roomNumber: string|null}} Room data and room number
@@ -37,11 +52,18 @@ function getRoomDataForQuest(quest) {
     
     // Fallback: search all rooms by matching prompt text (for legacy quests)
     if (quest.prompt && data.dungeonRooms) {
+        const extractedName = extractNameFromPrompt(quest.prompt);
+        
         for (const roomNumber in data.dungeonRooms) {
             const room = data.dungeonRooms[roomNumber];
             
-            // Check if prompt matches room challenge
+            // Check if prompt matches room challenge exactly
             if (room.challenge === quest.prompt) {
+                return { roomData: room, roomNumber };
+            }
+            
+            // Check if extracted name matches room name (handles reward value changes)
+            if (extractedName && room.name === extractedName) {
                 return { roomData: room, roomNumber };
             }
             
@@ -50,6 +72,10 @@ function getRoomDataForQuest(quest) {
                 for (const encounterName in room.encounters) {
                     const encounter = room.encounters[encounterName];
                     if (encounter.befriend === quest.prompt || encounter.defeat === quest.prompt) {
+                        return { roomData: room, roomNumber };
+                    }
+                    // Also check by extracted encounter name
+                    if (extractedName && encounterName === extractedName) {
                         return { roomData: room, roomNumber };
                     }
                 }
@@ -74,11 +100,20 @@ function getEncounterDataForQuest(quest, roomData) {
         return { encounterData, encounterName: quest.encounterName };
     }
     
-    // Fallback: search by prompt text (for legacy quests)
+    // Fallback: search by prompt text or extracted name (for legacy quests)
     if (quest.prompt && roomData && roomData.encounters) {
+        const extractedName = extractNameFromPrompt(quest.prompt);
+        
         for (const encounterName in roomData.encounters) {
             const encounter = roomData.encounters[encounterName];
+            // Exact prompt match
             if (encounter.befriend === quest.prompt || encounter.defeat === quest.prompt) {
+                const encountersDetailed = roomData.encountersDetailed || [];
+                const encounterData = encountersDetailed.find(enc => enc.name === encounterName) || null;
+                return { encounterData, encounterName };
+            }
+            // Match by extracted name (handles reward value changes in prompts)
+            if (extractedName && encounterName === extractedName) {
                 const encountersDetailed = roomData.encountersDetailed || [];
                 const encounterData = encountersDetailed.find(enc => enc.name === encounterName) || null;
                 return { encounterData, encounterName };

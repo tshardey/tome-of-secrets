@@ -15,6 +15,53 @@ import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
 import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
 
 /**
+ * Extract name from a quest prompt (e.g., "The Archivist's Riddle: Read..." -> "The Archivist's Riddle")
+ * @param {string} prompt - Quest prompt
+ * @returns {string|null} Extracted name or null
+ */
+function extractNameFromPrompt(prompt) {
+    if (!prompt || typeof prompt !== 'string') return null;
+    const colonIndex = prompt.indexOf(':');
+    if (colonIndex > 0) {
+        return prompt.substring(0, colonIndex).trim();
+    }
+    return null;
+}
+
+/**
+ * Find room data by searching all rooms for a prompt match (for legacy quests without roomNumber)
+ * @param {string} prompt - Quest prompt
+ * @returns {{roomData: Object|null, roomNumber: string|null, encounterName: string|null}}
+ */
+function findRoomByPrompt(prompt) {
+    if (!prompt || !data.dungeonRooms) return { roomData: null, roomNumber: null, encounterName: null };
+    
+    const extractedName = extractNameFromPrompt(prompt);
+    
+    for (const roomNumber in data.dungeonRooms) {
+        const room = data.dungeonRooms[roomNumber];
+        
+        // Check if prompt matches room challenge or room name
+        if (room.challenge === prompt || (extractedName && room.name === extractedName)) {
+            return { roomData: room, roomNumber, encounterName: null };
+        }
+        
+        // Check encounters
+        if (room.encounters) {
+            for (const encounterName in room.encounters) {
+                const encounter = room.encounters[encounterName];
+                if (encounter.befriend === prompt || encounter.defeat === prompt || 
+                    (extractedName && encounterName === extractedName)) {
+                    return { roomData: room, roomNumber, encounterName };
+                }
+            }
+        }
+    }
+    
+    return { roomData: null, roomNumber: null, encounterName: null };
+}
+
+/**
  * Pure rendering function for quest row - accepts view model
  * @param {Object} viewModel - Quest row view model from createQuestRowViewModel
  * @returns {HTMLTableRowElement} The rendered row element
@@ -558,14 +605,28 @@ export function renderQuestCard(quest, index, listType = 'active') {
     }
 
     // Dungeon card image (for dungeon quests)
-    if (quest.type === '♠ Dungeon Crawl' && quest.roomNumber) {
-        const roomData = data.dungeonRooms?.[quest.roomNumber];
+    if (quest.type === '♠ Dungeon Crawl') {
+        // Try to get room data - primary from roomNumber, fallback to prompt matching
+        let roomData = quest.roomNumber ? data.dungeonRooms?.[quest.roomNumber] : null;
+        let encounterName = quest.encounterName;
+        let isEncounter = quest.isEncounter;
+        
+        // Fallback for legacy quests without roomNumber
+        if (!roomData && quest.prompt) {
+            const found = findRoomByPrompt(quest.prompt);
+            roomData = found.roomData;
+            if (found.encounterName) {
+                encounterName = found.encounterName;
+                isEncounter = true;
+            }
+        }
+        
         if (roomData) {
             let cardImage = null;
             
-            if (quest.isEncounter && quest.encounterName) {
+            if (isEncounter && encounterName) {
                 // Encounter quest - use encounter image
-                const filename = getEncounterImageFilename(quest.encounterName);
+                const filename = getEncounterImageFilename(encounterName);
                 cardImage = toCdnImageUrlIfConfigured(`assets/images/encounters/${filename}`);
             } else {
                 // Room challenge quest - use room card image
@@ -578,7 +639,7 @@ export function renderQuestCard(quest, index, listType = 'active') {
                     src: cardImage,
                     loading: 'lazy',
                     decoding: 'async',
-                    alt: quest.isEncounter ? escapeHtml(quest.encounterName || 'Encounter') : escapeHtml(roomData.name || 'Room'),
+                    alt: isEncounter ? escapeHtml(encounterName || 'Encounter') : escapeHtml(roomData.name || 'Room'),
                     class: 'quest-card-dungeon-image'
                 });
                 imageSection.appendChild(img);
@@ -749,4 +810,3 @@ function createActionButton(text, className, index, extraAttrs = {}) {
     
     return button;
 }
-
