@@ -68,14 +68,15 @@ export function isGenreQuestActive(questKey, activeQuests) {
 
 /**
  * Get available genre quests that can be drawn
- * Only includes quests for selected genres, and excludes currently active quests.
- * Unlike dungeon rooms and side quests, genre quests are REPEATABLE - they can be
- * done multiple times, so we don't filter out completed quests.
+ * Only includes quests for selected genres.
+ * Unlike dungeon rooms and side quests, genre quests are FULLY REPEATABLE - 
+ * players can read multiple books in the same genre in a month, so we don't
+ * filter out completed OR active quests. All genre quests for selected genres
+ * are always available.
  * @param {Object} state - Character state object
  * @returns {Array<Object>} Array of available quest objects with their keys
  */
 export function getAvailableGenreQuests(state) {
-    const activeQuests = state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
     const selectedGenres = state[STORAGE_KEYS.SELECTED_GENRES] || [];
     const availableQuests = [];
     
@@ -86,7 +87,7 @@ export function getAvailableGenreQuests(state) {
         return availableQuests;
     }
     
-    // Check each genre quest
+    // Check each genre quest - include all quests for selected genres
     for (const questKey in data.genreQuests) {
         const quest = data.genreQuests[questKey];
         
@@ -95,16 +96,11 @@ export function getAvailableGenreQuests(state) {
             continue;
         }
         
-        const isActive = isGenreQuestActive(questKey, activeQuests);
-        
-        // Genre quests are repeatable - only exclude if currently active
-        // (to prevent having the same quest twice in active queue)
-        if (!isActive) {
-            availableQuests.push({
-                key: questKey,
-                ...quest
-            });
-        }
+        // Genre quests are always available - can have multiple active at once
+        availableQuests.push({
+            key: questKey,
+            ...quest
+        });
     }
     
     return availableQuests;

@@ -179,7 +179,7 @@ describe('GenreQuestDeckService', () => {
       expect(result.map(q => q.key)).toEqual(['1', '2', '3']);
     });
 
-    it('excludes active quests', () => {
+    it('does NOT exclude active quests (can have multiple of same genre active)', () => {
       const state = {
         [STORAGE_KEYS.SELECTED_GENRES]: ['Fantasy', 'Mystery'],
         [STORAGE_KEYS.COMPLETED_QUESTS]: [],
@@ -192,14 +192,12 @@ describe('GenreQuestDeckService', () => {
       };
 
       const result = GenreQuestDeckService.getAvailableGenreQuests(state);
-      // When a Fantasy quest is active, all Fantasy quests are excluded (fallback matching by genre name)
-      expect(result).toHaveLength(1);
-      expect(result.map(q => q.key)).toEqual(['2']);
-      expect(result.find(q => q.key === '1')).toBeUndefined();
-      expect(result.find(q => q.key === '3')).toBeUndefined();
+      // Genre quests are fully repeatable - can have multiple active at once
+      expect(result).toHaveLength(3);
+      expect(result.map(q => q.key)).toEqual(['1', '2', '3']);
     });
 
-    it('excludes active quests but allows completed quests (genre quests are repeatable)', () => {
+    it('includes all selected genre quests regardless of active or completed status', () => {
       const state = {
         [STORAGE_KEYS.SELECTED_GENRES]: ['Fantasy', 'Mystery'],
         [STORAGE_KEYS.COMPLETED_QUESTS]: [
@@ -217,10 +215,9 @@ describe('GenreQuestDeckService', () => {
       };
 
       const result = GenreQuestDeckService.getAvailableGenreQuests(state);
-      // Fantasy quests are available (completed quests can be repeated)
-      // Mystery quests excluded (currently active)
-      expect(result).toHaveLength(2);
-      expect(result.map(q => q.key)).toEqual(['1', '3']);
+      // Genre quests are fully repeatable - all selected genres are always available
+      expect(result).toHaveLength(3);
+      expect(result.map(q => q.key)).toEqual(['1', '2', '3']);
     });
 
     it('returns empty array when genreQuests data is missing', () => {
