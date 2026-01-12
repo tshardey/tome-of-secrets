@@ -452,14 +452,15 @@ export function renderCompletedQuests() {
     const genreQuestsContainer = container.querySelector('#genre-quests-archive-container');
     const sideQuestsContainer = container.querySelector('#side-quests-archive-container');
     const cardsContainer = container.querySelector('.quest-cards-container');
-    if (!dungeonRoomsContainer || !dungeonEncountersContainer || !genreQuestsContainer || !sideQuestsContainer || !cardsContainer) return;
+    // Only require essential containers - genre/side quest containers are optional (for backwards compatibility)
+    if (!dungeonRoomsContainer || !dungeonEncountersContainer || !cardsContainer) return;
     
-    // Clear containers
-    clearElement(dungeonRoomsContainer);
-    clearElement(dungeonEncountersContainer);
-    clearElement(genreQuestsContainer);
-    clearElement(sideQuestsContainer);
-    clearElement(cardsContainer);
+    // Clear containers (only clear if they exist)
+    if (dungeonRoomsContainer) clearElement(dungeonRoomsContainer);
+    if (dungeonEncountersContainer) clearElement(dungeonEncountersContainer);
+    if (genreQuestsContainer) clearElement(genreQuestsContainer);
+    if (sideQuestsContainer) clearElement(sideQuestsContainer);
+    if (cardsContainer) clearElement(cardsContainer);
     
     // Get background and wizard school from DOM for receipt calculations
     const bgSelect = document.getElementById('keeperBackground');
@@ -513,9 +514,9 @@ export function renderCompletedQuests() {
         });
     }
     
-    // Render genre quest cards
-    const genreViewModels = createGenreQuestArchiveCardsViewModel(genreQuests);
-    if (genreViewModels.length > 0) {
+    // Render genre quest cards (if container exists, otherwise fall back to other quests)
+    if (genreQuestsContainer && genreQuests.length > 0) {
+        const genreViewModels = createGenreQuestArchiveCardsViewModel(genreQuests);
         genreViewModels.forEach((viewModel) => {
             // Find the original index in completedQuests array
             const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
@@ -524,9 +525,9 @@ export function renderCompletedQuests() {
         });
     }
     
-    // Render side quest cards
-    const sideViewModels = createSideQuestArchiveCardsViewModel(sideQuests);
-    if (sideViewModels.length > 0) {
+    // Render side quest cards (if container exists, otherwise fall back to other quests)
+    if (sideQuestsContainer && sideQuests.length > 0) {
+        const sideViewModels = createSideQuestArchiveCardsViewModel(sideQuests);
         sideViewModels.forEach((viewModel) => {
             // Find the original index in completedQuests array
             const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
@@ -535,10 +536,19 @@ export function renderCompletedQuests() {
         });
     }
     
-    // Render other quest cards
-    if (otherQuests.length > 0) {
+    // Render other quest cards (includes genre/side quests if their containers don't exist)
+    // If specialized containers don't exist, render genre and side quests in the "other quests" container
+    const questsToRenderInOther = genreQuestsContainer && sideQuestsContainer 
+        ? otherQuests 
+        : [
+            ...otherQuests, 
+            ...(!genreQuestsContainer ? genreQuests : []), 
+            ...(!sideQuestsContainer ? sideQuests : [])
+        ];
+    
+    if (questsToRenderInOther.length > 0) {
         // Create view models for other quests (need to map to original indices)
-        const otherViewModels = otherQuests.map(quest => {
+        const otherViewModels = questsToRenderInOther.map(quest => {
             const originalIndex = completedQuests.findIndex(q => q === quest);
             const viewModels = createQuestListViewModel([quest], 'completed', background, wizardSchool);
             return { ...viewModels[0], index: originalIndex };
