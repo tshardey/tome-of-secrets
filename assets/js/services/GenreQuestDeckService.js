@@ -68,12 +68,13 @@ export function isGenreQuestActive(questKey, activeQuests) {
 
 /**
  * Get available genre quests that can be drawn
- * Only includes quests for selected genres, and excludes completed/active quests
+ * Only includes quests for selected genres, and excludes currently active quests.
+ * Unlike dungeon rooms and side quests, genre quests are REPEATABLE - they can be
+ * done multiple times, so we don't filter out completed quests.
  * @param {Object} state - Character state object
  * @returns {Array<Object>} Array of available quest objects with their keys
  */
 export function getAvailableGenreQuests(state) {
-    const completedQuests = state[STORAGE_KEYS.COMPLETED_QUESTS] || [];
     const activeQuests = state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
     const selectedGenres = state[STORAGE_KEYS.SELECTED_GENRES] || [];
     const availableQuests = [];
@@ -94,11 +95,11 @@ export function getAvailableGenreQuests(state) {
             continue;
         }
         
-        const isCompleted = isGenreQuestCompleted(questKey, completedQuests);
         const isActive = isGenreQuestActive(questKey, activeQuests);
         
-        // Quest is available if not completed and not active
-        if (!isCompleted && !isActive) {
+        // Genre quests are repeatable - only exclude if currently active
+        // (to prevent having the same quest twice in active queue)
+        if (!isActive) {
             availableQuests.push({
                 key: questKey,
                 ...quest

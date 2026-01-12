@@ -161,7 +161,7 @@ describe('GenreQuestDeckService', () => {
       expect(result.every(q => q.genre === 'Fantasy')).toBe(true);
     });
 
-    it('excludes completed quests', () => {
+    it('does NOT exclude completed quests (genre quests are repeatable)', () => {
       const state = {
         [STORAGE_KEYS.SELECTED_GENRES]: ['Fantasy', 'Mystery'],
         [STORAGE_KEYS.COMPLETED_QUESTS]: [
@@ -174,11 +174,9 @@ describe('GenreQuestDeckService', () => {
       };
 
       const result = GenreQuestDeckService.getAvailableGenreQuests(state);
-      // When a Fantasy quest is completed, all Fantasy quests are excluded (fallback matching by genre name)
-      expect(result).toHaveLength(1);
-      expect(result.map(q => q.key)).toEqual(['2']);
-      expect(result.find(q => q.key === '1')).toBeUndefined();
-      expect(result.find(q => q.key === '3')).toBeUndefined();
+      // Genre quests are repeatable - completed quests should still be available
+      expect(result).toHaveLength(3);
+      expect(result.map(q => q.key)).toEqual(['1', '2', '3']);
     });
 
     it('excludes active quests', () => {
@@ -201,7 +199,7 @@ describe('GenreQuestDeckService', () => {
       expect(result.find(q => q.key === '3')).toBeUndefined();
     });
 
-    it('excludes both completed and active quests', () => {
+    it('excludes active quests but allows completed quests (genre quests are repeatable)', () => {
       const state = {
         [STORAGE_KEYS.SELECTED_GENRES]: ['Fantasy', 'Mystery'],
         [STORAGE_KEYS.COMPLETED_QUESTS]: [
@@ -219,8 +217,10 @@ describe('GenreQuestDeckService', () => {
       };
 
       const result = GenreQuestDeckService.getAvailableGenreQuests(state);
-      // Fantasy quests excluded (completed), Mystery quests excluded (active)
-      expect(result).toHaveLength(0);
+      // Fantasy quests are available (completed quests can be repeated)
+      // Mystery quests excluded (currently active)
+      expect(result).toHaveLength(2);
+      expect(result.map(q => q.key)).toEqual(['1', '3']);
     });
 
     it('returns empty array when genreQuests data is missing', () => {
