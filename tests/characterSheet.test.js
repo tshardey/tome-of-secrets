@@ -1707,7 +1707,8 @@ describe('Character Sheet', () => {
       completeBtnMove.click();
 
       // Assert that the quest is now in the completed cards and the active cards are empty
-      const completedContainer = document.querySelector('#completed-quests-container .quest-cards-container');
+      // Side quests are rendered in the dedicated side-quests-archive-container
+      const completedContainer = document.querySelector('#completed-quests-container #side-quests-archive-container');
       expect(completedContainer.textContent).toContain('A Finished Story');
       const activeContainer = document.querySelector('#active-assignments-container .quest-cards-container');
       expect(activeContainer.children.length).toBe(0);
