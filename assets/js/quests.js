@@ -4,6 +4,30 @@ import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr } from './utils/helpers.js';
 import { toast } from './ui/toast.js';
 
+// Store reference to stateAdapter if available
+let stateAdapterRef = null;
+
+export function setStateAdapter(adapter) {
+    stateAdapterRef = adapter;
+}
+
+// Helper to get dice selection - uses stateAdapter if available
+function getDiceSelection() {
+    if (stateAdapterRef && stateAdapterRef.getGenreDiceSelection) {
+        return stateAdapterRef.getGenreDiceSelection();
+    }
+    return safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+}
+
+// Helper to set dice selection - uses stateAdapter if available
+function setDiceSelection(diceType) {
+    if (stateAdapterRef && stateAdapterRef.setGenreDiceSelection) {
+        stateAdapterRef.setGenreDiceSelection(diceType);
+    } else {
+        safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, diceType);
+    }
+}
+
 // Map dice types to their max values
 const DICE_LIMITS = {
     'd4': 4,
@@ -58,7 +82,7 @@ function initializeGenreSelection() {
     }
     
     // Load saved dice selection (default to d6)
-    const savedDiceSelection = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+    const savedDiceSelection = getDiceSelection();
     
     // Set dice selector value
     if (diceSelector) {
@@ -167,7 +191,7 @@ function renderCustomGenreQuests(selectedGenres = null, diceType = null) {
     }
     
     if (!diceType) {
-        diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+        diceType = getDiceSelection();
     }
     
     // Update title with dice type
@@ -209,19 +233,31 @@ function setupEventListeners() {
             const maxGenres = getMaxGenres(newDiceType);
             
             // Save dice selection
-            safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, newDiceType);
+            setDiceSelection(newDiceType);
             
             // If d20 is selected, auto-select all genres
             if (newDiceType === 'd20') {
                 const allGenres = getAllGenres();
                 const genresToAdd = allGenres.filter(genre => !selectedGenres.includes(genre));
                 selectedGenres.push(...genresToAdd);
-                safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+                
+                // Use stateAdapter if available to trigger events, otherwise use direct storage
+                if (stateAdapterRef) {
+                    stateAdapterRef.setSelectedGenres(selectedGenres);
+                } else {
+                    safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+                }
             } else {
                 // If switching from d20 or reducing limit, trim to new max
                 if (selectedGenres.length > maxGenres) {
                     selectedGenres.splice(maxGenres);
-                    safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+                    
+                    // Use stateAdapter if available to trigger events, otherwise use direct storage
+                    if (stateAdapterRef) {
+                        stateAdapterRef.setSelectedGenres(selectedGenres);
+                    } else {
+                        safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+                    }
                 }
             }
             
@@ -237,7 +273,7 @@ function setupEventListeners() {
             const selectedGenre = genreSelector.value;
             if (!selectedGenre) return;
             
-            const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+            const diceType = getDiceSelection();
             const maxGenres = getMaxGenres(diceType);
             const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
             
@@ -257,7 +293,13 @@ function setupEventListeners() {
             }
             
             selectedGenres.push(selectedGenre);
-            safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+            
+            // Use stateAdapter if available to trigger events, otherwise use direct storage
+            if (stateAdapterRef) {
+                stateAdapterRef.setSelectedGenres(selectedGenres);
+            } else {
+                safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+            }
             
             renderSelectedGenres(selectedGenres, diceType);
             updateGenreQuestDropdown(selectedGenres);
@@ -272,7 +314,7 @@ function setupEventListeners() {
     // Handle remove genre button clicks
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-genre-btn')) {
-            const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+            const diceType = getDiceSelection();
             const index = parseIntOr(e.target.dataset.index, 0);
             const selectedGenres = safeGetJSON(STORAGE_KEYS.SELECTED_GENRES, []);
             
@@ -284,7 +326,13 @@ function setupEventListeners() {
             }
             
             selectedGenres.splice(index, 1);
-            safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+            
+            // Use stateAdapter if available to trigger events, otherwise use direct storage
+            if (stateAdapterRef) {
+                stateAdapterRef.setSelectedGenres(selectedGenres);
+            } else {
+                safeSetJSON(STORAGE_KEYS.SELECTED_GENRES, selectedGenres);
+            }
             
             renderSelectedGenres(selectedGenres, diceType);
             updateGenreQuestDropdown(selectedGenres);

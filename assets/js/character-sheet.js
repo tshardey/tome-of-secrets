@@ -24,6 +24,9 @@ import { CurseController } from './controllers/CurseController.js';
 import { BuffController } from './controllers/BuffController.js';
 import { EndOfMonthController } from './controllers/EndOfMonthController.js';
 import { DungeonDeckController } from './controllers/DungeonDeckController.js';
+import { AtmosphericBuffDeckController } from './controllers/AtmosphericBuffDeckController.js';
+import { GenreQuestDeckController } from './controllers/GenreQuestDeckController.js';
+import { SideQuestDeckController } from './controllers/SideQuestDeckController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -72,6 +75,10 @@ export async function initializeCharacterSheet() {
     initializeFormPersistence(form);
 
     const stateAdapter = new StateAdapter(characterState);
+
+    // Set stateAdapter reference in quests module for event emission
+    const { setStateAdapter } = await import('./quests.js');
+    setStateAdapter(stateAdapter);
 
     // --- HELPER FUNCTIONS ---
     function initializeCompletedBooksSet() {
@@ -231,6 +238,9 @@ export async function initializeCharacterSheet() {
     const buffController = new BuffController(stateAdapter, form, dependencies);
     const endOfMonthController = new EndOfMonthController(stateAdapter, form, dependencies);
     const dungeonDeckController = new DungeonDeckController(stateAdapter, form, dependencies);
+    const atmosphericBuffDeckController = new AtmosphericBuffDeckController(stateAdapter, form, dependencies);
+    const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
+    const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
 
     // Initialize controllers
     characterController.initialize();
@@ -241,6 +251,9 @@ export async function initializeCharacterSheet() {
     buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
     dungeonDeckController.initialize();
+    atmosphericBuffDeckController.initialize();
+    genreQuestDeckController.initialize();
+    sideQuestDeckController.initialize();
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
@@ -635,7 +648,7 @@ async function initializeRollingTables() {
     // Function to render genre selection UI
     function renderGenreSelectionUI() {
         const selectedGenres = stateAdapter.getSelectedGenres();
-        const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+        const diceType = stateAdapter.getGenreDiceSelection();
         const allGenreKeys = Object.keys(allGenres);
         const DICE_LIMITS = { 'd4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20 };
         const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
@@ -758,7 +771,7 @@ async function initializeRollingTables() {
         
         function updateGenreSelectionUI() {
             const selectedGenres = stateAdapter.getSelectedGenres();
-            const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+            const diceType = stateAdapter.getGenreDiceSelection();
             const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
             const availableGenres = allGenreKeys.filter(g => !selectedGenres.includes(g));
             
@@ -813,7 +826,7 @@ async function initializeRollingTables() {
         if (diceSelector) {
             diceSelector._diceChangeHandler = () => {
                 const newDiceType = diceSelector.value;
-                safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, newDiceType);
+                stateAdapter.setGenreDiceSelection(newDiceType);
                 
                 let selectedGenres = stateAdapter.getSelectedGenres();
                 const maxGenres = newDiceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[newDiceType] || 6;
@@ -847,7 +860,7 @@ async function initializeRollingTables() {
                 if (!selectedGenre) return;
                 
                 const selectedGenres = stateAdapter.getSelectedGenres();
-                const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+                const diceType = stateAdapter.getGenreDiceSelection();
                 const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
                 
                 // Check if already at max (even if button is enabled, check again)
@@ -882,7 +895,7 @@ async function initializeRollingTables() {
                 if (!selectedGenre) return;
                 
                 const selectedGenres = stateAdapter.getSelectedGenres();
-                const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+                const diceType = stateAdapter.getGenreDiceSelection();
                 const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
                 
                 // If at max and trying to select a genre, show warning
@@ -1053,7 +1066,7 @@ async function initializeQuestInfoDrawers() {
     // Function to render genre selection UI
     function renderGenreSelectionUI() {
         const selectedGenres = stateAdapter.getSelectedGenres();
-        const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+        const diceType = stateAdapter.getGenreDiceSelection();
         const allGenreKeys = Object.keys(allGenres);
         const DICE_LIMITS = { 'd4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20 };
         const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
@@ -1116,7 +1129,7 @@ async function initializeQuestInfoDrawers() {
         
         function updateGenreSelectionUI() {
             const selectedGenres = stateAdapter.getSelectedGenres();
-            const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+            const diceType = stateAdapter.getGenreDiceSelection();
             const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
             const availableGenres = allGenreKeys.filter(g => !selectedGenres.includes(g));
             
@@ -1144,6 +1157,7 @@ async function initializeQuestInfoDrawers() {
                         const selectedGenres = stateAdapter.getSelectedGenres();
                         selectedGenres.splice(index, 1);
                         stateAdapter.setSelectedGenres(selectedGenres);
+                        
                         updateGenreSelectionUI();
                         // Re-render table
                         const tableContainer = container.querySelector('#genre-quests-table-container');
@@ -1175,7 +1189,7 @@ async function initializeQuestInfoDrawers() {
         if (diceSelector) {
             diceSelector.addEventListener('change', () => {
                 const diceType = diceSelector.value;
-                safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, diceType);
+                stateAdapter.setGenreDiceSelection(diceType);
                 
                 const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
                 const selectedGenres = stateAdapter.getSelectedGenres();
@@ -1204,7 +1218,7 @@ async function initializeQuestInfoDrawers() {
                 if (!genreSelector || !genreSelector.value) return;
                 
                 const selectedGenres = stateAdapter.getSelectedGenres();
-                const diceType = safeGetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+                const diceType = stateAdapter.getGenreDiceSelection();
                 const maxGenres = diceType === 'd20' ? allGenreKeys.length : DICE_LIMITS[diceType] || 6;
                 
                 if (selectedGenres.length >= maxGenres) return;
@@ -1288,6 +1302,13 @@ async function initializeQuestInfoDrawers() {
             const container = document.getElementById(config.container);
             if (container) {
                 container.innerHTML = config.renderTable();
+                
+                // Remove any existing genre selection UI first to prevent duplicates
+                const existingGenreUI = drawer.querySelector('.genre-selection-overlay-section');
+                if (existingGenreUI) {
+                    existingGenreUI.remove();
+                }
+                
                 // Add genre selection UI
                 if (config.renderGenreUI) {
                     container.insertAdjacentHTML('afterend', config.renderGenreUI());
@@ -1320,6 +1341,14 @@ async function initializeQuestInfoDrawers() {
         const backdrop = document.getElementById(config.backdrop);
         const drawer = document.getElementById(config.drawer);
         if (!backdrop || !drawer) return;
+        
+        // Clean up genre selection UI when closing genre-quests drawer
+        if (drawerId === 'genre-quests') {
+            const genreUI = drawer.querySelector('.genre-selection-overlay-section');
+            if (genreUI) {
+                genreUI.remove();
+            }
+        }
         
         drawer.style.display = 'none';
         backdrop.classList.remove('active');

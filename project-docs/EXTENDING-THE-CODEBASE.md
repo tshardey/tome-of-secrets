@@ -1,6 +1,6 @@
 # Extending the Codebase
 
-**Last Updated:** 2025-01-27
+**Last Updated:** 2026-01-12
 
 This guide provides straightforward instructions for adding new features to the Tome of Secrets codebase while maintaining consistency and quality.
 
@@ -291,6 +291,40 @@ setNewFeatureData(data) {
 }
 ```
 
+### Cross-Component Communication with DOM Events
+
+**When StateAdapter events aren't reliable** (e.g., closures, drawer UIs, or separate initialization contexts), use DOM CustomEvents for guaranteed cross-component communication.
+
+**Pattern:**
+1. **Controller listens** for a custom event on `document`
+2. **UI code dispatches** the event when state changes
+
+**Example - Genre Selection Changes:**
+```javascript
+// In GenreQuestDeckController.js - Listen for the event
+initialize() {
+    // ... other initialization ...
+    
+    // Listen for DOM custom event as a reliable fallback
+    document.addEventListener('genre-selection-changed', () => {
+        this.renderDeck();
+    });
+}
+
+// In character-sheet.js - Dispatch when genres change
+stateAdapter.setSelectedGenres(selectedGenres);
+document.dispatchEvent(new CustomEvent('genre-selection-changed'));
+```
+
+**When to use DOM CustomEvents:**
+- When StateAdapter events don't propagate reliably (closure/scope issues)
+- When UI components are initialized in different contexts
+- When you need guaranteed cross-component updates
+- For drawer/modal UIs that may not share the same stateAdapter reference
+
+**Existing Custom Events:**
+- `genre-selection-changed` - Fired when genres are added/removed/changed in the drawer
+
 ---
 
 ## Adding New UI Features
@@ -309,6 +343,10 @@ The character sheet now uses a **controller-based architecture** for better main
 - `CurseController` - Curse functionality
 - `BuffController` - Temporary and atmospheric buffs
 - `EndOfMonthController` - End of month processing
+- `DungeonDeckController` - Dungeon room/encounter card draw
+- `AtmosphericBuffDeckController` - Atmospheric buff card draw
+- `GenreQuestDeckController` - Genre quest card draw
+- `SideQuestDeckController` - Side quest card draw
 
 **Adding a New Feature Controller:**
 
@@ -531,6 +569,10 @@ export function formatNewFeature(data) {
 - `SlotService.js` - Slot limit calculations
 - `AbilityService.js` - Ability filtering and formatting
 - `AtmosphericBuffService.js` - Atmospheric buff calculations
+- `DungeonDeckService.js` - Available dungeon rooms/encounters
+- `AtmosphericBuffDeckService.js` - Available atmospheric buffs for card draw
+- `GenreQuestDeckService.js` - Available genre quests based on selected genres
+- `SideQuestDeckService.js` - Available side quests for card draw
 
 ---
 
@@ -616,6 +658,10 @@ uiModule.renderNewFeature(viewModel);
 - `atmosphericBuffViewModel.js` - Atmospheric buffs UI data
 - `curseViewModel.js` - Curses UI data
 - `generalInfoViewModel.js` - Character info UI data
+- `dungeonDeckViewModel.js` - Dungeon card deck UI data
+- `dungeonArchiveCardsViewModel.js` - Archived dungeon quest cards
+- `questDeckViewModel.js` - Quest card decks (atmospheric buffs, genre quests, side quests)
+- `questArchiveCardsViewModel.js` - Archived quest cards (genre quests, side quests)
 
 ---
 
@@ -935,6 +981,89 @@ When changing data structure (schema change):
 2. Update `RewardCalculator.js` if needed
 3. Update UI to display new reward type
 4. Add tests
+
+### Adding a New Card Deck
+
+The card draw system uses a layered architecture with services, view models, renderers, and controllers.
+
+**Required Files:**
+
+1. **Service** (`/assets/js/services/NewDeckService.js`):
+   ```javascript
+   export function getAvailableCards(state) {
+       // Return array of available cards based on state
+       // Filter out completed/active items
+   }
+   ```
+
+2. **View Model** (`/assets/js/viewModels/newDeckViewModel.js`):
+   ```javascript
+   export function createNewDeckViewModel(state) {
+       const availableCards = getAvailableCards(state);
+       return {
+           available: availableCards.length > 0,
+           count: availableCards.length,
+           cards: availableCards,
+           cardbackImage: getCardbackImage()
+       };
+   }
+   ```
+
+3. **Image Utility** (if needed, in `/assets/js/utils/`):
+   ```javascript
+   export function getNewCardImage(cardData) {
+       const filename = slugifyName(cardData.name);
+       return toCdnImageUrlIfConfigured(`new-cards/${filename}.png`);
+   }
+   ```
+
+4. **Card Renderer** (add to `/assets/js/character-sheet/cardRenderer.js`):
+   ```javascript
+   export function renderNewCard(cardData) {
+       // Create and return card DOM element
+   }
+   
+   export function renderNewArchiveCard(quest, index, cardImage, title) {
+       // Create archive card with book overlay
+   }
+   ```
+
+5. **Controller** (`/assets/js/controllers/NewDeckController.js`):
+   ```javascript
+   export class NewDeckController extends BaseController {
+       initialize() {
+           // Set up deck click handlers
+           // Set up action button handlers
+           // Listen for state change events
+       }
+       
+       renderDeck() {
+           const viewModel = createNewDeckViewModel(this.stateAdapter.getState());
+           // Render deck UI
+       }
+   }
+   ```
+
+6. **HTML** (in `character-sheet.md`):
+   ```html
+   <div class="deck-group">
+       <h4 class="deck-title">♦ New Cards</h4>
+       <div id="new-deck-container" class="card-deck available"></div>
+   </div>
+   <div id="new-drawn-card-display" class="drawn-card-area"></div>
+   <button id="add-new-card-btn" class="rpg-btn rpg-btn-primary">Add Card</button>
+   ```
+
+7. **Register Controller** (in `character-sheet.js`):
+   ```javascript
+   const newDeckController = new NewDeckController(stateAdapter, form, dependencies);
+   newDeckController.initialize();
+   ```
+
+**Image Storage:**
+- Card images are stored in Supabase at `tome-of-secrets-images/{card-type}/`
+- Use `toCdnImageUrlIfConfigured()` to get the correct CDN URL
+- Cardback images use naming convention: `tos-cardback-{card-type}.png`
 
 ---
 

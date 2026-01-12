@@ -527,20 +527,50 @@ permalink: /character-sheet.html
         </div>
     </div>
 
-    <!-- Dungeon Card Draw Interface -->
-    <div class="rpg-panel rpg-dungeon-card-draw-panel">
+    <!-- Quest Card Draw Interface -->
+    <div class="rpg-panel rpg-quest-card-draw-panel">
         <div class="rpg-panel-header">
-            <h3 class="rpg-panel-title">♠ Draw Dungeon Cards</h3>
+            <h3 class="rpg-panel-title">🎴 Draw Quest Cards</h3>
         </div>
         <div class="rpg-panel-body">
-            <div class="dungeon-deck-interface">
+            <div class="quest-deck-interface">
                 <div class="deck-section">
-                    <div id="room-deck-container" class="card-deck available"></div>
-                    <div id="encounter-deck-container" class="card-deck available" style="display: none;"></div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♦ Atmospheric Buffs</h4>
+                        <div id="atmospheric-buff-deck-container" class="card-deck available"></div>
+                    </div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♥ Genre Quests</h4>
+                        <div id="genre-quest-deck-container" class="card-deck available"></div>
+                    </div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♣ Side Quests</h4>
+                        <div id="side-quest-deck-container" class="card-deck available"></div>
+                    </div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♠ Dungeon Rooms</h4>
+                        <div id="room-deck-container" class="card-deck available"></div>
+                        <div id="encounter-deck-container" class="card-deck available" style="display: none;"></div>
+                    </div>
                 </div>
-                <div id="drawn-card-display" class="drawn-card-area"></div>
+                
+                <!-- Drawn Cards Display -->
+                <div class="drawn-cards-section">
+                    <div id="atmospheric-buff-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="genre-quest-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="side-quest-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="drawn-card-display" class="drawn-card-area"></div>
+                </div>
+                
+                <!-- Action Buttons -->
                 <div class="deck-actions">
-                    <button type="button" id="add-quest-from-cards-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add to Active Quests</button>
+                    <button type="button" id="add-atmospheric-buff-quest-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Activate Atmospheric Buff</button>
+                    <button type="button" id="clear-atmospheric-buff-draw-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
+                    <button type="button" id="add-genre-quest-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add Genre Quest to Quests</button>
+                    <button type="button" id="clear-genre-quest-draw-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
+                    <button type="button" id="add-side-quest-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add Side Quest to Quests</button>
+                    <button type="button" id="clear-side-quest-draw-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
+                    <button type="button" id="add-quest-from-cards-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add Dungeon to Active Quests</button>
                     <button type="button" id="clear-drawn-cards-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
                 </div>
             </div>
@@ -647,6 +677,18 @@ permalink: /character-sheet.html
                 <div class="dungeon-archive-section">
                     <h4>Dungeon Encounters</h4>
                     <div id="dungeon-encounters-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <!-- Genre Quests Section -->
+                <div class="dungeon-archive-section">
+                    <h4>Organize the Stacks (Genre Quests)</h4>
+                    <div id="genre-quests-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <!-- Side Quests Section -->
+                <div class="dungeon-archive-section">
+                    <h4>Side Quests</h4>
+                    <div id="side-quests-archive-container" class="dungeon-archive-cards-grid"></div>
                 </div>
                 
                 <!-- Other Quests Section -->

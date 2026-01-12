@@ -488,6 +488,89 @@ describe('Render Components', () => {
             const card = renderQuestCard(quest, 0, 'completed');
             expect(card.querySelector('.quest-card-notes-scrollable')).toBeTruthy();
         });
+
+        test('should render genre quest card image', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/utils/questCardImage.js', () => ({
+                    getGenreQuestCardImage: jest.fn((genreName) => 
+                        `assets/images/genre-quests/${genreName?.toLowerCase() || 'default'}.png`
+                    ),
+                    getSideQuestCardImage: jest.fn(() => null),
+                }));
+
+                const { renderQuestCard } = require('../assets/js/character-sheet/renderComponents.js');
+
+                const quest = {
+                    type: '♥ Organize the Stacks',
+                    prompt: 'Fantasy: Read a fantasy book',
+                    book: 'Test Book',
+                    month: 'January',
+                    year: '2024',
+                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    buffs: []
+                };
+
+                const card = renderQuestCard(quest, 0, 'active');
+                const img = card.querySelector('.quest-card-dungeon-image');
+                expect(img).toBeTruthy();
+                expect(img.getAttribute('src')).toBe('assets/images/genre-quests/fantasy.png');
+                expect(img.getAttribute('alt')).toBe('Fantasy');
+            });
+        });
+
+        test('should render side quest card image', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/utils/questCardImage.js', () => ({
+                    getGenreQuestCardImage: jest.fn(() => null),
+                    getSideQuestCardImage: jest.fn((questName) => 
+                        `assets/images/side-quests/${questName?.toLowerCase().replace(/\s+/g, '-') || 'default'}.png`
+                    ),
+                }));
+
+                const { renderQuestCard } = require('../assets/js/character-sheet/renderComponents.js');
+
+                const quest = {
+                    type: '♣ Side Quest',
+                    prompt: 'The Arcane Grimoire: A mysterious quest',
+                    book: 'Test Book',
+                    month: 'January',
+                    year: '2024',
+                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    buffs: []
+                };
+
+                const card = renderQuestCard(quest, 0, 'active');
+                const img = card.querySelector('.quest-card-dungeon-image');
+                expect(img).toBeTruthy();
+                expect(img.getAttribute('src')).toBe('assets/images/side-quests/the-arcane-grimoire.png');
+                expect(img.getAttribute('alt')).toBe('The Arcane Grimoire');
+            });
+        });
+
+        test('should not render image for genre quest without colon in prompt', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/utils/questCardImage.js', () => ({
+                    getGenreQuestCardImage: jest.fn(() => null),
+                    getSideQuestCardImage: jest.fn(() => null),
+                }));
+
+                const { renderQuestCard } = require('../assets/js/character-sheet/renderComponents.js');
+
+                const quest = {
+                    type: '♥ Organize the Stacks',
+                    prompt: 'No colon in prompt',
+                    book: 'Test Book',
+                    month: 'January',
+                    year: '2024',
+                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    buffs: []
+                };
+
+                const card = renderQuestCard(quest, 0, 'active');
+                const img = card.querySelector('.quest-card-dungeon-image');
+                expect(img).toBeFalsy();
+            });
+        });
     });
 
     describe('renderItemCard', () => {

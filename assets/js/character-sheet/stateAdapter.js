@@ -146,19 +146,31 @@ export class StateAdapter {
 
     setSelectedGenres(genres) {
         const sanitized = sanitizeGenreList(genres);
-        const previous = this.getSelectedGenres();
 
         this.state[STORAGE_KEYS.SELECTED_GENRES] = sanitized;
         void setStateKey(STORAGE_KEYS.SELECTED_GENRES, sanitized);
 
-        if (!arraysEqual(previous, sanitized)) {
-            this.emit(EVENTS.SELECTED_GENRES_CHANGED, this.getSelectedGenres());
-        }
+        // Always emit event to ensure UI updates
+        this.emit(EVENTS.SELECTED_GENRES_CHANGED, this.getSelectedGenres());
         return this.getSelectedGenres();
     }
 
     clearSelectedGenres() {
         return this.setSelectedGenres([]);
+    }
+
+    getGenreDiceSelection() {
+        return this.state[STORAGE_KEYS.GENRE_DICE_SELECTION] || 'd6';
+    }
+
+    setGenreDiceSelection(diceType) {
+        const validDice = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+        const sanitized = validDice.includes(diceType) ? diceType : 'd6';
+        
+        this.state[STORAGE_KEYS.GENRE_DICE_SELECTION] = sanitized;
+        void setStateKey(STORAGE_KEYS.GENRE_DICE_SELECTION, sanitized);
+        
+        return sanitized;
     }
 
     syncSelectedGenresFromStorage() {
