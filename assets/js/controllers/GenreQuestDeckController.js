@@ -154,30 +154,10 @@ export class GenreQuestDeckController extends BaseController {
     }
 
     /**
-     * Check if a quest already exists in active assignments
-     * @param {Object} quest - Quest object to check
-     * @param {Array} activeQuests - Array of active quest objects
-     * @returns {boolean} True if quest already exists
-     */
-    isQuestDuplicate(quest, activeQuests) {
-        for (const existingQuest of activeQuests) {
-            if (existingQuest.type !== quest.type) continue;
-            
-            // Match by prompt
-            if (quest.prompt && existingQuest.prompt && quest.prompt === existingQuest.prompt) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Handle "Add Quest" button - create quest from drawn card
      */
     handleAddQuestFromCard() {
         if (!this.drawnQuest) return;
-
-        const activeQuests = characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
         
         // Build prompt: genre + description
         const prompt = `${this.drawnQuest.genre}: ${this.drawnQuest.description}`;
@@ -191,11 +171,8 @@ export class GenreQuestDeckController extends BaseController {
             buffs: []
         };
 
-        // Check if quest is duplicate
-        if (this.isQuestDuplicate(quest, activeQuests)) {
-            toast.warning('This genre quest is already in your quest log.');
-            return;
-        }
+        // Genre quests are fully repeatable - no duplicate check needed
+        // Players can read multiple books in the same genre
 
         // Convert rewards to JSON (for storage)
         const questJSON = {
