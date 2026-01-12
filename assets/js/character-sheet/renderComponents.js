@@ -12,6 +12,7 @@ import { formatReceiptTooltip, calculateActiveQuestReceipt } from '../services/Q
 import { createQuestRowViewModel } from '../viewModels/questViewModel.js';
 import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
 import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
+import { getGenreQuestCardImage, getSideQuestCardImage } from '../utils/questCardImage.js';
 import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
 
 /**
@@ -604,7 +605,10 @@ export function renderQuestCard(quest, index, listType = 'active') {
         card.appendChild(promptSection);
     }
 
-    // Dungeon card image (for dungeon quests)
+    // Quest card image (for dungeon, genre, and side quests)
+    let cardImage = null;
+    let cardImageAlt = null;
+    
     if (quest.type === '♠ Dungeon Crawl') {
         // Try to get room data - primary from roomNumber, fallback to prompt matching
         let roomData = quest.roomNumber ? data.dungeonRooms?.[quest.roomNumber] : null;
@@ -622,30 +626,51 @@ export function renderQuestCard(quest, index, listType = 'active') {
         }
         
         if (roomData) {
-            let cardImage = null;
-            
             if (isEncounter && encounterName) {
                 // Encounter quest - use encounter image
                 const filename = getEncounterImageFilename(encounterName);
                 cardImage = toCdnImageUrlIfConfigured(`assets/images/encounters/${filename}`);
+                cardImageAlt = encounterName || 'Encounter';
             } else {
                 // Room challenge quest - use room card image
                 cardImage = getDungeonRoomCardImage(roomData);
-            }
-            
-            if (cardImage) {
-                const imageSection = createElement('div', { class: 'quest-card-image-section' });
-                const img = createElement('img', {
-                    src: cardImage,
-                    loading: 'lazy',
-                    decoding: 'async',
-                    alt: isEncounter ? escapeHtml(encounterName || 'Encounter') : escapeHtml(roomData.name || 'Room'),
-                    class: 'quest-card-dungeon-image'
-                });
-                imageSection.appendChild(img);
-                card.appendChild(imageSection);
+                cardImageAlt = roomData.name || 'Room';
             }
         }
+    } else if (quest.type === '♥ Organize the Stacks') {
+        // Genre quest - extract genre name from prompt (format: "Genre: description")
+        if (quest.prompt) {
+            const colonIndex = quest.prompt.indexOf(':');
+            if (colonIndex > 0) {
+                const genreName = quest.prompt.substring(0, colonIndex).trim();
+                cardImage = getGenreQuestCardImage(genreName);
+                cardImageAlt = genreName || 'Genre Quest';
+            }
+        }
+    } else if (quest.type === '♣ Side Quest') {
+        // Side quest - extract quest name from prompt (format: "Name: prompt")
+        if (quest.prompt) {
+            const colonIndex = quest.prompt.indexOf(':');
+            if (colonIndex > 0) {
+                const questName = quest.prompt.substring(0, colonIndex).trim();
+                cardImage = getSideQuestCardImage(questName);
+                cardImageAlt = questName || 'Side Quest';
+            }
+        }
+    }
+    
+    // Render card image if available
+    if (cardImage) {
+        const imageSection = createElement('div', { class: 'quest-card-image-section' });
+        const img = createElement('img', {
+            src: cardImage,
+            loading: 'lazy',
+            decoding: 'async',
+            alt: escapeHtml(cardImageAlt || 'Quest card'),
+            class: 'quest-card-dungeon-image'
+        });
+        imageSection.appendChild(img);
+        card.appendChild(imageSection);
     }
     
     // Rewards section

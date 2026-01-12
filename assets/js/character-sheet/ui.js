@@ -20,7 +20,8 @@ import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
 import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
 import { createQuestListViewModel } from '../viewModels/questViewModel.js';
 import { createDungeonArchiveCardsViewModel } from '../viewModels/dungeonArchiveCardsViewModel.js';
-import { renderDungeonArchiveCard } from './cardRenderer.js';
+import { renderDungeonArchiveCard, renderQuestArchiveCard } from './cardRenderer.js';
+import { createGenreQuestArchiveCardsViewModel, createSideQuestArchiveCardsViewModel } from '../viewModels/questArchiveCardsViewModel.js';
 import { createCurseListViewModel } from '../viewModels/curseViewModel.js';
 import { createAbilityViewModel } from '../viewModels/abilityViewModel.js';
 import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffViewModel.js';
@@ -448,12 +449,16 @@ export function renderCompletedQuests() {
     // Get containers
     const dungeonRoomsContainer = container.querySelector('#dungeon-rooms-archive-container');
     const dungeonEncountersContainer = container.querySelector('#dungeon-encounters-archive-container');
+    const genreQuestsContainer = container.querySelector('#genre-quests-archive-container');
+    const sideQuestsContainer = container.querySelector('#side-quests-archive-container');
     const cardsContainer = container.querySelector('.quest-cards-container');
-    if (!dungeonRoomsContainer || !dungeonEncountersContainer || !cardsContainer) return;
+    if (!dungeonRoomsContainer || !dungeonEncountersContainer || !genreQuestsContainer || !sideQuestsContainer || !cardsContainer) return;
     
     // Clear containers
     clearElement(dungeonRoomsContainer);
     clearElement(dungeonEncountersContainer);
+    clearElement(genreQuestsContainer);
+    clearElement(sideQuestsContainer);
     clearElement(cardsContainer);
     
     // Get background and wizard school from DOM for receipt calculations
@@ -465,9 +470,15 @@ export function renderCompletedQuests() {
     // Get quests from state using storage key
     const completedQuests = characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
     
-    // Separate dungeon and other quests
+    // Separate quests by type
     const dungeonQuests = completedQuests.filter(quest => quest.type === '♠ Dungeon Crawl');
-    const otherQuests = completedQuests.filter(quest => quest.type !== '♠ Dungeon Crawl');
+    const genreQuests = completedQuests.filter(quest => quest.type === '♥ Organize the Stacks');
+    const sideQuests = completedQuests.filter(quest => quest.type === '♣ Side Quest');
+    const otherQuests = completedQuests.filter(quest => 
+        quest.type !== '♠ Dungeon Crawl' && 
+        quest.type !== '♥ Organize the Stacks' && 
+        quest.type !== '♣ Side Quest'
+    );
     
     // Create view models for all dungeon quests (handles legacy quests without roomNumber/isEncounter)
     const allDungeonViewModels = createDungeonArchiveCardsViewModel(dungeonQuests);
@@ -499,6 +510,28 @@ export function renderCompletedQuests() {
             // Click handler will be handled by delegated handler via hidden edit button
             
             dungeonEncountersContainer.appendChild(card);
+        });
+    }
+    
+    // Render genre quest cards
+    const genreViewModels = createGenreQuestArchiveCardsViewModel(genreQuests);
+    if (genreViewModels.length > 0) {
+        genreViewModels.forEach((viewModel) => {
+            // Find the original index in completedQuests array
+            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
+            const card = renderQuestArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title);
+            genreQuestsContainer.appendChild(card);
+        });
+    }
+    
+    // Render side quest cards
+    const sideViewModels = createSideQuestArchiveCardsViewModel(sideQuests);
+    if (sideViewModels.length > 0) {
+        sideViewModels.forEach((viewModel) => {
+            // Find the original index in completedQuests array
+            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
+            const card = renderQuestArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title);
+            sideQuestsContainer.appendChild(card);
         });
     }
     

@@ -26,14 +26,15 @@ describe('StateAdapter', () => {
     expect(handler).toHaveBeenCalledWith(['Fantasy', 'Mystery']);
   });
 
-  it('does not emit change event when setting identical genres', () => {
+  it('emits change event even when setting identical genres (for UI consistency)', () => {
     adapter.setSelectedGenres(['Mystery', 'Fantasy']);
     const handler = jest.fn();
     adapter.on(STATE_EVENTS.SELECTED_GENRES_CHANGED, handler);
 
     adapter.setSelectedGenres(['Mystery', 'Fantasy']);
 
-    expect(handler).not.toHaveBeenCalled();
+    // Always emit to ensure UI stays in sync
+    expect(handler).toHaveBeenCalledWith(['Mystery', 'Fantasy']);
   });
 
   it('syncSelectedGenresFromStorage hydrates state without emitting events', () => {
@@ -315,6 +316,48 @@ describe('StateAdapter', () => {
 
       expect(result).toBe(3);
       expect(state[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe(3);
+    });
+  });
+
+  describe('Genre Dice Selection', () => {
+    it('getGenreDiceSelection returns current dice selection', () => {
+      state[STORAGE_KEYS.GENRE_DICE_SELECTION] = 'd8';
+      
+      expect(adapter.getGenreDiceSelection()).toBe('d8');
+    });
+
+    it('getGenreDiceSelection returns d6 if not set', () => {
+      expect(adapter.getGenreDiceSelection()).toBe('d6');
+    });
+
+    it('setGenreDiceSelection persists valid dice type', () => {
+      const result = adapter.setGenreDiceSelection('d10');
+
+      expect(result).toBe('d10');
+      expect(state[STORAGE_KEYS.GENRE_DICE_SELECTION]).toBe('d10');
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.GENRE_DICE_SELECTION))).toBe('d10');
+    });
+
+    it('setGenreDiceSelection accepts all valid dice types', () => {
+      const validDice = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+      
+      validDice.forEach(dice => {
+        const result = adapter.setGenreDiceSelection(dice);
+        expect(result).toBe(dice);
+        expect(state[STORAGE_KEYS.GENRE_DICE_SELECTION]).toBe(dice);
+      });
+    });
+
+    it('setGenreDiceSelection defaults to d6 for invalid dice type', () => {
+      const result = adapter.setGenreDiceSelection('invalid');
+
+      expect(result).toBe('d6');
+      expect(state[STORAGE_KEYS.GENRE_DICE_SELECTION]).toBe('d6');
+    });
+
+    it('setGenreDiceSelection defaults to d6 for null/undefined', () => {
+      expect(adapter.setGenreDiceSelection(null)).toBe('d6');
+      expect(adapter.setGenreDiceSelection(undefined)).toBe('d6');
     });
   });
 });
