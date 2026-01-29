@@ -767,22 +767,15 @@ export function renderQuestCard(quest, index, listType = 'active') {
         card.appendChild(buffsSection);
     }
     
-    // Notes section (with scrollable wrapper for other quests)
+    // Notes section (with scrollable wrapper so long notes have a scrollbar)
     if (quest.notes) {
         const notesSection = createElement('div', { class: 'quest-card-notes' });
         // Decode HTML entities first, then escape for safety
         const decodedNotes = decodeHtmlEntities(quest.notes);
-        // Add scrollable wrapper for non-dungeon quests
-        const notesContent = listType === 'completed' && quest.type !== '♠ Dungeon Crawl'
-            ? createElement('div', { class: 'quest-card-notes-scrollable' })
-            : null;
-        const notesHtml = `<strong>Notes:</strong> ${escapeHtml(decodedNotes)}`;
-        if (notesContent) {
-            notesContent.innerHTML = notesHtml;
-            notesSection.appendChild(notesContent);
-        } else {
-            notesSection.innerHTML = notesHtml;
-        }
+        // Use scrollable wrapper for all quests so notes have a scrollbar when long
+        const notesContent = createElement('div', { class: 'quest-card-notes-scrollable' });
+        notesContent.innerHTML = `<strong>Notes:</strong> ${escapeHtml(decodedNotes)}`;
+        notesSection.appendChild(notesContent);
         card.appendChild(notesSection);
     }
     
