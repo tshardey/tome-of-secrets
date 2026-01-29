@@ -630,7 +630,7 @@ permalink: /character-sheet.html
                 <input type="text" id="new-quest-book-author" placeholder="Book Author (optional)">
             </div>
             <div class="form-row">
-                <input type="text" id="new-quest-notes" placeholder="Notes (optional)">
+                <textarea id="new-quest-notes" placeholder="Notes (optional)" rows="5"></textarea>
             </div>
             <div class="form-row">
                 <label style="display: block; margin-bottom: 10px;"><strong>Applicable Buffs & Items:</strong></label>
@@ -978,7 +978,7 @@ permalink: /character-sheet.html
             </div>
             <div class="form-row">
                 <label for="edit-quest-notes"><strong>Notes (optional):</strong></label>
-                <input type="text" id="edit-quest-notes" placeholder="Notes">
+                <textarea id="edit-quest-notes" placeholder="Notes" rows="5"></textarea>
             </div>
             <div class="form-row">
                 <label style="display: block; margin-bottom: 10px;"><strong>Applicable Buffs & Items:</strong></label>

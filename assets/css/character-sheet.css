@@ -401,6 +401,7 @@
 
 .quest-edit-body {
     padding: 20px;
+    padding-bottom: 120px; /* Extra padding so Save/Cancel sit above the currency (status) widget */
     flex: 1;
     overflow-y: auto;
 }
@@ -419,7 +420,8 @@
 }
 
 .quest-edit-body .form-row input,
-.quest-edit-body .form-row select {
+.quest-edit-body .form-row select,
+.quest-edit-body .form-row textarea {
     padding: 10px 12px;
     background-color: #3e352f;
     border: 1px solid #54483b;
@@ -429,15 +431,23 @@
     font-size: 1em;
 }
 
+.quest-edit-body .form-row textarea {
+    min-height: 120px;
+    resize: vertical;
+    overflow-y: auto;
+}
+
 .quest-edit-body .form-row input:focus,
-.quest-edit-body .form-row select:focus {
+.quest-edit-body .form-row select:focus,
+.quest-edit-body .form-row textarea:focus {
     outline: none;
     border-color: #b89f62;
     box-shadow: 0 0 0 2px rgba(184, 159, 98, 0.2);
 }
 
 .quest-edit-body .form-row input:disabled,
-.quest-edit-body .form-row select:disabled {
+.quest-edit-body .form-row select:disabled,
+.quest-edit-body .form-row textarea:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     background-color: #2a231d;
@@ -787,6 +797,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 8px;
+    /* Grid items will automatically stretch to match row height (default behavior) */
+    align-items: stretch;
     /* Custom scrollbar styling for dark theme */
     scrollbar-width: thin;
     scrollbar-color: rgba(184, 159, 98, 0.5) rgba(139, 115, 85, 0.1);
@@ -819,6 +831,8 @@
     flex-direction: column;
     gap: 12px;
     transition: box-shadow 0.2s ease;
+    /* Cards will automatically stretch to match the tallest card in their row */
+    /* Card naturally sizes to contain all its content - grid handles uniform row heights */
 }
 
 .quest-card:hover {
@@ -2313,7 +2327,8 @@
 }
 
 .rpg-add-quest-panel input[type="text"],
-.rpg-add-quest-panel select {
+.rpg-add-quest-panel select,
+.rpg-add-quest-panel textarea {
     padding: 10px 14px;
     background-color: rgba(42, 35, 29, 0.7);
     border: 2px solid #54483b;
@@ -2324,14 +2339,22 @@
     transition: all 0.2s ease;
 }
 
+.rpg-add-quest-panel textarea {
+    min-height: 120px;
+    resize: vertical;
+    overflow-y: auto;
+}
+
 .rpg-add-quest-panel input[type="text"]:hover,
-.rpg-add-quest-panel select:hover {
+.rpg-add-quest-panel select:hover,
+.rpg-add-quest-panel textarea:hover {
     border-color: #8b7355;
     background-color: rgba(42, 35, 29, 0.9);
 }
 
 .rpg-add-quest-panel input[type="text"]:focus,
-.rpg-add-quest-panel select:focus {
+.rpg-add-quest-panel select:focus,
+.rpg-add-quest-panel textarea:focus {
     outline: none;
     border-color: #b89f62;
     box-shadow: 0 0 0 3px rgba(184, 159, 98, 0.2);
