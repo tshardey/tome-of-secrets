@@ -17,7 +17,7 @@ vendor/bundle/
 .sass-cache/
 
 # Planning files
-planning/
+feature_planning/
 
 # Supabase local override config (contains project-specific values)
 _config.supabase.yml
