@@ -26,6 +26,7 @@ import { createCurseListViewModel } from '../viewModels/curseViewModel.js';
 import { createAbilityViewModel } from '../viewModels/abilityViewModel.js';
 import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffViewModel.js';
 import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
+import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffService.js';
 
 export function updateXpNeeded(levelInput, xpNeededInput) {
     const currentLevel = parseIntOr(levelInput?.value || levelInput, 1);
@@ -798,26 +799,30 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
         });
     });
     
-    // Add equipped items
+    // Add equipped items (filter out excluded items)
     if (characterState.equippedItems && characterState.equippedItems.length > 0) {
         characterState.equippedItems.forEach((item) => {
-            bonuses.push({
-                value: `[Item] ${item.name}`,
-                name: item.name,
-                description: item.bonus || 'Equipped item',
-                type: 'item',
-                typeLabel: 'Equipped Item',
-                itemData: allItems[item.name]
-            });
+            const itemData = allItems[item.name];
+            // Skip items that should be excluded from quest bonuses
+            if (itemData && !shouldExcludeFromQuestBonuses(itemData)) {
+                bonuses.push({
+                    value: `[Item] ${item.name}`,
+                    name: item.name,
+                    description: item.bonus || 'Equipped item',
+                    type: 'item',
+                    typeLabel: 'Equipped Item',
+                    itemData: itemData
+                });
+            }
         });
     }
     
-    // Add passive item slot items
+    // Add passive item slot items (filter out excluded items)
     const passiveItemSlots = characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
     const passiveItemsWithNames = passiveItemSlots.filter(slot => slot.itemName);
     passiveItemsWithNames.forEach((slot) => {
         const itemData = allItems[slot.itemName];
-        if (itemData && itemData.passiveBonus) {
+        if (itemData && itemData.passiveBonus && !shouldExcludeFromQuestBonuses(itemData)) {
             bonuses.push({
                 value: `[Item] ${slot.itemName}`,
                 name: slot.itemName,
@@ -829,12 +834,12 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
         }
     });
     
-    // Add passive familiar slot familiars
+    // Add passive familiar slot familiars (filter out excluded items)
     const passiveFamiliarSlots = characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
     const passiveFamiliarsWithNames = passiveFamiliarSlots.filter(slot => slot.itemName);
     passiveFamiliarsWithNames.forEach((slot) => {
         const itemData = allItems[slot.itemName];
-        if (itemData && itemData.passiveBonus) {
+        if (itemData && itemData.passiveBonus && !shouldExcludeFromQuestBonuses(itemData)) {
             bonuses.push({
                 value: `[Item] ${slot.itemName}`,
                 name: slot.itemName,

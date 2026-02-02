@@ -167,7 +167,8 @@
         },
         "passiveRewardModifier": {
             "inkDrops": 1
-        }
+        },
+        "excludeFromQuestBonuses": true
     },
     "Celestial Koi Fish": {
         "id": "celestial-koi-fish",
@@ -189,7 +190,8 @@
         "rewardModifier": {},
         "passiveRewardModifier": {
             "inkDrops": 3
-        }
+        },
+        "excludeFromQuestBonuses": true
     },
     "Pocket Dragon": {
         "id": "pocket-dragon",
@@ -217,7 +219,8 @@
         },
         "passiveRewardModifier": {
             "inkDrops": 1
-        }
+        },
+        "excludeFromQuestBonuses": true
     },
     "Mystical Moth": {
         "id": "mystical-moth",
@@ -231,7 +234,8 @@
         },
         "passiveRewardModifier": {
             "inkDrops": 1
-        }
+        },
+        "excludeFromQuestBonuses": true
     },
     "Page Sprite": {
         "id": "page-sprite",
@@ -253,7 +257,8 @@
         "type": "Quest",
         "img": "assets/images/rewards/grand-key.png",
         "bonus": "You find a master key for a special, rare quest.",
-        "rewardModifier": {}
+        "rewardModifier": {},
+        "excludeFromQuestBonuses": true
     },
     "Crystal Sprite": {
         "id": "crystal-sprite",
@@ -503,6 +508,7 @@
         "bonus": "Once per month, remove one Worn Page penalty.",
         "passiveBonus": "Once every 2 months, remove one Worn Page penalty (passive).",
         "rewardModifier": {},
-        "passiveRewardModifier": {}
+        "passiveRewardModifier": {},
+        "excludeFromQuestBonuses": true
     }
 }

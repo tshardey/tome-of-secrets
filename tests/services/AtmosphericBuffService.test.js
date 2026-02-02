@@ -19,7 +19,8 @@ import {
     isGroveTenderBuff,
     calculateTotalInkDrops,
     getAssociatedBuffs,
-    getBuffState
+    getBuffState,
+    shouldExcludeFromQuestBonuses
 } from '../../assets/js/services/AtmosphericBuffService.js';
 import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';
 
@@ -121,6 +122,82 @@ describe('AtmosphericBuffService', () => {
             const buffState = getBuffState(state, 'AnyBuff');
             expect(buffState.daysUsed).toBe(0);
             expect(buffState.isActive).toBe(false);
+        });
+    });
+
+    describe('shouldExcludeFromQuestBonuses', () => {
+        test('should return true for item with excludeFromQuestBonuses flag', () => {
+            const itemData = {
+                excludeFromQuestBonuses: true,
+                bonus: 'Some bonus',
+                passiveBonus: ''
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
+        });
+
+        test('should return true for item with type Quest', () => {
+            const itemData = {
+                type: 'Quest',
+                bonus: 'Some bonus'
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
+        });
+
+        test('should return true for item with atmospheric mention in bonus (backward compatibility)', () => {
+            const itemData = {
+                bonus: 'When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus.',
+                passiveBonus: ''
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
+        });
+
+        test('should return true for item with atmospheric mention in passiveBonus (backward compatibility)', () => {
+            const itemData = {
+                bonus: '',
+                passiveBonus: 'Atmospheric Buffs grant +3 Ink Drops (passive, not multiplied).'
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
+        });
+
+        test('should return false for item without exclusion flag or atmospheric mention', () => {
+            const itemData = {
+                bonus: 'Earn a +20 Ink Drop bonus for books in a fantasy series.',
+                passiveBonus: 'Fantasy series books grant +10 Ink Drops (passive).'
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(false);
+        });
+
+        test('should return false for null itemData', () => {
+            expect(shouldExcludeFromQuestBonuses(null)).toBe(false);
+        });
+
+        test('should return false for undefined itemData', () => {
+            expect(shouldExcludeFromQuestBonuses(undefined)).toBe(false);
+        });
+
+        test('should return false for itemData with empty strings and no exclusion flag', () => {
+            const itemData = {
+                bonus: '',
+                passiveBonus: ''
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(false);
+        });
+
+        test('should be case-insensitive for atmospheric mentions', () => {
+            const itemData = {
+                bonus: 'ATMOSPHERIC buff bonus',
+                passiveBonus: ''
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
+        });
+
+        test('should prioritize excludeFromQuestBonuses flag over other checks', () => {
+            const itemData = {
+                excludeFromQuestBonuses: false,
+                type: 'Quest',
+                bonus: 'Atmospheric buff bonus'
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(false);
         });
     });
 });

@@ -515,8 +515,32 @@ export async function initializeCharacterSheet() {
     
     // Initialize shelf books visualization
     const booksCompletedInput = document.getElementById('books-completed-month');
-    const booksCompleted = booksCompletedInput ? parseIntOr(booksCompletedInput.value, 0) : 0;
-    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+    // Sync input value from completedBooksSet to ensure it matches actual data
+    const actualBooksCount = completedBooksSet.size;
+    const inputValue = booksCompletedInput ? parseIntOr(booksCompletedInput.value, 0) : 0;
+    // Cap booksCompleted at 10 to match shelf visualization limit
+    const booksCompleted = Math.min(Math.max(inputValue, actualBooksCount), 10);
+    
+    // Update input if it was out of sync (also cap at 10)
+    if (booksCompletedInput && booksCompleted !== inputValue) {
+        booksCompletedInput.value = booksCompleted;
+    }
+    
+    let shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+    // Ensure we have enough colors for the actual book count (but don't exceed 10)
+    while (shelfColors.length < booksCompleted && shelfColors.length < 10) {
+        shelfColors.push(ui.getRandomShelfColor());
+    }
+    // Trim colors if we have more than needed
+    if (shelfColors.length > booksCompleted) {
+        shelfColors = shelfColors.slice(0, booksCompleted);
+    }
+    // Save updated colors if they changed
+    if (shelfColors.length !== safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []).length) {
+        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
+        characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
+    }
+    
     ui.renderShelfBooks(booksCompleted, shelfColors);
     
     // Handle manual changes to books completed input

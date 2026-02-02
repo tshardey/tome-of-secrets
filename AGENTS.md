@@ -45,6 +45,22 @@ The repository is organized as a standard Jekyll project.
 *   `tests/`: Contains the Jest test suite for the project's JavaScript code, primarily for the character sheet functionality.
 *   `Gemfile`: Specifies the Ruby gem dependencies for Jekyll.
 
+## Task Tracking and Planning
+
+Use **[Beads](https://github.com/steveyegge/beads)** (`bd`) for task tracking and planning. Beads is a git-backed, dependency-aware graph issue tracker for coding agents.
+
+**Required workflow:**
+
+1.  **Before starting work:** Create tasks in Beads *before* you begin implementation. Do not start coding (or content changes) until the work is represented as one or more tasks. Use `bd create "Title" -p <priority>` for each discrete piece of work and `bd dep add <child> <parent>` to link dependencies. For multi-step requests, break the work into tasks first, then pick from `bd ready` to see what is unblocked.
+2.  **When finished:** Mark tasks complete when the work is done. Close or complete each task you created (or that you were assigned) so that Beads reflects the current state and future sessions see accurate progress.
+3.  **Ongoing:** Use `bd ready` to choose next steps; update task state as you go so context persists across sessions.
+
+**Setup and reference:**
+
+*   **Initialization:** If the project does not yet use Beads, run `bd init` in the project root. (Beads is a CLI you install once system-wide; you do not clone the beads repo into this project.)
+*   **Commands:** `bd ready` — list tasks with no open blockers; `bd create "Title" -p 0` — create a task; `bd dep add <child> <parent>` — link tasks; `bd show <id>` — view task details. Close/complete tasks via the appropriate `bd` command when work is finished.
+*   **Docs:** See [Beads documentation](https://github.com/steveyegge/beads) for installation, agent workflow, and full command reference.
+
 ## Agent Capabilities and Tasks
 
 You can perform the following tasks. Always use the local development environment inside the Dev Container for running servers or tests.
@@ -128,8 +144,34 @@ The project uses Jest for testing JavaScript functionality.
 
 ## Important Directives
 
-1.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
-2.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
-3.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
-4.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
+1.  **Task tracking (Beads):** Create tasks in Beads *before* starting work and mark them complete when finished. Do not begin implementation until the work is represented as tasks; close or complete those tasks when done.
+2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
+3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
+4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
+5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
 
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds

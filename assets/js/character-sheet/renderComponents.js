@@ -792,6 +792,10 @@ export function renderQuestCard(quest, index, listType = 'active') {
         actions.appendChild(createActionButton('Discard', 'discard-quest-btn', index));
     }
     
+    if (listType === 'discarded') {
+        actions.appendChild(createActionButton('Restore', 'restore-quest-btn', index));
+    }
+    
     actions.appendChild(createActionButton('Delete', 'delete-btn', index, { 'data-list': listType === 'active' ? 'active' : listType }));
     actions.appendChild(createActionButton('Edit', 'edit-quest-btn', index, { 'data-list': listName }));
     
