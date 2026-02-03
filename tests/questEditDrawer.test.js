@@ -223,11 +223,14 @@ describe('Quest Edit Drawer', () => {
         });
 
         it('should populate buffs dropdown with equipped items', () => {
+            // Use a real item from allItems that won't be filtered out
+            // Pocket Dragon is a familiar that doesn't have excludeFromQuestBonuses flag
+            const testItemName = 'Pocket Dragon';
             // Add equipped items
             characterState.equippedItems = [{
-                name: 'Test Item',
-                bonus: '+5 Ink Drops',
-                type: 'wearable'
+                name: testItemName,
+                bonus: '+20 Ink Drops',
+                type: 'Familiar'
             }];
 
             // Add a quest
@@ -250,12 +253,15 @@ describe('Quest Edit Drawer', () => {
 
             // Check card-based buffs UI
             const container = document.getElementById('edit-quest-bonus-selection-container');
-            const card = container?.querySelector('.quest-bonus-card[data-value="[Item] Test Item"]');
+            const card = container?.querySelector(`.quest-bonus-card[data-value="[Item] ${testItemName}"]`);
             expect(card).toBeTruthy();
-            expect(card.textContent).toContain('Test Item');
+            expect(card.textContent).toContain(testItemName);
         });
 
         it('should pre-select buffs that are already on the quest', () => {
+            // Use a real item from allItems that won't be filtered out
+            const testItemName = 'Pocket Dragon';
+            
             // Add temporary buff
             characterState.temporaryBuffs = [{
                 name: 'Test Buff',
@@ -267,9 +273,9 @@ describe('Quest Edit Drawer', () => {
 
             // Add equipped item
             characterState.equippedItems = [{
-                name: 'Test Item',
-                bonus: '+5 Ink Drops',
-                type: 'wearable'
+                name: testItemName,
+                bonus: '+20 Ink Drops',
+                type: 'Familiar'
             }];
 
             // Add a quest with buffs
@@ -280,7 +286,7 @@ describe('Quest Edit Drawer', () => {
                 month: 'January',
                 year: '2024',
                 notes: '',
-                buffs: ['[Buff] Test Buff', '[Item] Test Item'],
+                buffs: ['[Buff] Test Buff', `[Item] ${testItemName}`],
                 rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
             }];
 
@@ -293,14 +299,14 @@ describe('Quest Edit Drawer', () => {
             // Check that buffs are selected (cards + hidden JSON input)
             const container = document.getElementById('edit-quest-bonus-selection-container');
             const buffCard = container?.querySelector('.quest-bonus-card[data-value="[Buff] Test Buff"]');
-            const itemCard = container?.querySelector('.quest-bonus-card[data-value="[Item] Test Item"]');
+            const itemCard = container?.querySelector(`.quest-bonus-card[data-value="[Item] ${testItemName}"]`);
             expect(buffCard?.classList.contains('selected')).toBe(true);
             expect(itemCard?.classList.contains('selected')).toBe(true);
 
             const hidden = document.getElementById('edit-quest-buffs-select');
             const selected = hidden?.value ? JSON.parse(hidden.value) : [];
             expect(selected).toContain('[Buff] Test Buff');
-            expect(selected).toContain('[Item] Test Item');
+            expect(selected).toContain(`[Item] ${testItemName}`);
         });
 
         it('should include background bonuses if keeper background is set', () => {
@@ -469,11 +475,14 @@ describe('Quest Edit Drawer', () => {
                 status: 'active'
             }];
 
+            // Use a real item from allItems that won't be filtered out
+            const testItemName = 'Pocket Dragon';
+            
             // Add equipped item
             characterState.equippedItems = [{
-                name: 'Test Item',
-                bonus: '+5 Ink Drops',
-                type: 'wearable'
+                name: testItemName,
+                bonus: '+20 Ink Drops',
+                type: 'Familiar'
             }];
 
             // Add a quest without buffs
@@ -497,7 +506,7 @@ describe('Quest Edit Drawer', () => {
             // Select buffs (card-based)
             const container = document.getElementById('edit-quest-bonus-selection-container');
             const buffCard = container?.querySelector('.quest-bonus-card[data-value="[Buff] Test Buff"]');
-            const itemCard = container?.querySelector('.quest-bonus-card[data-value="[Item] Test Item"]');
+            const itemCard = container?.querySelector(`.quest-bonus-card[data-value="[Item] ${testItemName}"]`);
             expect(buffCard).toBeTruthy();
             expect(itemCard).toBeTruthy();
             buffCard.click();
@@ -509,7 +518,7 @@ describe('Quest Edit Drawer', () => {
             // Verify buffs were updated
             const quest = characterState.activeAssignments[0];
             expect(quest.buffs).toContain('[Buff] Test Buff');
-            expect(quest.buffs).toContain('[Item] Test Item');
+            expect(quest.buffs).toContain(`[Item] ${testItemName}`);
         });
     });
 
