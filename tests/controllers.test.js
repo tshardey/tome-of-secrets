@@ -837,6 +837,183 @@ describe('Controllers', () => {
             expect(controller.resolveQuestListKey('completed')).toBeDefined();
         });
 
+        it('should restore a discarded quest to active assignments', () => {
+            const state = createEmptyCharacterState();
+            const testQuest = {
+                type: '♣ Side Quest',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book',
+                prompt: 'Test Prompt',
+                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            state[STORAGE_KEYS.DISCARDED_QUESTS] = [testQuest];
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderDiscardedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            // Simulate clicking restore button
+            const target = document.createElement('button');
+            target.classList.add('restore-quest-btn');
+            target.dataset.index = '0';
+
+            const result = controller.handleClick(target);
+
+            expect(result).toBe(true);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(realStateAdapter.getDiscardedQuests()).toHaveLength(0);
+            expect(realStateAdapter.getActiveAssignments()[0]).toEqual(testQuest);
+            expect(localDependencies.ui.renderActiveAssignments).toHaveBeenCalled();
+            expect(localDependencies.ui.renderDiscardedQuests).toHaveBeenCalled();
+            expect(localDependencies.saveState).toHaveBeenCalled();
+        });
+
+        it('should not restore quest if index is invalid', () => {
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.DISCARDED_QUESTS] = [];
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderDiscardedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            // Try to restore from empty discarded list
+            const target = document.createElement('button');
+            target.classList.add('restore-quest-btn');
+            target.dataset.index = '0';
+
+            const result = controller.handleClick(target);
+
+            expect(result).toBe(true);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
+            expect(realStateAdapter.getDiscardedQuests()).toHaveLength(0);
+        });
+
+        it('should prevent completing quest without book title', () => {
+            const toastSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+
+            const state = createEmptyCharacterState();
+            const questWithoutBook = {
+                type: '♣ Side Quest',
+                month: 'January',
+                year: '2024',
+                book: '', // Missing book title
+                prompt: 'Test Prompt',
+                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [questWithoutBook];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            // Try to complete quest without book title
+            controller.handleCompleteQuest(0);
+
+            // Quest should remain in active assignments
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(0);
+            expect(realStateAdapter.getActiveAssignments()[0]).toEqual(questWithoutBook);
+
+            // Error toast should be shown
+            expect(toastSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Please add a book title')
+            );
+
+            // UI should be re-rendered
+            expect(localDependencies.ui.renderActiveAssignments).toHaveBeenCalled();
+
+            // State should be saved (consistent with other rollback scenarios)
+            expect(localDependencies.saveState).toHaveBeenCalled();
+
+            toastSpy.mockRestore();
+        });
+
+        it('should allow completing quest with book title', () => {
+            const state = createEmptyCharacterState();
+            const questWithBook = {
+                type: '♣ Side Quest',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book Title', // Has book title
+                prompt: 'Test Prompt',
+                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                buffs: []
+            };
+
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [questWithBook];
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            // Complete quest with book title
+            controller.handleCompleteQuest(0);
+
+            // Quest should be moved to completed
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
+            expect(realStateAdapter.getCompletedQuests().length).toBeGreaterThan(0);
+        });
+
         it('should auto-detect temporary buffs from quest notes', () => {
             if (!data.temporaryBuffs || Object.keys(data.temporaryBuffs).length === 0) {
                 return;

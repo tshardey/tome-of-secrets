@@ -1,2 +1,5 @@
 # Normalize line endings to LF so all environments get consistent diffs.
 * text=auto eol=lf
+
+# Use bd merge for beads JSONL files
+.beads/issues.jsonl merge=beads

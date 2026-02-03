@@ -717,6 +717,20 @@ export class QuestController extends BaseController {
             return true;
         }
 
+        if (target.classList.contains('restore-quest-btn')) {
+            const questToRestore = stateAdapter.moveQuest(
+                STORAGE_KEYS.DISCARDED_QUESTS,
+                index,
+                STORAGE_KEYS.ACTIVE_ASSIGNMENTS
+            );
+            if (questToRestore) {
+                uiModule.renderActiveAssignments();
+                uiModule.renderDiscardedQuests();
+                this.saveState();
+            }
+            return true;
+        }
+
         if (target.classList.contains('delete-btn')) {
             const list = target.dataset.list;
             const storageKey = this.resolveQuestListKey(list);
@@ -750,8 +764,19 @@ export class QuestController extends BaseController {
         const questToMove = stateAdapter.removeQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, index);
         if (!questToMove) return;
 
-        // Check if this is a new book
+        // Validate that quest has a book title before completing
         const bookName = trimOrEmpty(questToMove.book);
+        if (!bookName) {
+            // Restore quest to active assignments
+            stateAdapter.addActiveQuests(questToMove);
+            uiModule.renderActiveAssignments();
+            this.saveState();
+            // Show error message
+            toast.error('Please add a book title to this quest before completing it. Quests without book titles will not count towards monthly totals.');
+            return;
+        }
+
+        // Check if this is a new book
         const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
         // Use the BaseQuestHandler helper to finalize rewards
