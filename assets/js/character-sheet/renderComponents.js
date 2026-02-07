@@ -547,6 +547,32 @@ export function renderQuestCard(quest, index, listType = 'active') {
     date.textContent = `${decodeHtmlEntities(quest.month || '')} ${decodeHtmlEntities(quest.year || '')}`;
     meta.appendChild(date);
     
+    // Add date tracking info (Schema v3) - show dates if available
+    if (quest.dateAdded || quest.dateCompleted) {
+        const dateInfo = createElement('div', { class: 'quest-date-info', style: 'font-size: 0.75em; color: #8a7a61; margin-top: 4px;' });
+        const dateParts = [];
+        if (quest.dateAdded) {
+            try {
+                const addedDate = new Date(quest.dateAdded);
+                dateParts.push(`Added: ${addedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
+            } catch (e) {
+                // Ignore invalid dates
+            }
+        }
+        if (quest.dateCompleted) {
+            try {
+                const completedDate = new Date(quest.dateCompleted);
+                dateParts.push(`Completed: ${completedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
+            } catch (e) {
+                // Ignore invalid dates
+            }
+        }
+        if (dateParts.length > 0) {
+            dateInfo.textContent = dateParts.join(' • ');
+            meta.appendChild(dateInfo);
+        }
+    }
+    
     // Encounter action badge
     if (encounterAction) {
         const actionBadge = createElement('span', { 

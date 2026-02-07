@@ -57,6 +57,22 @@ export function createQuestRowViewModel(quest, index, listType = 'active', backg
         ? rewards.items.map(item => decodeHtmlEntities(item)).join(', ')
         : '-';
     
+    // Format dates for display (Schema v3)
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            // Format as MM/DD/YYYY
+            return date.toLocaleDateString('en-US', { 
+                month: '2-digit', 
+                day: '2-digit', 
+                year: 'numeric' 
+            });
+        } catch (e) {
+            return '';
+        }
+    };
+    
     return {
         quest,
         index,
@@ -70,6 +86,12 @@ export function createQuestRowViewModel(quest, index, listType = 'active', backg
         book: quest.book || '',
         notes: quest.notes || '',
         buffs: buffsDisplay,
+        
+        // Date fields (Schema v3)
+        dateAdded: formatDate(quest.dateAdded),
+        dateCompleted: formatDate(quest.dateCompleted),
+        dateAddedRaw: quest.dateAdded || null,
+        dateCompletedRaw: quest.dateCompleted || null,
         
         // Rewards
         xp: formatReward(rewards.xp || 0),

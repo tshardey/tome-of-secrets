@@ -20,6 +20,8 @@ export class Quest {
      * @param {Array<string>} [data.buffs=[]] - Applied atmospheric buffs
      * @param {Object|Reward} [data.rewards] - Quest rewards
      * @param {boolean} [data.isEncounter=false] - Whether this is a dungeon encounter
+     * @param {string} [data.dateAdded=null] - ISO date string when quest was added (Schema v3)
+     * @param {string} [data.dateCompleted=null] - ISO date string when quest was completed (Schema v3)
      */
     constructor({
         type,
@@ -31,7 +33,9 @@ export class Quest {
         notes = '',
         buffs = [],
         rewards = null,
-        isEncounter = false
+        isEncounter = false,
+        dateAdded = null,
+        dateCompleted = null
     }) {
         // Validate required fields
         if (!type || typeof type !== 'string') {
@@ -56,6 +60,8 @@ export class Quest {
         this.notes = notes;
         this.buffs = Array.isArray(buffs) ? buffs : [];
         this.isEncounter = Boolean(isEncounter);
+        this.dateAdded = dateAdded || null;
+        this.dateCompleted = dateCompleted || null;
 
         // Handle rewards
         if (rewards instanceof Reward) {
@@ -125,7 +131,9 @@ export class Quest {
             notes: this.notes,
             buffs: [...this.buffs],
             rewards: this.rewards ? this.rewards.clone() : null,
-            isEncounter: this.isEncounter
+            isEncounter: this.isEncounter,
+            dateAdded: this.dateAdded,
+            dateCompleted: this.dateCompleted
         });
     }
 
@@ -144,7 +152,9 @@ export class Quest {
             notes: this.notes,
             buffs: this.buffs,
             rewards: this.rewards ? this.rewards.toJSON() : { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [], modifiedBy: [] },
-            isEncounter: this.isEncounter
+            isEncounter: this.isEncounter,
+            dateAdded: this.dateAdded,
+            dateCompleted: this.dateCompleted
         };
     }
 

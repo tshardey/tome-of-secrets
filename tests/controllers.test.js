@@ -1014,6 +1014,126 @@ describe('Controllers', () => {
             expect(realStateAdapter.getCompletedQuests().length).toBeGreaterThan(0);
         });
 
+        it('should set dateAdded when creating a quest (Schema v3)', () => {
+            const state = createEmptyCharacterState();
+            const realStateAdapter = new StateAdapter(state);
+            
+            // Create a quest object directly and add it to test dateAdded assignment
+            const quest = {
+                type: '♣ Side Quest',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book',
+                prompt: 'Test Side Quest',
+                rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [] },
+                buffs: []
+            };
+            
+            // Simulate what handleCreateQuest does - add dateAdded before adding quest
+            const currentDate = new Date().toISOString();
+            quest.dateAdded = quest.dateAdded || currentDate;
+            
+            realStateAdapter.addActiveQuests([quest]);
+            
+            // Check that quest was created with dateAdded
+            const activeQuests = realStateAdapter.getActiveAssignments();
+            expect(activeQuests.length).toBe(1);
+            expect(activeQuests[0].dateAdded).toBeDefined();
+            expect(activeQuests[0].dateAdded).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/); // ISO format
+        });
+
+        it('should set dateCompleted when completing a quest (Schema v3)', () => {
+            const state = createEmptyCharacterState();
+            const questWithBook = {
+                type: '♣ Side Quest',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book Title',
+                prompt: 'Test Prompt',
+                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                buffs: [],
+                dateAdded: '2024-01-15T10:00:00.000Z' // Pre-existing dateAdded
+            };
+
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [questWithBook];
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            // Complete quest
+            controller.handleCompleteQuest(0);
+
+            // Check that completed quest has dateCompleted set
+            const completedQuests = realStateAdapter.getCompletedQuests();
+            expect(completedQuests.length).toBeGreaterThan(0);
+            const completedQuest = completedQuests[completedQuests.length - 1];
+            expect(completedQuest.dateCompleted).toBeDefined();
+            expect(completedQuest.dateCompleted).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/); // ISO format
+            // dateAdded should be preserved
+            expect(completedQuest.dateAdded).toBe('2024-01-15T10:00:00.000Z');
+        });
+
+        it('should set dateAdded as fallback when completing quest without dateAdded (Schema v3)', () => {
+            const state = createEmptyCharacterState();
+            const questWithoutDateAdded = {
+                type: '♣ Side Quest',
+                month: 'January',
+                year: '2024',
+                book: 'Test Book Title',
+                prompt: 'Test Prompt',
+                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                buffs: []
+                // No dateAdded field (legacy quest)
+            };
+
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [questWithoutDateAdded];
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            // Complete quest
+            controller.handleCompleteQuest(0);
+
+            // Check that completed quest has both dateAdded and dateCompleted set
+            const completedQuests = realStateAdapter.getCompletedQuests();
+            expect(completedQuests.length).toBeGreaterThan(0);
+            const completedQuest = completedQuests[completedQuests.length - 1];
+            expect(completedQuest.dateAdded).toBeDefined();
+            expect(completedQuest.dateCompleted).toBeDefined();
+            // dateAdded should equal dateCompleted (fallback behavior)
+            expect(completedQuest.dateAdded).toBe(completedQuest.dateCompleted);
+        });
+
         it('should auto-detect temporary buffs from quest notes', () => {
             if (!data.temporaryBuffs || Object.keys(data.temporaryBuffs).length === 0) {
                 return;

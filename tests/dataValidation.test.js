@@ -299,6 +299,10 @@ describe('Data Validation', () => {
             const version = getStoredSchemaVersion();
             expect(version).toBeNull();
         });
+
+        test('schema version should be 3', () => {
+            expect(SCHEMA_VERSION).toBe(3);
+        });
     });
 });
 
@@ -411,27 +415,124 @@ describe('Integration: Load State with Validation and Migration', () => {
         expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].type).toBe('♥ Organize the Stacks');
     });
 
-    test('should preserve valid data during migration', () => {
-        const originalQuests = [
-            {
-                type: '♥ Organize the Stacks',
-                prompt: 'Fantasy',
-                book: 'Test Book',
-                month: 'January',
-                year: '2024',
-                status: 'active',
-                notes: 'Test notes',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
-            }
-        ];
+        test('should preserve valid data during migration', () => {
+            const originalQuests = [
+                {
+                    type: '♥ Organize the Stacks',
+                    prompt: 'Fantasy',
+                    book: 'Test Book',
+                    month: 'January',
+                    year: '2024',
+                    status: 'active',
+                    notes: 'Test notes',
+                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                }
+            ];
 
-        safeSetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, originalQuests);
-        const loaded = loadAndMigrateState();
-        const validated = validateCharacterState(loaded);
+            safeSetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, originalQuests);
+            const loaded = loadAndMigrateState();
+            const validated = validateCharacterState(loaded);
 
-        expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].book).toBe('Test Book');
-        expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].notes).toBe('Test notes');
-        expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe(15);
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].book).toBe('Test Book');
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].notes).toBe('Test notes');
+            expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe(15);
+        });
+
+        test('should handle numeric month/year values during migration (legacy data)', () => {
+            // Set schema version to 2
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '2');
+            
+            // Create quests with numeric month/year (legacy data format)
+            const questsWithNumericValues = [
+                {
+                    type: '♥ Organize the Stacks',
+                    prompt: 'Fantasy',
+                    book: 'Test Book',
+                    month: 12, // Numeric month (legacy)
+                    year: 2024, // Numeric year (legacy)
+                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                },
+                {
+                    type: '♣ Side Quest',
+                    prompt: 'Test',
+                    book: 'Test Book 2',
+                    month: 3, // Numeric month
+                    year: 2025, // Numeric year
+                    rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [], modifiedBy: [] }
+                }
+            ];
+            
+            safeSetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, questsWithNumericValues);
+            
+            // Migration should not throw TypeError when calling .trim() on numeric values
+            expect(() => {
+                const loaded = loadAndMigrateState();
+                const validated = validateCharacterState(loaded);
+            }).not.toThrow();
+            
+            const loaded = loadAndMigrateState();
+            const validated = validateCharacterState(loaded);
+            
+            // Should convert numeric months to month names during normalization
+            // Note: normalizeQuestPeriod converts numeric values to strings and normalizes them
+            const quest1 = validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0];
+            const quest2 = validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][1];
+            
+            // Numeric month 12 should be converted to "December"
+            expect(quest1.month).toBe('December');
+            expect(quest1.year).toBe('2024');
+            
+            // Numeric month 3 should be converted to "March"
+            expect(quest2.month).toBe('March');
+            expect(quest2.year).toBe('2025');
+            
+            // Should have date fields added
+            expect(quest1.dateAdded).toBeNull();
+            expect(quest1.dateCompleted).toBeNull();
+        });
+
+        test('should migrate from schema v2 to v3 (add date fields to quests)', () => {
+            // Set schema version to 2
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '2');
+            
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+                    {
+                        type: '♣ Side Quest',
+                        prompt: 'Test Prompt',
+                        book: 'Test Book',
+                        month: 'January',
+                        year: '2024',
+                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        // No dateAdded or dateCompleted (Schema v2)
+                    }
+                ],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [
+                    {
+                        type: '♥ Organize the Stacks',
+                        prompt: 'Fantasy',
+                        book: 'Completed Book',
+                        month: 'December',
+                        year: '2023',
+                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        // No dateAdded or dateCompleted (Schema v2)
+                    }
+                ],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
+            };
+
+            const migrated = migrateState(state);
+
+            // All quests should have dateAdded and dateCompleted fields (set to null for existing quests)
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].dateAdded).toBeNull();
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].dateCompleted).toBeNull();
+            
+            expect(migrated[STORAGE_KEYS.COMPLETED_QUESTS][0].dateAdded).toBeNull();
+            expect(migrated[STORAGE_KEYS.COMPLETED_QUESTS][0].dateCompleted).toBeNull();
+
+            // Other quest fields should be preserved
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].book).toBe('Test Book');
+            expect(migrated[STORAGE_KEYS.COMPLETED_QUESTS][0].book).toBe('Completed Book');
+        });
     });
-});
 

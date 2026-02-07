@@ -68,6 +68,30 @@ export async function initializeCharacterSheet() {
         });
     }
 
+    // Populate year dropdowns (for quest month/year selection)
+    const populateYearDropdown = (selectElement) => {
+        if (!selectElement) return;
+        
+        // Keep the first option (-- Select Year --) if it exists, otherwise clear
+        const firstOption = selectElement.querySelector('option[value=""]');
+        selectElement.innerHTML = firstOption ? firstOption.outerHTML : '<option value="">-- Select Year --</option>';
+        
+        // Populate years: start from 2025 (game launch year) to current year + 2 years
+        const currentYear = new Date().getFullYear();
+        const startYear = 2025; // Game launch year
+        const endYear = Math.max(currentYear + 2, startYear); // At least show current year + 2
+        
+        for (let year = startYear; year <= endYear; year++) {
+            const opt = document.createElement('option');
+            opt.value = String(year);
+            opt.textContent = String(year);
+            selectElement.appendChild(opt);
+        }
+    };
+    
+    populateYearDropdown(document.getElementById('quest-year'));
+    populateYearDropdown(document.getElementById('edit-quest-year'));
+
     // --- INITIAL LOAD (may be async due to IndexedDB-backed storage) ---
     await loadState(form);
 

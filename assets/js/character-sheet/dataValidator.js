@@ -9,12 +9,14 @@
 
 import { STORAGE_KEYS, createEmptyCharacterState } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 
 /**
  * Current schema version - increment when data structure changes
  * Version 2: Added Library Restoration Expansion fields
+ * Version 3: Added quest date tracking (dateAdded, dateCompleted)
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /**
  * Schema version key in localStorage
@@ -59,14 +61,19 @@ function validateQuest(quest, context = 'quest') {
         return null;
     }
 
+    // Handle month/year - convert numeric values to strings (legacy data support)
+    // normalizeQuestPeriod will handle the conversion, but we need to preserve numeric values here
+    const monthValue = quest.month != null ? (typeof quest.month === 'string' ? quest.month : String(quest.month)) : '';
+    const yearValue = quest.year != null ? (typeof quest.year === 'string' ? quest.year : String(quest.year)) : '';
+
     // Required fields with defaults
     const validated = {
         type: typeof quest.type === 'string' ? quest.type : '',
         prompt: typeof quest.prompt === 'string' ? quest.prompt : '',
         book: typeof quest.book === 'string' ? quest.book : '',
         bookAuthor: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
-        month: typeof quest.month === 'string' ? quest.month : '',
-        year: typeof quest.year === 'string' ? quest.year : '',
+        month: monthValue,
+        year: yearValue,
         status: typeof quest.status === 'string' ? quest.status : 'active',
         notes: typeof quest.notes === 'string' ? quest.notes : '',
         buffs: Array.isArray(quest.buffs) ? quest.buffs.filter(b => typeof b === 'string') : [],
@@ -75,8 +82,20 @@ function validateQuest(quest, context = 'quest') {
         roomNumber: quest.roomNumber || null,
         encounterName: typeof quest.encounterName === 'string' ? quest.encounterName : null,
         // Preserve restorationData for restoration project quests
-        restorationData: quest.restorationData && typeof quest.restorationData === 'object' ? quest.restorationData : null
+        restorationData: quest.restorationData && typeof quest.restorationData === 'object' ? quest.restorationData : null,
+        // Date tracking fields (Schema v3)
+        dateAdded: typeof quest.dateAdded === 'string' ? quest.dateAdded : null,
+        dateCompleted: typeof quest.dateCompleted === 'string' ? quest.dateCompleted : null
     };
+
+    // Normalize month/year if they're invalid but dates are available (Phase 2.2)
+    // This fixes quests with typos, abbreviations, numeric values, or invalid month/year values
+    const normalized = normalizeQuestPeriod(validated, PERIOD_TYPES.MONTHLY);
+    if (normalized.month !== validated.month || normalized.year !== validated.year) {
+        console.info(`Fixed invalid month/year in ${context}: "${validated.month}" "${validated.year}" -> "${normalized.month}" "${normalized.year}"`);
+        validated.month = normalized.month;
+        validated.year = normalized.year;
+    }
 
     // Warn about missing critical fields but don't fail
     if (!validated.type) {

@@ -45,7 +45,7 @@ Phase 1: Bug Fixes & Quick Wins (Foundation)
 
 Phase 2: Quest System Enhancements (Foundation for Grimoire)
   ├─ Add quest completion dates (schema v3)
-  ├─ Implement variable tracking periods
+  ├─ Ensure correct monthly TBR assignment based on quest dates
   └─ Add quest restore functionality
 
 Phase 3: Dungeon & Card Mechanics
@@ -152,6 +152,8 @@ Phase 7: Documentation Updates
 **Beads Phase Task**: `tome-of-secrets-40o`  
 **Dependencies**: Phase 1 must be complete
 
+**Note**: Phase 2.2 has been updated to focus on ensuring correct monthly TBR assignment based on quest dates, with extensible design for future period types. The implementation will be monthly-only for now, but designed to easily support weekly/quarterly/yearly periods in the future.
+
 ### 2.1 Add Quest Completion Dates (Schema v3)
 **Beads Task**: `tome-of-secrets-tj0`
 
@@ -173,27 +175,40 @@ Phase 7: Documentation Updates
 - `assets/js/character-sheet/ui.js` - Display completion date
 - `character-sheet.md` - Add date columns to quest tables
 
-### 2.2 Implement Variable Tracking Periods
+### 2.2 Ensure Correct Monthly TBR Assignment Based on Quest Dates
 **Beads Task**: `tome-of-secrets-crv`
 
-**Problem**: Users want weekly, monthly, quarterly, or yearly tracking options.
+**Problem**: Quests need to be assigned to the correct monthly TBR period based on their start (`dateAdded`) and completion (`dateCompleted`) dates. Currently, quests use `month` and `year` strings which may not accurately reflect when they were actually started or completed.
 
-**Data Schema Change**: Add `trackingPeriod` to character state (default: 'monthly')
+**Goal**: Keep monthly tracking for now, but ensure quests are correctly assigned to monthly periods based on actual dates. Design the system to be extensible for future time periods (weekly/quarterly/yearly) without requiring major refactoring.
+
+**Data Schema Change**: 
+- Quest dates (`dateAdded`, `dateCompleted`) from Phase 2.1 will be used for period assignment
+- No new state keys needed for now (monthly only)
+- Design `PeriodService` with extensible architecture for future periods
 
 **Implementation**:
-- Add `trackingPeriod` state key
-- Create `TrackingPeriodService.js` to determine current period boundaries
-- Update `EndOfMonthController` to become `EndOfPeriodController` (or generalize)
-- Add UI dropdown in settings to select tracking period
-- Adjust XP calculations based on period length
-- Update quest allocation to use selected period
+- Create `PeriodService.js` with extensible architecture:
+  - `getPeriodForDate(date, periodType = 'monthly')` - Determines which period a date belongs to
+  - `getPeriodBoundaries(date, periodType = 'monthly')` - Returns period start/end dates
+  - `assignQuestToPeriod(quest, periodType = 'monthly')` - Assigns quest to correct period based on dates
+  - Design with enum/constants for period types to make future additions easy
+- Update quest creation to assign quest to period based on `dateAdded`
+- Update quest completion to verify/update period assignment based on `dateCompleted`
+- Ensure quests are grouped correctly in monthly views
+- Update `EndOfMonthController` to use period service (but keep monthly logic for now)
 
 **Files**:
-- `assets/js/services/TrackingPeriodService.js` - New service
-- `assets/js/character-sheet/storageKeys.js` - Add tracking period key
-- `assets/js/controllers/EndOfMonthController.js` - Generalize to periods
-- `assets/js/character-sheet/ui.js` - Add period selector
-- `assets/js/config/gameConfig.js` - Add period-specific rewards
+- `assets/js/services/PeriodService.js` - New extensible service (monthly implementation, extensible design)
+- `assets/js/controllers/QuestController.js` - Use period service for quest assignment
+- `assets/js/controllers/EndOfMonthController.js` - Use period service for period calculations
+- `assets/js/viewModels/questViewModel.js` - Group quests by period for display
+- `assets/js/character-sheet/ui.js` - Ensure quest rendering uses correct period grouping
+
+**Future Extensibility**:
+- Service designed with `periodType` parameter (defaults to 'monthly')
+- Easy to add: `getPeriodForDate(date, 'weekly')`, `getPeriodForDate(date, 'quarterly')`, etc.
+- No refactoring needed when adding new period types - just extend the service
 
 ### 2.3 Add Quest Restore Functionality
 **Beads Task**: `tome-of-secrets-aqh`
@@ -556,7 +571,7 @@ exchangeProgram: {
 | Phase | Schema Version | Migration Summary |
 |-------|---------------|-------------------|
 | Current | 2 | Library Restoration |
-| Phase 2 | 3 | Quest completion dates, claimed rewards, tracking period |
+| Phase 2 | 3 | Quest completion dates, monthly period assignment |
 | Phase 6 | 4 | Book log structure, series tracking, focus magic |
 | Phase 6 | 5 | Exchange program |
 
@@ -564,12 +579,12 @@ exchangeProgram: {
 
 ### Phase Dependencies
 - **Phase 2** depends on **Phase 1** (foundation fixes)
-- **Phase 6** depends on **Phase 2** (needs quest dates and tracking periods)
+- **Phase 6** depends on **Phase 2** (needs quest dates and period assignment)
 
 ### Feature Dependencies
 - **Gallery (6.1)** depends on:
   - Quest completion dates (2.1)
-  - Tracking periods (2.2)
+  - Monthly period assignment (2.2)
 - **Exchange Program (6.4)** depends on:
   - Quest completion dates (2.1)
 - **Archive (6.3)** can be done independently but benefits from Gallery (6.1)
@@ -583,7 +598,7 @@ exchangeProgram: {
 4. **Phase 4** (Atmospheric) - Independent, visual improvements
 5. **Phase 5** (Genres) - Independent, content addition
 6. **Phase 6** (Grimoire) - Major feature expansion, depends on Phase 2
-   - 6.1 Gallery (depends on 2.1, 2.2)
+   - 6.1 Gallery (depends on 2.1, 2.2 - quest dates and period assignment)
    - 6.2 Hourglass (independent)
    - 6.3 Archive (can start independently)
    - 6.4 Exchange (depends on 2.1)
