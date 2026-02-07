@@ -552,19 +552,15 @@ export function renderQuestCard(quest, index, listType = 'active') {
         const dateInfo = createElement('div', { class: 'quest-date-info', style: 'font-size: 0.75em; color: #8a7a61; margin-top: 4px;' });
         const dateParts = [];
         if (quest.dateAdded) {
-            try {
-                const addedDate = new Date(quest.dateAdded);
+            const addedDate = new Date(quest.dateAdded);
+            if (!isNaN(addedDate.getTime())) {
                 dateParts.push(`Added: ${addedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
-            } catch (e) {
-                // Ignore invalid dates
             }
         }
         if (quest.dateCompleted) {
-            try {
-                const completedDate = new Date(quest.dateCompleted);
+            const completedDate = new Date(quest.dateCompleted);
+            if (!isNaN(completedDate.getTime())) {
                 dateParts.push(`Completed: ${completedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
-            } catch (e) {
-                // Ignore invalid dates
             }
         }
         if (dateParts.length > 0) {
