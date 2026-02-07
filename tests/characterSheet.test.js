@@ -1660,6 +1660,12 @@ describe('Character Sheet', () => {
   describe('Monthly Tracker', () => {
     it('should add a new side quest to the active table', () => {
       // Fill out the quest form
+      // Note: PeriodService will assign quest to period based on dateAdded (current date)
+      // So the displayed month/year will be the current month/year, not the form values
+      const currentDate = new Date();
+      const currentMonth = currentDate.toLocaleString('en-US', { month: 'long' });
+      const currentYear = String(currentDate.getFullYear());
+      
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
       document.getElementById('new-quest-book').value = 'The Test Book';
@@ -1680,7 +1686,8 @@ describe('Character Sheet', () => {
       expect(cardsContainer).toBeTruthy();
       const firstCard = cardsContainer.querySelector('.quest-card');
       expect(firstCard).toBeTruthy();
-      expect(firstCard.textContent).toContain('October');
+      // Quest will be assigned to current month/year based on dateAdded (PeriodService)
+      expect(firstCard.textContent).toContain(currentMonth);
       expect(firstCard.textContent).toContain('The Test Book');
       expect(firstCard.textContent).toContain('The Arcane Grimoire');
     });

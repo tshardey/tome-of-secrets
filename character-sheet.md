@@ -584,8 +584,24 @@ permalink: /character-sheet.html
         <div class="rpg-panel-body">
             <div class="add-quest-form">
             <div class="form-row">
-                <input type="text" id="quest-month" placeholder="Month (e.g., October)">
-                <input type="text" id="quest-year" placeholder="Year (e.g., 2025)">
+                <select id="quest-month">
+                    <option value="">-- Select Month --</option>
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                </select>
+                <select id="quest-year">
+                    <option value="">-- Select Year --</option>
+                </select>
             </div>
             <div class="form-row">
                 <select id="new-quest-status">
@@ -943,11 +959,27 @@ permalink: /character-sheet.html
         <form id="quest-edit-form">
             <div class="form-row">
                 <label for="edit-quest-month"><strong>Month:</strong></label>
-                <input type="text" id="edit-quest-month" placeholder="Month (e.g., October)">
+                <select id="edit-quest-month">
+                    <option value="">-- Select Month --</option>
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                </select>
             </div>
             <div class="form-row">
                 <label for="edit-quest-year"><strong>Year:</strong></label>
-                <input type="text" id="edit-quest-year" placeholder="Year (e.g., 2025)">
+                <select id="edit-quest-year">
+                    <option value="">-- Select Year --</option>
+                </select>
             </div>
             <div class="form-row">
                 <label for="edit-quest-type"><strong>Quest Type:</strong></label>

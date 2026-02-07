@@ -98,6 +98,8 @@ describe('Quest Edit Drawer', () => {
 
             // Check drawer fields
             expect(document.getElementById('edit-quest-month').value).toBe('January');
+            // Year dropdown should be populated with the quest's year
+            // If the year isn't in the default range (2025+), it will be added to the dropdown
             expect(document.getElementById('edit-quest-year').value).toBe('2024');
             expect(document.getElementById('edit-quest-type').value).toBe('♥ Organize the Stacks');
             expect(document.getElementById('edit-quest-book').value).toBe('Test Book');

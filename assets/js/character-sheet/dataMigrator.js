@@ -11,6 +11,7 @@ import { STORAGE_KEYS } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { getStoredSchemaVersion, SCHEMA_VERSION, saveSchemaVersion } from './dataValidator.js';
 import { safeGetJSON } from '../utils/storage.js';
+import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 
 /**
  * Migrate quest rewards from legacy format
@@ -53,6 +54,47 @@ function migrateQuestRewards(quest) {
         ...quest,
         rewards: defaultRewards
     };
+}
+
+/**
+ * Migration from schema version 2 to version 3
+ * - Adds dateAdded and dateCompleted fields to all quests
+ * - Sets dateAdded to null for existing quests (will be set on next creation)
+ * - Sets dateCompleted to null for existing quests (will be set on next completion)
+ * - Normalizes invalid month/year values based on dates when available (Phase 2.2)
+ */
+function migrateToVersion3(state) {
+    const migrated = { ...state };
+
+    // Migrate quest arrays to add date fields and normalize month/year
+    const questKeys = [
+        STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+        STORAGE_KEYS.COMPLETED_QUESTS,
+        STORAGE_KEYS.DISCARDED_QUESTS
+    ];
+
+    questKeys.forEach(key => {
+        if (Array.isArray(migrated[key])) {
+            migrated[key] = migrated[key].map(quest => {
+                if (!quest || typeof quest !== 'object') {
+                    return quest;
+                }
+                // Add date fields if they don't exist
+                const questWithDates = {
+                    ...quest,
+                    dateAdded: quest.dateAdded || null,
+                    dateCompleted: quest.dateCompleted || null
+                };
+                
+                // Normalize month/year if invalid but dates are available
+                // This fixes quests with typos, abbreviations, or invalid values
+                const normalized = normalizeQuestPeriod(questWithDates, PERIOD_TYPES.MONTHLY);
+                return normalized;
+            });
+        }
+    });
+
+    return migrated;
 }
 
 /**
@@ -161,6 +203,9 @@ export function migrateState(state) {
                 break;
             case 2:
                 migratedState = migrateToVersion2(migratedState);
+                break;
+            case 3:
+                migratedState = migrateToVersion3(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

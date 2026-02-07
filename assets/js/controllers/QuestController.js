@@ -21,6 +21,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import * as data from '../character-sheet/data.js';
 import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
+import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
 
 export class QuestController extends BaseController {
@@ -596,6 +597,20 @@ export class QuestController extends BaseController {
                 return;
             }
             
+            // Add dateAdded to all new quests (Schema v3)
+            const currentDate = new Date().toISOString();
+            quests.forEach(quest => {
+                if (quest && typeof quest === 'object') {
+                    quest.dateAdded = quest.dateAdded || currentDate;
+                    
+                    // Assign quest to correct period based on dateAdded (Phase 2.2)
+                    const assignedQuest = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
+                    // Update quest with correct month/year from period assignment
+                    quest.month = assignedQuest.month;
+                    quest.year = assignedQuest.year;
+                }
+            });
+            
             // Validate quest structure
             quests.forEach((quest, idx) => {
                 if (!quest || typeof quest !== 'object') {
@@ -784,6 +799,19 @@ export class QuestController extends BaseController {
         const wizardSchoolSelect = document.getElementById('wizardSchool');
         const wizardSchool = wizardSchoolSelect?.value || '';
         const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool);
+        
+        // Set dateCompleted (Schema v3)
+        completedQuest.dateCompleted = new Date().toISOString();
+        // Ensure dateAdded is set if it wasn't already (for quests created before Schema v3)
+        if (!completedQuest.dateAdded) {
+            completedQuest.dateAdded = completedQuest.dateCompleted; // Use completion date as fallback
+        }
+        
+        // Assign quest to correct period based on dateCompleted (Phase 2.2)
+        const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
+        // Update quest with correct month/year from period assignment
+        completedQuest.month = assignedQuest.month;
+        completedQuest.year = assignedQuest.year;
 
         // Calculate and add blueprints to rewards BEFORE storing the quest
         applyBlueprintRewardToQuest(completedQuest);
@@ -1165,7 +1193,22 @@ export class QuestController extends BaseController {
 
         // Populate basic fields
         if (monthInput) monthInput.value = quest.month || '';
-        if (yearInput) yearInput.value = quest.year || '';
+        if (yearInput) {
+            // Set the year value, and ensure it exists in the dropdown options
+            const questYear = quest.year || '';
+            if (questYear) {
+                // Check if the year option exists in the dropdown
+                const yearOption = Array.from(yearInput.options).find(opt => opt.value === questYear);
+                if (!yearOption) {
+                    // Add the year option if it doesn't exist (for older quests with years before 2025)
+                    const opt = document.createElement('option');
+                    opt.value = questYear;
+                    opt.textContent = questYear;
+                    yearInput.appendChild(opt);
+                }
+            }
+            yearInput.value = questYear;
+        }
         if (typeSelect) typeSelect.value = quest.type || '';
         if (bookInput) bookInput.value = quest.book || '';
         if (bookAuthorInput) bookAuthorInput.value = quest.bookAuthor || '';
