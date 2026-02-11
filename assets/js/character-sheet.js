@@ -1470,7 +1470,7 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
                 return;
             }
 
-            const drawBtn = e.target.id === 'draw-dungeon-completion-card-btn' || e.target.closest('#draw-dungeon-completion-card-btn');
+            const drawBtn = e.target.id === 'draw-dungeon-completion-card-btn' ? e.target : e.target.closest('#draw-dungeon-completion-card-btn');
             const drawerFromClick = drawBtn ? drawBtn.closest('#dungeons-info-drawer') : null;
             if (drawBtn && updateCurrency) {
                 const available = stateAdapter.getDungeonCompletionDrawsAvailable();
