@@ -1452,7 +1452,7 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
                 const completedQuests = stateAdapter.getCompletedQuests() || [];
                 const claimed = stateAdapter.getClaimedRoomRewards() || [];
                 if (!canClaimRoomReward(roomNumber, completedQuests, claimed)) {
-                    toast('This room reward cannot be claimed.');
+                    toast.warning('This room reward cannot be claimed.');
                     return;
                 }
                 stateAdapter.addClaimedRoomReward(roomNumber);
@@ -1466,7 +1466,7 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
                     completionSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 window.location.hash = 'dungeon-completion-rewards';
-                toast('Scroll to Dungeon Completion Rewards and click "Draw item" to add your reward.');
+                toast.info('Scroll to Dungeon Completion Rewards and click "Draw item" to add your reward.');
                 return;
             }
 
@@ -1475,11 +1475,11 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
             if (drawBtn && updateCurrency) {
                 const available = stateAdapter.getDungeonCompletionDrawsAvailable();
                 if (available <= 0) {
-                    toast('No draws available. Complete a dungeon room and click "Claim Reward" to earn a draw.');
+                    toast.info('No draws available. Complete a dungeon room and click "Claim Reward" to earn a draw.');
                     return;
                 }
                 if (!stateAdapter.redeemDungeonCompletionDraw()) {
-                    toast('No draws available.');
+                    toast.info('No draws available.');
                     return;
                 }
                 const roll = Math.floor(Math.random() * 20) + 1;
@@ -1505,7 +1505,7 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
                         </div>`;
                 }
                 if (result.alreadyOwned) {
-                    toast(`You already have ${result.rewardName}. Draw refunded.`);
+                    toast.info(`You already have ${result.rewardName}. Draw refunded.`);
                 } else {
                     toast.success(`You drew ${result.rewardName}. ${result.rewardText || ''}`);
                 }

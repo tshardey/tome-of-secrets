@@ -421,11 +421,11 @@ export function renderActiveAssignments() {
         ? characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] 
         : [];
     
-    // Debug: log what we found
+    // Debug: log what we found (use debug for empty state to avoid test noise)
     if (activeQuests.length > 0) {
         console.log(`renderActiveAssignments: Found ${activeQuests.length} active quests in characterState`);
     } else {
-        console.warn(`renderActiveAssignments: No active quests found. characterState[${STORAGE_KEYS.ACTIVE_ASSIGNMENTS}] =`, characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
+        console.debug(`renderActiveAssignments: No active quests found. characterState[${STORAGE_KEYS.ACTIVE_ASSIGNMENTS}] =`, characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
     }
     
     // Create view models for all active quests
