@@ -259,17 +259,15 @@ Phase 7: Documentation Updates
 - `tests/characterSheet.test.js` - "should not consume a draw when drawn reward is already owned"
 
 ### 3.2 Add Dungeon Completion Reminder Prompt
-**Beads Task**: `tome-of-secrets-dgc`
+**Beads Task**: `tome-of-secrets-dgc` ✓ (closed)
 
-**Implementation**:
-- Show reminder when dungeon room is completed
-- Prompt to roll/pull from completion rewards table
-- Link to completion rewards table
-- Track if reminder was shown to avoid spam
+**Implementation** (done in Phase 3.1 / character-sheet drawer):
+- When the user clicks **Claim Reward** on a completed room, the dungeons drawer scrolls to the Dungeon Completion Rewards section (`#dungeon-completion-rewards`), sets the hash, and shows a toast: *"Scroll to Dungeon Completion Rewards and click 'Draw item' to add your reward."*
+- The **Claim Reward** button in the dungeon rooms table (table-renderer) serves as the in-context reminder that a completed room can be claimed; no separate "reminder when quest is completed" popup was added (claim flow is sufficient).
 
 **Files**:
-- `assets/js/controllers/QuestController.js` - Add reminder logic
-- `assets/js/utils/toast.js` - Use existing toast system
+- `assets/js/character-sheet.js` - Claim handler scrolls to completion section and shows toast (dungeons drawer)
+- `assets/js/table-renderer.js` - Claim Reward button when room completed
 
 ### 3.3 Implement Multiple Card Draw with Selection
 **Beads Task**: `tome-of-secrets-1su`
