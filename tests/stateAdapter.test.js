@@ -360,5 +360,63 @@ describe('StateAdapter', () => {
       expect(adapter.setGenreDiceSelection(undefined)).toBe('d6');
     });
   });
+
+  describe('Dungeon completion draws', () => {
+    it('getClaimedRoomRewards returns empty array when none claimed', () => {
+      expect(adapter.getClaimedRoomRewards()).toEqual([]);
+    });
+
+    it('addClaimedRoomReward adds room and getDungeonCompletionDrawsAvailable increases', () => {
+      adapter.addClaimedRoomReward('1');
+      expect(adapter.getClaimedRoomRewards()).toEqual(['1']);
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(1);
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
+    });
+
+    it('getDungeonCompletionDrawsRedeemed returns 0 when not set', () => {
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
+    });
+
+    it('redeemDungeonCompletionDraw consumes one draw and returns true when available', () => {
+      adapter.addClaimedRoomReward('1');
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(1);
+      const result = adapter.redeemDungeonCompletionDraw();
+      expect(result).toBe(true);
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(1);
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(0);
+    });
+
+    it('redeemDungeonCompletionDraw returns false when no draws available', () => {
+      const result = adapter.redeemDungeonCompletionDraw();
+      expect(result).toBe(false);
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
+    });
+
+    it('getDungeonCompletionDrawsAvailable is claimed minus redeemed', () => {
+      adapter.addClaimedRoomReward('1');
+      adapter.addClaimedRoomReward('2');
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(2);
+      adapter.redeemDungeonCompletionDraw();
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(1);
+      adapter.redeemDungeonCompletionDraw();
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(0);
+    });
+
+    it('refundDungeonCompletionDraw restores one draw when already owned case', () => {
+      adapter.addClaimedRoomReward('1');
+      adapter.redeemDungeonCompletionDraw();
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(1);
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(0);
+      const result = adapter.refundDungeonCompletionDraw();
+      expect(result).toBe(true);
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
+      expect(adapter.getDungeonCompletionDrawsAvailable()).toBe(1);
+    });
+
+    it('refundDungeonCompletionDraw returns false when none redeemed', () => {
+      expect(adapter.refundDungeonCompletionDraw()).toBe(false);
+      expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
+    });
+  });
 });
 

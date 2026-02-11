@@ -559,6 +559,15 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS],
         STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
     );
+    validated[STORAGE_KEYS.CLAIMED_ROOM_REWARDS] = validateStringArray(
+        state[STORAGE_KEYS.CLAIMED_ROOM_REWARDS],
+        STORAGE_KEYS.CLAIMED_ROOM_REWARDS
+    );
+    validated[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED] = validateNumber(
+        state[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED],
+        0,
+        STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED
+    );
 
     return validated;
 }

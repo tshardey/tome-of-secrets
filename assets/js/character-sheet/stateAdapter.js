@@ -19,7 +19,8 @@ const EVENTS = Object.freeze({
     COMPLETED_RESTORATION_PROJECTS_CHANGED: 'completedRestorationProjectsChanged',
     COMPLETED_WINGS_CHANGED: 'completedWingsChanged',
     PASSIVE_ITEM_SLOTS_CHANGED: 'passiveItemSlotsChanged',
-    PASSIVE_FAMILIAR_SLOTS_CHANGED: 'passiveFamiliarSlotsChanged'
+    PASSIVE_FAMILIAR_SLOTS_CHANGED: 'passiveFamiliarSlotsChanged',
+    CLAIMED_ROOM_REWARDS_CHANGED: 'claimedRoomRewardsChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -36,7 +37,8 @@ const LIST_EVENTS = Object.freeze({
     [STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS]: EVENTS.COMPLETED_RESTORATION_PROJECTS_CHANGED,
     [STORAGE_KEYS.COMPLETED_WINGS]: EVENTS.COMPLETED_WINGS_CHANGED,
     [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: EVENTS.PASSIVE_ITEM_SLOTS_CHANGED,
-    [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: EVENTS.PASSIVE_FAMILIAR_SLOTS_CHANGED
+    [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: EVENTS.PASSIVE_FAMILIAR_SLOTS_CHANGED,
+    [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: EVENTS.CLAIMED_ROOM_REWARDS_CHANGED
 });
 
 function sanitizeGenreList(genres) {
@@ -733,6 +735,70 @@ export class StateAdapter {
             return { changed: true, value: list[slotIndex] };
         });
         return value || null;
+    }
+
+    // Claimed dungeon room rewards (Phase 3.1)
+    getClaimedRoomRewards() {
+        return this.state[STORAGE_KEYS.CLAIMED_ROOM_REWARDS] || [];
+    }
+
+    addClaimedRoomReward(roomNumber) {
+        const roomStr = String(roomNumber);
+        const { changed } = this._mutateList(STORAGE_KEYS.CLAIMED_ROOM_REWARDS, list => {
+            if (list.includes(roomStr)) return { changed: false };
+            list.push(roomStr);
+            return { changed: true };
+        });
+        return changed;
+    }
+
+    getDungeonCompletionDrawsRedeemed() {
+        const n = this.state[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED];
+        return typeof n === 'number' && n >= 0 ? n : 0;
+    }
+
+    /** Number of dungeon completion draws available (claimed rooms not yet redeemed). */
+    getDungeonCompletionDrawsAvailable() {
+        const claimed = this.getClaimedRoomRewards().length;
+        const redeemed = this.getDungeonCompletionDrawsRedeemed();
+        return Math.max(0, claimed - redeemed);
+    }
+
+    /** Consume one dungeon completion draw. Returns true if a draw was available and consumed. */
+    redeemDungeonCompletionDraw() {
+        if (this.getDungeonCompletionDrawsAvailable() <= 0) return false;
+        const next = this.getDungeonCompletionDrawsRedeemed() + 1;
+        this.state[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED] = next;
+        void setStateKey(STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED, next);
+        return true;
+    }
+
+    /** Refund one dungeon completion draw (e.g. when drawn reward was already owned). Returns true if a draw was refunded. */
+    refundDungeonCompletionDraw() {
+        const current = this.getDungeonCompletionDrawsRedeemed();
+        if (current <= 0) return false;
+        const next = current - 1;
+        this.state[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED] = next;
+        void setStateKey(STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED, next);
+        return true;
+    }
+
+    /**
+     * All item names the character currently owns (inventory, equipped, passive item slots, passive familiar slots).
+     * Use this for "already owned" checks instead of checking each source separately.
+     * @returns {Set<string>}
+     */
+    getOwnedItemNames() {
+        const names = new Set();
+        const inventory = this.getInventoryItems() || [];
+        inventory.forEach(item => { if (item && item.name) names.add(item.name); });
+        const equipped = this.getEquippedItems() || [];
+        equipped.forEach(item => { if (item && item.name) names.add(item.name); });
+        const passiveItemSlots = this.getPassiveItemSlots() || [];
+        passiveItemSlots.forEach(slot => { if (slot && slot.itemName) names.add(slot.itemName); });
+        const passiveFamiliarSlots = this.getPassiveFamiliarSlots() || [];
+        passiveFamiliarSlots.forEach(slot => { if (slot && slot.itemName) names.add(slot.itemName); });
+        return names;
     }
     
     /**

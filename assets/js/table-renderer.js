@@ -53,6 +53,14 @@ function getCompletedQuests() {
 }
 
 /**
+ * Get claimed room rewards from state (Phase 3.1)
+ * @returns {Array<string>} Room numbers that have had rewards claimed
+ */
+function getClaimedRoomRewards() {
+    return characterState[STORAGE_KEYS.CLAIMED_ROOM_REWARDS] || [];
+}
+
+/**
  * Check if a dungeon room is completed
  * A room is considered completed if both the challenge and at least one encounter are completed
  * @param {string} roomNumber - Room number (1-12)
@@ -224,6 +232,8 @@ export function renderDungeonRoomsTable() {
     const roomNumbers = Object.keys(dungeonRooms).map(Number).sort((a, b) => a - b);
     const maxRoom = Math.max(...roomNumbers);
     
+    const claimedRoomRewards = getClaimedRoomRewards();
+
     let html = `
 <table>
   <thead>
@@ -231,6 +241,7 @@ export function renderDungeonRoomsTable() {
       <th>Roll</th>
       <th>Wing</th>
       <th>Room Description & Encounters</th>
+      <th>Reward</th>
     </tr>
   </thead>
   <tbody>`;
@@ -342,6 +353,21 @@ export function renderDungeonRoomsTable() {
         </table>`;
         }
         
+        html += `
+      </td>
+      <td class="room-reward-cell">`;
+        // Claim Reward button (Phase 3.1): show when room is completed and not yet claimed
+        const roomStr = i.toString();
+        const alreadyClaimed = claimedRoomRewards.includes(roomStr);
+        if (roomCompletion.isCompleted) {
+            if (alreadyClaimed) {
+                html += `<span class="room-reward-claimed">Claimed</span>`;
+            } else {
+                html += `<button type="button" class="claim-room-reward-btn" data-room-number="${roomStr}" data-table-context="dungeon-rooms">Claim Reward</button>`;
+            }
+        } else {
+            html += `—`;
+        }
         html += `
       </td>
     </tr>`;

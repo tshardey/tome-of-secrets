@@ -66,7 +66,9 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS]: [],
             [STORAGE_KEYS.COMPLETED_WINGS]: [],
             [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
-            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: []
+            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+            [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: [],
+            [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {

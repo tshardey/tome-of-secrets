@@ -614,7 +614,7 @@ export async function initializeCharacterSheet() {
     
     // Initialize rolling tables in Quests tab
     await initializeRollingTables();
-    await initializeQuestInfoDrawers();
+    await initializeQuestInfoDrawers(updateCurrency, ui, stateAdapter);
 }
 
 /**
@@ -1061,16 +1061,18 @@ async function initializeRollingTables() {
     });
 }
 
-// Initialize Quest Info Drawers
-async function initializeQuestInfoDrawers() {
+// Initialize Quest Info Drawers (uses main sheet stateAdapter so inventory/state updates propagate)
+async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAdapter) {
     const { renderGenreQuestsTable, renderAtmosphericBuffsTable, renderSideQuestsTable, renderDungeonRewardsTable, renderDungeonRoomsTable, renderDungeonCompletionRewardsTable, processLinks } = await import('./table-renderer.js');
-    const { StateAdapter } = await import('./character-sheet/stateAdapter.js');
     const { characterState } = await import('./character-sheet/state.js');
     const { safeGetJSON, safeSetJSON } = await import('./utils/storage.js');
     const { STORAGE_KEYS } = await import('./character-sheet/storageKeys.js');
     const dataModule = await import('./character-sheet/data.js');
     const allGenres = dataModule.allGenres;
-    const stateAdapter = new StateAdapter(characterState);
+    const stateAdapter = mainStateAdapter;
+    const { canClaimRoomReward, applyDungeonCompletionReward, getDungeonCompletionRewardByRoll, getDungeonCompletionRewardCardImage } = await import('./services/DungeonRewardService.js');
+    const { toast } = await import('./ui/toast.js');
+    const { toLocalOrCdnUrl } = await import('./utils/imageCdn.js');
     
     // Helper function to process links
     function processLinksHelper(html) {
@@ -1325,7 +1327,15 @@ async function initializeQuestInfoDrawers() {
                 rewards: processLinksHelper(renderDungeonRewardsTable()),
                 rooms: processLinksHelper(renderDungeonRoomsTable()),
                 completion: processLinksHelper(renderDungeonCompletionRewardsTable())
-            })
+            }),
+            updateDrawsUI: (drawerFromEvent) => {
+                const available = stateAdapter.getDungeonCompletionDrawsAvailable();
+                const drawer = drawerFromEvent || document.getElementById('dungeons-info-drawer');
+                const span = drawer ? drawer.querySelector('#dungeon-completion-draws-available') : document.getElementById('dungeon-completion-draws-available');
+                const btn = drawer ? drawer.querySelector('#draw-dungeon-completion-card-btn') : document.getElementById('draw-dungeon-completion-card-btn');
+                if (span) span.textContent = String(available);
+                if (btn) btn.disabled = available <= 0;
+            }
         }
     };
     
@@ -1346,6 +1356,7 @@ async function initializeQuestInfoDrawers() {
             if (rewardsContainer) rewardsContainer.innerHTML = tables.rewards;
             if (roomsContainer) roomsContainer.innerHTML = tables.rooms;
             if (completionContainer) completionContainer.innerHTML = tables.completion;
+            if (config.updateDrawsUI) config.updateDrawsUI(drawer);
         } else if (drawerId === 'genre-quests') {
             const container = document.getElementById(config.container);
             if (container) {
@@ -1428,6 +1439,92 @@ async function initializeQuestInfoDrawers() {
             backdrop.addEventListener('click', () => closeDrawer(drawerId));
         }
     });
+
+    // Dungeons drawer: Claim Reward (scroll to completion table) + Roll d20 for reward
+    const dungeonsConfig = drawerConfig['dungeons'];
+    const dungeonsDrawer = dungeonsConfig && document.getElementById(dungeonsConfig.drawer);
+    if (dungeonsDrawer) {
+        dungeonsDrawer.addEventListener('click', (e) => {
+            const claimBtn = e.target.closest('.claim-room-reward-btn');
+            if (claimBtn) {
+                const roomNumber = claimBtn.getAttribute('data-room-number');
+                if (!roomNumber) return;
+                const completedQuests = stateAdapter.getCompletedQuests() || [];
+                const claimed = stateAdapter.getClaimedRoomRewards() || [];
+                if (!canClaimRoomReward(roomNumber, completedQuests, claimed)) {
+                    toast('This room reward cannot be claimed.');
+                    return;
+                }
+                stateAdapter.addClaimedRoomReward(roomNumber);
+                const roomsContainer = document.getElementById(dungeonsConfig.containers.rooms);
+                if (roomsContainer) {
+                    roomsContainer.innerHTML = processLinksHelper(renderDungeonRoomsTable());
+                }
+                if (dungeonsConfig.updateDrawsUI) dungeonsConfig.updateDrawsUI(dungeonsDrawer);
+                const completionSection = dungeonsDrawer.querySelector('#dungeon-completion-rewards');
+                if (completionSection) {
+                    completionSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                window.location.hash = 'dungeon-completion-rewards';
+                toast('Scroll to Dungeon Completion Rewards and click "Draw item" to add your reward.');
+                return;
+            }
+
+            const drawBtn = e.target.id === 'draw-dungeon-completion-card-btn' || e.target.closest('#draw-dungeon-completion-card-btn');
+            const drawerFromClick = drawBtn ? drawBtn.closest('#dungeons-info-drawer') : null;
+            if (drawBtn && updateCurrency) {
+                const available = stateAdapter.getDungeonCompletionDrawsAvailable();
+                if (available <= 0) {
+                    toast('No draws available. Complete a dungeon room and click "Claim Reward" to earn a draw.');
+                    return;
+                }
+                if (!stateAdapter.redeemDungeonCompletionDraw()) {
+                    toast('No draws available.');
+                    return;
+                }
+                const roll = Math.floor(Math.random() * 20) + 1;
+                const reward = getDungeonCompletionRewardByRoll(roll);
+                const result = applyDungeonCompletionReward(roll, { stateAdapter, updateCurrency });
+                const baseurl = document.querySelector('meta[name="baseurl"]')?.content || '';
+                const cardContainer = document.getElementById('dungeon-completion-drawn-card-container');
+                if (cardContainer && reward) {
+                    const cardImgPath = getDungeonCompletionRewardCardImage(reward);
+                    const imgSrc = cardImgPath ? toLocalOrCdnUrl(cardImgPath, baseurl) : '';
+                    const safeName = reward.name.replace(/"/g, '&quot;');
+                    const safeReward = (reward.reward || '').replace(/"/g, '&quot;');
+                    cardContainer.innerHTML = `
+                        <div class="dungeon-completion-drawn-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: rgba(84, 72, 59, 0.25); border: 1px solid #b89f62; border-radius: 8px;">
+                            ${imgSrc ? `<img src="${imgSrc}" alt="${safeName}" style="width: 80px; height: 120px; object-fit: contain; border-radius: 4px;" onerror="this.style.display='none'">` : ''}
+                            <div style="flex: 1;">
+                                <strong style="color: #b89f62;">${safeName}</strong>
+                                <p style="margin: 6px 0 0; font-size: 0.9em;">${safeReward}</p>
+                            </div>
+                        </div>`;
+                }
+                toast.success(`You drew ${result.rewardName}. ${result.rewardText || ''}`);
+                if (uiModule) {
+                    if (typeof uiModule.renderTemporaryBuffs === 'function') uiModule.renderTemporaryBuffs();
+                    const wearableSlotsInput = document.getElementById('wearable-slots');
+                    const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+                    const familiarSlotsInput = document.getElementById('familiar-slots');
+                    if (uiModule.updateQuestBuffsDropdown && wearableSlotsInput) {
+                        uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                    }
+                    if (typeof uiModule.renderLoadout === 'function' && wearableSlotsInput) {
+                        uiModule.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                    }
+                }
+                const dustyBlueprintsInput = document.getElementById('dustyBlueprints');
+                if (dustyBlueprintsInput) {
+                    dustyBlueprintsInput.value = stateAdapter.getDustyBlueprints();
+                }
+                if (dungeonsConfig.updateDrawsUI) dungeonsConfig.updateDrawsUI(drawerFromClick);
+                setTimeout(() => {
+                    if (dungeonsConfig.updateDrawsUI) dungeonsConfig.updateDrawsUI(drawerFromClick || document.getElementById('dungeons-info-drawer'));
+                }, 0);
+            }
+        });
+    }
     
     // Close drawers on Escape key
     document.addEventListener('keydown', (e) => {
