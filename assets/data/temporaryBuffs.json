@@ -1,4 +1,12 @@
 {
+    "The Archivist's Favor": {
+        "id": "the-archivists-favor",
+        "name": "The Archivist's Favor",
+        "description": "Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off.",
+        "duration": "one-time",
+        "source": "Dungeon Completion Reward",
+        "rewardModifier": {}
+    },
     "The Librarian's Hoard": {
         "id": "the-librarians-hoard",
         "name": "The Librarian's Hoard",

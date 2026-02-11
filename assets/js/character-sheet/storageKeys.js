@@ -20,7 +20,10 @@ export const STORAGE_KEYS = Object.freeze({
     COMPLETED_RESTORATION_PROJECTS: 'completedRestorationProjects',
     COMPLETED_WINGS: 'completedWings',
     PASSIVE_ITEM_SLOTS: 'passiveItemSlots',
-    PASSIVE_FAMILIAR_SLOTS: 'passiveFamiliarSlots'
+    PASSIVE_FAMILIAR_SLOTS: 'passiveFamiliarSlots',
+    // Dungeon room rewards (Phase 3.1)
+    CLAIMED_ROOM_REWARDS: 'claimedRoomRewards',
+    DUNGEON_COMPLETION_DRAWS_REDEEMED: 'dungeonCompletionDrawsRedeemed'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -43,7 +46,9 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS,
     STORAGE_KEYS.COMPLETED_WINGS,
     STORAGE_KEYS.PASSIVE_ITEM_SLOTS,
-    STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
+    STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS,
+    STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
+    STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED
 ]);
 
 export function createEmptyCharacterState() {
@@ -67,7 +72,9 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS]: [],
         [STORAGE_KEYS.COMPLETED_WINGS]: [],
         [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
-        [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: []
+        [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+        [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: [],
+        [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0
     };
 }
 

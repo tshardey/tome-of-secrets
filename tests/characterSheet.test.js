@@ -3489,10 +3489,10 @@ describe('Character Sheet', () => {
             // Check content body
             const content = drawer.querySelector('.info-drawer-content');
             expect(content).toBeTruthy();
-            // Check for paragraph content
-            expect(content.textContent).toContain('Roll a d20');
-            expect(content.textContent).toContain('The Setting');
-            expect(content.textContent).toContain('The Encounter');
+            // "Roll a d20" is in the header (h2); rest of copy is in content
+            expect(drawer.textContent).toContain('Roll a d20');
+            expect(drawer.textContent).toContain('The Setting');
+            expect(drawer.textContent).toContain('The Encounter');
             // Check for table containers (tables are rendered dynamically)
             const rewardsContainer = content.querySelector('#dungeon-rewards-table-container');
             const roomsContainer = content.querySelector('#dungeon-rooms-table-container');
@@ -3526,6 +3526,31 @@ describe('Character Sheet', () => {
             resolve();
           }, 100);
         });
+      });
+
+      it('should not consume a draw when drawn reward is already owned', async () => {
+        // Set state: 1 draw available, and character already has Librarian's Quill (roll 4)
+        characterState[STORAGE_KEYS.CLAIMED_ROOM_REWARDS] = ['1'];
+        characterState[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED] = 0;
+        characterState[STORAGE_KEYS.INVENTORY_ITEMS] = [
+          { name: "Librarian's Quill", type: 'passive', bonus: 'Test' }
+        ];
+        const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.15); // roll = floor(0.15*20)+1 = 4
+        try {
+          const openBtn = document.querySelector('.open-quest-info-drawer-btn[data-drawer="dungeons"]');
+          const drawer = document.getElementById('dungeons-info-drawer');
+          const drawBtn = document.getElementById('draw-dungeon-completion-card-btn');
+          expect(openBtn).toBeTruthy();
+          expect(drawBtn).toBeTruthy();
+          openBtn.click();
+          await new Promise(r => setTimeout(r, 150));
+          expect(drawer.style.display).toBe('flex');
+          drawBtn.click();
+          await new Promise(r => setTimeout(r, 300));
+          expect(characterState[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]).toBe(0);
+        } finally {
+          randomSpy.mockRestore();
+        }
       });
     });
   });

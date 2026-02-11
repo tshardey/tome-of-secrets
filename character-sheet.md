@@ -942,8 +942,12 @@ permalink: /character-sheet.html
             
             <div id="dungeon-rooms-table-container"></div>
             
-            <h3 id="dungeon-completion-rewards">♠ Dungeon Completion Rewards (Roll a d20)</h3>
-            
+            <h3 id="dungeon-completion-rewards">♠ Dungeon Completion Rewards</h3>
+            <p>Complete a dungeon room and click "Claim Reward" above to earn a draw. You have <strong><span id="dungeon-completion-draws-available">0</span></strong> draw(s) to use.</p>
+            <div class="form-row" style="margin-bottom: 12px;">
+                <button type="button" id="draw-dungeon-completion-card-btn" class="rpg-btn rpg-btn-primary">Draw item</button>
+            </div>
+            <div id="dungeon-completion-drawn-card-container" style="min-height: 0; margin-bottom: 12px;"></div>
             <div id="dungeon-completion-rewards-table-container"></div>
         </div>
     </div>

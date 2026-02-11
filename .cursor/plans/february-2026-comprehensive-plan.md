@@ -224,7 +224,7 @@ Phase 7: Documentation Updates
 **Beads Phase Task**: `tome-of-secrets-1n7`
 
 ### 3.1 Make Dungeon Room Rewards Claimable
-**Beads Task**: `tome-of-secrets-cll`
+**Beads Task**: `tome-of-secrets-cll` ✓ (closed)
 
 **Problem**: Items from `dungeonRoomRewards` can only be added manually.
 
@@ -242,18 +242,32 @@ Phase 7: Documentation Updates
 - `assets/js/controllers/DungeonDeckController.js` - Add claim handlers
 - `assets/js/table-renderer.js` - Add claim button to dungeon rooms table
 
-### 3.2 Add Dungeon Completion Reminder Prompt
-**Beads Task**: `tome-of-secrets-dgc`
+#### 3.1.1 Dungeon Completion Draw Refinements (completed)
+**Beads Task**: `tome-of-secrets-me0` ✓ (closed)
 
-**Implementation**:
-- Show reminder when dungeon room is completed
-- Prompt to roll/pull from completion rewards table
-- Link to completion rewards table
-- Track if reminder was shown to avoid spam
+**Fixes applied**:
+- **Draw button**: Resolve draw button as element (not boolean) so `drawBtn.closest()` works when clicking the button; use `toast.info`/`toast.success` from toast module in drawer handler.
+- **Redeem before apply**: Consume a draw only after validating availability; apply reward after redeem so the player never receives a reward without consuming a draw (prevents resource duplication).
+- **Refund when already owned**: If the rolled reward is already owned, call `stateAdapter.refundDungeonCompletionDraw()` so the draw counter is not decremented; show "Your draw was not used" message.
+- **StateAdapter**: Added `refundDungeonCompletionDraw()` and tests for dungeon completion draws and refund.
 
 **Files**:
-- `assets/js/controllers/QuestController.js` - Add reminder logic
-- `assets/js/utils/toast.js` - Use existing toast system
+- `assets/js/character-sheet.js` - Redeem-first flow, refund on !applied, drawBtn element fix, toast API
+- `assets/js/character-sheet/stateAdapter.js` - `refundDungeonCompletionDraw()`
+- `tests/stateAdapter.test.js` - Dungeon completion draws and refund tests
+- `tests/DungeonRewardService.test.js` - `applyDungeonCompletionReward` alreadyOwned tests
+- `tests/characterSheet.test.js` - "should not consume a draw when drawn reward is already owned"
+
+### 3.2 Add Dungeon Completion Reminder Prompt
+**Beads Task**: `tome-of-secrets-dgc` ✓ (closed)
+
+**Implementation** (done in Phase 3.1 / character-sheet drawer):
+- When the user clicks **Claim Reward** on a completed room, the dungeons drawer scrolls to the Dungeon Completion Rewards section (`#dungeon-completion-rewards`), sets the hash, and shows a toast: *"Scroll to Dungeon Completion Rewards and click 'Draw item' to add your reward."*
+- The **Claim Reward** button in the dungeon rooms table (table-renderer) serves as the in-context reminder that a completed room can be claimed; no separate "reminder when quest is completed" popup was added (claim flow is sufficient).
+
+**Files**:
+- `assets/js/character-sheet.js` - Claim handler scrolls to completion section and shows toast (dungeons drawer)
+- `assets/js/table-renderer.js` - Claim Reward button when room completed
 
 ### 3.3 Implement Multiple Card Draw with Selection
 **Beads Task**: `tome-of-secrets-1su`
@@ -628,6 +642,14 @@ Each phase should include:
 - `tome-of-secrets-vep` - Test: Bookshelf initialization bug fix
 - `tome-of-secrets-0en` - Test: Filter atmospheric buff items from dropdown
 - `tome-of-secrets-ein` - Test: Restore discarded quests functionality
+
+### Phase 3.1 Test Coverage (Dungeon completion draw)
+
+**Completed Tests**:
+- ✅ `tests/DungeonRewardService.test.js` - `applyDungeonCompletionReward` returns alreadyOwned and does not add item when owned; applies when not owned
+- ✅ `tests/stateAdapter.test.js` - Dungeon completion draws (claimed/redeemed/available, redeem, refund)
+- ✅ `tests/characterSheet.test.js` - "should not consume a draw when drawn reward is already owned"
+- ✅ `tests/statePersistence.test.js` - expectedState includes CLAIMED_ROOM_REWARDS and DUNGEON_COMPLETION_DRAWS_REDEEMED
 
 ### Code Quality Standards
 
