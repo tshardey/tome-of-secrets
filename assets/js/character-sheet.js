@@ -1485,6 +1485,9 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
                 const roll = Math.floor(Math.random() * 20) + 1;
                 const reward = getDungeonCompletionRewardByRoll(roll);
                 const result = applyDungeonCompletionReward(roll, { stateAdapter, updateCurrency });
+                if (result.alreadyOwned) {
+                    stateAdapter.refundDungeonCompletionDraw();
+                }
                 const baseurl = document.querySelector('meta[name="baseurl"]')?.content || '';
                 const cardContainer = document.getElementById('dungeon-completion-drawn-card-container');
                 if (cardContainer && reward) {
@@ -1501,7 +1504,11 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
                             </div>
                         </div>`;
                 }
-                toast.success(`You drew ${result.rewardName}. ${result.rewardText || ''}`);
+                if (result.alreadyOwned) {
+                    toast(`You already have ${result.rewardName}. Draw refunded.`);
+                } else {
+                    toast.success(`You drew ${result.rewardName}. ${result.rewardText || ''}`);
+                }
                 if (uiModule) {
                     if (typeof uiModule.renderTemporaryBuffs === 'function') uiModule.renderTemporaryBuffs();
                     const wearableSlotsInput = document.getElementById('wearable-slots');
