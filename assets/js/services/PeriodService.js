@@ -400,11 +400,14 @@ export function normalizeQuestPeriod(quest, periodType = DEFAULT_PERIOD_TYPE) {
     const monthStr = quest.month != null ? String(quest.month) : '';
     const yearStr = quest.year != null ? String(quest.year) : '';
     
-    // Empty month/year is valid for unassigned quests (card-drawn quests that haven't been filled in yet)
-    // Don't warn or try to fix empty values - they're expected
+    // Empty month/year: default to current period (newly added quests should have current month/year)
     const isEmpty = (!monthStr || monthStr.trim() === '') && (!yearStr || yearStr.trim() === '');
     if (isEmpty) {
-        return quest;
+        const questWithDate = {
+            ...quest,
+            dateAdded: quest.dateAdded || new Date().toISOString()
+        };
+        return assignQuestToPeriod(questWithDate, periodType);
     }
     
     // Create a quest object with string values for processing

@@ -32,46 +32,40 @@ function getEncounterCardImage(encounterData) {
 /**
  * Create view model for dungeon deck UI
  * @param {Object} state - Character state object
- * @param {string|null} drawnRoomNumber - Currently drawn room number (if any)
+ * @param {Array<{roomNumber: string, encounterData: Object|null}>} drawnSlots - Drawn room+encounter slots (can accumulate)
  * @returns {Object} View model for deck UI rendering
  */
-export function createDungeonDeckViewModel(state, drawnRoomNumber = null) {
+export function createDungeonDeckViewModel(state, drawnSlots = []) {
     const availableRooms = getAvailableRooms(state);
-    const drawnRoom = drawnRoomNumber ? data.dungeonRooms?.[drawnRoomNumber] : null;
-    const availableEncounters = drawnRoomNumber 
-        ? getAvailableEncounters(drawnRoomNumber, state)
-        : [];
-    
+    const slots = Array.isArray(drawnSlots) ? drawnSlots : [];
+
+    // Encounter deck is available if any slot has no encounter and that room has encounters
+    let encounterDeckAvailable = false;
+    let lastSlotWithoutEncounter = null;
+    for (let i = slots.length - 1; i >= 0; i--) {
+        const slot = slots[i];
+        if (slot.encounterData) continue;
+        const encs = getAvailableEncounters(slot.roomNumber, state);
+        if (encs.length > 0) {
+            encounterDeckAvailable = true;
+            if (lastSlotWithoutEncounter === null) lastSlotWithoutEncounter = i;
+        }
+    }
+
     return {
-        // Room deck state
         roomDeck: {
             available: availableRooms.length > 0,
             availableCount: availableRooms.length,
             cardbackImage: toCdnImageUrlIfConfigured('assets/images/dungeons/tos-cardback-dungeon-rooms.png')
         },
-        
-        // Encounter deck state
         encounterDeck: {
-            available: availableEncounters.length > 0 && drawnRoomNumber !== null,
-            availableCount: availableEncounters.length,
+            available: encounterDeckAvailable,
+            availableCount: encounterDeckAvailable ? 1 : 0,
             cardbackImage: toCdnImageUrlIfConfigured('assets/images/encounters/tos-cardback-encounters.png')
         },
-        
-        // Drawn cards
-        drawnRoom: drawnRoom ? {
-            roomNumber: drawnRoomNumber,
-            name: drawnRoom.name,
-            description: drawnRoom.description,
-            challenge: drawnRoom.challenge,
-            cardImage: getDungeonRoomCardImage(drawnRoom),
-            roomData: drawnRoom
-        } : null,
-        
-        drawnEncounter: null, // Will be set when encounter is drawn
-        
-        // Available data for drawing
-        availableRooms,
-        availableEncounters
+        drawnSlots: slots.map((slot) => createDrawnCardViewModel(slot.roomNumber, slot.encounterData)),
+        lastSlotIndexForEncounter: lastSlotWithoutEncounter,
+        availableRooms
     };
 }
 

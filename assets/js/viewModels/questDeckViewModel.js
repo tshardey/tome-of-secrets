@@ -28,29 +28,25 @@ import {
 /**
  * Create view model for atmospheric buff deck UI
  * @param {Object} state - Character state object
- * @param {Object|null} drawnBuff - Currently drawn buff object (if any)
+ * @param {Array<Object>} drawnBuffs - Array of drawn buff objects (can accumulate multiple draws)
  * @returns {Object} View model for deck UI rendering
  */
-export function createAtmosphericBuffDeckViewModel(state, drawnBuff = null) {
+export function createAtmosphericBuffDeckViewModel(state, drawnBuffs = []) {
     const availableBuffs = getAvailableAtmosphericBuffs(state);
-    
+    const list = Array.isArray(drawnBuffs) ? drawnBuffs : (drawnBuffs ? [drawnBuffs] : []);
+
     return {
-        // Deck state
         deck: {
             available: availableBuffs.length > 0,
             availableCount: availableBuffs.length,
             cardbackImage: getQuestCardbackImage('atmospheric-buffs')
         },
-        
-        // Drawn card
-        drawnBuff: drawnBuff ? {
-            name: drawnBuff.name,
-            description: drawnBuff.description,
-            cardImage: getAtmosphericBuffCardImage(drawnBuff),
-            buffData: drawnBuff
-        } : null,
-        
-        // Available data for drawing
+        drawnBuffs: list.map((buff) => ({
+            name: buff.name,
+            description: buff.description,
+            cardImage: getAtmosphericBuffCardImage(buff),
+            buffData: buff
+        })),
         availableBuffs
     };
 }
@@ -58,30 +54,26 @@ export function createAtmosphericBuffDeckViewModel(state, drawnBuff = null) {
 /**
  * Create view model for genre quest deck UI
  * @param {Object} state - Character state object
- * @param {Object|null} drawnQuest - Currently drawn quest object (if any)
+ * @param {Array<Object>} drawnQuests - Array of drawn quest objects (can accumulate multiple draws)
  * @returns {Object} View model for deck UI rendering
  */
-export function createGenreQuestDeckViewModel(state, drawnQuest = null) {
+export function createGenreQuestDeckViewModel(state, drawnQuests = []) {
     const availableQuests = getAvailableGenreQuests(state);
-    
+    const list = Array.isArray(drawnQuests) ? drawnQuests : (drawnQuests ? [drawnQuests] : []);
+
     return {
-        // Deck state
         deck: {
             available: availableQuests.length > 0,
             availableCount: availableQuests.length,
             cardbackImage: getQuestCardbackImage('genre-quests')
         },
-        
-        // Drawn card
-        drawnQuest: drawnQuest ? {
-            key: drawnQuest.key,
-            genre: drawnQuest.genre,
-            description: drawnQuest.description,
-            cardImage: getGenreQuestCardImage(drawnQuest),
-            questData: drawnQuest
-        } : null,
-        
-        // Available data for drawing
+        drawnQuests: list.map((q) => ({
+            key: q.key,
+            genre: q.genre,
+            description: q.description,
+            cardImage: getGenreQuestCardImage(q),
+            questData: q
+        })),
         availableQuests
     };
 }
@@ -89,31 +81,27 @@ export function createGenreQuestDeckViewModel(state, drawnQuest = null) {
 /**
  * Create view model for side quest deck UI
  * @param {Object} state - Character state object
- * @param {Object|null} drawnQuest - Currently drawn quest object (if any)
+ * @param {Array<Object>} drawnQuests - Array of drawn quest objects (can accumulate multiple draws)
  * @returns {Object} View model for deck UI rendering
  */
-export function createSideQuestDeckViewModel(state, drawnQuest = null) {
+export function createSideQuestDeckViewModel(state, drawnQuests = []) {
     const availableQuests = getAvailableSideQuests(state);
-    
+    const list = Array.isArray(drawnQuests) ? drawnQuests : (drawnQuests ? [drawnQuests] : []);
+
     return {
-        // Deck state
         deck: {
             available: availableQuests.length > 0,
             availableCount: availableQuests.length,
             cardbackImage: getQuestCardbackImage('side-quests')
         },
-        
-        // Drawn card
-        drawnQuest: drawnQuest ? {
-            key: drawnQuest.key,
-            name: drawnQuest.name,
-            description: drawnQuest.description,
-            prompt: drawnQuest.prompt,
-            cardImage: getSideQuestCardImage(drawnQuest),
-            questData: drawnQuest
-        } : null,
-        
-        // Available data for drawing
+        drawnQuests: list.map((q) => ({
+            key: q.key,
+            name: q.name,
+            description: q.description,
+            prompt: q.prompt,
+            cardImage: getSideQuestCardImage(q),
+            questData: q
+        })),
         availableQuests
     };
 }

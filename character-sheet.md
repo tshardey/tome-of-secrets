@@ -562,16 +562,10 @@ permalink: /character-sheet.html
                     <div id="drawn-card-display" class="drawn-card-area"></div>
                 </div>
                 
-                <!-- Action Buttons -->
+                <!-- Action Buttons (shared for all deck types) -->
                 <div class="deck-actions">
-                    <button type="button" id="add-atmospheric-buff-quest-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Activate Atmospheric Buff</button>
-                    <button type="button" id="clear-atmospheric-buff-draw-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
-                    <button type="button" id="add-genre-quest-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add Genre Quest to Quests</button>
-                    <button type="button" id="clear-genre-quest-draw-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
-                    <button type="button" id="add-side-quest-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add Side Quest to Quests</button>
-                    <button type="button" id="clear-side-quest-draw-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
-                    <button type="button" id="add-quest-from-cards-btn" class="rpg-btn rpg-btn-primary" style="display: none;">Add Dungeon to Active Quests</button>
-                    <button type="button" id="clear-drawn-cards-btn" class="rpg-btn rpg-btn-secondary" style="display: none;">Clear Draw</button>
+                    <button type="button" id="add-selected-cards-btn" class="rpg-btn rpg-btn-primary">Add selected</button>
+                    <button type="button" id="clear-drawn-cards-btn" class="rpg-btn rpg-btn-secondary">Clear draw</button>
                 </div>
             </div>
         </div>

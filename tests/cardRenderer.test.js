@@ -329,4 +329,41 @@ describe('cardRenderer', () => {
       expect(overlay).toBeFalsy();
     });
   });
+
+  describe('wrapCardSelectable', () => {
+    it('returns null for null card element', () => {
+      expect(cardRenderer.wrapCardSelectable(null, 0, false, () => {})).toBeNull();
+    });
+
+    it('wraps card in div with card-selectable-wrapper class', () => {
+      const card = document.createElement('div');
+      card.textContent = 'card';
+      const wrapper = cardRenderer.wrapCardSelectable(card, 1, false, () => {});
+      expect(wrapper).toBeTruthy();
+      expect(wrapper.className).toContain('card-selectable-wrapper');
+      expect(wrapper.contains(card)).toBe(true);
+    });
+
+    it('adds selected class when isSelected is true', () => {
+      const card = document.createElement('div');
+      const wrapper = cardRenderer.wrapCardSelectable(card, 0, true, () => {});
+      expect(wrapper.classList.contains('selected')).toBe(true);
+    });
+
+    it('does not add selected class when isSelected is false', () => {
+      const card = document.createElement('div');
+      const wrapper = cardRenderer.wrapCardSelectable(card, 0, false, () => {});
+      expect(wrapper.classList.contains('selected')).toBe(false);
+    });
+
+    it('calls onCardClick with index and event when wrapper is clicked', () => {
+      const card = document.createElement('div');
+      const onCardClick = jest.fn();
+      const wrapper = cardRenderer.wrapCardSelectable(card, 2, false, onCardClick);
+      const ev = new MouseEvent('click', { bubbles: true });
+      wrapper.dispatchEvent(ev);
+      expect(onCardClick).toHaveBeenCalledTimes(1);
+      expect(onCardClick).toHaveBeenCalledWith(2, expect.any(MouseEvent));
+    });
+  });
 });

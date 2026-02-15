@@ -1,12 +1,35 @@
 /**
  * CardRenderer - Pure rendering functions for card visuals
- * 
+ *
  * All rendering functions are pure - they only manipulate DOM.
  * No business logic or state mutations here.
  */
 
 import { createElement } from '../utils/domHelpers.js';
 import { escapeHtml } from '../utils/sanitize.js';
+
+/**
+ * Wrap a card element so it can be selected via click / Ctrl+click.
+ * - Click: select only this card (deselect others).
+ * - Ctrl+click or Cmd+click: toggle this card in the selection.
+ * @param {HTMLElement} cardElement - The card DOM element to wrap
+ * @param {number} index - Index of this card in the drawn list
+ * @param {boolean} isSelected - Whether this card is currently selected
+ * @param {(index: number, event: MouseEvent) => void} onCardClick - Called when the card is clicked (index, event)
+ * @returns {HTMLElement} Wrapper div containing the card
+ */
+export function wrapCardSelectable(cardElement, index, isSelected, onCardClick) {
+    if (!cardElement) return null;
+    const wrapper = createElement('div', { class: 'card-selectable-wrapper' });
+    if (isSelected) wrapper.classList.add('selected');
+    wrapper.appendChild(cardElement);
+    wrapper.addEventListener('click', (e) => {
+        e.preventDefault();
+        onCardClick(index, e);
+    });
+    wrapper.style.cursor = 'pointer';
+    return wrapper;
+}
 
 /**
  * Render a cardback (deck stack)

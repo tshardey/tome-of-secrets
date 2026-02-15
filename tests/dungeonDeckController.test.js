@@ -26,14 +26,16 @@ describe('DungeonDeckController', () => {
         createDungeonDeckViewModel: jest.fn(() => ({
           roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 2 },
           encounterDeck: { cardbackImage: 'enc-back.png', available: false, availableCount: 0 },
+          drawnSlots: [],
+          lastSlotIndexForEncounter: null,
         })),
-        createDrawnCardViewModel: jest.fn(() => ({ room: null, encounter: null })),
       }));
 
       jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
         renderCardback: jest.fn(() => document.createElement('div')),
         renderRoomCard: jest.fn(() => null),
         renderEncounterCard: jest.fn(() => null),
+        wrapCardSelectable: jest.fn((el) => el),
       }));
 
       const { DungeonDeckController } = require('../assets/js/controllers/DungeonDeckController.js');
@@ -61,7 +63,10 @@ describe('DungeonDeckController', () => {
       const renderDecksSpy = jest.spyOn(controller, 'renderDecks');
       controller.handleRoomDeckClick();
 
-      expect(controller.drawnRoomNumber).toBe('2');
+      expect(controller.drawnSlots).toHaveLength(1);
+      expect(controller.drawnSlots[0].roomNumber).toBe('2');
+      expect(controller.drawnSlots[0].encounterData).toBe(null);
+      expect(controller.selectedIndices.has(0)).toBe(true);
       expect(renderDecksSpy).toHaveBeenCalled();
     });
   });
@@ -86,17 +91,19 @@ describe('DungeonDeckController', () => {
       }));
 
       jest.doMock('../assets/js/viewModels/dungeonDeckViewModel.js', () => ({
-        createDungeonDeckViewModel: jest.fn(() => ({
+        createDungeonDeckViewModel: jest.fn((state, slots) => ({
           roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 1 },
           encounterDeck: { cardbackImage: 'enc-back.png', available: true, availableCount: 1 },
+          drawnSlots: slots && slots.length ? slots.map((s) => ({ room: {}, encounter: s.encounterData ? {} : null })) : [],
+          lastSlotIndexForEncounter: slots?.length && !slots[slots.length - 1].encounterData ? slots.length - 1 : null,
         })),
-        createDrawnCardViewModel: jest.fn(() => ({ room: null, encounter: null })),
       }));
 
       jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
         renderCardback: jest.fn(() => document.createElement('div')),
         renderRoomCard: jest.fn(() => null),
         renderEncounterCard: jest.fn(() => null),
+        wrapCardSelectable: jest.fn((el) => el),
       }));
 
       const { DungeonDeckController } = require('../assets/js/controllers/DungeonDeckController.js');
@@ -120,12 +127,13 @@ describe('DungeonDeckController', () => {
 
       const controller = new DungeonDeckController(stateAdapter, form, dependencies);
       controller.initialize();
-      controller.drawnRoomNumber = '1';
+      controller.drawnSlots = [{ roomNumber: '1', encounterData: null }];
+      controller.selectedIndices = new Set([0]);
 
-      const renderDrawnCardsSpy = jest.spyOn(controller, 'renderDrawnCards');
+      const renderDrawnCardsSpy = jest.spyOn(controller, 'renderDecks');
       controller.handleEncounterDeckClick();
 
-      expect(controller.drawnEncounterData).toEqual({ name: 'Zombie' });
+      expect(controller.drawnSlots[0].encounterData).toEqual({ name: 'Zombie' });
       expect(renderDrawnCardsSpy).toHaveBeenCalled();
     });
   });
@@ -172,14 +180,16 @@ describe('DungeonDeckController', () => {
         createDungeonDeckViewModel: jest.fn(() => ({
           roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 1 },
           encounterDeck: { cardbackImage: 'enc-back.png', available: true, availableCount: 1 },
+          drawnSlots: [{ room: {}, encounter: {} }],
+          lastSlotIndexForEncounter: null,
         })),
-        createDrawnCardViewModel: jest.fn(() => ({ room: null, encounter: null })),
       }));
 
       jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
         renderCardback: jest.fn(() => document.createElement('div')),
-        renderRoomCard: jest.fn(() => null),
-        renderEncounterCard: jest.fn(() => null),
+        renderRoomCard: jest.fn(() => document.createElement('div')),
+        renderEncounterCard: jest.fn(() => document.createElement('div')),
+        wrapCardSelectable: jest.fn((el) => el),
       }));
 
       const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
@@ -207,8 +217,8 @@ describe('DungeonDeckController', () => {
       const controller = new DungeonDeckController(stateAdapter, form, dependencies);
       controller.initialize();
 
-      controller.drawnRoomNumber = '1';
-      controller.drawnEncounterData = { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' };
+      controller.drawnSlots = [{ roomNumber: '1', encounterData: { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' } }];
+      controller.selectedIndices = new Set([0]);
 
       controller.handleAddQuestFromCards();
 
@@ -225,8 +235,8 @@ describe('DungeonDeckController', () => {
         ])
       );
       expect(dependencies.saveState).toHaveBeenCalled();
-      expect(controller.drawnRoomNumber).toBe(null);
-      expect(controller.drawnEncounterData).toBe(null);
+      expect(controller.drawnSlots).toHaveLength(0);
+      expect(controller.selectedIndices.size).toBe(0);
     });
   });
 
@@ -279,14 +289,16 @@ describe('DungeonDeckController', () => {
         createDungeonDeckViewModel: jest.fn(() => ({
           roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 1 },
           encounterDeck: { cardbackImage: 'enc-back.png', available: false, availableCount: 0 },
+          drawnSlots: [{ room: {}, encounter: null }],
+          lastSlotIndexForEncounter: null,
         })),
-        createDrawnCardViewModel: jest.fn(() => ({ room: null, encounter: null })),
       }));
 
       jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
         renderCardback: jest.fn(() => document.createElement('div')),
-        renderRoomCard: jest.fn(() => null),
+        renderRoomCard: jest.fn(() => document.createElement('div')),
         renderEncounterCard: jest.fn(() => null),
+        wrapCardSelectable: jest.fn((el) => el),
       }));
 
       const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
@@ -316,8 +328,8 @@ describe('DungeonDeckController', () => {
       const controller = new DungeonDeckController(stateAdapter, form, dependencies);
       controller.initialize();
 
-      controller.drawnRoomNumber = '10';
-      controller.drawnEncounterData = null; // no encounter drawn
+      controller.drawnSlots = [{ roomNumber: '10', encounterData: null }];
+      controller.selectedIndices = new Set([0]);
 
       controller.handleAddQuestFromCards();
 
@@ -381,14 +393,16 @@ describe('DungeonDeckController', () => {
         createDungeonDeckViewModel: jest.fn(() => ({
           roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 1 },
           encounterDeck: { cardbackImage: 'enc-back.png', available: true, availableCount: 1 },
+          drawnSlots: [{ room: {}, encounter: {} }],
+          lastSlotIndexForEncounter: null,
         })),
-        createDrawnCardViewModel: jest.fn(() => ({ room: null, encounter: null })),
       }));
 
       jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
         renderCardback: jest.fn(() => document.createElement('div')),
-        renderRoomCard: jest.fn(() => null),
-        renderEncounterCard: jest.fn(() => null),
+        renderRoomCard: jest.fn(() => document.createElement('div')),
+        renderEncounterCard: jest.fn(() => document.createElement('div')),
+        wrapCardSelectable: jest.fn((el) => el),
       }));
 
       const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
@@ -422,8 +436,8 @@ describe('DungeonDeckController', () => {
       const controller = new DungeonDeckController(stateAdapter, form, dependencies);
       controller.initialize();
 
-      controller.drawnRoomNumber = '1';
-      controller.drawnEncounterData = { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' };
+      controller.drawnSlots = [{ roomNumber: '1', encounterData: { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' } }];
+      controller.selectedIndices = new Set([0]);
 
       controller.handleAddQuestFromCards();
       expect(stateAdapter.addActiveQuests).not.toHaveBeenCalled();
@@ -432,9 +446,96 @@ describe('DungeonDeckController', () => {
       // Simulate discarding/removing from active: allow re-add
       characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
       toast.warning.mockClear();
+      controller.drawnSlots = [{ roomNumber: '1', encounterData: { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' } }];
+      controller.selectedIndices = new Set([0]);
       controller.handleAddQuestFromCards();
       expect(stateAdapter.addActiveQuests).toHaveBeenCalled();
       expect(toast.warning).not.toHaveBeenCalledWith(expect.stringContaining('already in your quest log'));
+    });
+  });
+
+  test('multiple selected slots with same room add room challenge only once (pendingQuests)', () => {
+    jest.isolateModules(() => {
+      const characterState = {};
+      jest.doMock('../assets/js/character-sheet/state.js', () => ({ characterState }));
+      jest.doMock('../assets/js/character-sheet/data.js', () => ({
+        dungeonRooms: {
+          '1': {
+            challenge: 'Room challenge',
+            encountersDetailed: [{ name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' }],
+          },
+        },
+      }));
+      jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
+        RewardCalculator: {
+          getBaseRewards: jest.fn(() => ({
+            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+          })),
+        },
+      }));
+      jest.doMock('../assets/js/services/DungeonDeckService.js', () => ({
+        getAvailableRooms: jest.fn(() => ['1']),
+        getAvailableEncounters: jest.fn(() => [{ name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' }]),
+        drawRandomRoom: jest.fn(() => '1'),
+        drawRandomEncounter: jest.fn(() => ({ name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' })),
+        checkRoomCompletionStatus: jest.fn(() => ({
+          isFullyCompleted: false,
+          challengeCompleted: false,
+          completedEncounters: new Set(),
+          totalEncounters: 1,
+        })),
+      }));
+      jest.doMock('../assets/js/viewModels/dungeonDeckViewModel.js', () => ({
+        createDungeonDeckViewModel: jest.fn(() => ({
+          roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 1 },
+          encounterDeck: { cardbackImage: 'enc-back.png', available: true, availableCount: 1 },
+          drawnSlots: [{ room: {}, encounter: {} }],
+          lastSlotIndexForEncounter: null,
+        })),
+      }));
+      jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
+        renderCardback: jest.fn(() => document.createElement('div')),
+        renderRoomCard: jest.fn(() => document.createElement('div')),
+        renderEncounterCard: jest.fn(() => document.createElement('div')),
+        wrapCardSelectable: jest.fn((el) => el),
+      }));
+
+      const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
+      const { DungeonDeckController } = require('../assets/js/controllers/DungeonDeckController.js');
+
+      characterState[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+      characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
+
+      document.body.innerHTML = `
+        <form id="character-sheet">
+          <div id="room-deck-container"></div>
+          <div id="encounter-deck-container"></div>
+          <div id="drawn-card-display"></div>
+          <button id="add-quest-from-cards-btn" type="button"></button>
+          <button id="clear-drawn-cards-btn" type="button"></button>
+        </form>
+      `;
+
+      const form = document.getElementById('character-sheet');
+      const stateAdapter = { on: jest.fn(), addActiveQuests: jest.fn() };
+      const dependencies = { ui: { renderActiveAssignments: jest.fn() }, saveState: jest.fn() };
+      const controller = new DungeonDeckController(stateAdapter, form, dependencies);
+      controller.initialize();
+
+      // Two slots, same room: one with encounter, one without. Should add one room challenge + one encounter (no duplicate room)
+      controller.drawnSlots = [
+        { roomNumber: '1', encounterData: { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' } },
+        { roomNumber: '1', encounterData: null },
+      ];
+      controller.selectedIndices = new Set([0, 1]);
+
+      controller.handleAddQuestFromCards();
+
+      const added = stateAdapter.addActiveQuests.mock.calls[0][0];
+      const roomQuests = added.filter((q) => q.type === '♠ Dungeon Crawl' && q.isEncounter === false);
+      expect(roomQuests).toHaveLength(1);
+      const encounterQuests = added.filter((q) => q.type === '♠ Dungeon Crawl' && q.isEncounter === true);
+      expect(encounterQuests).toHaveLength(1);
     });
   });
 });
