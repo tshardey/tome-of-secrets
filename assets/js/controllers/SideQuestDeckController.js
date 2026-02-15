@@ -13,19 +13,23 @@ import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
+import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import {
     getAvailableSideQuests,
     drawRandomSideQuest
 } from '../services/SideQuestDeckService.js';
 import { createSideQuestDeckViewModel } from '../viewModels/questDeckViewModel.js';
-import { renderCardback, renderSideQuestCard } from '../character-sheet/cardRenderer.js';
+import { renderCardback, renderSideQuestCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
 
 export class SideQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
         super(stateAdapter, form, dependencies);
-        this.drawnQuest = null;
+        /** @type {Array<Object>} */
+        this.drawnQuests = [];
+        /** @type {Set<number>} */
+        this.selectedIndices = new Set();
     }
 
     initialize() {
@@ -81,12 +85,11 @@ export class SideQuestDeckController extends BaseController {
     }
 
     /**
-     * Render deck UI (cardback and drawn card)
+     * Render deck UI (cardback and drawn cards)
      */
     renderDeck() {
-        const viewModel = createSideQuestDeckViewModel(characterState, this.drawnQuest);
-        
-        // Render deck
+        const viewModel = createSideQuestDeckViewModel(characterState, this.drawnQuests);
+
         clearElement(this.deckContainer);
         const deck = renderCardback(
             viewModel.deck.cardbackImage,
@@ -94,50 +97,59 @@ export class SideQuestDeckController extends BaseController {
             viewModel.deck.availableCount
         );
         this.deckContainer.appendChild(deck);
-
-        // Render drawn card if any
         this.renderDrawnCard();
     }
 
     /**
-     * Render drawn card
+     * Render drawn cards with click/ctrl+click selection
      */
     renderDrawnCard() {
         clearElement(this.drawnCardDisplay);
-        
-        if (!this.drawnQuest) {
+
+        if (this.drawnQuests.length === 0) {
             if (this.addQuestButton) this.addQuestButton.style.display = 'none';
             if (this.clearDrawButton) this.clearDrawButton.style.display = 'none';
+            this.dependencies.updateDeckActionsLabel?.();
             return;
         }
 
-        const viewModel = createSideQuestDeckViewModel(characterState, this.drawnQuest);
-        
-        // Render quest card
-        if (viewModel.drawnQuest) {
-            const questCard = renderSideQuestCard(viewModel.drawnQuest);
-            if (questCard) {
-                this.drawnCardDisplay.appendChild(questCard);
-            }
-        }
-
-        // Show action buttons
         if (this.addQuestButton) this.addQuestButton.style.display = 'block';
         if (this.clearDrawButton) this.clearDrawButton.style.display = 'block';
+
+        const viewModel = createSideQuestDeckViewModel(characterState, this.drawnQuests);
+        viewModel.drawnQuests.forEach((cardData, index) => {
+            const card = renderSideQuestCard(cardData);
+            if (!card) return;
+            const wrapper = wrapCardSelectable(card, index, this.selectedIndices.has(index), (idx, ev) => {
+                if (ev.ctrlKey || ev.metaKey) {
+                    if (this.selectedIndices.has(idx)) this.selectedIndices.delete(idx);
+                    else this.selectedIndices.add(idx);
+                } else {
+                    this.selectedIndices = new Set([idx]);
+                }
+                this.renderDrawnCard();
+            });
+            this.drawnCardDisplay.appendChild(wrapper);
+        });
+        this.dependencies.updateDeckActionsLabel?.();
     }
 
     /**
-     * Handle deck click - draw a random quest
+     * Handle deck click - draw one more quest and add to list (excludes already-drawn)
      */
     handleDeckClick() {
         const availableQuests = getAvailableSideQuests(characterState);
-        if (availableQuests.length === 0) return;
+        const drawnKeys = new Set(this.drawnQuests.map((q) => q.key));
+        const pool = availableQuests.filter((q) => !drawnKeys.has(q.key));
+        if (pool.length === 0) return;
 
-        const drawnQuest = drawRandomSideQuest(availableQuests);
-        if (!drawnQuest) return;
+        const drawn = drawRandomSideQuest(pool);
+        if (!drawn) return;
 
-        this.drawnQuest = drawnQuest;
+        this.drawnQuests.push(drawn);
+        this.selectedIndices.add(this.drawnQuests.length - 1);
         this.renderDeck();
+        this.dependencies.updateDeckActionsLabel?.();
     }
 
     /**
@@ -159,57 +171,51 @@ export class SideQuestDeckController extends BaseController {
     }
 
     /**
-     * Handle "Add Quest" button - create quest from drawn card
+     * Handle "Add selected" - add only selected quests to pool
      */
     handleAddQuestFromCard() {
-        if (!this.drawnQuest) return;
+        const toAdd = Array.from(this.selectedIndices)
+            .filter((i) => i >= 0 && i < this.drawnQuests.length)
+            .map((i) => this.drawnQuests[i]);
+        if (toAdd.length === 0) return;
 
-        const activeQuests = characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
-        
-        // Build prompt: name + prompt
-        const prompt = `${this.drawnQuest.name}: ${this.drawnQuest.prompt}`;
-        
-        const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', prompt);
+        const activeQuests = [...(characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [])];
+        const questJSONs = [];
 
-        const quest = {
-            type: '♣ Side Quest',
-            prompt: prompt,
-            rewards: rewards,
-            buffs: []
-        };
-
-        // Check if quest is duplicate
-        if (this.isQuestDuplicate(quest, activeQuests)) {
-            toast.warning('This side quest is already in your quest log.');
-            return;
+        for (const questData of toAdd) {
+            const prompt = `${questData.name}: ${questData.prompt}`;
+            const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', prompt);
+            const quest = {
+                type: '♣ Side Quest',
+                prompt,
+                rewards: rewards.toJSON ? rewards.toJSON() : rewards,
+                buffs: [],
+                dateAdded: new Date().toISOString()
+            };
+            if (this.isQuestDuplicate(quest, activeQuests)) {
+                toast.warning(`"${questData.name}" is already in your quest log.`);
+                continue;
+            }
+            const assigned = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
+            questJSONs.push({ ...quest, month: assigned.month, year: assigned.year });
+            activeQuests.push(quest); // Track for duplicate check within this batch
         }
 
-        // Convert rewards to JSON (for storage)
-        const questJSON = {
-            ...quest,
-            rewards: rewards.toJSON ? rewards.toJSON() : rewards
-        };
+        if (questJSONs.length === 0) return;
 
-        // Add quest to active assignments
-        this.stateAdapter.addActiveQuests([questJSON]);
-        
-        // Update UI to show newly added quest
-        if (this.dependencies.ui) {
-            this.dependencies.ui.renderActiveAssignments();
-        }
-
-        // Clear drawn card
+        this.stateAdapter.addActiveQuests(questJSONs);
+        if (this.dependencies.ui) this.dependencies.ui.renderActiveAssignments();
         this.handleClearDraw();
-
-        // Save state
         this.saveState();
     }
 
     /**
-     * Handle "Clear Draw" button - clear drawn card
+     * Handle "Clear Draw" - clear all drawn cards
      */
     handleClearDraw() {
-        this.drawnQuest = null;
+        this.drawnQuests = [];
+        this.selectedIndices = new Set();
         this.renderDeck();
+        this.dependencies.updateDeckActionsLabel?.();
     }
 }

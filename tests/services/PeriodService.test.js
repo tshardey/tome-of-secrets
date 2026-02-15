@@ -386,21 +386,26 @@ describe('PeriodService', () => {
             expect(normalized.year).toBe('2025');
         });
 
-        test('should not warn for empty month/year (expected for card-drawn quests)', () => {
+        test('should default empty month/year to current period (newly added quests)', () => {
             const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
             const quest = {
                 type: 'Test Quest',
                 prompt: 'Test',
-                month: '', // Empty - expected for unassigned quests
-                year: '', // Empty - expected for unassigned quests
+                month: '', // Empty - newly added quests should get current month/year
+                year: '',
                 book: 'Test Book'
             };
             
             const normalized = normalizeQuestPeriod(quest, PERIOD_TYPES.MONTHLY);
             
-            // Should return as-is without warnings
-            expect(normalized.month).toBe('');
-            expect(normalized.year).toBe('');
+            // Should default to current month/year
+            const now = new Date();
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            expect(normalized.month).toBe(monthNames[now.getMonth()]);
+            expect(normalized.year).toBe(String(now.getFullYear()));
+            expect(normalized.dateAdded).toBeDefined();
+            expect(typeof normalized.dateAdded).toBe('string');
             expect(consoleSpy).not.toHaveBeenCalled();
             consoleSpy.mockRestore();
         });

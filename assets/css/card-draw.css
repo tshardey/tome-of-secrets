@@ -138,6 +138,28 @@
     max-width: 100%;
 }
 
+/* Selectable card wrapper (click / Ctrl+click to select multiple) */
+.card-selectable-wrapper {
+    display: inline-block;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: box-shadow 0.15s ease;
+}
+.card-selectable-wrapper:hover {
+    box-shadow: 0 0 0 2px rgba(184, 159, 98, 0.5);
+}
+.card-selectable-wrapper.selected {
+    box-shadow: 0 0 0 3px #b89f62;
+}
+
+/* Dungeon slot = room + optional encounter cards grouped */
+.dungeon-slot-wrapper {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+
 /* Encounter Card (1:1 aspect ratio) */
 .encounter-card {
     width: 300px;

@@ -14,6 +14,7 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
+import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import {
     getAvailableRooms,
     getAvailableEncounters,
@@ -21,16 +22,18 @@ import {
     drawRandomEncounter,
     checkRoomCompletionStatus
 } from '../services/DungeonDeckService.js';
-import { createDungeonDeckViewModel, createDrawnCardViewModel } from '../viewModels/dungeonDeckViewModel.js';
-import { renderCardback, renderRoomCard, renderEncounterCard } from '../character-sheet/cardRenderer.js';
+import { createDungeonDeckViewModel } from '../viewModels/dungeonDeckViewModel.js';
+import { renderCardback, renderRoomCard, renderEncounterCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
 
 export class DungeonDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
         super(stateAdapter, form, dependencies);
-        this.drawnRoomNumber = null;
-        this.drawnEncounterData = null;
+        /** @type {Array<{roomNumber: string, encounterData: Object|null}>} */
+        this.drawnSlots = [];
+        /** @type {Set<number>} */
+        this.selectedIndices = new Set();
     }
 
     initialize() {
@@ -39,50 +42,28 @@ export class DungeonDeckController extends BaseController {
 
         if (!uiModule) return;
 
-        // Get DOM elements
         const roomDeckContainer = document.getElementById('room-deck-container');
         const encounterDeckContainer = document.getElementById('encounter-deck-container');
         const drawnCardDisplay = document.getElementById('drawn-card-display');
-        const addQuestButton = document.getElementById('add-quest-from-cards-btn');
-        const clearDrawButton = document.getElementById('clear-drawn-cards-btn');
 
         if (!roomDeckContainer || !encounterDeckContainer || !drawnCardDisplay) return;
 
-        // Store elements
         this.roomDeckContainer = roomDeckContainer;
         this.encounterDeckContainer = encounterDeckContainer;
         this.drawnCardDisplay = drawnCardDisplay;
-        this.addQuestButton = addQuestButton;
-        this.clearDrawButton = clearDrawButton;
 
-        // Initial render
         this.renderDecks();
 
-        // Room deck click handler
         this.addEventListener(roomDeckContainer, 'click', () => {
             this.handleRoomDeckClick();
         });
 
-        // Encounter deck click handler
         this.addEventListener(encounterDeckContainer, 'click', () => {
             this.handleEncounterDeckClick();
         });
 
-        // Add quest button
-        if (addQuestButton) {
-            this.addEventListener(addQuestButton, 'click', () => {
-                this.handleAddQuestFromCards();
-            });
-        }
+        // Add/clear are handled by shared buttons in character-sheet.js
 
-        // Clear draw button
-        if (clearDrawButton) {
-            this.addEventListener(clearDrawButton, 'click', () => {
-                this.handleClearDraw();
-            });
-        }
-
-        // Listen to quest completion events to update deck
         stateAdapter.on(STATE_EVENTS.COMPLETED_QUESTS_CHANGED, () => {
             this.renderDecks();
         });
@@ -97,9 +78,8 @@ export class DungeonDeckController extends BaseController {
      * Render deck UI (cardbacks and drawn cards)
      */
     renderDecks() {
-        const viewModel = createDungeonDeckViewModel(characterState, this.drawnRoomNumber);
-        
-        // Render room deck
+        const viewModel = createDungeonDeckViewModel(characterState, this.drawnSlots);
+
         clearElement(this.roomDeckContainer);
         const roomDeck = renderCardback(
             viewModel.roomDeck.cardbackImage,
@@ -108,89 +88,96 @@ export class DungeonDeckController extends BaseController {
         );
         this.roomDeckContainer.appendChild(roomDeck);
 
-        // Render encounter deck (only if room is drawn)
+        // Encounter deck (available when at least one slot has no encounter)
         clearElement(this.encounterDeckContainer);
-        if (this.drawnRoomNumber) {
-            this.encounterDeckContainer.style.display = 'block';
-            const encounterDeck = renderCardback(
-                viewModel.encounterDeck.cardbackImage,
-                viewModel.encounterDeck.available,
-                viewModel.encounterDeck.availableCount
-            );
-            this.encounterDeckContainer.appendChild(encounterDeck);
-        } else {
-            this.encounterDeckContainer.style.display = 'none';
-        }
+        this.encounterDeckContainer.style.display = 'block';
+        const encounterDeck = renderCardback(
+            viewModel.encounterDeck.cardbackImage,
+            viewModel.encounterDeck.available,
+            viewModel.encounterDeck.availableCount
+        );
+        this.encounterDeckContainer.appendChild(encounterDeck);
 
         // Render drawn cards if any
         this.renderDrawnCards();
     }
 
     /**
-     * Render drawn cards (room and encounter)
+     * Render drawn slots with click/ctrl+click selection (each slot = room + optional encounter)
      */
     renderDrawnCards() {
         clearElement(this.drawnCardDisplay);
-        
-        if (!this.drawnRoomNumber) {
-            if (this.addQuestButton) this.addQuestButton.style.display = 'none';
-            if (this.clearDrawButton) this.clearDrawButton.style.display = 'none';
+
+        if (this.drawnSlots.length === 0) {
+            this.dependencies.updateDeckActionsLabel?.();
             return;
         }
 
-        const cardViewModel = createDrawnCardViewModel(this.drawnRoomNumber, this.drawnEncounterData);
-        
-        // Render room card
-        if (cardViewModel.room) {
-            const roomCard = renderRoomCard(cardViewModel.room);
-            if (roomCard) {
-                this.drawnCardDisplay.appendChild(roomCard);
+        const viewModel = createDungeonDeckViewModel(characterState, this.drawnSlots);
+        viewModel.drawnSlots.forEach((slotViewModel, index) => {
+            const slotWrapper = document.createElement('div');
+            slotWrapper.className = 'dungeon-slot-wrapper';
+            if (slotViewModel.room) {
+                const roomCard = renderRoomCard(slotViewModel.room);
+                if (roomCard) slotWrapper.appendChild(roomCard);
             }
-        }
-
-        // Render encounter card if drawn
-        if (cardViewModel.encounter) {
-            const encounterCard = renderEncounterCard(cardViewModel.encounter);
-            if (encounterCard) {
-                this.drawnCardDisplay.appendChild(encounterCard);
+            if (slotViewModel.encounter) {
+                const encounterCard = renderEncounterCard(slotViewModel.encounter);
+                if (encounterCard) slotWrapper.appendChild(encounterCard);
             }
-        }
-
-        // Show action buttons
-        if (this.addQuestButton) this.addQuestButton.style.display = 'block';
-        if (this.clearDrawButton) this.clearDrawButton.style.display = 'block';
+            const selectable = wrapCardSelectable(slotWrapper, index, this.selectedIndices.has(index), (idx, ev) => {
+                if (ev.ctrlKey || ev.metaKey) {
+                    if (this.selectedIndices.has(idx)) this.selectedIndices.delete(idx);
+                    else this.selectedIndices.add(idx);
+                } else {
+                    this.selectedIndices = new Set([idx]);
+                }
+                this.renderDrawnCards();
+            });
+            this.drawnCardDisplay.appendChild(selectable);
+        });
+        this.dependencies.updateDeckActionsLabel?.();
     }
 
     /**
-     * Handle room deck click - draw a random room
+     * Handle room deck click - draw one more room and add slot.
+     * Excludes already-drawn rooms from the pool so the same room cannot be drawn twice in one session.
      */
     handleRoomDeckClick() {
         const availableRooms = getAvailableRooms(characterState);
-        if (availableRooms.length === 0) return;
+        const drawnRoomNumbers = new Set(this.drawnSlots.map((s) => s.roomNumber));
+        const pool = availableRooms.filter((roomNum) => !drawnRoomNumbers.has(roomNum));
+        if (pool.length === 0) return;
 
-        const drawnRoomNumber = drawRandomRoom(availableRooms);
+        const viewModel = createDungeonDeckViewModel(characterState, this.drawnSlots);
+        if (viewModel.lastSlotIndexForEncounter !== null) {
+            toast.info('You can draw an encounter for the current room first (optional) before drawing another room.');
+        }
+
+        const drawnRoomNumber = drawRandomRoom(pool);
         if (!drawnRoomNumber) return;
 
-        this.drawnRoomNumber = drawnRoomNumber;
-        this.drawnEncounterData = null; // Reset encounter when drawing new room
-
+        this.drawnSlots.push({ roomNumber: drawnRoomNumber, encounterData: null });
+        this.selectedIndices.add(this.drawnSlots.length - 1);
         this.renderDecks();
     }
 
     /**
-     * Handle encounter deck click - draw a random encounter for current room
+     * Handle encounter deck click - draw encounter for the last slot that has none
      */
     handleEncounterDeckClick() {
-        if (!this.drawnRoomNumber) return;
+        const viewModel = createDungeonDeckViewModel(characterState, this.drawnSlots);
+        if (viewModel.lastSlotIndexForEncounter === null) return;
 
-        const availableEncounters = getAvailableEncounters(this.drawnRoomNumber, characterState);
+        const slot = this.drawnSlots[viewModel.lastSlotIndexForEncounter];
+        const availableEncounters = getAvailableEncounters(slot.roomNumber, characterState);
         if (availableEncounters.length === 0) return;
 
-        const drawnEncounter = drawRandomEncounter(availableEncounters);
-        if (!drawnEncounter) return;
+        const drawn = drawRandomEncounter(availableEncounters);
+        if (!drawn) return;
 
-        this.drawnEncounterData = drawnEncounter;
-        this.renderDrawnCards();
+        slot.encounterData = drawn;
+        this.renderDecks();
     }
 
     /**
@@ -233,123 +220,96 @@ export class DungeonDeckController extends BaseController {
     }
 
     /**
-     * Handle "Add Quest" button - create quests from drawn cards
+     * Handle "Add selected" - create quests from selected slots
      */
     handleAddQuestFromCards() {
-        if (!this.drawnRoomNumber) return;
-
-        const roomData = data.dungeonRooms?.[this.drawnRoomNumber];
-        if (!roomData) return;
-
-        // Check if room has encounters - only require encounter if room has encounters
-        const hasEncounters = roomData.encountersDetailed && roomData.encountersDetailed.length > 0;
-        if (hasEncounters && !this.drawnEncounterData) {
-            toast.warning('Please draw an encounter before adding the room to your quest log.');
-            return;
-        }
-
         const activeQuests = characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [];
-        const quests = [];
-
-        // Check if room challenge is already completed or active
         const completedQuests = characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
-        const roomCompletionStatus = checkRoomCompletionStatus(this.drawnRoomNumber, completedQuests, activeQuests);
-        const challengeAlreadyCompleted = roomCompletionStatus.challengeCompleted;
+        const toAdd = Array.from(this.selectedIndices)
+            .filter((i) => i >= 0 && i < this.drawnSlots.length)
+            .map((i) => this.drawnSlots[i]);
+        if (toAdd.length === 0) return;
 
-        // Only add room challenge quest if it's not already completed
-        if (!challengeAlreadyCompleted) {
-            const roomRewards = RewardCalculator.getBaseRewards(
-                '♠ Dungeon Crawl',
-                roomData.challenge,
-                { isEncounter: false, roomNumber: this.drawnRoomNumber }
-            );
+        const quests = [];
+        const pendingQuests = [...activeQuests];
+        for (const slot of toAdd) {
+            const roomData = data.dungeonRooms?.[slot.roomNumber];
+            if (!roomData) continue;
 
-            const roomQuest = {
-                type: '♠ Dungeon Crawl',
-                prompt: roomData.challenge,
-                isEncounter: false,
-                roomNumber: this.drawnRoomNumber,
-                rewards: roomRewards,
-                buffs: []
-            };
+            const roomCompletionStatus = checkRoomCompletionStatus(slot.roomNumber, completedQuests, pendingQuests);
+            if (!roomCompletionStatus.challengeCompleted) {
+                const roomRewards = RewardCalculator.getBaseRewards(
+                    '♠ Dungeon Crawl',
+                    roomData.challenge,
+                    { isEncounter: false, roomNumber: slot.roomNumber }
+                );
+                const roomQuest = {
+                    type: '♠ Dungeon Crawl',
+                    prompt: roomData.challenge,
+                    isEncounter: false,
+                    roomNumber: slot.roomNumber,
+                    rewards: roomRewards,
+                    buffs: []
+                };
+                if (!this.isQuestDuplicate(roomQuest, pendingQuests)) {
+                    quests.push(roomQuest);
+                    pendingQuests.push(roomQuest);
+                }
+            }
 
-            // Check if room quest is duplicate
-            if (this.isQuestDuplicate(roomQuest, activeQuests)) {
-                toast.warning('This room challenge is already in your quest log.');
-            } else {
-                quests.push(roomQuest);
+            if (slot.encounterData) {
+                const enc = slot.encounterData;
+                const isBefriend = !!enc.befriend;
+                const encounterPrompt = isBefriend && enc.befriend ? enc.befriend : (enc.defeat || enc.befriend);
+                const encounterRewards = RewardCalculator.getBaseRewards(
+                    '♠ Dungeon Crawl',
+                    encounterPrompt,
+                    { isEncounter: true, roomNumber: slot.roomNumber, encounterName: enc.name, isBefriend }
+                );
+                const encounterQuest = {
+                    type: '♠ Dungeon Crawl',
+                    prompt: encounterPrompt,
+                    isEncounter: true,
+                    roomNumber: slot.roomNumber,
+                    encounterName: enc.name,
+                    isBefriend,
+                    rewards: encounterRewards,
+                    buffs: []
+                };
+                if (!this.isQuestDuplicate(encounterQuest, pendingQuests)) {
+                    quests.push(encounterQuest);
+                    pendingQuests.push(encounterQuest);
+                }
             }
         }
 
-        // Create encounter quest if encounter was drawn
-        if (this.drawnEncounterData) {
-            const encounterName = this.drawnEncounterData.name;
-            // Use encountersDetailed data directly (which we already have in drawnEncounterData)
-            // Determine if befriend or defeat (default to befriend if both exist)
-            const hasBefriend = !!this.drawnEncounterData.befriend;
-            const hasDefeat = !!this.drawnEncounterData.defeat;
-            const isBefriend = hasBefriend; // Default to befriend if available
-            const encounterPrompt = isBefriend && this.drawnEncounterData.befriend
-                ? this.drawnEncounterData.befriend
-                : (this.drawnEncounterData.defeat || this.drawnEncounterData.befriend);
-
-            const encounterRewards = RewardCalculator.getBaseRewards(
-                '♠ Dungeon Crawl',
-                encounterPrompt,
-                { isEncounter: true, roomNumber: this.drawnRoomNumber, encounterName, isBefriend }
-            );
-
-            const encounterQuest = {
-                type: '♠ Dungeon Crawl',
-                prompt: encounterPrompt,
-                isEncounter: true,
-                roomNumber: this.drawnRoomNumber,
-                encounterName: encounterName,
-                isBefriend: isBefriend,
-                rewards: encounterRewards,
-                buffs: []
-            };
-
-            // Check if encounter quest is duplicate
-            if (this.isQuestDuplicate(encounterQuest, activeQuests)) {
-                toast.warning('This encounter is already in your quest log.');
-            } else {
-                quests.push(encounterQuest);
-            }
-        }
-
-        // If no quests to add (all duplicates or already completed), don't proceed
         if (quests.length === 0) {
+            if (toAdd.length > 0) toast.warning('Selected room/encounter is already in your quest log.');
+            this.handleClearDraw();
             return;
         }
 
-        // Convert rewards to JSON (for storage)
-        const questsJSON = quests.map(quest => ({
-            ...quest,
-            rewards: quest.rewards.toJSON ? quest.rewards.toJSON() : quest.rewards
-        }));
-
-        // Add quests to active assignments
+        const questsJSON = quests.map((q) => {
+            const questWithDate = {
+                ...q,
+                rewards: q.rewards.toJSON ? q.rewards.toJSON() : q.rewards,
+                dateAdded: q.dateAdded || new Date().toISOString()
+            };
+            const assigned = assignQuestToPeriod(questWithDate, PERIOD_TYPES.MONTHLY);
+            return { ...questWithDate, month: assigned.month, year: assigned.year };
+        });
         this.stateAdapter.addActiveQuests(questsJSON);
-        
-        // Update UI to show newly added quests
-        if (this.dependencies.ui) {
-            this.dependencies.ui.renderActiveAssignments();
-        }
-
-        // Clear drawn cards
+        if (this.dependencies.ui) this.dependencies.ui.renderActiveAssignments();
         this.handleClearDraw();
-
-        // Save state
         this.saveState();
     }
 
     /**
-     * Handle "Clear Draw" button - clear drawn cards
+     * Handle "Clear Draw" - clear all drawn slots
      */
     handleClearDraw() {
-        this.drawnRoomNumber = null;
-        this.drawnEncounterData = null;
+        this.drawnSlots = [];
+        this.selectedIndices = new Set();
         this.renderDecks();
     }
 }

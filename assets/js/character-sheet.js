@@ -266,6 +266,18 @@ export async function initializeCharacterSheet() {
     const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
     const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
 
+    const addSelectedBtn = document.getElementById('add-selected-cards-btn');
+    function updateDeckActionsLabel() {
+        if (!addSelectedBtn) return;
+        const n = (genreQuestDeckController.selectedIndices?.size ?? 0) +
+            (sideQuestDeckController.selectedIndices?.size ?? 0) +
+            (atmosphericBuffDeckController.selectedIndices?.size ?? 0) +
+            (dungeonDeckController.selectedIndices?.size ?? 0);
+        addSelectedBtn.textContent = n > 0 ? `Add selected (${n})` : 'Add selected';
+        addSelectedBtn.disabled = n === 0;
+    }
+    dependencies.updateDeckActionsLabel = updateDeckActionsLabel;
+
     // Initialize controllers
     characterController.initialize();
     abilityController.initialize();
@@ -278,6 +290,28 @@ export async function initializeCharacterSheet() {
     atmosphericBuffDeckController.initialize();
     genreQuestDeckController.initialize();
     sideQuestDeckController.initialize();
+
+    // Consolidated deck actions: one "Add selected" and one "Clear draw" for all deck types
+    const clearDrawBtn = document.getElementById('clear-drawn-cards-btn');
+
+    if (addSelectedBtn) {
+        addSelectedBtn.addEventListener('click', () => {
+            genreQuestDeckController.handleAddQuestFromCard();
+            sideQuestDeckController.handleAddQuestFromCard();
+            atmosphericBuffDeckController.handleActivateBuff();
+            dungeonDeckController.handleAddQuestFromCards();
+        });
+    }
+    if (clearDrawBtn) {
+        clearDrawBtn.addEventListener('click', () => {
+            genreQuestDeckController.handleClearDraw();
+            sideQuestDeckController.handleClearDraw();
+            atmosphericBuffDeckController.handleClearDraw();
+            dungeonDeckController.handleClearDraw();
+        });
+    }
+
+    updateDeckActionsLabel();
 
     // --- GENRE SELECTION FUNCTIONALITY ---
     function initializeGenreSelection() {
