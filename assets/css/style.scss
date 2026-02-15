@@ -252,7 +252,14 @@ article h6:hover .anchor-link {
 .hero {
     position: relative;
     /* Needed for the overlay effect */
-    padding: 8em 2em;
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2em;
     text-align: center;
     color: #fff;
     /* We'll use white text on the dark image */
@@ -265,8 +272,8 @@ article h6:hover .anchor-link {
     {% endif %}
     background-size: cover;
     /* Cover the entire area */
-    background-position: center bottom;
-    /* Center horizontally, anchor to bottom */
+    background-position: center center;
+    /* Center horizontally and vertically */
     border-radius: 5px;
     margin-bottom: 20px;
 }
@@ -317,26 +324,31 @@ article h6:hover .anchor-link {
 .sanctum-hero {
     position: relative;
     /* Needed for the overlay effect */
-    padding: 4em 2em;
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2em;
     /* More compact than main hero */
     text-align: center;
     color: #fff;
     /* We'll use white text on the dark image */
-    background-size: cover;
-    /* Cover the entire area */
+    background-size: contain;
+    /* Show full image so edge-to-edge title text is never cropped */
+    background-repeat: no-repeat;
     background-position: center center;
-    /* Center the image */
+    background-color: #2a231d;
+    /* Letterboxing matches page background when image aspect differs */
     border-radius: 5px;
     margin-bottom: 20px;
     margin-left: auto;
     margin-right: auto;
     /* Center the hero on wide screens */
-    min-height: 200px;
-    /* Ensure minimum height for compact display */
     max-width: 1200px;
     /* Prevent excessive stretching on wide monitors */
-    max-height: 400px;
-    /* Prevent excessive height on wide screens */
 }
 
 /* --- Darkening overlay to make text readable --- */
