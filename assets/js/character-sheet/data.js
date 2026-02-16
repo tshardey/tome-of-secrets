@@ -22,7 +22,8 @@ import {
     levelRewards,
     shoppingOptions,
     wings,
-    restorationProjects
+    restorationProjects,
+    roomThemes
 } from './data.json-exports.js';
 
 // Derive allGenres from genreQuests (genre name -> description mapping)
@@ -37,7 +38,7 @@ export const allGenres = (() => {
 })();
 
 // Re-export JSON data for backward compatibility
-export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects };
+export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects, roomThemes };
 
 // atmosphericBuffs and other data are now imported from JSON exports above
 
@@ -250,6 +251,15 @@ export const wingsById = (() => {
 
 export function getWing(idOrKeyOrName) {
     return wingsById.get(idOrKeyOrName) || wings[idOrKeyOrName] || null;
+}
+
+/**
+ * Get a room theme by ID (for room visualization).
+ * @param {string} themeId - Theme id, e.g. 'cozy-modern'
+ * @returns {Object|null} Theme object or null if not found
+ */
+export function getRoomTheme(themeId) {
+    return (roomThemes && roomThemes[themeId]) || null;
 }
 
 // Derived, backward-compatible shapes from detailed JSON (single source of truth)

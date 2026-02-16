@@ -40,7 +40,8 @@ const JSON_EXPORTS = {
     'levelRewards.json': 'levelRewards',
     'shoppingOptions.json': 'shoppingOptions',
     'wings.json': 'wings',
-    'restorationProjects.json': 'restorationProjects'
+    'restorationProjects.json': 'restorationProjects',
+    'roomThemes.json': 'roomThemes'
 };
 
 function generateExports() {

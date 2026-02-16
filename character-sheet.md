@@ -390,6 +390,9 @@ permalink: /character-sheet.html
             <h3 class="rpg-panel-title">♦️ Atmospheric Buffs</h3>
         </div>
         <div class="rpg-panel-body">
+            <div id="room-visualization-container" class="room-visualization-wrapper" aria-hidden="true">
+                <!-- Rendered by RoomVisualization.js -->
+            </div>
             <div style="overflow-x: auto;">
                 <table class="tracker-table" style="width: 100%; margin: 0 auto;">
                     <thead>

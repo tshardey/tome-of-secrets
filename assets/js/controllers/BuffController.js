@@ -6,11 +6,18 @@
  * - Marking buffs as used
  * - Removing buffs
  * - Atmospheric buff tracking
+ * - Room visualization (sticker show/hide when atmospheric buffs toggle)
  */
 
 import { BaseController } from './BaseController.js';
 import { parseIntOr } from '../utils/helpers.js';
 import * as dataModule from '../character-sheet/data.js';
+import { getActiveStickers } from '../services/RoomVisualizationService.js';
+import * as RoomVisualization from '../components/RoomVisualization.js';
+import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
+import { getRoomTheme } from '../character-sheet/data.js';
+
+const DEFAULT_THEME_ID = 'cozy-modern';
 
 export class BuffController extends BaseController {
     initialize(updateCurrency) {
@@ -53,6 +60,30 @@ export class BuffController extends BaseController {
         }
 
         this.keeperBackgroundSelect = keeperBackgroundSelect;
+
+        // Room visualization: initial render and sync on atmospheric buff changes
+        const roomContainer = document.getElementById('room-visualization-container');
+        if (roomContainer) {
+            this.renderRoomVisualization();
+            stateAdapter.on(STATE_EVENTS.ATMOSPHERIC_BUFFS_CHANGED, () => {
+                this.renderRoomVisualization();
+            });
+        }
+    }
+
+    /**
+     * Render the room visualization from current atmospheric buff state.
+     */
+    renderRoomVisualization() {
+        const roomContainer = document.getElementById('room-visualization-container');
+        if (!roomContainer) return;
+
+        const theme = getRoomTheme(DEFAULT_THEME_ID);
+        if (!theme) return;
+
+        const keeperBackground = this.keeperBackgroundSelect?.value || '';
+        const activeStickers = getActiveStickers(this.stateAdapter.state, DEFAULT_THEME_ID, { keeperBackground });
+        RoomVisualization.render(roomContainer, theme, activeStickers);
     }
 
     handleAddTemporaryBuffFromDropdown() {
@@ -106,6 +137,7 @@ export class BuffController extends BaseController {
         }
 
         stateAdapter.setAtmosphericBuffActive(buffName, checkbox.checked);
+        // Room visualization updates via ATMOSPHERIC_BUFFS_CHANGED listener
         // No need to save state on every check, it's temporary for the day
     }
 
@@ -176,4 +208,3 @@ export class BuffController extends BaseController {
         return false;
     }
 }
-
