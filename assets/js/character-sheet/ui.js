@@ -340,6 +340,11 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         if (buffVM.isHighlighted) {
             row.classList.add('highlight');
         }
+        const isModifierRow = buffVM.isModifierItem;
+        const isTrackableRow = buffVM.isTrackableItem;
+        if (isModifierRow || isTrackableRow) {
+            row.classList.add('atmospheric-reward-item-row');
+        }
 
         // Buff name cell
         const nameCell = document.createElement('td');
@@ -349,6 +354,21 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
             star.style.color = '#b89f62';
             star.textContent = ' ★';
             nameCell.appendChild(star);
+        }
+        if (isModifierRow) {
+            const label = document.createElement('span');
+            label.className = 'atmospheric-reward-item-label';
+            const mult = buffVM.modifierMultiplier;
+            label.textContent = typeof mult === 'number' && mult !== 1 ? ` (x${mult} modifier)` : ' (modifier)';
+            label.title = buffVM.bonus || '';
+            nameCell.appendChild(label);
+        }
+        if (isTrackableRow) {
+            const label = document.createElement('span');
+            label.className = 'atmospheric-reward-item-label';
+            label.textContent = ' (from item)';
+            label.title = buffVM.bonus || '';
+            nameCell.appendChild(label);
         }
         row.appendChild(nameCell);
 
@@ -366,26 +386,41 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         checkbox.checked = buffVM.isActive;
         if (buffVM.isDisabled) {
             checkbox.disabled = true;
-            checkbox.title = 'Always active (Grove Tender)';
+            const mult = buffVM.modifierMultiplier;
+            let title = 'Always active (Grove Tender)';
+            if (isModifierRow && typeof mult === 'number' && mult !== 1) {
+                title = `x${mult} to active atmospheric buffs`;
+            } else if (isModifierRow) {
+                title = 'Multiplier to active atmospheric buffs';
+            } else if (buffVM.isTrackableItem) {
+                title = 'Active while equipped or displayed';
+            }
+            checkbox.title = title;
         }
         checkboxCell.appendChild(checkbox);
         row.appendChild(checkboxCell);
 
-        // Days input cell
+        // Days input cell (trackable items get editable input; modifier row gets "—")
         const daysCell = document.createElement('td');
-        const daysInput = document.createElement('input');
-        daysInput.type = 'number';
-        daysInput.className = 'buff-days-input';
-        daysInput.value = buffVM.daysUsed;
-        daysInput.min = 0;
-        daysInput.dataset.buffName = buffVM.name;
-        daysInput.dataset.dailyValue = buffVM.dailyValue;
-        daysCell.appendChild(daysInput);
+        if (isModifierRow) {
+            daysCell.textContent = '—';
+        } else {
+            const daysInput = document.createElement('input');
+            daysInput.type = 'number';
+            daysInput.className = 'buff-days-input';
+            daysInput.value = buffVM.daysUsed;
+            daysInput.min = 0;
+            daysInput.dataset.buffName = buffVM.name;
+            daysInput.dataset.dailyValue = typeof buffVM.dailyValue === 'number' ? buffVM.dailyValue : 1;
+            daysCell.appendChild(daysInput);
+        }
         row.appendChild(daysCell);
 
-        // Total cell
+        // Total cell (trackable and regular buffs need id for updateBuffTotal; modifier shows text)
         const totalCell = document.createElement('td');
-        totalCell.id = `total-${buffVM.name.replace(/\s+/g, '')}`;
+        if (!isModifierRow) {
+            totalCell.id = `total-${buffVM.name.replace(/\s+/g, '')}`;
+        }
         totalCell.textContent = buffVM.total;
         row.appendChild(totalCell);
     });
