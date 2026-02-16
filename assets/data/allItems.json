@@ -143,7 +143,8 @@
         "bonus": "Once per month, you may re-roll a prompt or a die roll to get a new result, and you must keep the new result.",
         "passiveBonus": "Once every 2 months, you may re-roll a prompt or a die roll (passive).",
         "rewardModifier": {},
-        "passiveRewardModifier": {}
+        "passiveRewardModifier": {},
+        "excludeFromQuestBonuses": true
     },
     "The Scepter of Knowledge": {
         "id": "the-scepter-of-knowledge",

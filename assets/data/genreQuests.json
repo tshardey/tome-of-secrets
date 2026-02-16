@@ -238,5 +238,41 @@
             "items": []
         },
         "blueprintReward": 15
+    },
+    "21": {
+        "id": "genre-quest-21",
+        "genre": "Literary Fiction",
+        "description": "Read a book that emphasizes style, character, and theme over plot.",
+        "rewards": {
+            "xp": 15,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
+        "blueprintReward": 18
+    },
+    "22": {
+        "id": "genre-quest-22",
+        "genre": "Genre Fiction",
+        "description": "Read a book that fits clearly into a popular genre (e.g. mystery, romance, thriller).",
+        "rewards": {
+            "xp": 15,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
+        "blueprintReward": 15
+    },
+    "23": {
+        "id": "genre-quest-23",
+        "genre": "Cozy",
+        "description": "Read a low-stakes, comforting book—cozy mystery, gentle romance, or slice-of-life.",
+        "rewards": {
+            "xp": 15,
+            "inkDrops": 10,
+            "paperScraps": 0,
+            "items": []
+        },
+        "blueprintReward": 15
     }
 }

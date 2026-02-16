@@ -150,6 +150,12 @@ export class GenreQuestDeckController extends BaseController {
         const questJSONs = toAdd.map((questData) => {
             const prompt = `${questData.genre}: ${questData.description}`;
             const rewards = RewardCalculator.getBaseRewards('♥ Organize the Stacks', prompt);
+            const blueprintReward = questData.blueprintReward ?? 0;
+            if (blueprintReward > 0) {
+                rewards.blueprints = blueprintReward;
+                rewards.receipt.base.blueprints = blueprintReward;
+                rewards.receipt.final.blueprints = blueprintReward;
+            }
             const quest = {
                 type: '♥ Organize the Stacks',
                 prompt,

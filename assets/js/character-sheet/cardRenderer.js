@@ -210,14 +210,14 @@ export function renderAtmosphericBuffCard(buffCardData) {
 
 /**
  * Render a genre quest card (2:3 aspect ratio)
- * @param {Object} questCardData - Genre quest card data from view model
+ * @param {Object} questCardData - Genre quest card data from view model (includes questData with rewards and blueprintReward)
  * @returns {HTMLElement} Genre quest card element
  */
 export function renderGenreQuestCard(questCardData) {
     if (!questCardData) return null;
-    
+
     const card = createElement('div', { class: 'card quest-card' });
-    
+
     // Card image
     if (questCardData.cardImage) {
         const cardImg = createElement('img', {
@@ -227,24 +227,59 @@ export function renderGenreQuestCard(questCardData) {
         });
         card.appendChild(cardImg);
     }
-    
+
     // Card content overlay
     const content = createElement('div', { class: 'card-content' });
-    
+
     // Genre name
     const name = createElement('h3', { class: 'card-title' });
     name.textContent = questCardData.genre || '';
     content.appendChild(name);
-    
+
     // Genre description
     if (questCardData.description) {
         const desc = createElement('p', { class: 'card-description' });
         desc.textContent = questCardData.description;
         content.appendChild(desc);
     }
-    
+
+    // Rewards section (includes dusty blueprints from blueprintReward)
+    const questData = questCardData.questData;
+    const rewards = questData?.rewards || {};
+    const blueprintReward = questData?.blueprintReward ?? 0;
+    const hasRewards = (rewards.xp > 0) || (rewards.inkDrops > 0) || (rewards.paperScraps > 0) || (blueprintReward > 0);
+    if (hasRewards) {
+        const rewardsSection = createElement('div', { class: 'quest-card-rewards' });
+        const rewardsTitle = createElement('h4', { class: 'quest-rewards-title' });
+        rewardsTitle.textContent = 'Rewards';
+        rewardsSection.appendChild(rewardsTitle);
+        const rewardsGrid = createElement('div', { class: 'quest-rewards-grid' });
+        if (rewards.xp > 0) {
+            const xpReward = createElement('div', { class: 'reward-item xp-reward' });
+            xpReward.innerHTML = `<span class="reward-label">XP</span><span class="reward-value">+${rewards.xp}</span>`;
+            rewardsGrid.appendChild(xpReward);
+        }
+        if (rewards.inkDrops > 0) {
+            const idReward = createElement('div', { class: 'reward-item ink-drops-reward' });
+            idReward.innerHTML = `<span class="reward-label">💧</span><span class="reward-value">+${rewards.inkDrops}</span>`;
+            rewardsGrid.appendChild(idReward);
+        }
+        if (rewards.paperScraps > 0) {
+            const psReward = createElement('div', { class: 'reward-item paper-scraps-reward' });
+            psReward.innerHTML = `<span class="reward-label">📄</span><span class="reward-value">+${rewards.paperScraps}</span>`;
+            rewardsGrid.appendChild(psReward);
+        }
+        if (blueprintReward > 0) {
+            const bpReward = createElement('div', { class: 'reward-item blueprints-reward' });
+            bpReward.innerHTML = `<span class="reward-label">📜</span><span class="reward-value">+${blueprintReward}</span>`;
+            rewardsGrid.appendChild(bpReward);
+        }
+        rewardsSection.appendChild(rewardsGrid);
+        content.appendChild(rewardsSection);
+    }
+
     card.appendChild(content);
-    
+
     return card;
 }
 

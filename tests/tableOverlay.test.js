@@ -262,14 +262,14 @@ describe('Table Overlay System', () => {
             
             const content = document.getElementById('table-overlay-content');
             const genreSection = content.querySelector('.genre-selection-overlay-section');
-            const diceSelector = content.querySelector('#overlay-genre-dice-selector');
             const genreSelector = content.querySelector('#overlay-genre-selector');
             const addButton = content.querySelector('#overlay-add-genre-button');
+            const selectAllButton = content.querySelector('#overlay-select-all-genres-button');
             
             expect(genreSection).toBeTruthy();
-            expect(diceSelector).toBeTruthy();
             expect(genreSelector).toBeTruthy();
             expect(addButton).toBeTruthy();
+            expect(selectAllButton).toBeTruthy();
         });
 
         it('should display currently selected genres', async () => {
@@ -291,7 +291,6 @@ describe('Table Overlay System', () => {
 
         it('should add genre when Add Genre button is clicked', async () => {
             stateAdapter.setSelectedGenres([]);
-            safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
@@ -324,9 +323,9 @@ describe('Table Overlay System', () => {
         // is tested through add/update operations. Direct removal testing has
         // timing issues in the test environment but works correctly in the browser.
 
-        it('should update dice selection and enforce limits', async () => {
-            stateAdapter.setSelectedGenres(['Fantasy', 'Mystery', 'Science Fiction', 'Horror', 'Romance', 'Thriller']);
-            safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
+        it('should allow unlimited genre selection (no dice limit)', async () => {
+            const allGenres = Object.keys(data.allGenres);
+            stateAdapter.setSelectedGenres(allGenres.slice(0, 8));
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
@@ -336,27 +335,14 @@ describe('Table Overlay System', () => {
             await new Promise(resolve => setTimeout(resolve, 200));
             
             const content = document.getElementById('table-overlay-content');
-            const diceSelector = content.querySelector('#overlay-genre-dice-selector');
             const addButton = content.querySelector('#overlay-add-genre-button');
             
-            // Change to d4 (should trim to 4)
-            diceSelector.value = 'd4';
-            diceSelector.dispatchEvent(new Event('change'));
-            
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            const updatedGenres = stateAdapter.getSelectedGenres();
-            expect(updatedGenres.length).toBeLessThanOrEqual(4);
-            
-            // Add button should be disabled if at max
-            if (updatedGenres.length >= 4) {
-                expect(addButton.disabled).toBe(true);
-            }
+            // With 8 selected and many total, Add button should still be enabled (no cap)
+            expect(addButton.disabled).toBe(false);
         });
 
-        it('should auto-select all genres when d20 is selected', async () => {
+        it('should select all genres when Select All is clicked', async () => {
             stateAdapter.setSelectedGenres([]);
-            safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
@@ -366,11 +352,9 @@ describe('Table Overlay System', () => {
             await new Promise(resolve => setTimeout(resolve, 200));
             
             const content = document.getElementById('table-overlay-content');
-            const diceSelector = content.querySelector('#overlay-genre-dice-selector');
+            const selectAllButton = content.querySelector('#overlay-select-all-genres-button');
             
-            // Change to d20
-            diceSelector.value = 'd20';
-            diceSelector.dispatchEvent(new Event('change'));
+            selectAllButton.click();
             
             await new Promise(resolve => setTimeout(resolve, 200));
             
@@ -381,7 +365,6 @@ describe('Table Overlay System', () => {
 
         it('should update table when genres are added', async () => {
             stateAdapter.setSelectedGenres([]);
-            safeSetJSON(STORAGE_KEYS.GENRE_DICE_SELECTION, 'd6');
             
             await new Promise(resolve => setTimeout(resolve, 100));
             
