@@ -65,13 +65,19 @@ export function getBuffState(state, buffName) {
 
 /**
  * Check if an item should be excluded from quest bonus cards
- * Items that modify atmospheric buffs or are marked for exclusion should not appear in the monthly quest tracker dropdown
+ * Items that modify atmospheric buffs (atmosphericReward) or are marked for exclusion
+ * should not appear in the monthly quest tracker / quest creation and edit menus.
  * @param {Object} itemData - Item data object from allItems
  * @returns {boolean} True if item should be excluded from quest bonuses
  */
 export function shouldExcludeFromQuestBonuses(itemData) {
     if (!itemData) return false;
-    
+
+    // Atmospheric rewards are environment/atmosphere only, not quest buffs
+    if (itemData.atmosphericReward === true) {
+        return true;
+    }
+
     // Check explicit exclusion flag (if explicitly false, don't exclude)
     if (itemData.excludeFromQuestBonuses === true) {
         return true;
@@ -79,17 +85,17 @@ export function shouldExcludeFromQuestBonuses(itemData) {
     if (itemData.excludeFromQuestBonuses === false) {
         return false;
     }
-    
+
     // Check if item type is "Quest" (like The Grand Key)
     if (itemData.type === 'Quest') {
         return true;
     }
-    
+
     // Check if bonus or passiveBonus mentions atmospheric buffs (backward compatibility)
     // Only check if excludeFromQuestBonuses is not explicitly set
     const bonus = (itemData.bonus || '').toLowerCase();
     const passiveBonus = (itemData.passiveBonus || '').toLowerCase();
-    
+
     return bonus.includes('atmospheric') || passiveBonus.includes('atmospheric');
 }
 

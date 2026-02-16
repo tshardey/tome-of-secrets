@@ -54,21 +54,29 @@ export class BuffController extends BaseController {
                     const buffName = e.target.dataset.buffName;
                     const daysUsed = parseIntOr(e.target.value, 0);
                     stateAdapter.setAtmosphericBuffDaysUsed(buffName, daysUsed);
-                    uiModule.updateBuffTotal(e.target);
+                    // Table re-renders via ATMOSPHERIC_BUFFS_CHANGED and shows correct totals (including x2 when Tome-Bound Cat equipped)
                 }
             });
         }
 
         this.keeperBackgroundSelect = keeperBackgroundSelect;
 
-        // Room visualization: initial render and sync on atmospheric buff changes
+        // Room visualization and atmospheric table: sync on atmospheric buff or inventory changes
         const roomContainer = document.getElementById('room-visualization-container');
+        const librarySanctumSelect = document.getElementById('librarySanctum');
+        const refreshAtmosphericPanel = () => {
+            if (roomContainer) this.renderRoomVisualization();
+            if (librarySanctumSelect && uiModule.renderAtmosphericBuffs) {
+                uiModule.renderAtmosphericBuffs(librarySanctumSelect);
+            }
+        };
         if (roomContainer) {
             this.renderRoomVisualization();
-            stateAdapter.on(STATE_EVENTS.ATMOSPHERIC_BUFFS_CHANGED, () => {
-                this.renderRoomVisualization();
-            });
         }
+        stateAdapter.on(STATE_EVENTS.ATMOSPHERIC_BUFFS_CHANGED, refreshAtmosphericPanel);
+        stateAdapter.on(STATE_EVENTS.EQUIPPED_ITEMS_CHANGED, refreshAtmosphericPanel);
+        stateAdapter.on(STATE_EVENTS.PASSIVE_ITEM_SLOTS_CHANGED, refreshAtmosphericPanel);
+        stateAdapter.on(STATE_EVENTS.PASSIVE_FAMILIAR_SLOTS_CHANGED, refreshAtmosphericPanel);
     }
 
     /**

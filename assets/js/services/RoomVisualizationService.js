@@ -3,7 +3,7 @@
  * based on active atmospheric buffs and theme config.
  */
 
-import { getRoomTheme, atmosphericBuffs } from '../character-sheet/data.js';
+import { getRoomTheme, atmosphericBuffs, allItems } from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { isGroveTenderBuff } from './AtmosphericBuffService.js';
 
@@ -51,11 +51,30 @@ export function getStickerForBuff(buffName, themeId = DEFAULT_THEME_ID) {
 }
 
 /**
- * Get list of sticker configs for all currently active atmospheric buffs.
+ * Get item names that are equipped or in display (passive) slots.
+ * @param {Object} characterState - Full character state
+ * @returns {Array<string>} Item names
+ */
+function getEquippedOrDisplayedItemNames(characterState) {
+    const names = [];
+    const equipped = characterState?.[STORAGE_KEYS.EQUIPPED_ITEMS];
+    if (Array.isArray(equipped)) {
+        equipped.forEach((item) => { if (item?.name) names.push(item.name); });
+    }
+    const passiveItems = characterState?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    passiveItems.forEach((slot) => { if (slot?.itemName) names.push(slot.itemName); });
+    const passiveFamiliars = characterState?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    passiveFamiliars.forEach((slot) => { if (slot?.itemName) names.push(slot.itemName); });
+    return names;
+}
+
+/**
+ * Get list of sticker configs for all currently active atmospheric buffs and for
+ * equipped/displayed atmospheric reward items (e.g. Tome-Bound Cat, Garden Gnome).
  * @param {Object} characterState - Full character state (or object with ATMOSPHERIC_BUFFS key)
  * @param {string} [themeId] - Room theme id (default: 'cozy-modern')
  * @param {{ keeperBackground?: string }} [options] - Optional; keeperBackground for Grove Tender
- * @returns {Array<Object>} Array of sticker configs for active buffs
+ * @returns {Array<Object>} Array of sticker configs for active buffs and items
  */
 export function getActiveStickers(characterState, themeId = DEFAULT_THEME_ID, options = {}) {
     const theme = getRoomTheme(themeId);
@@ -65,16 +84,29 @@ export function getActiveStickers(characterState, themeId = DEFAULT_THEME_ID, op
     const keeperBackground = options.keeperBackground || '';
 
     const result = [];
-    if (!atmosphericBuffs) return result;
-
-    for (const buffName of Object.keys(atmosphericBuffs)) {
-        if (!isAtmosphericBuffActiveForSticker(buffName, atmosphericBuffsState, keeperBackground)) {
-            continue;
-        }
-        const stickerConfig = getStickerForBuff(buffName, themeId);
-        if (stickerConfig) {
-            result.push(stickerConfig);
+    if (atmosphericBuffs) {
+        for (const buffName of Object.keys(atmosphericBuffs)) {
+            if (!isAtmosphericBuffActiveForSticker(buffName, atmosphericBuffsState, keeperBackground)) {
+                continue;
+            }
+            const stickerConfig = getStickerForBuff(buffName, themeId);
+            if (stickerConfig) {
+                result.push(stickerConfig);
+            }
         }
     }
+
+    // Add stickers for equipped/displayed atmospheric reward items
+    const itemNames = getEquippedOrDisplayedItemNames(characterState);
+    for (const itemName of itemNames) {
+        const itemData = allItems?.[itemName];
+        if (!itemData?.atmosphericReward || !itemData?.atmosphericStickerSlug) continue;
+        const sticker = theme.stickers[itemData.atmosphericStickerSlug];
+        if (!sticker) continue;
+        const imagePath = typeof sticker === 'object' && sticker !== null ? sticker.image : sticker;
+        if (!imagePath) continue;
+        result.push({ slug: itemData.atmosphericStickerSlug, image: imagePath });
+    }
+
     return result;
 }

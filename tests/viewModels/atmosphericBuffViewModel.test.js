@@ -22,12 +22,16 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
     })
 }));
 
-// Mock data
+// Mock data (allItems: empty for most tests; with Tome-Bound Cat / Garden Gnome for modifier and trackable tests)
 jest.mock('../../assets/js/character-sheet/data.js', () => ({
     atmosphericBuffs: {
         'Buff1': {},
         'Buff2': {},
         'The Soaking in Nature': {}
+    },
+    allItems: {
+        'Tome-Bound Cat': { atmosphericReward: true, atmosphericBuffMultiplier: 2, passiveAtmosphericMultiplier: 1.5 },
+        'Garden Gnome': { atmosphericReward: true, atmosphericRewardTrackable: true }
     }
 }));
 
@@ -115,6 +119,81 @@ describe('AtmosphericBuffViewModel', () => {
                 expect(vm.isActive).toBe(false);
                 expect(vm.total).toBe(0);
             });
+        });
+
+        test('should apply x2 to active buff totals when Tome-Bound Cat is equipped', () => {
+            const stateWithCat = {
+                ...mockState,
+                equippedItems: [{ name: 'Tome-Bound Cat' }]
+            };
+            const viewModels = createAtmosphericBuffViewModel(stateWithCat, '', '');
+            const buff1 = viewModels.find(vm => vm.name === 'Buff1');
+            expect(buff1.isActive).toBe(true);
+            expect(buff1.total).toBe(6); // 3 * 1 * 2
+            const buff2 = viewModels.find(vm => vm.name === 'Buff2');
+            expect(buff2.isActive).toBe(false);
+            expect(buff2.total).toBe(2); // not active, no x2
+        });
+
+        test('should add trackable item row with days/total when Garden Gnome equipped', () => {
+            const stateWithGnome = {
+                atmosphericBuffs: {
+                    ...mockState.atmosphericBuffs,
+                    'Garden Gnome': { daysUsed: 4, isActive: true }
+                },
+                equippedItems: [{ name: 'Garden Gnome' }]
+            };
+            const viewModels = createAtmosphericBuffViewModel(stateWithGnome, '', '');
+            const gnomeRow = viewModels.find(vm => vm.name === 'Garden Gnome');
+            expect(gnomeRow).toBeDefined();
+            expect(gnomeRow.isTrackableItem).toBe(true);
+            expect(gnomeRow.isActive).toBe(true); // Always active when equipped/displayed
+            expect(gnomeRow.isDisabled).toBe(true); // Checkbox disabled
+            expect(gnomeRow.dailyValue).toBe(1);
+            expect(gnomeRow.daysUsed).toBe(4);
+            expect(gnomeRow.total).toBe(4);
+        });
+
+        test('should apply x2 to trackable item total when Tome-Bound Cat also equipped', () => {
+            const stateWithBoth = {
+                atmosphericBuffs: {
+                    'Garden Gnome': { daysUsed: 5, isActive: true }
+                },
+                equippedItems: [{ name: 'Garden Gnome' }, { name: 'Tome-Bound Cat' }]
+            };
+            const viewModels = createAtmosphericBuffViewModel(stateWithBoth, '', '');
+            const gnomeRow = viewModels.find(vm => vm.name === 'Garden Gnome');
+            expect(gnomeRow.total).toBe(10); // 5 * 1 * 2
+        });
+
+        test('should add modifier row for Tome-Bound Cat when equipped (x2 from item data)', () => {
+            const stateWithCat = {
+                atmosphericBuffs: {},
+                equippedItems: [{ name: 'Tome-Bound Cat' }]
+            };
+            const viewModels = createAtmosphericBuffViewModel(stateWithCat, '', '');
+            const catRow = viewModels.find(vm => vm.name === 'Tome-Bound Cat');
+            expect(catRow).toBeDefined();
+            expect(catRow.isModifierItem).toBe(true);
+            expect(catRow.dailyValue).toBe('x2');
+            expect(catRow.modifierMultiplier).toBe(2);
+            expect(catRow.total).toBe('x2 to active buffs');
+            expect(catRow.isDisabled).toBe(true);
+        });
+
+        test('should use x1.5 when Tome-Bound Cat is adopted (passive slot) not equipped', () => {
+            const stateWithCatAdopted = {
+                atmosphericBuffs: {
+                    'Buff1': { daysUsed: 4, isActive: true }
+                },
+                passiveFamiliarSlots: [{ itemName: 'Tome-Bound Cat' }]
+            };
+            const viewModels = createAtmosphericBuffViewModel(stateWithCatAdopted, '', '');
+            const buff1 = viewModels.find(vm => vm.name === 'Buff1');
+            expect(buff1.total).toBe(6); // 4 * 1 * 1.5 = 6
+            const catRow = viewModels.find(vm => vm.name === 'Tome-Bound Cat');
+            expect(catRow.dailyValue).toBe('x1.5');
+            expect(catRow.modifierMultiplier).toBe(1.5);
         });
     });
 });

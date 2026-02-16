@@ -168,7 +168,9 @@
         "passiveRewardModifier": {
             "inkDrops": 1
         },
-        "excludeFromQuestBonuses": true
+        "atmosphericReward": true,
+        "atmosphericRewardTrackable": true,
+        "atmosphericStickerSlug": "picture-above-candles"
     },
     "Celestial Koi Fish": {
         "id": "celestial-koi-fish",
@@ -186,12 +188,15 @@
         "type": "Familiar",
         "img": "assets/images/rewards/tome-bound-cat.png",
         "bonus": "When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect.",
-        "passiveBonus": "Atmospheric Buffs grant +3 Ink Drops (passive, not multiplied).",
+        "passiveBonus": "Atmospheric Buffs grant x1.5 Ink Drop bonus when adopted (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {
-            "inkDrops": 3
+            "inkDropsMultiplier": 1.5
         },
-        "excludeFromQuestBonuses": true
+        "atmosphericReward": true,
+        "atmosphericBuffMultiplier": 2,
+        "passiveAtmosphericMultiplier": 1.5,
+        "atmosphericStickerSlug": "cat-fireplace"
     },
     "Pocket Dragon": {
         "id": "pocket-dragon",
@@ -220,7 +225,9 @@
         "passiveRewardModifier": {
             "inkDrops": 1
         },
-        "excludeFromQuestBonuses": true
+        "atmosphericReward": true,
+        "atmosphericRewardTrackable": true,
+        "atmosphericStickerSlug": "garden-gnome"
     },
     "Mystical Moth": {
         "id": "mystical-moth",
@@ -235,7 +242,9 @@
         "passiveRewardModifier": {
             "inkDrops": 1
         },
-        "excludeFromQuestBonuses": true
+        "atmosphericReward": true,
+        "atmosphericRewardTrackable": true,
+        "atmosphericStickerSlug": "lunar-moth"
     },
     "Page Sprite": {
         "id": "page-sprite",

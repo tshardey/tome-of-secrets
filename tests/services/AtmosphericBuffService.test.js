@@ -126,6 +126,15 @@ describe('AtmosphericBuffService', () => {
     });
 
     describe('shouldExcludeFromQuestBonuses', () => {
+        test('should return true for item with atmosphericReward flag (exclude from quest menus)', () => {
+            const itemData = {
+                atmosphericReward: true,
+                name: 'Garden Gnome',
+                bonus: 'Earn +2 Ink Drops on any day where you read outside.'
+            };
+            expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
+        });
+
         test('should return true for item with excludeFromQuestBonuses flag', () => {
             const itemData = {
                 excludeFromQuestBonuses: true,

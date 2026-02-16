@@ -5,7 +5,8 @@
     "baseImage": "assets/images/atmospheric-buffs/cozy-modern-stickers/walls-and-bookshelves.png",
     "stickers": {
       "candlelight-study": {
-        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/candlelight-study.png"
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/candlelight-study.png",
+        "zIndex": 3
       },
       "herbalists-nook": {
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/herbalists-nook.png",
@@ -33,6 +34,19 @@
       },
       "head-in-the-clouds": {
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/head-in-the-clouds.png"
+      },
+      "cat-fireplace": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/cat-fireplace.png"
+      },
+      "garden-gnome": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/garden-gnome.png"
+      },
+      "picture-above-candles": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/picture-above-candles.png",
+        "zIndex": 2
+      },
+      "lunar-moth": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/lunar-moth.png"
       }
     }
   }

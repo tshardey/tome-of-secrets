@@ -10,6 +10,13 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
         'The Candlight Study': { id: 'the-candlight-study', name: 'The Candlight Study', stickerSlug: 'candlelight-study' },
         'The Soaking in Nature': { id: 'the-soaking-in-nature', name: 'The Soaking in Nature', stickerSlug: 'soaking-in-nature' }
     },
+    allItems: {
+        'Garden Gnome': {
+            name: 'Garden Gnome',
+            atmosphericReward: true,
+            atmosphericStickerSlug: 'garden-gnome'
+        }
+    },
     roomThemes: {
         'cozy-modern': {
             id: 'cozy-modern',
@@ -17,7 +24,8 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
             baseImage: 'assets/images/atmospheric-buffs/cozy-modern-plain-base.png',
             stickers: {
                 'candlelight-study': { image: 'candlelight.png', category: 'atmospheric', top: '10%', left: '5%', width: '30%', zIndex: 2 },
-                'soaking-in-nature': { image: 'soaking.png', category: 'atmospheric', top: '50%', left: '20%', width: '28%', zIndex: 2 }
+                'soaking-in-nature': { image: 'soaking.png', category: 'atmospheric', top: '50%', left: '20%', width: '28%', zIndex: 2 },
+                'garden-gnome': { image: 'garden-gnome.png' }
             }
         }
     }
@@ -38,7 +46,8 @@ const cozyModernTheme = {
     id: 'cozy-modern',
     stickers: {
         'candlelight-study': { image: 'candlelight.png', category: 'atmospheric', top: '10%', left: '5%', width: '30%', zIndex: 2 },
-        'soaking-in-nature': { image: 'soaking.png', category: 'atmospheric', top: '50%', left: '20%', width: '28%', zIndex: 2 }
+        'soaking-in-nature': { image: 'soaking.png', category: 'atmospheric', top: '50%', left: '20%', width: '28%', zIndex: 2 },
+        'garden-gnome': { image: 'garden-gnome.png' }
     }
 };
 
@@ -111,6 +120,38 @@ describe('RoomVisualizationService', () => {
             const stickers = getActiveStickers(state, 'cozy-modern', { keeperBackground: 'groveTender' });
             expect(stickers.length).toBe(1);
             expect(stickers[0].slug).toBe('soaking-in-nature');
+        });
+
+        test('includes sticker for equipped atmospheric reward item', () => {
+            const state = {
+                [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Garden Gnome' }]
+            };
+            const stickers = getActiveStickers(state, 'cozy-modern');
+            expect(stickers.length).toBe(1);
+            expect(stickers[0].slug).toBe('garden-gnome');
+            expect(stickers[0].image).toBe('garden-gnome.png');
+        });
+
+        test('includes sticker for atmospheric reward item in passive familiar slot', () => {
+            const state = {
+                [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [{ itemName: 'Garden Gnome' }]
+            };
+            const stickers = getActiveStickers(state, 'cozy-modern');
+            expect(stickers.length).toBe(1);
+            expect(stickers[0].slug).toBe('garden-gnome');
+        });
+
+        test('does not add duplicate sticker when same item is in both equipped and passive slot', () => {
+            const state = {
+                [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Garden Gnome' }],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [{ itemName: 'Garden Gnome' }]
+            };
+            const stickers = getActiveStickers(state, 'cozy-modern');
+            expect(stickers.length).toBe(1);
+            expect(stickers[0].slug).toBe('garden-gnome');
         });
     });
 });
