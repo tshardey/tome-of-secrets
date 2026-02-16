@@ -2145,6 +2145,40 @@
     background-color: rgba(184, 159, 98, 0.3);
 }
 
+/* Room visualization (atmospheric buff stickers on base room image) */
+.room-visualization-wrapper {
+    margin: 0 auto 1.5rem;
+    max-width: min(640px, 100%);
+    text-align: center;
+}
+
+/* Size the room to the base image so the full illustration is in view (no crop) */
+.room-visualization {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background-color: rgba(42, 35, 29, 0.5);
+    display: inline-block;
+    max-width: 100%;
+}
+
+.room-visualization .room-base {
+    width: 100%;
+    height: auto;
+    display: block;
+    vertical-align: top;
+}
+
+.room-visualization .room-layer {
+    position: absolute;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+.room-visualization .room-layer.hidden {
+    opacity: 0;
+}
+
 /* End of Month Button Styling */
 .end-of-month-button {
     padding: 12px 32px;

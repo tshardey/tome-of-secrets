@@ -1,0 +1,37 @@
+{
+  "cozy-modern": {
+    "id": "cozy-modern",
+    "name": "Cozy Modern Library",
+    "baseImage": "assets/images/atmospheric-buffs/cozy-modern-stickers/walls-and-bookshelves.png",
+    "stickers": {
+      "candlelight-study": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/candlelight-study.png"
+      },
+      "herbalists-nook": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/herbalists-nook.png"
+      },
+      "soundscape-spire": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/soundscape-spire.png",
+        "zIndex": 3
+      },
+      "the-excavation": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/the-excavation.png",
+        "zIndex": 4
+      },
+      "cozy-hearth": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/cozy-hearth.png",
+        "zIndex": 2
+      },
+      "soaking-in-nature": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/soaking-in-nature.png",
+        "zIndex": 5
+      },
+      "wanderers-path": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/wanderers-path.png"
+      },
+      "head-in-the-clouds": {
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/head-in-the-clouds.png"
+      }
+    }
+  }
+}
