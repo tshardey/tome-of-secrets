@@ -481,7 +481,19 @@ function getEncounterAction(quest) {
  */
 export function renderQuestCard(quest, index, listType = 'active') {
     const card = createElement('div', { class: 'quest-card' });
-    const rewards = quest.rewards || {};
+    let rewards = quest.rewards ? { ...quest.rewards } : {};
+    // Genre quests: ensure blueprints show on card (stored at add-time, or look up from genre data for legacy quests)
+    if (quest.type === '♥ Organize the Stacks' && (rewards.blueprints == null || rewards.blueprints === 0)) {
+        const genreQuests = data.genreQuests || {};
+        for (const key of Object.keys(genreQuests)) {
+            const g = genreQuests[key];
+            if (g && quest.prompt === `${g.genre}: ${g.description}`) {
+                const bp = g.blueprintReward ?? 0;
+                if (bp > 0) rewards = { ...rewards, blueprints: bp };
+                break;
+            }
+        }
+    }
     
     // Format buffs to remove prefixes for display
     const buffs = quest.buffs && quest.buffs.length > 0 
