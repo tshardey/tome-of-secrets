@@ -51,21 +51,23 @@ export function getStickerForBuff(buffName, themeId = DEFAULT_THEME_ID) {
 }
 
 /**
- * Get item names that are equipped or in display (passive) slots.
+ * Get item names that are equipped or in display (passive) slots, deduplicated.
+ * (Same item in both equipped and passive would otherwise add its sticker twice.)
  * @param {Object} characterState - Full character state
- * @returns {Array<string>} Item names
+ * @returns {Array<string>} Item names (unique)
  */
 function getEquippedOrDisplayedItemNames(characterState) {
-    const names = [];
+    const seen = new Set();
+    const add = (name) => { if (name) seen.add(name); };
     const equipped = characterState?.[STORAGE_KEYS.EQUIPPED_ITEMS];
     if (Array.isArray(equipped)) {
-        equipped.forEach((item) => { if (item?.name) names.push(item.name); });
+        equipped.forEach((item) => add(item?.name));
     }
     const passiveItems = characterState?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
-    passiveItems.forEach((slot) => { if (slot?.itemName) names.push(slot.itemName); });
+    passiveItems.forEach((slot) => add(slot?.itemName));
     const passiveFamiliars = characterState?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
-    passiveFamiliars.forEach((slot) => { if (slot?.itemName) names.push(slot.itemName); });
-    return names;
+    passiveFamiliars.forEach((slot) => add(slot?.itemName));
+    return Array.from(seen);
 }
 
 /**
