@@ -8,11 +8,12 @@
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/candlelight-study.png"
       },
       "herbalists-nook": {
-        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/herbalists-nook.png"
+        "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/herbalists-nook.png",
+        "zIndex": 3
       },
       "soundscape-spire": {
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/soundscape-spire.png",
-        "zIndex": 3
+        "zIndex": 6
       },
       "the-excavation": {
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/the-excavation.png",
@@ -20,7 +21,8 @@
       },
       "cozy-hearth": {
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/cozy-hearth.png",
-        "zIndex": 2
+        "zIndex": 2,
+        "scale": 0.9
       },
       "soaking-in-nature": {
         "image": "assets/images/atmospheric-buffs/cozy-modern-stickers/soaking-in-nature.png",

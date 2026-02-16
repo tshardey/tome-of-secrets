@@ -59,6 +59,8 @@ export function render(containerEl, theme, activeStickers) {
         if (!imagePath) continue;
 
         const zIndex = String(cfg.zIndex != null ? cfg.zIndex : 2);
+        const scale = cfg.scale != null ? Number(cfg.scale) : 1;
+        const transform = scale !== 1 ? `scale(${scale})` : '';
 
         let img = room.querySelector(`.${LAYER_CLASS}[data-sticker="${slug}"]`);
         if (!img) {
@@ -74,10 +76,16 @@ export function render(containerEl, theme, activeStickers) {
             img.style.height = '100%';
             img.style.objectFit = 'cover';
             img.style.zIndex = zIndex;
+            if (scale !== 1) {
+                img.style.transformOrigin = 'center center';
+                img.style.transform = transform;
+            }
             img.src = toCdnImageUrlIfConfigured(imagePath);
             room.appendChild(img);
         } else {
             img.style.zIndex = zIndex;
+            img.style.transformOrigin = scale !== 1 ? 'center center' : '';
+            img.style.transform = transform;
             img.src = toCdnImageUrlIfConfigured(imagePath);
         }
         if (activeSlugs.has(slug)) {
