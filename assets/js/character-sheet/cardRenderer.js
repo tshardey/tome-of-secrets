@@ -458,12 +458,8 @@ function formatCompletionDate(dateCompleted) {
  * @param {string} cardTitle - Display title (genre or quest name)
  * @returns {HTMLElement} Tome card element with .tome-card class
  */
-export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle, options = {}) {
-    const shape = options?.shape === 'square' ? 'square' : 'tall';
-    const frontFit = options?.frontFit === 'contain' ? 'contain' : 'cover';
-
-    const cardClass = shape === 'square' ? 'tome-card tome-card--square' : 'tome-card';
-    const card = createElement('div', { class: cardClass });
+export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle) {
+    const card = createElement('div', { class: 'tome-card' });
     card.dataset.questIndex = index.toString();
     card.dataset.list = 'completedQuests';
 
@@ -472,9 +468,8 @@ export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle, op
     // Front: cover or fallback
     const front = createElement('div', { class: 'tome-card-front' });
     if (frontImageUrl) {
-        const fitClass = frontFit === 'contain' ? 'tome-card-cover tome-card-cover--contain' : 'tome-card-cover';
         const img = createElement('img', {
-            class: fitClass,
+            class: 'tome-card-cover',
             src: frontImageUrl,
             alt: escapeHtml((quest.book || cardTitle) || 'Book cover')
         });
@@ -532,8 +527,9 @@ export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle, op
 
     if (quest.notes && typeof quest.notes === 'string' && quest.notes.trim()) {
         const notesEl = createElement('div', { class: 'tome-card-stat-notes' });
-        const trimmed = quest.notes.trim().slice(0, 100);
-        notesEl.textContent = trimmed + (quest.notes.length > 100 ? '…' : '');
+        const trimmedFull = quest.notes.trim();
+        const trimmed = trimmedFull.slice(0, 100);
+        notesEl.textContent = trimmed + (trimmedFull.length > 100 ? '…' : '');
         back.appendChild(notesEl);
     }
 
