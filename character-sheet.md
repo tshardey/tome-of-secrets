@@ -680,6 +680,11 @@ permalink: /character-sheet.html
 
         <div id="completed-quests-container">
             <h3 id="completed-summary">Completed Quests</h3>
+            <div class="archive-card-face-toggle" role="group" aria-label="Archive card front face">
+                <span class="archive-card-face-toggle__label">Card front:</span>
+                <button type="button" class="archive-face-toggle-btn" data-archive-face="poster" aria-pressed="true">Poster</button>
+                <button type="button" class="archive-face-toggle-btn" data-archive-face="cover" aria-pressed="false">Cover</button>
+            </div>
             <nav class="archive-jump-links" aria-label="Jump to archive section">
                 <a href="#archive-rooms" class="archive-jump-link">♠ Rooms</a>
                 <a href="#archive-encounters" class="archive-jump-link">♠ Encounters</a>
@@ -1012,13 +1017,35 @@ permalink: /character-sheet.html
                 <label><strong>Prompt:</strong></label>
                 <div id="edit-quest-prompt-display" class="quest-prompt-display"></div>
             </div>
-            <div class="form-row">
+            <div class="form-row form-row-book-search">
                 <label for="edit-quest-book"><strong>Book Title:</strong></label>
-                <input type="text" id="edit-quest-book" placeholder="Book Title">
+                <div class="book-search-input-row">
+                    <input type="text" id="edit-quest-book" placeholder="Book Title" autocomplete="off">
+                    <button type="button" id="edit-quest-lookup-book-btn" class="lookup-book-btn" title="Fetch cover and page count for this book">Look up book</button>
+                </div>
+                <div id="edit-quest-book-search-results" class="book-search-results" aria-live="polite" style="display: none;"></div>
             </div>
             <div class="form-row">
                 <label for="edit-quest-book-author"><strong>Book Author (optional):</strong></label>
                 <input type="text" id="edit-quest-book-author" placeholder="Book Author">
+            </div>
+            <div id="edit-quest-book-meta-row" class="form-row edit-quest-book-meta-row">
+                <label><strong>Cover &amp; pages:</strong></label>
+                <div class="edit-quest-book-meta-fields">
+                    <div class="edit-quest-cover-field">
+                        <img id="edit-quest-cover-preview" class="edit-quest-cover-preview" src="" alt="" role="presentation">
+                        <div class="edit-quest-cover-inputs">
+                            <input type="url" id="edit-quest-cover-url" class="edit-quest-cover-url-input" placeholder="Or paste cover image URL" value="">
+                            <label for="edit-quest-cover-upload" class="edit-quest-cover-upload-label">Upload cover</label>
+                            <input type="file" id="edit-quest-cover-upload" class="edit-quest-cover-upload-input" accept="image/*">
+                        </div>
+                        <input type="hidden" id="edit-quest-cover-value" value="">
+                    </div>
+                    <div class="edit-quest-page-count-field">
+                        <label for="edit-quest-page-count" class="edit-quest-page-count-label">Pages</label>
+                        <input type="number" id="edit-quest-page-count" class="edit-quest-page-count-input" min="1" placeholder="—" value="">
+                    </div>
+                </div>
             </div>
             <div class="form-row">
                 <label for="edit-quest-notes"><strong>Notes (optional):</strong></label>

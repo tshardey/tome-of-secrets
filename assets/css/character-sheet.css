@@ -459,6 +459,201 @@
     font-style: italic;
 }
 
+/* Live book search (Grimoire Gallery) */
+.quest-edit-body .form-row-book-search {
+    position: relative;
+}
+
+.book-search-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.book-search-input-row input {
+    flex: 1;
+    min-width: 160px;
+}
+
+.lookup-book-btn {
+    padding: 8px 14px;
+    background: rgba(184, 159, 98, 0.25);
+    border: 1px solid rgba(184, 159, 98, 0.5);
+    border-radius: 6px;
+    color: #d4c8b0;
+    font-family: 'Lora', serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.lookup-book-btn:hover:not(:disabled) {
+    background: rgba(184, 159, 98, 0.4);
+}
+
+.lookup-book-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.book-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin-top: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #2a231d;
+    border: 1px solid rgba(184, 159, 98, 0.4);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.book-search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(184, 159, 98, 0.15);
+    color: #f5f0e6;
+    font-family: 'Lora', serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.book-search-result-cover {
+    width: 36px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.book-search-result-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.book-search-result-item:last-child {
+    border-bottom: none;
+}
+
+.book-search-result-item:hover {
+    background: rgba(184, 159, 98, 0.2);
+}
+
+.edit-quest-book-meta-row {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edit-quest-book-meta-display,
+.edit-quest-book-meta-fields {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.edit-quest-cover-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edit-quest-cover-preview {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid rgba(184, 159, 98, 0.3);
+}
+
+.edit-quest-cover-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+}
+
+.edit-quest-cover-url-input {
+    width: 100%;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #d4c8b0;
+    background-color: rgba(42, 35, 29, 0.8);
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+}
+
+.edit-quest-cover-url-input::placeholder {
+    color: #8a7a61;
+}
+
+.edit-quest-cover-upload-label {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    color: #2a231d;
+    background-color: #b89f62;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.edit-quest-cover-upload-label:hover {
+    background-color: #cca352;
+}
+
+.edit-quest-cover-upload-input {
+    position: absolute;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.edit-quest-page-count-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-quest-page-count-label {
+    font-size: 0.9rem;
+    color: #8a7a61;
+}
+
+.edit-quest-page-count-input {
+    width: 5em;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: #d4c8b0;
+    background-color: rgba(42, 35, 29, 0.8);
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+}
+
+.edit-quest-page-count-display {
+    color: #b89f62;
+    font-size: 0.95rem;
+}
+
 .quest-edit-section {
     margin-bottom: 20px;
 }

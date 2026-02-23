@@ -487,6 +487,8 @@ export async function initializeCharacterSheet() {
     // Ensure warning reflects current saved vs form values on initial load
     checkCurrencyUnsavedChanges();
 
+    const isTouchFlipMode = window.matchMedia?.('(hover: none)')?.matches ?? false;
+
     // Delegated click handler for all interactive elements
     form.addEventListener('click', (e) => {
         const target = e.target;
@@ -502,21 +504,48 @@ export async function initializeCharacterSheet() {
             }
             return;
         }
+
+        // Archive tab: card face toggle (Poster vs Cover)
+        const faceBtn = target.closest('.archive-face-toggle-btn');
+        if (faceBtn) {
+            const mode = faceBtn.getAttribute('data-archive-face');
+            if (mode === 'poster' || mode === 'cover') {
+                safeSetJSON(STORAGE_KEYS.ARCHIVE_CARD_FACE_MODE, mode);
+                ui.renderCompletedQuests();
+            }
+            return;
+        }
         
-        // Handle dungeon archive card clicks first (before data-index check)
-        // Check if click is on the card itself or its children (but not on buttons)
-        if (target.closest('.dungeon-archive-card') && !target.closest('button')) {
-            const card = target.closest('.dungeon-archive-card');
-            const editButton = card?.querySelector('.edit-quest-btn');
+        // Handle archive card clicks:
+        // - Desktop pointers: hover flips (CSS), click opens edit drawer
+        // - Touch devices: tap flips (JS), double-tap opens edit drawer
+        const tomeCard = target.closest('.tome-card');
+        const dungeonCard = target.closest('.dungeon-archive-card');
+        const archiveCard = tomeCard || dungeonCard;
+        if (archiveCard && !target.closest('button')) {
+            const editButton = archiveCard.querySelector('.edit-quest-btn');
             if (editButton && editButton.dataset.list && editButton.dataset.index) {
-                // Simulate clicking the edit button by creating a synthetic event
-                // This ensures the delegated handler processes it correctly
-                const syntheticEvent = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window
-                });
-                editButton.dispatchEvent(syntheticEvent);
+                if (tomeCard) {
+                    if (!isTouchFlipMode) {
+                        editButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                        return;
+                    }
+
+                    const now = Date.now();
+                    const sameCard = window._tomeCardLastClickCard === tomeCard;
+                    const recent = sameCard && (now - (window._tomeCardLastClickTime || 0)) < 400;
+                    if (recent) {
+                        window._tomeCardLastClickCard = null;
+                        window._tomeCardLastClickTime = 0;
+                        editButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                        return;
+                    }
+                    window._tomeCardLastClickCard = tomeCard;
+                    window._tomeCardLastClickTime = now;
+                    tomeCard.classList.toggle('tome-card-flipped');
+                    return;
+                }
+                editButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
                 return;
             }
         }

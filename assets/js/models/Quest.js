@@ -22,6 +22,9 @@ export class Quest {
      * @param {boolean} [data.isEncounter=false] - Whether this is a dungeon encounter
      * @param {string} [data.dateAdded=null] - ISO date string when quest was added (Schema v3)
      * @param {string} [data.dateCompleted=null] - ISO date string when quest was completed (Schema v3)
+     * @param {string} [data.coverUrl=null] - Book cover URL from API (Schema v4, Grimoire Gallery)
+     * @param {number} [data.pageCountRaw=null] - Page count from API (Schema v4)
+     * @param {number} [data.pageCountEffective=null] - Page count after Keeper item adjustments (Schema v4)
      */
     constructor({
         type,
@@ -35,7 +38,10 @@ export class Quest {
         rewards = null,
         isEncounter = false,
         dateAdded = null,
-        dateCompleted = null
+        dateCompleted = null,
+        coverUrl = null,
+        pageCountRaw = null,
+        pageCountEffective = null
     }) {
         // Validate required fields
         if (!type || typeof type !== 'string') {
@@ -62,6 +68,9 @@ export class Quest {
         this.isEncounter = Boolean(isEncounter);
         this.dateAdded = dateAdded || null;
         this.dateCompleted = dateCompleted || null;
+        this.coverUrl = coverUrl || null;
+        this.pageCountRaw = typeof pageCountRaw === 'number' && !isNaN(pageCountRaw) ? pageCountRaw : null;
+        this.pageCountEffective = typeof pageCountEffective === 'number' && !isNaN(pageCountEffective) ? pageCountEffective : null;
 
         // Handle rewards
         if (rewards instanceof Reward) {
@@ -133,7 +142,10 @@ export class Quest {
             rewards: this.rewards ? this.rewards.clone() : null,
             isEncounter: this.isEncounter,
             dateAdded: this.dateAdded,
-            dateCompleted: this.dateCompleted
+            dateCompleted: this.dateCompleted,
+            coverUrl: this.coverUrl,
+            pageCountRaw: this.pageCountRaw,
+            pageCountEffective: this.pageCountEffective
         });
     }
 
@@ -154,7 +166,10 @@ export class Quest {
             rewards: this.rewards ? this.rewards.toJSON() : { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [], modifiedBy: [] },
             isEncounter: this.isEncounter,
             dateAdded: this.dateAdded,
-            dateCompleted: this.dateCompleted
+            dateCompleted: this.dateCompleted,
+            coverUrl: this.coverUrl,
+            pageCountRaw: this.pageCountRaw,
+            pageCountEffective: this.pageCountEffective
         };
     }
 

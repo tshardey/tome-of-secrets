@@ -57,6 +57,39 @@ function migrateQuestRewards(quest) {
 }
 
 /**
+ * Migration from schema version 3 to version 4
+ * - Adds Grimoire Gallery metadata to all quests: coverUrl, pageCountRaw, pageCountEffective
+ * - Values are null for existing quests; populated when user selects a book via API or edits
+ */
+function migrateToVersion4(state) {
+    const migrated = { ...state };
+
+    const questKeys = [
+        STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+        STORAGE_KEYS.COMPLETED_QUESTS,
+        STORAGE_KEYS.DISCARDED_QUESTS
+    ];
+
+    questKeys.forEach(key => {
+        if (Array.isArray(migrated[key])) {
+            migrated[key] = migrated[key].map(quest => {
+                if (!quest || typeof quest !== 'object') {
+                    return quest;
+                }
+                return {
+                    ...quest,
+                    coverUrl: quest.coverUrl ?? null,
+                    pageCountRaw: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? quest.pageCountRaw : null,
+                    pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? quest.pageCountEffective : null
+                };
+            });
+        }
+    });
+
+    return migrated;
+}
+
+/**
  * Migration from schema version 2 to version 3
  * - Adds dateAdded and dateCompleted fields to all quests
  * - Sets dateAdded to null for existing quests (will be set on next creation)
@@ -206,6 +239,9 @@ export function migrateState(state) {
                 break;
             case 3:
                 migratedState = migrateToVersion3(migratedState);
+                break;
+            case 4:
+                migratedState = migrateToVersion4(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

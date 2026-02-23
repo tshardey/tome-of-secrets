@@ -75,9 +75,9 @@ describe('ui.renderCompletedQuests dungeon archive sections', () => {
 
     ui.renderCompletedQuests();
 
-    const rooms = document.querySelectorAll('#dungeon-rooms-archive-container .dungeon-archive-card');
-    const encounters = document.querySelectorAll('#dungeon-encounters-archive-container .dungeon-archive-card');
-    const otherCards = document.querySelectorAll('.other-quests-section .quest-cards-container .quest-card');
+    const rooms = document.querySelectorAll('#dungeon-rooms-archive-container .tome-card');
+    const encounters = document.querySelectorAll('#dungeon-encounters-archive-container .tome-card');
+    const otherCards = document.querySelectorAll('.other-quests-section .quest-cards-container .tome-card');
 
     expect(rooms).toHaveLength(1);
     expect(encounters).toHaveLength(1);
@@ -121,7 +121,7 @@ describe('ui.renderCompletedQuests dungeon archive sections', () => {
     ui.renderCompletedQuests();
 
     const monthHeadings = document.querySelectorAll('.other-quests-section .quest-cards-container .archive-month-heading');
-    const cards = document.querySelectorAll('.other-quests-section .quest-cards-container .quest-card');
+    const cards = document.querySelectorAll('.other-quests-section .quest-cards-container .tome-card');
 
     expect(monthHeadings).toHaveLength(2);
     expect(monthHeadings[0].textContent).toBe('February 2026');

@@ -352,27 +352,33 @@
     z-index: 1;
 }
 
-/* Archive tab: max 4 rows per section, then scroll (Dungeon Rooms, Encounters, Genre, Side Quests) */
-#completed-quests-container .dungeon-archive-cards-grid {
-    max-height: 1350px; /* ~4 rows of cards (200px min width, 2/3 aspect ratio ~300px + gaps) */
+/* Archive tab: max 4 rows per section, then scroll (Dungeon Rooms, Encounters) */
+/* IMPORTANT: overflow != visible breaks CSS 3D transforms, so Tome Cards grids must NOT scroll */
+#completed-quests-container .dungeon-archive-cards-grid:not(.tome-cards-grid) {
+    max-height: 1350px;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(184, 159, 98, 0.5) rgba(139, 115, 85, 0.1);
 }
-#completed-quests-container .dungeon-archive-cards-grid::-webkit-scrollbar {
+#completed-quests-container .dungeon-archive-cards-grid:not(.tome-cards-grid)::-webkit-scrollbar {
     width: 8px;
 }
-#completed-quests-container .dungeon-archive-cards-grid::-webkit-scrollbar-track {
+#completed-quests-container .dungeon-archive-cards-grid:not(.tome-cards-grid)::-webkit-scrollbar-track {
     background: rgba(139, 115, 85, 0.1);
     border-radius: 4px;
 }
-#completed-quests-container .dungeon-archive-cards-grid::-webkit-scrollbar-thumb {
+#completed-quests-container .dungeon-archive-cards-grid:not(.tome-cards-grid)::-webkit-scrollbar-thumb {
     background: rgba(184, 159, 98, 0.5);
     border-radius: 4px;
 }
-#completed-quests-container .dungeon-archive-cards-grid::-webkit-scrollbar-thumb:hover {
+#completed-quests-container .dungeon-archive-cards-grid:not(.tome-cards-grid)::-webkit-scrollbar-thumb:hover {
     background: rgba(184, 159, 98, 0.7);
+}
+
+/* Tome card grids: overflow must stay visible for 3D transforms */
+#completed-quests-container .dungeon-archive-cards-grid.tome-cards-grid {
+    overflow: visible;
 }
 
 .dungeon-archive-card {
@@ -479,6 +485,13 @@
     margin-bottom: 16px;
 }
 
+/* Archive "Other" section uses Tome Card grid; remove quest-card max-height so it doesn't overlay sections above. */
+#completed-quests-container .other-quests-section .quest-cards-container.dungeon-archive-cards-grid {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+}
+
 /* Scrollable Notes/Review Section */
 .quest-card-notes-scrollable {
     max-height: 200px;
@@ -503,6 +516,231 @@
 
 .quest-card-notes-scrollable::-webkit-scrollbar-thumb:hover {
     background: rgba(184, 159, 98, 0.7);
+}
+
+/* ========================================
+   Grimoire Gallery: Tome Card 3D flip
+   Scoped under #completed-quests-container so flip wins over any other archive rules.
+   ======================================== */
+
+#completed-quests-container .archive-card-face-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 14px 0;
+    flex-wrap: wrap;
+}
+
+#completed-quests-container .archive-card-face-toggle__label {
+    font-size: 0.9rem;
+    color: rgba(212, 200, 176, 0.9);
+    font-family: 'Lora', serif;
+}
+
+#completed-quests-container .archive-face-toggle-btn {
+    border: 1px solid rgba(184, 159, 98, 0.45);
+    background: rgba(42, 35, 29, 0.65);
+    color: rgba(245, 240, 230, 0.95);
+    font-family: 'Lora', serif;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#completed-quests-container .archive-face-toggle-btn[aria-pressed="true"] {
+    background: rgba(184, 159, 98, 0.25);
+    border-color: rgba(184, 159, 98, 0.9);
+}
+
+#completed-quests-container .archive-face-toggle-btn:hover {
+    border-color: rgba(184, 159, 98, 0.75);
+}
+
+#completed-quests-container .tome-card,
+.tome-card {
+    width: 250px;
+    height: 375px;
+    perspective: 1000px;
+    -webkit-perspective: 1000px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+#completed-quests-container .tome-card-inner,
+.tome-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s ease;
+    -webkit-transition: -webkit-transform 0.6s ease;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    overflow: visible;
+}
+
+/* Hover-to-flip for desktop pointers (matches GDD: hover flips, click edits). */
+@media (hover: hover) and (pointer: fine) {
+    #completed-quests-container .tome-card:hover .tome-card-inner,
+    .tome-card:hover .tome-card-inner {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+    }
+}
+
+/* Tap-to-flip fallback for touch devices (JS toggles .tome-card-flipped). */
+@media (hover: none) {
+    #completed-quests-container .tome-card.tome-card-flipped .tome-card-inner,
+    .tome-card.tome-card-flipped .tome-card-inner {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+    }
+}
+
+#completed-quests-container .tome-card-front,
+#completed-quests-container .tome-card-back,
+.tome-card-front,
+.tome-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#completed-quests-container .tome-card-front,
+.tome-card-front {
+    z-index: 2;
+    background: linear-gradient(180deg, #2a231d 0%, #1a1612 100%);
+}
+
+#completed-quests-container .tome-card-back,
+.tome-card-back {
+    transform: rotateY(180deg);
+    -webkit-transform: rotateY(180deg);
+    z-index: 1;
+    background: linear-gradient(180deg, #2a231d 0%, #1a1612 100%);
+    border: 2px solid rgba(184, 159, 98, 0.4);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tome-card-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.tome-card-cover.tome-card-cover--contain {
+    object-fit: contain;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.tome-card.tome-card--square {
+    width: 250px;
+    height: 250px;
+}
+
+.tome-card-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: linear-gradient(135deg, #3d3428 0%, #2a231d 100%);
+    color: #b89f62;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    padding: 12px;
+    line-height: 1.2;
+}
+
+/* Stat block (back of Tome Card) */
+.tome-card-stat-header {
+    margin-bottom: 6px;
+}
+
+.tome-card-stat-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f5f0e6;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.tome-card-stat-author {
+    font-size: 0.75rem;
+    color: #b89f62;
+    margin-top: 2px;
+}
+
+.tome-card-stat-date {
+    font-size: 0.7rem;
+    color: rgba(212, 200, 176, 0.8);
+    margin-top: 2px;
+}
+
+.tome-card-stat-prompt {
+    font-size: 0.7rem;
+    color: rgba(212, 200, 176, 0.9);
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.tome-card-stat-pages {
+    font-size: 0.75rem;
+    color: #b89f62;
+    margin-bottom: 4px;
+}
+
+.tome-card-stat-rewards {
+    font-size: 0.75rem;
+    color: rgba(212, 200, 176, 0.95);
+    margin-bottom: 4px;
+}
+
+.tome-card-stat-buffs {
+    font-size: 0.65rem;
+    color: rgba(212, 200, 176, 0.7);
+    margin-bottom: 4px;
+}
+
+.tome-card-stat-notes {
+    font-size: 0.65rem;
+    color: rgba(212, 200, 176, 0.8);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    margin-top: auto;
+}
+
+/* Grid for Tome Cards: fixed card size */
+.dungeon-archive-cards-grid.tome-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 250px));
+    justify-content: start;
 }
 
 /* Mobile Responsive */

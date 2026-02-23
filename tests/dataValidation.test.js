@@ -300,8 +300,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 3', () => {
-            expect(SCHEMA_VERSION).toBe(3);
+        test('schema version should be 4', () => {
+            expect(SCHEMA_VERSION).toBe(4);
         });
     });
 });
