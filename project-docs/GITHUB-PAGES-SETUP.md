@@ -28,8 +28,22 @@ The `.github/workflows/jekyll.yml` workflow will:
 2. ✅ Build the Jekyll site (which includes the generated file)
 3. ✅ Deploy to GitHub Pages
 
-It can also inject environment-specific configuration at build time (e.g., Supabase Cloud Save),
-without committing instance credentials to git.
+It can also inject environment-specific configuration at build time (e.g., Supabase Cloud Save, Google Books API for the Gallery), without committing credentials to git.
+
+### Repository secrets (optional)
+
+To enable features that need API keys in production, add these in **Settings → Secrets and variables → Actions**:
+
+| Secret name | Used for |
+|-------------|----------|
+| `SUPABASE_URL` | Cloud Save (Supabase project URL) |
+| `SUPABASE_PUBLISHABLE_KEY` | Cloud Save (Supabase anon/publishable key) |
+| `IMAGES_CDN_BASE` | Optional images CDN base URL |
+| `GOOGLE_BOOKS_API_KEY` | Gallery book search (Google Books API). Restrict the key to your GitHub Pages origin and (optionally) `localhost` in Google Cloud Console. |
+
+After adding or changing secrets, re-run the workflow or push a commit so the next build picks them up.
+
+**Local development (Gallery):** To use the Google Books API when running Jekyll locally, add `google_books_api_key: "your-key-here"` to your existing `_config.supabase.yml` (same file you use for Supabase). You can copy the value from `.devcontainer/.env` (`GOOGLE_BOOKS_API_KEY`). Do not commit secrets.
 
 ### Why This Is Necessary
 

@@ -15,6 +15,12 @@ supabase_publishable_key: ""
 supabase_anon_key: ""
 
 # ==============================
+# Google Books API (optional - for Gallery book search)
+# ==============================
+# Set via GitHub Actions secret GOOGLE_BOOKS_API_KEY in production, or _config.local.yml for local dev.
+google_books_api_key: ""
+
+# ==============================
 # Images CDN (optional)
 # ==============================
 # If set, `assets/images/...` paths will be served from this base instead of the repo.

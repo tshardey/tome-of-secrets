@@ -1209,6 +1209,18 @@ export class QuestController extends BaseController {
             }
             yearInput.value = questYear;
         }
+        // Date completed (read-only): when the quest was actually completed (separate from reading period month/year)
+        const dateCompletedDisplay = document.getElementById('edit-quest-date-completed-display');
+        if (dateCompletedDisplay) {
+            if (quest.dateCompleted) {
+                const d = new Date(quest.dateCompleted);
+                dateCompletedDisplay.textContent = !isNaN(d.getTime())
+                    ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '—';
+            } else {
+                dateCompletedDisplay.textContent = '—';
+            }
+        }
         if (typeSelect) typeSelect.value = quest.type || '';
         if (bookInput) bookInput.value = quest.book || '';
         if (bookAuthorInput) bookAuthorInput.value = quest.bookAuthor || '';

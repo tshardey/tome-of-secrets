@@ -59,13 +59,13 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Create Supabase config override (from repo secrets)
+      - name: Create config overrides (from repo secrets)
         run: |
           cat > _config.supabase.yml << 'EOF'
           supabase_url: "${{ secrets.SUPABASE_URL }}"
           supabase_publishable_key: "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
-          # Optional: images CDN base (e.g., Supabase Storage public bucket URL)
           images_cdn_base: "${{ secrets.IMAGES_CDN_BASE }}"
+          google_books_api_key: "${{ secrets.GOOGLE_BOOKS_API_KEY }}"
           EOF
           echo "Wrote _config.supabase.yml (values hidden)."
       

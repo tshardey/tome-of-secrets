@@ -680,32 +680,39 @@ permalink: /character-sheet.html
 
         <div id="completed-quests-container">
             <h3 id="completed-summary">Completed Quests</h3>
+            <nav class="archive-jump-links" aria-label="Jump to archive section">
+                <a href="#archive-rooms" class="archive-jump-link">♠ Rooms</a>
+                <a href="#archive-encounters" class="archive-jump-link">♠ Encounters</a>
+                <a href="#archive-genre" class="archive-jump-link">♥ Genre</a>
+                <a href="#archive-side" class="archive-jump-link">♣ Side</a>
+                <a href="#archive-other" class="archive-jump-link">Other</a>
+            </nav>
             <div class="completed-quests-sections">
                 <!-- Dungeon Section -->
-                <div class="dungeon-archive-section">
+                <div id="archive-rooms" class="dungeon-archive-section archive-section-anchor">
                     <h4>Dungeon Rooms</h4>
                     <div id="dungeon-rooms-archive-container" class="dungeon-archive-cards-grid"></div>
                 </div>
                 
-                <div class="dungeon-archive-section">
+                <div id="archive-encounters" class="dungeon-archive-section archive-section-anchor">
                     <h4>Dungeon Encounters</h4>
                     <div id="dungeon-encounters-archive-container" class="dungeon-archive-cards-grid"></div>
                 </div>
                 
                 <!-- Genre Quests Section -->
-                <div class="dungeon-archive-section">
+                <div id="archive-genre" class="dungeon-archive-section archive-section-anchor">
                     <h4>Organize the Stacks (Genre Quests)</h4>
                     <div id="genre-quests-archive-container" class="dungeon-archive-cards-grid"></div>
                 </div>
                 
                 <!-- Side Quests Section -->
-                <div class="dungeon-archive-section">
+                <div id="archive-side" class="dungeon-archive-section archive-section-anchor">
                     <h4>Side Quests</h4>
                     <div id="side-quests-archive-container" class="dungeon-archive-cards-grid"></div>
                 </div>
                 
                 <!-- Other Quests Section -->
-                <div class="other-quests-section">
+                <div id="archive-other" class="other-quests-section archive-section-anchor">
                     <h4>Other Quests</h4>
                     <div class="quest-cards-container"></div>
                 </div>
@@ -981,6 +988,10 @@ permalink: /character-sheet.html
                 <select id="edit-quest-year">
                     <option value="">-- Select Year --</option>
                 </select>
+            </div>
+            <div class="form-row edit-quest-date-completed-row">
+                <label><strong>Date completed:</strong></label>
+                <span id="edit-quest-date-completed-display" class="edit-quest-date-completed-display"></span>
             </div>
             <div class="form-row">
                 <label for="edit-quest-type"><strong>Quest Type:</strong></label>
