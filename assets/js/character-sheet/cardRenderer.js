@@ -434,3 +434,119 @@ export function renderQuestArchiveCard(quest, index, cardImage, title) {
     
     return card;
 }
+
+/**
+ * Format completion date for stat block (e.g. "February 2026")
+ * @param {string|null} dateCompleted - ISO date string
+ * @returns {string}
+ */
+function formatCompletionDate(dateCompleted) {
+    if (!dateCompleted || typeof dateCompleted !== 'string') return '—';
+    const d = new Date(dateCompleted);
+    if (isNaN(d.getTime())) return '—';
+    const month = d.toLocaleString('default', { month: 'long' });
+    const year = d.getFullYear();
+    return `${month} ${year}`;
+}
+
+/**
+ * Render a Tome Card (flip card: cover front, stat block back) for the Grimoire Gallery.
+ * Used for genre and side quests. Click opens edit drawer.
+ * @param {Object} quest - Quest object (may include coverUrl, pageCountRaw, pageCountEffective)
+ * @param {number} index - Quest index in completedQuests
+ * @param {string|null} frontImageUrl - Cover image URL (quest.coverUrl or fallback card art)
+ * @param {string} cardTitle - Display title (genre or quest name)
+ * @returns {HTMLElement} Tome card element with .tome-card class
+ */
+export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle, options = {}) {
+    const shape = options?.shape === 'square' ? 'square' : 'tall';
+    const frontFit = options?.frontFit === 'contain' ? 'contain' : 'cover';
+
+    const cardClass = shape === 'square' ? 'tome-card tome-card--square' : 'tome-card';
+    const card = createElement('div', { class: cardClass });
+    card.dataset.questIndex = index.toString();
+    card.dataset.list = 'completedQuests';
+
+    const inner = createElement('div', { class: 'tome-card-inner' });
+
+    // Front: cover or fallback
+    const front = createElement('div', { class: 'tome-card-front' });
+    if (frontImageUrl) {
+        const fitClass = frontFit === 'contain' ? 'tome-card-cover tome-card-cover--contain' : 'tome-card-cover';
+        const img = createElement('img', {
+            class: fitClass,
+            src: frontImageUrl,
+            alt: escapeHtml((quest.book || cardTitle) || 'Book cover')
+        });
+        front.appendChild(img);
+    } else {
+        const fallback = createElement('div', { class: 'tome-card-fallback' });
+        fallback.textContent = quest.book || cardTitle || 'No cover';
+        front.appendChild(fallback);
+    }
+    inner.appendChild(front);
+
+    // Back: stat block
+    const back = createElement('div', { class: 'tome-card-back' });
+
+    const header = createElement('div', { class: 'tome-card-stat-header' });
+    const titleEl = createElement('div', { class: 'tome-card-stat-title' });
+    titleEl.textContent = quest.book || cardTitle || '—';
+    header.appendChild(titleEl);
+    const authorEl = createElement('div', { class: 'tome-card-stat-author' });
+    authorEl.textContent = quest.bookAuthor || '—';
+    header.appendChild(authorEl);
+    const dateEl = createElement('div', { class: 'tome-card-stat-date' });
+    dateEl.textContent = formatCompletionDate(quest.dateCompleted);
+    header.appendChild(dateEl);
+    back.appendChild(header);
+
+    const promptEl = createElement('div', { class: 'tome-card-stat-prompt' });
+    promptEl.textContent = quest.prompt || '—';
+    back.appendChild(promptEl);
+
+    const pageCount = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
+    if (pageCount != null) {
+        const pageEl = createElement('div', { class: 'tome-card-stat-pages' });
+        pageEl.textContent = `${pageCount} pp`;
+        back.appendChild(pageEl);
+    }
+
+    const rewards = quest.rewards && typeof quest.rewards === 'object' ? quest.rewards : {};
+    const hasRewards = (rewards.xp > 0) || (rewards.inkDrops > 0) || (rewards.paperScraps > 0);
+    if (hasRewards) {
+        const rewardsRow = createElement('div', { class: 'tome-card-stat-rewards' });
+        const parts = [];
+        if (rewards.xp > 0) parts.push(`+${rewards.xp} XP`);
+        if (rewards.inkDrops > 0) parts.push(`+${rewards.inkDrops} 💧`);
+        if (rewards.paperScraps > 0) parts.push(`+${rewards.paperScraps} 📄`);
+        rewardsRow.textContent = parts.join(' ');
+        back.appendChild(rewardsRow);
+    }
+
+    if (Array.isArray(quest.buffs) && quest.buffs.length > 0) {
+        const buffsEl = createElement('div', { class: 'tome-card-stat-buffs' });
+        buffsEl.textContent = quest.buffs.join(', ');
+        back.appendChild(buffsEl);
+    }
+
+    if (quest.notes && typeof quest.notes === 'string' && quest.notes.trim()) {
+        const notesEl = createElement('div', { class: 'tome-card-stat-notes' });
+        const trimmed = quest.notes.trim().slice(0, 100);
+        notesEl.textContent = trimmed + (quest.notes.length > 100 ? '…' : '');
+        back.appendChild(notesEl);
+    }
+
+    const editButton = createElement('button', {
+        class: 'edit-quest-btn',
+        type: 'button',
+        style: 'display: none;'
+    });
+    editButton.dataset.list = 'completedQuests';
+    editButton.dataset.index = index.toString();
+    back.appendChild(editButton);
+
+    inner.appendChild(back);
+    card.appendChild(inner);
+    return card;
+}

@@ -15,8 +15,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Current schema version - increment when data structure changes
  * Version 2: Added Library Restoration Expansion fields
  * Version 3: Added quest date tracking (dateAdded, dateCompleted)
+ * Version 4: Added Grimoire Gallery metadata on quests (coverUrl, pageCountRaw, pageCountEffective)
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /**
  * Schema version key in localStorage
@@ -85,7 +86,11 @@ function validateQuest(quest, context = 'quest') {
         restorationData: quest.restorationData && typeof quest.restorationData === 'object' ? quest.restorationData : null,
         // Date tracking fields (Schema v3)
         dateAdded: typeof quest.dateAdded === 'string' ? quest.dateAdded : null,
-        dateCompleted: typeof quest.dateCompleted === 'string' ? quest.dateCompleted : null
+        dateCompleted: typeof quest.dateCompleted === 'string' ? quest.dateCompleted : null,
+        // Grimoire Gallery metadata (Schema v4)
+        coverUrl: typeof quest.coverUrl === 'string' ? quest.coverUrl : null,
+        pageCountRaw: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? Math.max(0, Math.floor(quest.pageCountRaw)) : null,
+        pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? Math.max(0, Math.floor(quest.pageCountEffective)) : null
     };
 
     // Normalize month/year if they're invalid but dates are available (Phase 2.2)

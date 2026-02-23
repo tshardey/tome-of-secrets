@@ -23,7 +23,9 @@ export const STORAGE_KEYS = Object.freeze({
     PASSIVE_FAMILIAR_SLOTS: 'passiveFamiliarSlots',
     // Dungeon room rewards (Phase 3.1)
     CLAIMED_ROOM_REWARDS: 'claimedRoomRewards',
-    DUNGEON_COMPLETION_DRAWS_REDEEMED: 'dungeonCompletionDrawsRedeemed'
+    DUNGEON_COMPLETION_DRAWS_REDEEMED: 'dungeonCompletionDrawsRedeemed',
+    // Archive UI preferences
+    ARCHIVE_CARD_FACE_MODE: 'archiveCardFaceMode'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
