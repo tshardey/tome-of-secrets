@@ -474,6 +474,11 @@
     font-size: 0.9em;
 }
 
+.edit-quest-date-completed-display {
+    color: #8a7a61;
+    font-size: 0.95em;
+}
+
 .quest-prompt-display {
     padding: 12px;
     background-color: rgba(139, 115, 85, 0.15);

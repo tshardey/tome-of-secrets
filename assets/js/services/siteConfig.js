@@ -18,4 +18,13 @@ export function getSupabaseConfig() {
   };
 }
 
+/**
+ * Returns the Google Books API key for Gallery book search (optional).
+ * Set via repo secret GOOGLE_BOOKS_API_KEY in CI, or _config.local.yml for local dev.
+ * @returns {string}
+ */
+export function getGoogleBooksApiKey() {
+  return readMeta('google-books-api-key');
+}
+
 

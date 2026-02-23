@@ -491,6 +491,18 @@ export async function initializeCharacterSheet() {
     form.addEventListener('click', (e) => {
         const target = e.target;
         
+        // Archive tab: jump links smooth-scroll to section
+        const jumpLink = target.closest('.archive-jump-link');
+        if (jumpLink && jumpLink.getAttribute('href')?.startsWith('#')) {
+            const id = jumpLink.getAttribute('href').slice(1);
+            const section = document.getElementById(id);
+            if (section) {
+                e.preventDefault();
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+        
         // Handle dungeon archive card clicks first (before data-index check)
         // Check if click is on the card itself or its children (but not on buttons)
         if (target.closest('.dungeon-archive-card') && !target.closest('button')) {

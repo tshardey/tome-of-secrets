@@ -3,7 +3,7 @@ import { characterState } from './state.js';
 import { keeperBackgrounds, allItems } from './data.js';
 import { parseIntOr } from '../utils/helpers.js';
 import { escapeHtml } from '../utils/sanitize.js';
-import { clearElement, appendHTML } from '../utils/domHelpers.js';
+import { clearElement, appendHTML, createElement } from '../utils/domHelpers.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from './storageKeys.js';
 import { 
@@ -478,6 +478,84 @@ export function renderActiveAssignments() {
     }
 }
 
+/** Full month names for archive grouping labels */
+const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+/** Common abbreviations -> 1-based month number (for legacy quest.month) */
+const MONTH_ABBREV_TO_NUM = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12
+};
+
+/**
+ * Get sort key and display label for a quest's completion month/year (for archive grouping).
+ * Uses dateCompleted when valid; falls back to reading period month/year when dateCompleted is missing.
+ * @param {Object} quest - Quest with optional dateCompleted (ISO string), month, year (reading period)
+ * @returns {{ sortKey: string, label: string }}
+ */
+function getMonthYearFromQuest(quest) {
+    const d = quest?.dateCompleted ? new Date(quest.dateCompleted) : null;
+    if (d && !isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = d.getMonth() + 1;
+        const sortKey = `${y}-${String(m).padStart(2, '0')}`;
+        const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return { sortKey, label };
+    }
+    // Fallback: reading period month/year (e.g. "November", "2025" or "Nov", "2025")
+    const monthStr = (quest?.month != null && typeof quest.month === 'string') ? quest.month.trim() : '';
+    const yearStr = (quest?.year != null && String(quest.year).trim()) ? String(quest.year).trim() : '';
+    if (!monthStr || !yearStr) return { sortKey: '0000-00', label: 'Unknown date' };
+    const yearNum = /^\d{4}$/.test(yearStr) ? yearStr : (parseInt(yearStr, 10) >= 1000 && parseInt(yearStr, 10) < 10000 ? String(parseInt(yearStr, 10)) : '');
+    if (!yearNum) return { sortKey: '0000-00', label: 'Unknown date' };
+    let monthNum = MONTH_NAMES.indexOf(monthStr) + 1;
+    if (monthNum === 0) monthNum = MONTH_ABBREV_TO_NUM[monthStr.toLowerCase().slice(0, 3)] || 0;
+    if (monthNum === 0) {
+        const parsed = parseInt(monthStr, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) monthNum = parsed;
+    }
+    if (monthNum < 1 || monthNum > 12) return { sortKey: '0000-00', label: 'Unknown date' };
+    const sortKey = `${yearNum}-${String(monthNum).padStart(2, '0')}`;
+    const label = `${MONTH_NAMES[monthNum - 1]} ${yearNum}`;
+    return { sortKey, label };
+}
+
+/**
+ * Group items by completion month/year (most recent first). getQuest(item) must return the quest.
+ * @param {Array} items - Items (e.g. view models) to group
+ * @param {function} getQuest - (item) => quest
+ * @returns {Array<{ label: string, sortKey: string, items: Array }>}
+ */
+function groupByMonthYearDesc(items, getQuest) {
+    const map = new Map();
+    for (const item of items) {
+        const { sortKey, label } = getMonthYearFromQuest(getQuest(item));
+        if (!map.has(sortKey)) map.set(sortKey, { label, sortKey, items: [] });
+        map.get(sortKey).items.push(item);
+    }
+    const groups = Array.from(map.values());
+    groups.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+    return groups;
+}
+
+/**
+ * Append a month/year heading and then cards to a container. renderCard(item) returns the card element.
+ */
+function appendGroupedArchiveCards(container, groups, completedQuests, renderCard) {
+    for (const group of groups) {
+        const heading = createElement('h5', { class: 'archive-month-heading' }, group.label);
+        container.appendChild(heading);
+        for (const item of group.items) {
+            const quest = item.quest;
+            const originalIndex = completedQuests.findIndex(q => q === quest);
+            container.appendChild(renderCard(item, originalIndex));
+        }
+    }
+}
+
 export function renderCompletedQuests() {
     const container = document.getElementById('completed-quests-container');
     if (!container) return;
@@ -487,7 +565,7 @@ export function renderCompletedQuests() {
     const dungeonEncountersContainer = container.querySelector('#dungeon-encounters-archive-container');
     const genreQuestsContainer = container.querySelector('#genre-quests-archive-container');
     const sideQuestsContainer = container.querySelector('#side-quests-archive-container');
-    const cardsContainer = container.querySelector('.quest-cards-container');
+    const cardsContainer = container.querySelector('.other-quests-section .quest-cards-container');
     // Only require essential containers - genre/side quest containers are optional (for backwards compatibility)
     if (!dungeonRoomsContainer || !dungeonEncountersContainer || !cardsContainer) return;
     
@@ -524,56 +602,41 @@ export function renderCompletedQuests() {
     const roomViewModels = allDungeonViewModels.filter(vm => !vm.isEncounter);
     const encounterViewModels = allDungeonViewModels.filter(vm => vm.isEncounter);
     
-    // Render dungeon room cards
+    // Render dungeon room cards grouped by month/year (most recent first)
     if (roomViewModels.length > 0) {
-        roomViewModels.forEach((viewModel) => {
-            // Find the original index in completedQuests array
-            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
-            const card = renderDungeonArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title, 'room');
-            
-            // Click handler will be handled by delegated handler via hidden edit button
-            
-            dungeonRoomsContainer.appendChild(card);
-        });
+        const roomGroups = groupByMonthYearDesc(roomViewModels, vm => vm.quest);
+        appendGroupedArchiveCards(dungeonRoomsContainer, roomGroups, completedQuests, (viewModel, originalIndex) =>
+            renderDungeonArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title, 'room')
+        );
     }
     
-    // Render dungeon encounter cards
+    // Render dungeon encounter cards grouped by month/year (most recent first)
     if (encounterViewModels.length > 0) {
-        encounterViewModels.forEach((viewModel) => {
-            // Find the original index in completedQuests array
-            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
-            const card = renderDungeonArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title, 'encounter');
-            
-            // Click handler will be handled by delegated handler via hidden edit button
-            
-            dungeonEncountersContainer.appendChild(card);
-        });
+        const encounterGroups = groupByMonthYearDesc(encounterViewModels, vm => vm.quest);
+        appendGroupedArchiveCards(dungeonEncountersContainer, encounterGroups, completedQuests, (viewModel, originalIndex) =>
+            renderDungeonArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title, 'encounter')
+        );
     }
     
-    // Render genre quest cards (if container exists, otherwise fall back to other quests)
+    // Render genre quest cards (if container exists) grouped by month/year
     if (genreQuestsContainer && genreQuests.length > 0) {
         const genreViewModels = createGenreQuestArchiveCardsViewModel(genreQuests);
-        genreViewModels.forEach((viewModel) => {
-            // Find the original index in completedQuests array
-            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
-            const card = renderQuestArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title);
-            genreQuestsContainer.appendChild(card);
-        });
+        const genreGroups = groupByMonthYearDesc(genreViewModels, vm => vm.quest);
+        appendGroupedArchiveCards(genreQuestsContainer, genreGroups, completedQuests, (viewModel, originalIndex) =>
+            renderQuestArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title)
+        );
     }
     
-    // Render side quest cards (if container exists, otherwise fall back to other quests)
+    // Render side quest cards (if container exists) grouped by month/year
     if (sideQuestsContainer && sideQuests.length > 0) {
         const sideViewModels = createSideQuestArchiveCardsViewModel(sideQuests);
-        sideViewModels.forEach((viewModel) => {
-            // Find the original index in completedQuests array
-            const originalIndex = completedQuests.findIndex(q => q === viewModel.quest);
-            const card = renderQuestArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title);
-            sideQuestsContainer.appendChild(card);
-        });
+        const sideGroups = groupByMonthYearDesc(sideViewModels, vm => vm.quest);
+        appendGroupedArchiveCards(sideQuestsContainer, sideGroups, completedQuests, (viewModel, originalIndex) =>
+            renderQuestArchiveCard(viewModel.quest, originalIndex, viewModel.cardImage, viewModel.title)
+        );
     }
     
-    // Render other quest cards (includes genre/side quests if their containers don't exist)
-    // If specialized containers don't exist, render genre and side quests in the "other quests" container
+    // Render other quest cards (includes genre/side quests if their containers don't exist) grouped by month/year
     const questsToRenderInOther = genreQuestsContainer && sideQuestsContainer 
         ? otherQuests 
         : [
@@ -583,17 +646,20 @@ export function renderCompletedQuests() {
         ];
     
     if (questsToRenderInOther.length > 0) {
-        // Create view models for other quests (need to map to original indices)
         const otherViewModels = questsToRenderInOther.map(quest => {
             const originalIndex = completedQuests.findIndex(q => q === quest);
             const viewModels = createQuestListViewModel([quest], 'completed', background, wizardSchool);
-            return { ...viewModels[0], index: originalIndex };
+            return { ...viewModels[0], quest, index: originalIndex };
         });
-        
-        otherViewModels.forEach((viewModel) => {
-            const card = renderQuestCard(viewModel.quest, viewModel.index, 'completed');
-            cardsContainer.appendChild(card);
-        });
+        const otherGroups = groupByMonthYearDesc(otherViewModels, vm => vm.quest);
+        for (const group of otherGroups) {
+            const heading = createElement('h5', { class: 'archive-month-heading' }, group.label);
+            cardsContainer.appendChild(heading);
+            for (const viewModel of group.items) {
+                const card = renderQuestCard(viewModel.quest, viewModel.index, 'completed');
+                cardsContainer.appendChild(card);
+            }
+        }
     }
     
     const summary = document.getElementById('completed-summary');
