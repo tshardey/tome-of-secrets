@@ -60,13 +60,22 @@ jobs:
           bundler-cache: true
 
       - name: Create config overrides (from repo secrets)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          IMAGES_CDN_BASE: ${{ secrets.IMAGES_CDN_BASE }}
+          GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
         run: |
-          {
-            echo 'supabase_url: "${{ secrets.SUPABASE_URL }}"'
-            echo 'supabase_publishable_key: "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"'
-            echo 'images_cdn_base: "${{ secrets.IMAGES_CDN_BASE }}"'
-            echo 'google_books_api_key: "${{ secrets.GOOGLE_BOOKS_API_KEY }}"'
-          } > _config.supabase.yml
+          ruby -e "
+          require 'yaml'
+          h = {
+            'supabase_url' => (ENV['SUPABASE_URL'] || '').to_s,
+            'supabase_publishable_key' => (ENV['SUPABASE_PUBLISHABLE_KEY'] || '').to_s,
+            'images_cdn_base' => (ENV['IMAGES_CDN_BASE'] || '').to_s,
+            'google_books_api_key' => (ENV['GOOGLE_BOOKS_API_KEY'] || '').to_s
+          }
+          File.write('_config.supabase.yml', h.to_yaml)
+          "
           echo "Wrote _config.supabase.yml (values hidden)."
       
       - name: Build Jekyll site
