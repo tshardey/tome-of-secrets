@@ -61,12 +61,12 @@ jobs:
 
       - name: Create config overrides (from repo secrets)
         run: |
-          cat > _config.supabase.yml << 'EOF'
-          supabase_url: "${{ secrets.SUPABASE_URL }}"
-          supabase_publishable_key: "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
-          images_cdn_base: "${{ secrets.IMAGES_CDN_BASE }}"
-          google_books_api_key: "${{ secrets.GOOGLE_BOOKS_API_KEY }}"
-          EOF
+          {
+            echo 'supabase_url: "${{ secrets.SUPABASE_URL }}"'
+            echo 'supabase_publishable_key: "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"'
+            echo 'images_cdn_base: "${{ secrets.IMAGES_CDN_BASE }}"'
+            echo 'google_books_api_key: "${{ secrets.GOOGLE_BOOKS_API_KEY }}"'
+          } > _config.supabase.yml
           echo "Wrote _config.supabase.yml (values hidden)."
       
       - name: Build Jekyll site
