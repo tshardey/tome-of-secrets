@@ -25,7 +25,10 @@ export const STORAGE_KEYS = Object.freeze({
     CLAIMED_ROOM_REWARDS: 'claimedRoomRewards',
     DUNGEON_COMPLETION_DRAWS_REDEEMED: 'dungeonCompletionDrawsRedeemed',
     // Archive UI preferences
-    ARCHIVE_CARD_FACE_MODE: 'archiveCardFaceMode'
+    ARCHIVE_CARD_FACE_MODE: 'archiveCardFaceMode',
+    // Book-First Paradigm (Schema v5)
+    BOOKS: 'books',
+    EXCHANGE_PROGRAM: 'exchangeProgram'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -50,7 +53,9 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.PASSIVE_ITEM_SLOTS,
     STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS,
     STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
-    STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED
+    STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
+    STORAGE_KEYS.BOOKS,
+    STORAGE_KEYS.EXCHANGE_PROGRAM
 ]);
 
 export function createEmptyCharacterState() {
@@ -76,7 +81,9 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
         [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
         [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: [],
-        [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0
+        [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0,
+        [STORAGE_KEYS.BOOKS]: {},
+        [STORAGE_KEYS.EXCHANGE_PROGRAM]: {}
     };
 }
 

@@ -57,6 +57,79 @@ function migrateQuestRewards(quest) {
 }
 
 /**
+ * Generate a UUID for book and quest ids (Schema v5)
+ */
+function generateId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
+ * Migration from schema version 4 to version 5 (Book-First Paradigm)
+ * - Adds characterState.books and characterState.exchangeProgram (empty objects if missing)
+ * - For each quest in activeAssignments, completedQuests, discardedQuests: create a Book
+ *   from book/bookAuthor/coverUrl/pageCountRaw/pageCountEffective; set quest.bookId and
+ *   quest.id; set book.links.tomeQuestId to quest id
+ */
+function migrateToVersion5(state) {
+    const migrated = { ...state };
+
+    if (!(STORAGE_KEYS.BOOKS in migrated) || typeof migrated[STORAGE_KEYS.BOOKS] !== 'object') {
+        migrated[STORAGE_KEYS.BOOKS] = {};
+    }
+    if (!(STORAGE_KEYS.EXCHANGE_PROGRAM in migrated) || typeof migrated[STORAGE_KEYS.EXCHANGE_PROGRAM] !== 'object') {
+        migrated[STORAGE_KEYS.EXCHANGE_PROGRAM] = {};
+    }
+
+    const books = { ...migrated[STORAGE_KEYS.BOOKS] };
+    const questKeys = [
+        STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+        STORAGE_KEYS.COMPLETED_QUESTS,
+        STORAGE_KEYS.DISCARDED_QUESTS
+    ];
+
+    questKeys.forEach(key => {
+        if (!Array.isArray(migrated[key])) return;
+        migrated[key] = migrated[key].map(quest => {
+            if (!quest || typeof quest !== 'object') return quest;
+            const hasBookData = quest.book || quest.bookAuthor || quest.coverUrl != null ||
+                (typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw)) ||
+                (typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective));
+            const questId = quest.id || generateId();
+            let bookId = quest.bookId || null;
+            if (hasBookData) {
+                bookId = bookId || generateId();
+                books[bookId] = {
+                    id: bookId,
+                    title: typeof quest.book === 'string' ? quest.book : '',
+                    author: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
+                    coverUrl: typeof quest.coverUrl === 'string' ? quest.coverUrl : null,
+                    pageCountRaw: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? quest.pageCountRaw : null,
+                    pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? quest.pageCountEffective : null,
+                    links: {
+                        tomeQuestId: questId
+                    }
+                };
+            }
+            return {
+                ...quest,
+                id: questId,
+                bookId: bookId
+            };
+        });
+    });
+
+    migrated[STORAGE_KEYS.BOOKS] = books;
+    return migrated;
+}
+
+/**
  * Migration from schema version 3 to version 4
  * - Adds Grimoire Gallery metadata to all quests: coverUrl, pageCountRaw, pageCountEffective
  * - Values are null for existing quests; populated when user selects a book via API or edits
@@ -243,6 +316,9 @@ export function migrateState(state) {
             case 4:
                 migratedState = migrateToVersion4(migratedState);
                 break;
+            case 5:
+                migratedState = migrateToVersion5(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -286,12 +362,16 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS,
         STORAGE_KEYS.COMPLETED_WINGS,
         STORAGE_KEYS.PASSIVE_ITEM_SLOTS,
-        STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
+        STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS,
+        STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
+        STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
+        STORAGE_KEYS.BOOKS,
+        STORAGE_KEYS.EXCHANGE_PROGRAM
     ];
 
     stateKeys.forEach(key => {
         let defaultValue;
-        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS) {
+        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS || key === STORAGE_KEYS.EXCHANGE_PROGRAM) {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
