@@ -16,8 +16,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 2: Added Library Restoration Expansion fields
  * Version 3: Added quest date tracking (dateAdded, dateCompleted)
  * Version 4: Added Grimoire Gallery metadata on quests (coverUrl, pageCountRaw, pageCountEffective)
+ * Version 5: Book-First Paradigm - books and exchangeProgram state; quests have bookId and id
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * Schema version key in localStorage
@@ -90,7 +91,10 @@ function validateQuest(quest, context = 'quest') {
         // Grimoire Gallery metadata (Schema v4)
         coverUrl: typeof quest.coverUrl === 'string' ? quest.coverUrl : null,
         pageCountRaw: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? Math.max(0, Math.floor(quest.pageCountRaw)) : null,
-        pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? Math.max(0, Math.floor(quest.pageCountEffective)) : null
+        pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? Math.max(0, Math.floor(quest.pageCountEffective)) : null,
+        // Book-First (Schema v5)
+        id: typeof quest.id === 'string' && quest.id.trim() ? quest.id.trim() : null,
+        bookId: typeof quest.bookId === 'string' && quest.bookId.trim() ? quest.bookId.trim() : null
     };
 
     // Normalize month/year if they're invalid but dates are available (Phase 2.2)
@@ -365,6 +369,60 @@ function validateNumber(value, defaultValue, context = 'number') {
 }
 
 /**
+ * Validate and fix a book object (Schema v5)
+ * @param {*} book - Book object to validate
+ * @param {string} context - Context for error messages
+ * @returns {Object|null} - Validated book object, or null if unfixable
+ */
+function validateBook(book, context = 'book') {
+    if (!book || typeof book !== 'object') {
+        return null;
+    }
+    const id = typeof book.id === 'string' && book.id.trim() ? book.id.trim() : null;
+    if (!id) return null;
+    return {
+        id,
+        title: typeof book.title === 'string' ? book.title : '',
+        author: typeof book.author === 'string' ? book.author : '',
+        coverUrl: typeof book.coverUrl === 'string' ? book.coverUrl : null,
+        pageCountRaw: typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? Math.max(0, Math.floor(book.pageCountRaw)) : null,
+        pageCountEffective: typeof book.pageCountEffective === 'number' && !isNaN(book.pageCountEffective) ? Math.max(0, Math.floor(book.pageCountEffective)) : null,
+        links: book.links && typeof book.links === 'object' ? book.links : {}
+    };
+}
+
+/**
+ * Validate and fix the books state object (Schema v5)
+ * @param {*} books - books state (id -> book)
+ * @returns {Object} - Validated books object
+ */
+function validateBooks(books) {
+    if (!books || typeof books !== 'object' || Array.isArray(books)) {
+        return {};
+    }
+    const validated = {};
+    for (const id in books) {
+        const book = validateBook(books[id], `books[${id}]`);
+        if (book && book.id) {
+            validated[book.id] = book;
+        }
+    }
+    return validated;
+}
+
+/**
+ * Validate and fix the exchangeProgram state object (Schema v5)
+ * @param {*} exchangeProgram - exchangeProgram state
+ * @returns {Object} - Validated exchangeProgram object (structure TBD in Exchange feature)
+ */
+function validateExchangeProgram(exchangeProgram) {
+    if (!exchangeProgram || typeof exchangeProgram !== 'object' || Array.isArray(exchangeProgram)) {
+        return {};
+    }
+    return { ...exchangeProgram };
+}
+
+/**
  * Validate and fix a genre dice selection value
  * @param {*} value - Value to validate
  * @param {string} defaultValue - Default value if invalid
@@ -573,6 +631,8 @@ export function validateCharacterState(state) {
         0,
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED
     );
+    validated[STORAGE_KEYS.BOOKS] = validateBooks(state[STORAGE_KEYS.BOOKS]);
+    validated[STORAGE_KEYS.EXCHANGE_PROGRAM] = validateExchangeProgram(state[STORAGE_KEYS.EXCHANGE_PROGRAM]);
 
     return validated;
 }
