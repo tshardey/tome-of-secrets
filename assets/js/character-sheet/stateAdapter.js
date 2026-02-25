@@ -20,7 +20,10 @@ const EVENTS = Object.freeze({
     COMPLETED_WINGS_CHANGED: 'completedWingsChanged',
     PASSIVE_ITEM_SLOTS_CHANGED: 'passiveItemSlotsChanged',
     PASSIVE_FAMILIAR_SLOTS_CHANGED: 'passiveFamiliarSlotsChanged',
-    CLAIMED_ROOM_REWARDS_CHANGED: 'claimedRoomRewardsChanged'
+    CLAIMED_ROOM_REWARDS_CHANGED: 'claimedRoomRewardsChanged',
+    // Book-First Paradigm (Schema v5)
+    BOOKS_CHANGED: 'booksChanged',
+    EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -781,6 +784,302 @@ export class StateAdapter {
         this.state[STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED] = next;
         void setStateKey(STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED, next);
         return true;
+    }
+
+    // ==========================================
+    // Books (Schema v5 – Book-First Paradigm)
+    // ==========================================
+
+    _generateId() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    _getBooksRaw() {
+        const books = this.state[STORAGE_KEYS.BOOKS];
+        return books && typeof books === 'object' && !Array.isArray(books) ? books : {};
+    }
+
+    _persistBooks(books) {
+        this.state[STORAGE_KEYS.BOOKS] = books;
+        void setStateKey(STORAGE_KEYS.BOOKS, books);
+        this.emit(EVENTS.BOOKS_CHANGED, { ...books });
+    }
+
+    addBook(bookData) {
+        if (!bookData || typeof bookData !== 'object') return null;
+        const books = { ...this._getBooksRaw() };
+        const id = (typeof bookData.id === 'string' && bookData.id.trim()) ? bookData.id.trim() : this._generateId();
+        const now = new Date().toISOString();
+        const book = {
+            id,
+            title: typeof bookData.title === 'string' ? bookData.title : '',
+            author: typeof bookData.author === 'string' ? bookData.author : '',
+            cover: typeof bookData.cover === 'string' ? bookData.cover : (typeof bookData.coverUrl === 'string' ? bookData.coverUrl : null),
+            pageCount: typeof bookData.pageCount === 'number' && !isNaN(bookData.pageCount) ? Math.max(0, Math.floor(bookData.pageCount)) : (typeof bookData.pageCountRaw === 'number' && !isNaN(bookData.pageCountRaw) ? Math.max(0, Math.floor(bookData.pageCountRaw)) : null),
+            status: ['reading', 'completed', 'other'].includes(bookData.status) ? bookData.status : 'reading',
+            dateAdded: typeof bookData.dateAdded === 'string' ? bookData.dateAdded : now,
+            dateCompleted: typeof bookData.dateCompleted === 'string' ? bookData.dateCompleted : null,
+            links: bookData.links && typeof bookData.links === 'object'
+                ? {
+                    questIds: Array.isArray(bookData.links.questIds) ? bookData.links.questIds.filter(x => typeof x === 'string') : [],
+                    curriculumPromptIds: Array.isArray(bookData.links.curriculumPromptIds) ? bookData.links.curriculumPromptIds.filter(x => typeof x === 'string') : []
+                }
+                : { questIds: [], curriculumPromptIds: [] }
+        };
+        books[id] = book;
+        this._persistBooks(books);
+        return book;
+    }
+
+    updateBook(bookId, updates) {
+        if (!bookId || typeof bookId !== 'string') return null;
+        const books = { ...this._getBooksRaw() };
+        const book = books[bookId];
+        if (!book) return null;
+        if (updates && typeof updates === 'object') {
+            if (typeof updates.title === 'string') book.title = updates.title;
+            if (typeof updates.author === 'string') book.author = updates.author;
+            if (updates.cover !== undefined) book.cover = typeof updates.cover === 'string' ? updates.cover : null;
+            if (typeof updates.pageCount === 'number' && !isNaN(updates.pageCount)) book.pageCount = Math.max(0, Math.floor(updates.pageCount));
+            if (['reading', 'completed', 'other'].includes(updates.status)) book.status = updates.status;
+            if (typeof updates.dateAdded === 'string') book.dateAdded = updates.dateAdded;
+            if (updates.dateCompleted !== undefined) book.dateCompleted = typeof updates.dateCompleted === 'string' ? updates.dateCompleted : null;
+            if (updates.links && typeof updates.links === 'object') {
+                if (!book.links || typeof book.links !== 'object') {
+                    book.links = { questIds: [], curriculumPromptIds: [] };
+                }
+                if (Array.isArray(updates.links.questIds)) book.links.questIds = updates.links.questIds.filter(x => typeof x === 'string');
+                if (Array.isArray(updates.links.curriculumPromptIds)) book.links.curriculumPromptIds = updates.links.curriculumPromptIds.filter(x => typeof x === 'string');
+            }
+        }
+        books[bookId] = book;
+        this._persistBooks(books);
+        return book;
+    }
+
+    deleteBook(bookId) {
+        if (!bookId || typeof bookId !== 'string') return false;
+        const books = { ...this._getBooksRaw() };
+        if (!(bookId in books)) return false;
+        delete books[bookId];
+        this._persistBooks(books);
+        return true;
+    }
+
+    getBook(bookId) {
+        if (!bookId || typeof bookId !== 'string') return null;
+        const books = this._getBooksRaw();
+        const book = books[bookId];
+        if (!book) return null;
+        const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
+        return { ...book, links: { ...links } };
+    }
+
+    getBooks() {
+        const books = this._getBooksRaw();
+        return Object.keys(books).map(id => {
+            const book = books[id];
+            const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
+            return { ...book, links: { ...links } };
+        });
+    }
+
+    getBooksByStatus(status) {
+        if (!['reading', 'completed', 'other'].includes(status)) return [];
+        return this.getBooks().filter(b => b.status === status);
+    }
+
+    markBookComplete(bookId) {
+        if (!bookId || typeof bookId !== 'string') return null;
+        const books = { ...this._getBooksRaw() };
+        const book = books[bookId];
+        if (!book) return null;
+        const now = new Date().toISOString();
+        book.status = 'completed';
+        book.dateCompleted = now;
+        books[bookId] = book;
+        this._persistBooks(books);
+        // Cascade (move linked quests, complete curriculum prompts) is Phase 5
+        return book;
+    }
+
+    // ==========================================
+    // External Curriculum (Schema v5)
+    // ==========================================
+
+    _getExternalCurriculumRaw() {
+        const data = this.state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
+        if (!data || typeof data !== 'object' || Array.isArray(data)) return { curriculums: {} };
+        return {
+            curriculums: data.curriculums && typeof data.curriculums === 'object' ? data.curriculums : {}
+        };
+    }
+
+    _persistExternalCurriculum(data) {
+        this.state[STORAGE_KEYS.EXTERNAL_CURRICULUM] = data;
+        void setStateKey(STORAGE_KEYS.EXTERNAL_CURRICULUM, data);
+        this.emit(EVENTS.EXTERNAL_CURRICULUM_CHANGED, { ...data });
+    }
+
+    addCurriculum(name) {
+        const curriculums = { ...this._getExternalCurriculumRaw().curriculums };
+        const id = this._generateId();
+        curriculums[id] = { id, name: typeof name === 'string' ? name : '', categories: {} };
+        this._persistExternalCurriculum({ curriculums });
+        return curriculums[id];
+    }
+
+    updateCurriculum(curriculumId, updates) {
+        if (!curriculumId || typeof curriculumId !== 'string') return null;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = curriculums[curriculumId];
+        if (!curriculum) return null;
+        if (updates && typeof updates === 'object') {
+            if (typeof updates.name === 'string') curriculum.name = updates.name;
+            if (updates.categories && typeof updates.categories === 'object') curriculum.categories = updates.categories;
+        }
+        curriculums[curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return curriculum;
+    }
+
+    deleteCurriculum(curriculumId) {
+        if (!curriculumId || typeof curriculumId !== 'string') return false;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        if (!(curriculumId in curriculums)) return false;
+        delete curriculums[curriculumId];
+        this._persistExternalCurriculum({ curriculums });
+        return true;
+    }
+
+    addCategory(curriculumId, name) {
+        if (!curriculumId || typeof curriculumId !== 'string') return null;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = curriculums[curriculumId];
+        if (!curriculum) return null;
+        const categories = { ...(curriculum.categories || {}) };
+        const categoryId = this._generateId();
+        categories[categoryId] = { id: categoryId, name: typeof name === 'string' ? name : '', prompts: {} };
+        curriculum.categories = categories;
+        curriculums[curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return categories[categoryId];
+    }
+
+    addPrompts(curriculumId, categoryId, promptTexts) {
+        if (!curriculumId || typeof curriculumId !== 'string' || !categoryId || typeof categoryId !== 'string') return [];
+        const texts = Array.isArray(promptTexts) ? promptTexts.filter(t => typeof t === 'string' && t.trim()) : [];
+        if (texts.length === 0) return [];
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = curriculums[curriculumId];
+        if (!curriculum) return [];
+        const categories = { ...(curriculum.categories || {}) };
+        const category = categories[categoryId];
+        if (!category) return [];
+        const prompts = { ...(category.prompts || {}) };
+        const added = [];
+        texts.forEach(text => {
+            const promptId = this._generateId();
+            prompts[promptId] = { id: promptId, text: text.trim(), bookId: null, completedAt: null };
+            added.push(prompts[promptId]);
+        });
+        category.prompts = prompts;
+        categories[categoryId] = category;
+        curriculum.categories = categories;
+        curriculums[curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return added;
+    }
+
+    _findPromptLocation(promptId) {
+        const data = this._getExternalCurriculumRaw();
+        for (const curriculumId of Object.keys(data.curriculums)) {
+            const curriculum = data.curriculums[curriculumId];
+            const categories = curriculum.categories || {};
+            for (const catId of Object.keys(categories)) {
+                const category = categories[catId];
+                const prompts = category.prompts || {};
+                if (promptId in prompts) return { curriculumId, categoryId: catId, curriculum, category, prompts };
+            }
+        }
+        return null;
+    }
+
+    linkBookToPrompt(promptId, bookId) {
+        if (!promptId || typeof promptId !== 'string') return null;
+        const loc = this._findPromptLocation(promptId);
+        if (!loc) return null;
+        const prompts = { ...loc.prompts };
+        const prompt = prompts[promptId];
+        if (!prompt) return null;
+        const previousBookId = prompt.bookId && typeof prompt.bookId === 'string' ? prompt.bookId : null;
+        const newBookId = bookId && typeof bookId === 'string' ? bookId : null;
+
+        if (previousBookId && previousBookId !== newBookId) {
+            const prevBook = this._getBooksRaw()[previousBookId];
+            if (prevBook) {
+                const links = prevBook.links && typeof prevBook.links === 'object' ? prevBook.links : { questIds: [], curriculumPromptIds: [] };
+                const curriculumPromptIds = (links.curriculumPromptIds || []).filter(id => id !== promptId);
+                this.updateBook(previousBookId, { links: { questIds: links.questIds || [], curriculumPromptIds } });
+            }
+        }
+
+        prompt.bookId = newBookId;
+        prompts[promptId] = prompt;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = { ...curriculums[loc.curriculumId] };
+        const categories = { ...curriculum.categories };
+        const category = { ...categories[loc.categoryId] };
+        category.prompts = prompts;
+        categories[loc.categoryId] = category;
+        curriculum.categories = categories;
+        curriculums[loc.curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+
+        if (newBookId && this.getBook(newBookId)) {
+            const book = this._getBooksRaw()[newBookId];
+            const links = book && book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
+            if (!(links.curriculumPromptIds || []).includes(promptId)) {
+                const questIds = [...(links.questIds || [])];
+                const curriculumPromptIds = [...(links.curriculumPromptIds || []), promptId];
+                this.updateBook(newBookId, { links: { questIds, curriculumPromptIds } });
+            }
+        }
+        return prompt;
+    }
+
+    markPromptComplete(promptId) {
+        if (!promptId || typeof promptId !== 'string') return null;
+        const loc = this._findPromptLocation(promptId);
+        if (!loc) return null;
+        const prompts = { ...loc.prompts };
+        const prompt = prompts[promptId];
+        if (!prompt) return null;
+        prompt.completedAt = new Date().toISOString();
+        prompts[promptId] = prompt;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = { ...curriculums[loc.curriculumId] };
+        const categories = { ...curriculum.categories };
+        const category = { ...categories[loc.categoryId] };
+        category.prompts = prompts;
+        categories[loc.categoryId] = category;
+        curriculum.categories = categories;
+        curriculums[loc.curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return prompt;
     }
 
     /**

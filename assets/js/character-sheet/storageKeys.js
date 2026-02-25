@@ -28,7 +28,8 @@ export const STORAGE_KEYS = Object.freeze({
     ARCHIVE_CARD_FACE_MODE: 'archiveCardFaceMode',
     // Book-First Paradigm (Schema v5)
     BOOKS: 'books',
-    EXCHANGE_PROGRAM: 'exchangeProgram'
+    /** Persisted as 'exchangeProgram' for backward compatibility; UI name is External Curriculum. */
+    EXTERNAL_CURRICULUM: 'exchangeProgram'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -55,7 +56,7 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
     STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
     STORAGE_KEYS.BOOKS,
-    STORAGE_KEYS.EXCHANGE_PROGRAM
+    STORAGE_KEYS.EXTERNAL_CURRICULUM
 ]);
 
 export function createEmptyCharacterState() {
@@ -83,7 +84,7 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: [],
         [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0,
         [STORAGE_KEYS.BOOKS]: {},
-        [STORAGE_KEYS.EXCHANGE_PROGRAM]: {}
+        [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} }
     };
 }
 

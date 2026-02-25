@@ -368,6 +368,8 @@ function validateNumber(value, defaultValue, context = 'number') {
     return defaultValue;
 }
 
+const BOOK_STATUSES = ['reading', 'completed', 'other'];
+
 /**
  * Validate and fix a book object (Schema v5)
  * @param {*} book - Book object to validate
@@ -380,14 +382,20 @@ function validateBook(book, context = 'book') {
     }
     const id = typeof book.id === 'string' && book.id.trim() ? book.id.trim() : null;
     if (!id) return null;
+    const links = book.links && typeof book.links === 'object' ? book.links : {};
     return {
         id,
         title: typeof book.title === 'string' ? book.title : '',
         author: typeof book.author === 'string' ? book.author : '',
-        coverUrl: typeof book.coverUrl === 'string' ? book.coverUrl : null,
-        pageCountRaw: typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? Math.max(0, Math.floor(book.pageCountRaw)) : null,
-        pageCountEffective: typeof book.pageCountEffective === 'number' && !isNaN(book.pageCountEffective) ? Math.max(0, Math.floor(book.pageCountEffective)) : null,
-        links: book.links && typeof book.links === 'object' ? book.links : {}
+        cover: typeof book.cover === 'string' ? book.cover : (typeof book.coverUrl === 'string' ? book.coverUrl : null),
+        pageCount: typeof book.pageCount === 'number' && !isNaN(book.pageCount) ? Math.max(0, Math.floor(book.pageCount)) : (typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? Math.max(0, Math.floor(book.pageCountRaw)) : null),
+        status: BOOK_STATUSES.includes(book.status) ? book.status : 'reading',
+        dateAdded: typeof book.dateAdded === 'string' ? book.dateAdded : new Date().toISOString(),
+        dateCompleted: typeof book.dateCompleted === 'string' ? book.dateCompleted : null,
+        links: {
+            questIds: Array.isArray(links.questIds) ? links.questIds.filter(x => typeof x === 'string') : (typeof links.tomeQuestId === 'string' ? [links.tomeQuestId] : []),
+            curriculumPromptIds: Array.isArray(links.curriculumPromptIds) ? links.curriculumPromptIds.filter(x => typeof x === 'string') : []
+        }
     };
 }
 
@@ -411,15 +419,77 @@ function validateBooks(books) {
 }
 
 /**
- * Validate and fix the exchangeProgram state object (Schema v5)
- * @param {*} exchangeProgram - exchangeProgram state
- * @returns {Object} - Validated exchangeProgram object (structure TBD in Exchange feature)
+ * Validate a single external curriculum prompt
  */
-function validateExchangeProgram(exchangeProgram) {
-    if (!exchangeProgram || typeof exchangeProgram !== 'object' || Array.isArray(exchangeProgram)) {
-        return {};
+function validateCurriculumPrompt(prompt, context = 'prompt') {
+    if (!prompt || typeof prompt !== 'object') return null;
+    const id = typeof prompt.id === 'string' && prompt.id.trim() ? prompt.id.trim() : null;
+    if (!id) return null;
+    return {
+        id,
+        text: typeof prompt.text === 'string' ? prompt.text : '',
+        bookId: typeof prompt.bookId === 'string' && prompt.bookId.trim() ? prompt.bookId.trim() : null,
+        completedAt: typeof prompt.completedAt === 'string' ? prompt.completedAt : null
+    };
+}
+
+/**
+ * Validate a single external curriculum category (prompts map)
+ */
+function validateCurriculumCategory(category, context = 'category') {
+    if (!category || typeof category !== 'object') return null;
+    const id = typeof category.id === 'string' && category.id.trim() ? category.id.trim() : null;
+    if (!id) return null;
+    const promptsRaw = category.prompts && typeof category.prompts === 'object' ? category.prompts : {};
+    const prompts = {};
+    for (const pid in promptsRaw) {
+        const p = validateCurriculumPrompt(promptsRaw[pid], `${context}.prompts[${pid}]`);
+        if (p && p.id) prompts[p.id] = p;
     }
-    return { ...exchangeProgram };
+    return {
+        id,
+        name: typeof category.name === 'string' ? category.name : '',
+        prompts
+    };
+}
+
+/**
+ * Validate a single external curriculum (categories map)
+ */
+function validateCurriculum(curriculum, context = 'curriculum') {
+    if (!curriculum || typeof curriculum !== 'object') return null;
+    const id = typeof curriculum.id === 'string' && curriculum.id.trim() ? curriculum.id.trim() : null;
+    if (!id) return null;
+    const categoriesRaw = curriculum.categories && typeof curriculum.categories === 'object' ? curriculum.categories : {};
+    const categories = {};
+    for (const cid in categoriesRaw) {
+        const c = validateCurriculumCategory(categoriesRaw[cid], `${context}.categories[${cid}]`);
+        if (c && c.id) categories[c.id] = c;
+    }
+    return {
+        id,
+        name: typeof curriculum.name === 'string' ? curriculum.name : '',
+        categories
+    };
+}
+
+/**
+ * Validate and fix the external curriculum state object (Schema v5)
+ * Shape: { curriculums: { [curriculumId]: { id, name, categories: { [categoryId]: { id, name, prompts: { [promptId]: { id, text, bookId, completedAt } } } } } }
+ * @param {*} externalCurriculum - external curriculum state (stored under key 'exchangeProgram')
+ * @returns {Object} - Validated object with curriculums key
+ */
+function validateExternalCurriculum(externalCurriculum) {
+    if (!externalCurriculum || typeof externalCurriculum !== 'object' || Array.isArray(externalCurriculum)) {
+        return { curriculums: {} };
+    }
+    const curriculumsRaw = externalCurriculum.curriculums && typeof externalCurriculum.curriculums === 'object' ? externalCurriculum.curriculums : {};
+    const curriculums = {};
+    for (const cid in curriculumsRaw) {
+        const c = validateCurriculum(curriculumsRaw[cid], `curriculums[${cid}]`);
+        if (c && c.id) curriculums[c.id] = c;
+    }
+    return { curriculums };
 }
 
 /**
@@ -632,7 +702,7 @@ export function validateCharacterState(state) {
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED
     );
     validated[STORAGE_KEYS.BOOKS] = validateBooks(state[STORAGE_KEYS.BOOKS]);
-    validated[STORAGE_KEYS.EXCHANGE_PROGRAM] = validateExchangeProgram(state[STORAGE_KEYS.EXCHANGE_PROGRAM]);
+    validated[STORAGE_KEYS.EXTERNAL_CURRICULUM] = validateExternalCurriculum(state[STORAGE_KEYS.EXTERNAL_CURRICULUM]);
 
     return validated;
 }

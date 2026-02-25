@@ -83,11 +83,12 @@ function migrateToVersion5(state) {
     if (!(STORAGE_KEYS.BOOKS in migrated) || typeof migrated[STORAGE_KEYS.BOOKS] !== 'object') {
         migrated[STORAGE_KEYS.BOOKS] = {};
     }
-    if (!(STORAGE_KEYS.EXCHANGE_PROGRAM in migrated) || typeof migrated[STORAGE_KEYS.EXCHANGE_PROGRAM] !== 'object') {
-        migrated[STORAGE_KEYS.EXCHANGE_PROGRAM] = {};
+    if (!(STORAGE_KEYS.EXTERNAL_CURRICULUM in migrated) || typeof migrated[STORAGE_KEYS.EXTERNAL_CURRICULUM] !== 'object') {
+        migrated[STORAGE_KEYS.EXTERNAL_CURRICULUM] = { curriculums: {} };
     }
 
     const books = { ...migrated[STORAGE_KEYS.BOOKS] };
+    const now = new Date().toISOString();
     const questKeys = [
         STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
         STORAGE_KEYS.COMPLETED_QUESTS,
@@ -96,6 +97,7 @@ function migrateToVersion5(state) {
 
     questKeys.forEach(key => {
         if (!Array.isArray(migrated[key])) return;
+        const isCompletedList = key === STORAGE_KEYS.COMPLETED_QUESTS;
         migrated[key] = migrated[key].map(quest => {
             if (!quest || typeof quest !== 'object') return quest;
             const hasBookData = quest.book || quest.bookAuthor || quest.coverUrl != null ||
@@ -105,17 +107,27 @@ function migrateToVersion5(state) {
             let bookId = quest.bookId || null;
             if (hasBookData) {
                 bookId = bookId || generateId();
-                books[bookId] = {
-                    id: bookId,
-                    title: typeof quest.book === 'string' ? quest.book : '',
-                    author: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
-                    coverUrl: typeof quest.coverUrl === 'string' ? quest.coverUrl : null,
-                    pageCountRaw: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? quest.pageCountRaw : null,
-                    pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? quest.pageCountEffective : null,
-                    links: {
-                        tomeQuestId: questId
+                const existingBook = books[bookId];
+                if (existingBook && existingBook.links && Array.isArray(existingBook.links.questIds)) {
+                    if (!existingBook.links.questIds.includes(questId)) {
+                        existingBook.links.questIds.push(questId);
                     }
-                };
+                } else {
+                    books[bookId] = {
+                        id: bookId,
+                        title: typeof quest.book === 'string' ? quest.book : '',
+                        author: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
+                        cover: typeof quest.coverUrl === 'string' ? quest.coverUrl : (typeof quest.cover === 'string' ? quest.cover : null),
+                        pageCount: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? Math.max(0, Math.floor(quest.pageCountRaw)) : (typeof quest.pageCount === 'number' && !isNaN(quest.pageCount) ? Math.max(0, Math.floor(quest.pageCount)) : null),
+                        status: isCompletedList ? 'completed' : 'reading',
+                        dateAdded: typeof quest.dateAdded === 'string' ? quest.dateAdded : now,
+                        dateCompleted: isCompletedList ? (typeof quest.dateCompleted === 'string' ? quest.dateCompleted : now) : null,
+                        links: {
+                            questIds: [questId],
+                            curriculumPromptIds: []
+                        }
+                    };
+                }
             }
             return {
                 ...quest,
@@ -366,13 +378,15 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
         STORAGE_KEYS.BOOKS,
-        STORAGE_KEYS.EXCHANGE_PROGRAM
+        STORAGE_KEYS.EXTERNAL_CURRICULUM
     ];
 
     stateKeys.forEach(key => {
         let defaultValue;
-        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS || key === STORAGE_KEYS.EXCHANGE_PROGRAM) {
+        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS) {
             defaultValue = {};
+        } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
+            defaultValue = { curriculums: {} };
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
