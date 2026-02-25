@@ -259,6 +259,33 @@ describe('Book migration (v5)', () => {
     expect(completedBook.dateCompleted).toBeDefined();
   });
 
+  it('migrateToVersion5 deduplicates books by title+author across multiple quests', () => {
+    const state = {
+      [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+        { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Harry Potter', bookAuthor: 'J.K. Rowling', month: 'January', year: '2024', rewards: {} },
+        { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Harry Potter', bookAuthor: 'J.K. Rowling', month: 'February', year: '2024', rewards: {} },
+        { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Harry Potter', bookAuthor: 'J.K. Rowling', month: 'March', year: '2024', rewards: {} }
+      ],
+      [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+      [STORAGE_KEYS.DISCARDED_QUESTS]: []
+    };
+    localStorage.setItem('tomeOfSecrets_schemaVersion', '4');
+
+    const migrated = migrateState(state);
+
+    const books = migrated[STORAGE_KEYS.BOOKS];
+    const bookIds = Object.keys(books);
+    expect(bookIds.length).toBe(1);
+
+    const book = books[bookIds[0]];
+    expect(book.title).toBe('Harry Potter');
+    expect(book.author).toBe('J.K. Rowling');
+    expect(book.links.questIds.length).toBe(3);
+
+    const active = migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS];
+    expect(active.every(q => q.bookId === bookIds[0])).toBe(true);
+  });
+
   it('migrateToVersion5 initializes external curriculum with curriculums', () => {
     localStorage.setItem('tomeOfSecrets_schemaVersion', '4');
     const state = {

@@ -532,9 +532,11 @@
 .book-search-result-cover {
     width: 36px;
     height: 54px;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     border-radius: 3px;
     flex-shrink: 0;
+    background: rgba(84, 72, 59, 0.3);
 }
 
 .book-search-result-text {
@@ -625,6 +627,334 @@
     opacity: 0;
     overflow: hidden;
     z-index: -1;
+}
+
+/* Library tab */
+.library-add-form .form-row {
+    margin-bottom: 16px;
+}
+
+/* Library: search results sit directly below title row in document flow (no overlap) */
+.library-search-input-and-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.library-book-search-row .library-search-results {
+    position: static;
+    margin-top: 8px;
+    max-height: 240px;
+}
+
+.library-search-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.library-title-input,
+.library-author-input {
+    flex: 1;
+    min-width: 180px;
+    padding: 8px 12px;
+    background-color: #3e352f;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    color: #d4c8b0;
+    font-family: 'Source Serif Pro', serif;
+    font-size: 1em;
+}
+
+.library-search-results {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(42, 35, 29, 0.9);
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.library-search-results .book-search-loading,
+.library-search-results .book-search-empty,
+.library-search-results .book-search-error {
+    color: #8a7a61;
+    font-style: italic;
+}
+
+.library-cover-fields {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.library-cover-preview-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.library-cover-preview {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid rgba(184, 159, 98, 0.3);
+}
+
+.library-cover-placeholder {
+    display: inline-block;
+    width: 60px;
+    height: 90px;
+    line-height: 90px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #8a7a61;
+    background: rgba(84, 72, 59, 0.3);
+    border: 1px dashed #54483b;
+    border-radius: 4px;
+}
+
+.library-cover-url-input {
+    width: 100%;
+    min-width: 180px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #d4c8b0;
+    background-color: rgba(42, 35, 29, 0.8);
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+}
+
+.library-cover-upload-label {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    color: #2a231d;
+    background-color: #b89f62;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.library-cover-upload-label:hover {
+    background-color: #cca352;
+}
+
+.library-cover-upload-input {
+    position: absolute;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.library-page-count-input {
+    width: 8em;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: #d4c8b0;
+    background-color: rgba(42, 35, 29, 0.8);
+    border: 1px solid #8b7355;
+    border-radius: 4px;
+}
+
+.library-status-radios {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.library-status-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #d4c8b0;
+    cursor: pointer;
+}
+
+.library-add-actions {
+    margin-top: 12px;
+}
+
+.library-books-section {
+    margin-bottom: 28px;
+}
+
+.library-section-title {
+    margin: 0 0 12px 0;
+    font-family: 'Lora', serif;
+    color: #b89f62;
+    font-size: 1.2em;
+}
+
+.library-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.library-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(62, 53, 47, 0.6);
+    border: 1px solid #54483b;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+    min-height: 380px;
+}
+
+.library-card:hover {
+    border-color: rgba(184, 159, 98, 0.5);
+}
+
+.library-card-cover-wrap {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    min-height: 280px;
+    flex-shrink: 0;
+    background: rgba(84, 72, 59, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.library-card-cover {
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    object-fit: contain;
+    object-position: center;
+    background: rgba(84, 72, 59, 0.3);
+}
+
+.library-card-cover-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    color: #8a7a61;
+    font-size: 0.9rem;
+}
+
+/* Status badge overlays top-left corner of card */
+.library-status-overlay {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    margin: 0;
+}
+
+.library-card-body {
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 4px;
+}
+
+.library-card-text {
+    flex: 0 1 auto;
+    min-height: 0;
+}
+
+.library-card-title {
+    font-weight: 600;
+    color: #d4c8b0;
+    font-family: 'Lora', serif;
+    font-size: 0.9rem;
+    line-height: 1.25;
+}
+
+.library-card-author {
+    font-size: 0.85rem;
+    color: #8a7a61;
+}
+
+.library-card-meta {
+    font-size: 0.8rem;
+    color: #8a7a61;
+}
+
+.library-status-badge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.library-status-reading {
+    background: rgba(184, 159, 98, 0.25);
+    border: 1px solid #b89f62;
+    color: #b89f62;
+}
+
+.library-status-completed {
+    background: rgba(72, 120, 72, 0.25);
+    border: 1px solid #6a9e6a;
+    color: #8bc88b;
+}
+
+.library-status-other {
+    background: rgba(84, 72, 59, 0.5);
+    border: 1px solid #8a7a61;
+    color: #8a7a61;
+}
+
+.library-card-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.library-card-actions .rpg-btn {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+}
+
+.library-card-actions .library-card-action-btn {
+    min-width: 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.library-empty-section {
+    margin: 0;
+    color: #8a7a61;
+    font-style: italic;
+    padding: 12px 0;
+}
+
+.book-edit-links-display {
+    color: #8a7a61;
+    font-size: 0.9rem;
 }
 
 .edit-quest-page-count-field {

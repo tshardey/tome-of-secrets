@@ -27,6 +27,7 @@ import { DungeonDeckController } from './controllers/DungeonDeckController.js';
 import { AtmosphericBuffDeckController } from './controllers/AtmosphericBuffDeckController.js';
 import { GenreQuestDeckController } from './controllers/GenreQuestDeckController.js';
 import { SideQuestDeckController } from './controllers/SideQuestDeckController.js';
+import { LibraryController } from './controllers/LibraryController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -261,6 +262,7 @@ export async function initializeCharacterSheet() {
     const atmosphericBuffDeckController = new AtmosphericBuffDeckController(stateAdapter, form, dependencies);
     const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
     const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
+    const libraryController = new LibraryController(stateAdapter, form, dependencies);
 
     const addSelectedBtn = document.getElementById('add-selected-cards-btn');
     function updateDeckActionsLabel() {
@@ -286,6 +288,7 @@ export async function initializeCharacterSheet() {
     atmosphericBuffDeckController.initialize();
     genreQuestDeckController.initialize();
     sideQuestDeckController.initialize();
+    libraryController.initialize();
 
     // Consolidated deck actions: one "Add selected" and one "Clear draw" for all deck types
     const clearDrawBtn = document.getElementById('clear-drawn-cards-btn');

@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: phase-2-library-tab
     content: "Phase 2: Library tab UI -- add tab HTML to character-sheet.md, create LibraryController.js with add/edit/search/render, wire into character-sheet.js, write libraryController.test.js"
-    status: pending
+    status: completed
   - id: phase-3-book-selector
     content: "Phase 3: Book selector component -- create bookSelector.js reusable dropdown, write bookSelector.test.js"
     status: pending

@@ -21,6 +21,9 @@ permalink: /character-sheet.html
         <button type="button" data-tab-target="environment" role="tab" aria-selected="false">
             <span>🌿</span> Environment
         </button>
+        <button type="button" data-tab-target="library" role="tab" aria-selected="false">
+            <span>📚</span> Library
+        </button>
         <button type="button" data-tab-target="quests" role="tab" aria-selected="false">
             <span>📅</span> Quests
         </button>
@@ -415,9 +418,90 @@ permalink: /character-sheet.html
     </div>
 </div>
 </div>
+</div>
 <!-- END TAB 4: ENVIRONMENT -->
 
-<!-- TAB 5: QUESTS -->
+<!-- TAB 5: LIBRARY -->
+<div class="tab-panel" data-tab-panel="library" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-library-add-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📚 Add a Book</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="library-add-book-form" class="library-add-form" role="form" aria-label="Add a book">
+                <div class="form-row library-book-search-row">
+                    <label for="library-book-title"><strong>Title:</strong></label>
+                    <div class="library-search-input-and-results">
+                        <div class="library-search-wrap">
+                            <input type="text" id="library-book-title" class="library-title-input" placeholder="Search or enter title" autocomplete="off" />
+                            <button type="button" id="library-book-search-btn" class="rpg-btn rpg-btn-secondary lookup-book-btn" title="Search for cover and details">Look up</button>
+                        </div>
+                        <div id="library-book-search-results" class="book-search-results library-search-results" aria-live="polite" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label for="library-book-author"><strong>Author (optional):</strong></label>
+                    <input type="text" id="library-book-author" class="library-author-input" placeholder="Author" />
+                </div>
+                <div class="form-row library-cover-row">
+                    <label><strong>Cover:</strong></label>
+                    <div class="library-cover-fields">
+                        <div class="library-cover-preview-wrap">
+                            <img id="library-add-cover-preview" class="library-cover-preview" src="" alt="" role="presentation" style="display: none;">
+                            <span id="library-add-cover-placeholder" class="library-cover-placeholder">No cover</span>
+                        </div>
+                        <div class="library-cover-inputs">
+                            <input type="url" id="library-add-cover-url" class="library-cover-url-input" placeholder="Cover image URL" value="" />
+                            <label for="library-add-cover-upload" class="library-cover-upload-label">Upload</label>
+                            <input type="file" id="library-add-cover-upload" class="library-cover-upload-input" accept="image/*" />
+                            <input type="hidden" id="library-add-cover-value" value="" />
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label for="library-add-page-count"><strong>Page count (optional):</strong></label>
+                    <input type="number" id="library-add-page-count" class="library-page-count-input" min="1" placeholder="—" value="" />
+                </div>
+                <div class="form-row library-status-row">
+                    <label><strong>Status:</strong></label>
+                    <div class="library-status-radios">
+                        <label class="library-status-option"><input type="radio" name="library-add-status" value="reading" checked /> Reading</label>
+                        <label class="library-status-option"><input type="radio" name="library-add-status" value="completed" /> Completed</label>
+                        <label class="library-status-option"><input type="radio" name="library-add-status" value="other" /> Other</label>
+                    </div>
+                </div>
+                <div class="form-row library-add-actions">
+                    <button type="button" id="library-add-book-btn" class="rpg-btn rpg-btn-primary">Add Book</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-library-books-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">Your Library</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="library-books-reading" class="library-books-section">
+                <h3 class="library-section-title">Reading</h3>
+                <div id="library-cards-reading" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-completed" class="library-books-section">
+                <h3 class="library-section-title">Completed</h3>
+                <div id="library-cards-completed" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-other" class="library-books-section">
+                <h3 class="library-section-title">Other</h3>
+                <div id="library-cards-other" class="library-cards-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB 5: LIBRARY -->
+
+<!-- TAB 6: QUESTS -->
 <div class="tab-panel" data-tab-panel="quests" role="tabpanel">
 <div class="rpg-tab-content">
     <div class="rpg-panel rpg-monthly-tracker-panel">
@@ -959,6 +1043,62 @@ permalink: /character-sheet.html
             <div id="dungeon-completion-drawn-card-container" style="min-height: 0; margin-bottom: 12px;"></div>
             <div id="dungeon-completion-rewards-table-container"></div>
         </div>
+    </div>
+</div>
+
+<div id="book-edit-backdrop" class="quest-edit-backdrop book-edit-backdrop"></div>
+<div id="book-edit-drawer" class="quest-edit-drawer book-edit-drawer" style="display: none;">
+    <div class="quest-edit-header">
+        <h2 id="book-edit-header-title">Edit Book</h2>
+        <button type="button" class="close-quest-edit-btn" id="close-book-edit" aria-label="Close book edit drawer">&times;</button>
+    </div>
+    <div class="quest-edit-body">
+        <form id="book-edit-form">
+            <input type="hidden" id="book-edit-id" value="" />
+            <div class="form-row">
+                <label for="book-edit-title"><strong>Title:</strong></label>
+                <input type="text" id="book-edit-title" placeholder="Book Title" required />
+            </div>
+            <div class="form-row">
+                <label for="book-edit-author"><strong>Author (optional):</strong></label>
+                <input type="text" id="book-edit-author" placeholder="Author" />
+            </div>
+            <div class="form-row book-edit-cover-row">
+                <label><strong>Cover:</strong></label>
+                <div class="library-cover-fields">
+                    <div class="library-cover-preview-wrap">
+                        <img id="book-edit-cover-preview" class="library-cover-preview" src="" alt="" role="presentation" style="display: none;">
+                        <span id="book-edit-cover-placeholder" class="library-cover-placeholder">No cover</span>
+                    </div>
+                    <div class="library-cover-inputs">
+                        <input type="url" id="book-edit-cover-url" class="library-cover-url-input" placeholder="Cover image URL" value="" />
+                        <label for="book-edit-cover-upload" class="library-cover-upload-label">Upload</label>
+                        <input type="file" id="book-edit-cover-upload" class="library-cover-upload-input" accept="image/*" />
+                        <input type="hidden" id="book-edit-cover-value" value="" />
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="book-edit-page-count"><strong>Page count (optional):</strong></label>
+                <input type="number" id="book-edit-page-count" class="library-page-count-input" min="1" placeholder="—" value="" />
+            </div>
+            <div class="form-row">
+                <label for="book-edit-status"><strong>Status:</strong></label>
+                <select id="book-edit-status" class="rpg-select">
+                    <option value="reading">Reading</option>
+                    <option value="completed">Completed</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div id="book-edit-links-section" class="form-row book-edit-links" style="display: none;">
+                <label><strong>Linked:</strong></label>
+                <div id="book-edit-links-display" class="book-edit-links-display"></div>
+            </div>
+            <div class="quest-edit-actions">
+                <button type="button" id="save-book-edit-btn" class="save-quest-btn">Save</button>
+                <button type="button" id="cancel-book-edit-btn" class="cancel-quest-btn">Cancel</button>
+            </div>
+        </form>
     </div>
 </div>
 

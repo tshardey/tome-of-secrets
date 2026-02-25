@@ -89,11 +89,19 @@ function migrateToVersion5(state) {
 
     const books = { ...migrated[STORAGE_KEYS.BOOKS] };
     const now = new Date().toISOString();
+    /** Dedupe key: normalized "title|author" so multiple quests for the same book share one Book */
+    const bookIdByTitleAuthor = new Map();
     const questKeys = [
         STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
         STORAGE_KEYS.COMPLETED_QUESTS,
         STORAGE_KEYS.DISCARDED_QUESTS
     ];
+
+    function titleAuthorKey(quest) {
+        const title = (typeof quest.book === 'string' ? quest.book : '').toLowerCase().trim();
+        const author = (typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '').toLowerCase().trim();
+        return `${title}|${author}`;
+    }
 
     questKeys.forEach(key => {
         if (!Array.isArray(migrated[key])) return;
@@ -106,13 +114,21 @@ function migrateToVersion5(state) {
             const questId = quest.id || generateId();
             let bookId = quest.bookId || null;
             if (hasBookData) {
-                bookId = bookId || generateId();
-                const existingBook = books[bookId];
-                if (existingBook && existingBook.links && Array.isArray(existingBook.links.questIds)) {
-                    if (!existingBook.links.questIds.includes(questId)) {
+                const keyTA = titleAuthorKey(quest);
+                const existingBookId = bookIdByTitleAuthor.get(keyTA);
+                if (existingBookId && books[existingBookId]) {
+                    bookId = existingBookId;
+                    const existingBook = books[bookId];
+                    if (existingBook.links && Array.isArray(existingBook.links.questIds) && !existingBook.links.questIds.includes(questId)) {
                         existingBook.links.questIds.push(questId);
                     }
+                    if (isCompletedList) {
+                        existingBook.status = 'completed';
+                        existingBook.dateCompleted = typeof quest.dateCompleted === 'string' ? quest.dateCompleted : now;
+                    }
                 } else {
+                    bookId = bookId || generateId();
+                    bookIdByTitleAuthor.set(keyTA, bookId);
                     books[bookId] = {
                         id: bookId,
                         title: typeof quest.book === 'string' ? quest.book : '',
