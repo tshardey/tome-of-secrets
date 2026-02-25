@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: phase-3-book-selector
     content: "Phase 3: Book selector component -- create bookSelector.js reusable dropdown, write bookSelector.test.js"
-    status: pending
+    status: in_progress
   - id: phase-4-quest-integration
     content: "Phase 4: Quest integration -- refactor QuestController to use book selector, move API search to Library, update quest tests"
     status: pending
