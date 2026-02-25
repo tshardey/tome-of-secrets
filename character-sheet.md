@@ -723,8 +723,10 @@ permalink: /character-sheet.html
                 </div>
             </div>
             <div class="form-row">
-                <input type="text" id="new-quest-book" placeholder="Book Title">
-                <input type="text" id="new-quest-book-author" placeholder="Book Author (optional)">
+                <label><strong>Book:</strong></label>
+                <input type="hidden" id="new-quest-book-id" value="" />
+                <div id="new-quest-book-selector-container" class="book-selector-container" aria-label="Select a book from your library"></div>
+                <p class="form-hint">Add books in the Library tab first, then select one here.</p>
             </div>
             <div class="form-row">
                 <textarea id="new-quest-notes" placeholder="Notes (optional)" rows="5"></textarea>
@@ -1157,35 +1159,11 @@ permalink: /character-sheet.html
                 <label><strong>Prompt:</strong></label>
                 <div id="edit-quest-prompt-display" class="quest-prompt-display"></div>
             </div>
-            <div class="form-row form-row-book-search">
-                <label for="edit-quest-book"><strong>Book Title:</strong></label>
-                <div class="book-search-input-row">
-                    <input type="text" id="edit-quest-book" placeholder="Book Title" autocomplete="off">
-                    <button type="button" id="edit-quest-lookup-book-btn" class="lookup-book-btn" title="Fetch cover and page count for this book">Look up book</button>
-                </div>
-                <div id="edit-quest-book-search-results" class="book-search-results" aria-live="polite" style="display: none;"></div>
-            </div>
-            <div class="form-row">
-                <label for="edit-quest-book-author"><strong>Book Author (optional):</strong></label>
-                <input type="text" id="edit-quest-book-author" placeholder="Book Author">
-            </div>
-            <div id="edit-quest-book-meta-row" class="form-row edit-quest-book-meta-row">
-                <label><strong>Cover &amp; pages:</strong></label>
-                <div class="edit-quest-book-meta-fields">
-                    <div class="edit-quest-cover-field">
-                        <img id="edit-quest-cover-preview" class="edit-quest-cover-preview" src="" alt="" role="presentation">
-                        <div class="edit-quest-cover-inputs">
-                            <input type="url" id="edit-quest-cover-url" class="edit-quest-cover-url-input" placeholder="Or paste cover image URL" value="">
-                            <label for="edit-quest-cover-upload" class="edit-quest-cover-upload-label">Upload cover</label>
-                            <input type="file" id="edit-quest-cover-upload" class="edit-quest-cover-upload-input" accept="image/*">
-                        </div>
-                        <input type="hidden" id="edit-quest-cover-value" value="">
-                    </div>
-                    <div class="edit-quest-page-count-field">
-                        <label for="edit-quest-page-count" class="edit-quest-page-count-label">Pages</label>
-                        <input type="number" id="edit-quest-page-count" class="edit-quest-page-count-input" min="1" placeholder="—" value="">
-                    </div>
-                </div>
+            <div class="form-row edit-quest-book-row">
+                <label><strong>Book:</strong></label>
+                <input type="hidden" id="edit-quest-book-id" value="" />
+                <div id="edit-quest-legacy-book-display" class="edit-quest-legacy-book-display" style="display: none;"></div>
+                <div id="edit-quest-book-selector-container" class="book-selector-container" aria-label="Link a book from your library"></div>
             </div>
             <div class="form-row">
                 <label for="edit-quest-notes"><strong>Notes (optional):</strong></label>

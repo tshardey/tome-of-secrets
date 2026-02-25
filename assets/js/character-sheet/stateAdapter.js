@@ -896,6 +896,40 @@ export class StateAdapter {
         return this.getBooks().filter(b => b.status === status);
     }
 
+    /**
+     * Add a quest id to a book's links.questIds (for book-first quest integration).
+     * @param {string} bookId
+     * @param {string} questId
+     * @returns {boolean} true if updated
+     */
+    linkQuestToBook(bookId, questId) {
+        if (!bookId || !questId || typeof bookId !== 'string' || typeof questId !== 'string') return false;
+        const book = this.getBook(bookId);
+        if (!book) return false;
+        const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
+        const questIds = [...(links.questIds || [])];
+        if (questIds.includes(questId)) return true;
+        questIds.push(questId);
+        this.updateBook(bookId, { links: { questIds, curriculumPromptIds: links.curriculumPromptIds || [] } });
+        return true;
+    }
+
+    /**
+     * Remove a quest id from a book's links.questIds.
+     * @param {string} bookId
+     * @param {string} questId
+     * @returns {boolean} true if updated
+     */
+    unlinkQuestFromBook(bookId, questId) {
+        if (!bookId || !questId || typeof bookId !== 'string' || typeof questId !== 'string') return false;
+        const book = this.getBook(bookId);
+        if (!book) return false;
+        const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
+        const questIds = (links.questIds || []).filter(id => id !== questId);
+        this.updateBook(bookId, { links: { questIds, curriculumPromptIds: links.curriculumPromptIds || [] } });
+        return true;
+    }
+
     markBookComplete(bookId) {
         if (!bookId || typeof bookId !== 'string') return null;
         const books = { ...this._getBooksRaw() };

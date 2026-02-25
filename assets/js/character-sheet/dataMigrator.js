@@ -123,8 +123,12 @@ function migrateToVersion5(state) {
                         existingBook.links.questIds.push(questId);
                     }
                     if (isCompletedList) {
-                        existingBook.status = 'completed';
-                        existingBook.dateCompleted = typeof quest.dateCompleted === 'string' ? quest.dateCompleted : now;
+                        const hasActiveQuest = existingBook.links && Array.isArray(existingBook.links.questIds) &&
+                            existingBook.links.questIds.some(qid => activeQuestIds.has(qid));
+                        if (!hasActiveQuest) {
+                            existingBook.status = 'completed';
+                            existingBook.dateCompleted = typeof quest.dateCompleted === 'string' ? quest.dateCompleted : now;
+                        }
                     }
                 } else {
                     bookId = bookId || generateId();
@@ -416,4 +420,3 @@ export function loadAndMigrateState() {
     // Migrate state to current schema version
     return migrateState(state);
 }
-

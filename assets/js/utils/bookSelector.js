@@ -33,6 +33,7 @@ function escapeAttr(s) {
  * @param {function(string|null): void} [options.onSelect] - Called when selection changes (bookId or null for unlink)
  * @param {string} [options.placeholder] - Button text when no book selected (default: "Link Book")
  * @param {string} [options.unlinkLabel] - Label for unlink button (default: "Unlink")
+ * @param {string} [options.appendTo] - Where to mount the dropdown: 'body' (default) or 'container' (inline below trigger, for use inside drawers)
  * @returns {{ render: function(), setSelectedBookId: function(string|null), getSelectedBookId: function(): string|null, destroy: function() }}
  */
 export function createBookSelector(container, stateAdapter, options = {}) {
@@ -50,6 +51,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
     const onSelect = typeof options.onSelect === 'function' ? options.onSelect : () => {};
     const placeholder = options.placeholder ?? 'Link Book';
     const unlinkLabel = options.unlinkLabel ?? 'Unlink';
+    const appendTo = options.appendTo === 'container' ? 'container' : 'body';
 
     let dropdownEl = null;
     let clickOutsideHandler = null;
@@ -102,13 +104,24 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         dropdownEl.innerHTML = listContent;
 
         const style = dropdownEl.style;
-        style.position = 'absolute';
-        style.left = `${buttonRect.left}px`;
-        style.top = `${buttonRect.bottom + 4}px`;
-        style.minWidth = `${Math.max(buttonRect.width, 220)}px`;
-        style.zIndex = '1000';
+        style.minWidth = '220px';
+        style.zIndex = '10001';
 
-        document.body.appendChild(dropdownEl);
+        if (appendTo === 'container') {
+            // Render inside container so dropdown is visible inside drawers (no stacking-context issues)
+            container.style.position = 'relative';
+            style.position = 'absolute';
+            style.top = '100%';
+            style.left = '0';
+            style.marginTop = '4px';
+            container.appendChild(dropdownEl);
+        } else {
+            style.position = 'absolute';
+            style.left = `${buttonRect.left}px`;
+            style.top = `${buttonRect.bottom + 4}px`;
+            style.minWidth = `${Math.max(buttonRect.width, 220)}px`;
+            document.body.appendChild(dropdownEl);
+        }
 
         dropdownEl.querySelectorAll('.book-selector-option').forEach((btn) => {
             btn.addEventListener('click', (e) => {
@@ -176,10 +189,12 @@ export function createBookSelector(container, stateAdapter, options = {}) {
                 </button>`;
             const trigger = container.querySelector('.book-selector-trigger');
             if (trigger) {
+                // Use capture so this runs before any parent handler (e.g. form delegated click)
                 trigger.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     openDropdown(trigger.getBoundingClientRect());
-                });
+                }, true);
             }
         }
     }

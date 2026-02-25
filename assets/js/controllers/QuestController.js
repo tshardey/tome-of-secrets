@@ -23,7 +23,15 @@ import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
-import { searchBooks } from '../services/BookMetadataService.js';
+import { createBookSelector } from '../utils/bookSelector.js';
+
+function generateQuestId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
 
 export class QuestController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -178,186 +186,20 @@ export class QuestController extends BaseController {
             }
         });
 
-        // Live book search (Grimoire Gallery): debounced search, results with thumbnails + page count, on select populate fields
-        const bookInput = document.getElementById('edit-quest-book');
-        const bookAuthorInput = document.getElementById('edit-quest-book-author');
-        const searchResultsDiv = document.getElementById('edit-quest-book-search-results');
-        const lookupBookBtn = document.getElementById('edit-quest-lookup-book-btn');
-
-        const setEditQuestCover = (value, urlInputValue = null) => {
-            const coverValueEl = document.getElementById('edit-quest-cover-value');
-            const coverUrlEl = document.getElementById('edit-quest-cover-url');
-            const coverPreview = document.getElementById('edit-quest-cover-preview');
-            const v = (value || '').trim() || '';
-            if (coverValueEl) coverValueEl.value = v;
-            if (coverUrlEl && urlInputValue !== undefined) coverUrlEl.value = urlInputValue !== null ? urlInputValue : (v.startsWith('data:') ? '' : v);
-            if (coverPreview) {
-                if (v) {
-                    coverPreview.src = v;
-                    coverPreview.alt = 'Book cover';
-                    coverPreview.style.display = 'block';
-                } else {
-                    coverPreview.src = '';
-                    coverPreview.style.display = 'none';
-                }
-            }
-        };
-
-        const applyBookToForm = (book) => {
-            const authorStr = Array.isArray(book.authors) && book.authors.length ? book.authors.join(', ') : '';
-            bookInput.value = book.title || '';
-            if (bookAuthorInput) bookAuthorInput.value = authorStr || '';
-            const pages = book.pageCount != null && book.pageCount !== '' ? String(Number(book.pageCount)) : '';
-            const pageCountEl = document.getElementById('edit-quest-page-count');
-            const url = book.coverUrl || '';
-            setEditQuestCover(url, url);
-            if (pageCountEl) pageCountEl.value = pages;
-        };
-
-        if (bookInput && searchResultsDiv) {
-            let searchDebounceTimer = null;
-            let bookSearchAbortController = null;
-            const BOOK_SEARCH_DEBOUNCE_MS = 600;
-            const BOOK_SEARCH_MIN_LENGTH = 3;
-            const hideResults = () => {
-                searchResultsDiv.style.display = 'none';
-                searchResultsDiv.innerHTML = '';
-            };
-            const showResults = (results) => {
-                searchResultsDiv.innerHTML = '';
-                if (!results || results.length === 0) {
-                    searchResultsDiv.style.display = 'none';
-                    return;
-                }
-                results.forEach((book) => {
-                    const authorStr = Array.isArray(book.authors) && book.authors.length ? book.authors.join(', ') : '';
-                    const pageStr = book.pageCount != null && book.pageCount !== '' ? ` · ${Number(book.pageCount)} pp` : '';
-                    const item = document.createElement('button');
-                    item.type = 'button';
-                    item.className = 'book-search-result-item';
-                    if (book.coverUrl) {
-                        const img = document.createElement('img');
-                        img.className = 'book-search-result-cover';
-                        img.src = book.coverUrl;
-                        img.alt = '';
-                        item.appendChild(img);
-                    }
-                    const text = document.createElement('span');
-                    text.className = 'book-search-result-text';
-                    text.textContent = `${book.title}${authorStr ? ` — ${authorStr}` : ''}${pageStr}`;
-                    item.appendChild(text);
-                    item.addEventListener('click', () => {
-                        applyBookToForm(book);
-                        hideResults();
-                    });
-                    searchResultsDiv.appendChild(item);
-                });
-                searchResultsDiv.style.display = 'block';
-            };
-            this.addEventListener(bookInput, 'input', () => {
-                clearTimeout(searchDebounceTimer);
-                const query = (bookInput.value || '').trim();
-                if (query.length < BOOK_SEARCH_MIN_LENGTH) {
-                    hideResults();
-                    return;
-                }
-                searchDebounceTimer = setTimeout(async () => {
-                    if (bookSearchAbortController) bookSearchAbortController.abort();
-                    bookSearchAbortController = new AbortController();
-                    try {
-                        const author = bookAuthorInput?.value?.trim() || '';
-                        const results = await searchBooks(query, author || undefined, bookSearchAbortController.signal);
-                        showResults(results);
-                    } catch (err) {
-                        if (err.name !== 'AbortError') {
-                            hideResults();
-                        }
-                    }
-                }, BOOK_SEARCH_DEBOUNCE_MS);
-            });
-            this.addEventListener(bookInput, 'blur', () => {
-                setTimeout(hideResults, 150);
-            });
-
-            // "Look up book" for legacy quests: fetch cover + page count using current title/author
-            if (lookupBookBtn) {
-                this.addEventListener(lookupBookBtn, 'click', async () => {
-                    const query = (bookInput?.value || '').trim();
-                    if (query.length < BOOK_SEARCH_MIN_LENGTH) {
-                        toast.error('Type at least 3 characters in Book Title, or use the search as you type above.');
-                        return;
-                    }
-                    hideResults();
-                    lookupBookBtn.disabled = true;
-                    lookupBookBtn.textContent = 'Looking up…';
-                    try {
-                        const author = (bookAuthorInput?.value || '').trim();
-                        const results = await searchBooks(query, author || undefined, null);
-                        if (results && results.length > 0) {
-                            showResults(results);
-                        } else {
-                            toast.error('No results found. Try a different title or author.');
-                        }
-                    } catch (err) {
-                        toast.error(err?.message || 'Lookup failed');
-                    } finally {
-                        lookupBookBtn.disabled = false;
-                        lookupBookBtn.textContent = 'Look up book';
-                    }
-                });
-            }
-
-            this._hideBookSearchResults = hideResults;
-            this._applyBookToForm = applyBookToForm;
-        }
-
-        // Cover: URL input and file upload (Grimoire Gallery)
-        const coverUrlInput = document.getElementById('edit-quest-cover-url');
-        const coverValueInput = document.getElementById('edit-quest-cover-value');
-        const coverUploadInput = document.getElementById('edit-quest-cover-upload');
-        if (coverUrlInput && coverValueInput) {
-            this.addEventListener(coverUrlInput, 'input', () => {
-                const url = coverUrlInput.value.trim();
-                coverValueInput.value = url;
-                const preview = document.getElementById('edit-quest-cover-preview');
-                if (preview) {
-                    if (url) {
-                        preview.src = url;
-                        preview.alt = 'Book cover';
-                        preview.style.display = 'block';
-                    } else {
-                        preview.src = '';
-                        preview.style.display = 'none';
-                    }
-                }
+        // Add-quest form: book selector (library only; API search is in Library tab)
+        const newQuestBookIdInput = document.getElementById('new-quest-book-id');
+        const newQuestBookSelectorContainer = document.getElementById('new-quest-book-selector-container');
+        if (newQuestBookIdInput && newQuestBookSelectorContainer && stateAdapter.getBooks) {
+            this._addFormBookSelector = createBookSelector(newQuestBookSelectorContainer, stateAdapter, {
+                placeholder: 'Select a book',
+                onSelect: (bookId) => {
+                    newQuestBookIdInput.value = bookId || '';
+                },
+                appendTo: 'container'
             });
         }
-        if (coverUploadInput && coverValueInput && coverUrlInput) {
-            this.addEventListener(coverUploadInput, 'change', () => {
-                const file = coverUploadInput.files && coverUploadInput.files[0];
-                if (!file || !file.type.startsWith('image/')) {
-                    if (coverUploadInput.files && coverUploadInput.files.length) {
-                        toast.error('Please choose an image file (e.g. JPEG or PNG).');
-                    }
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const dataUrl = reader.result;
-                    if (typeof dataUrl !== 'string') return;
-                    coverValueInput.value = dataUrl;
-                    coverUrlInput.value = '';
-                    const preview = document.getElementById('edit-quest-cover-preview');
-                    if (preview) {
-                        preview.src = dataUrl;
-                        preview.alt = 'Book cover';
-                        preview.style.display = 'block';
-                    }
-                };
-                reader.readAsDataURL(file);
-                coverUploadInput.value = '';
-            });
-        }
+
+        // Edit drawer: book selector is created when drawer opens (see populateQuestEditDrawer)
     }
 
     handleQuestTypeChange() {
@@ -560,13 +402,12 @@ export class QuestController extends BaseController {
     resetQuestForm() {
         // Clear form fields
         const promptInput = document.getElementById('new-quest-prompt');
-        const bookInput = document.getElementById('new-quest-book');
-        const bookAuthorInput = document.getElementById('new-quest-book-author');
+        const newQuestBookIdInput = document.getElementById('new-quest-book-id');
         const notesInput = document.getElementById('new-quest-notes');
         
         if (promptInput) promptInput.value = '';
-        if (bookInput) bookInput.value = '';
-        if (bookAuthorInput) bookAuthorInput.value = '';
+        if (newQuestBookIdInput) newQuestBookIdInput.value = '';
+        if (this._addFormBookSelector) this._addFormBookSelector.setSelectedBookId(null);
         if (notesInput) notesInput.value = '';
 
         if (this.dungeonRoomSelect) this.dungeonRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
@@ -625,8 +466,6 @@ export class QuestController extends BaseController {
         const { ui: uiModule } = this.dependencies;
 
         const type = this.questTypeSelect.value;
-        const book = document.getElementById('new-quest-book')?.value || '';
-        const bookAuthor = document.getElementById('new-quest-book-author')?.value || '';
         const notes = document.getElementById('new-quest-notes')?.value || '';
         const month = document.getElementById('quest-month')?.value || '';
         const year = document.getElementById('quest-year')?.value || '';
@@ -635,16 +474,25 @@ export class QuestController extends BaseController {
         const buffsSelect = document.getElementById('quest-buffs-select');
         const selectedBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
 
+        const selectedBookId = (this._addFormBookSelector?.getSelectedBookId()) || document.getElementById('new-quest-book-id')?.value?.trim() || null;
+        const bookFromLibrary = selectedBookId ? stateAdapter.getBook(selectedBookId) : null;
+        const book = bookFromLibrary?.title ?? '';
+        const bookAuthor = bookFromLibrary?.author ?? '';
+
         if (this.editingQuestInfo) {
-            // Update existing quest
-            this.handleUpdateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs);
+            this.handleUpdateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs, selectedBookId);
         } else {
-            // Add new quest
-            this.handleCreateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs);
+            if (!selectedBookId) {
+                toast.error('Please select a book from the Library.');
+                const container = document.getElementById('new-quest-book-selector-container');
+                if (container) showFormError(container.closest('.form-row') || container, 'Please select a book from the Library.');
+                return;
+            }
+            this.handleCreateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs, selectedBookId, bookFromLibrary);
         }
     }
 
-    handleUpdateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs) {
+    handleUpdateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs, selectedBookId = null) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
@@ -667,8 +515,16 @@ export class QuestController extends BaseController {
         // Use BaseQuestHandler to determine the correct prompt
         const prompt = BaseQuestHandler.determinePromptForEdit(type, originalQuest, formElements, data);
 
+        const questId = originalQuest.id || null;
+        const previousBookId = originalQuest.bookId || null;
+        if (selectedBookId && questId && selectedBookId !== previousBookId) {
+            if (previousBookId) stateAdapter.unlinkQuestFromBook(previousBookId, questId);
+            stateAdapter.linkQuestToBook(selectedBookId, questId);
+        }
+
         // Preserve restorationData if it exists (for restoration project quests)
         const updates = { month, year, type, prompt, book, bookAuthor, notes, buffs: selectedBuffs };
+        if (selectedBookId !== undefined) updates.bookId = selectedBookId || null;
         if (originalQuest.restorationData) {
             // For restoration quests, also update restorationData from form selections
             if (type === '🔨 Restoration Project') {
@@ -718,17 +574,22 @@ export class QuestController extends BaseController {
         this.resetQuestForm();
     }
 
-    handleCreateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs) {
+    handleCreateQuest(type, month, year, book, bookAuthor, notes, selectedBuffs, selectedBookId, bookFromLibrary) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
         try {
-            // Create form elements object for handler
+            const newQuestBookIdInput = document.getElementById('new-quest-book-id');
+            if (newQuestBookIdInput) newQuestBookIdInput.value = selectedBookId || '';
+
+            // Create form elements object for handler (book from library selector)
             const formElements = {
                 monthInput: document.getElementById('quest-month'),
                 yearInput: document.getElementById('quest-year'),
-                bookInput: document.getElementById('new-quest-book'),
-                bookAuthorInput: document.getElementById('new-quest-book-author'),
+                bookIdInput: newQuestBookIdInput,
+                bookSelectorContainer: document.getElementById('new-quest-book-selector-container'),
+                bookTitleForQuest: bookFromLibrary?.title ?? book ?? '',
+                bookAuthorForQuest: bookFromLibrary?.author ?? bookAuthor ?? '',
                 notesInput: document.getElementById('new-quest-notes'),
                 statusSelect: document.getElementById('new-quest-status'),
                 buffsSelect: document.getElementById('quest-buffs-select'),
@@ -779,10 +640,11 @@ export class QuestController extends BaseController {
                 return;
             }
             
-            // Add dateAdded to all new quests (Schema v3)
+            // Add dateAdded and id to all new quests (Schema v3 / v5)
             const currentDate = new Date().toISOString();
             quests.forEach(quest => {
                 if (quest && typeof quest === 'object') {
+                    if (!quest.id) quest.id = generateQuestId();
                     quest.dateAdded = quest.dateAdded || currentDate;
                     
                     // Assign quest to correct period based on dateAdded (Phase 2.2)
@@ -793,23 +655,28 @@ export class QuestController extends BaseController {
                 }
             });
             
-            // Validate quest structure
+            // Validate quest structure (book can come from library so book or bookId required)
             quests.forEach((quest, idx) => {
                 if (!quest || typeof quest !== 'object') {
                     console.error(`Invalid quest at index ${idx}:`, quest);
                     throw new Error(`Invalid quest structure at index ${idx}`);
                 }
-                if (!quest.type || !quest.book || !quest.month || !quest.year) {
+                if (!quest.type || !quest.month || !quest.year) {
                     console.error(`Quest missing required fields at index ${idx}:`, quest);
                     throw new Error(`Quest missing required fields at index ${idx}`);
+                }
+                if (!quest.book && !quest.bookId) {
+                    console.error(`Quest missing book at index ${idx}:`, quest);
+                    throw new Error(`Quest missing book at index ${idx}`);
                 }
             });
             
             const status = formElements.statusSelect?.value || 'active';
 
-            // Add quests to appropriate list
+            // Add quests to appropriate list and link each to its book (book-first)
             if (status === 'active') {
                 stateAdapter.addActiveQuests(quests);
+                quests.forEach(q => { if (q.bookId && q.id) stateAdapter.linkQuestToBook(q.bookId, q.id); });
                 uiModule.renderActiveAssignments();
             } else if (status === 'completed') {
                 // Track if this is a new book
@@ -831,8 +698,9 @@ export class QuestController extends BaseController {
                     }
                 }
 
-                // Add to completed quests
+                // Add to completed quests and link each to its book (book-first)
                 stateAdapter.addCompletedQuests(quests);
+                quests.forEach(q => { if (q.bookId && q.id) stateAdapter.linkQuestToBook(q.bookId, q.id); });
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
@@ -961,15 +829,16 @@ export class QuestController extends BaseController {
         const questToMove = stateAdapter.removeQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, index);
         if (!questToMove) return;
 
-        // Validate that quest has a book title before completing
-        const bookName = trimOrEmpty(questToMove.book);
+        // Validate that quest has a book (linked or legacy title) before completing
+        const bookName = trimOrEmpty(
+            questToMove.bookId ? (stateAdapter.getBook(questToMove.bookId)?.title ?? questToMove.book) : questToMove.book
+        );
         if (!bookName) {
             // Restore quest to active assignments
             stateAdapter.addActiveQuests(questToMove);
             uiModule.renderActiveAssignments();
             this.saveState();
-            // Show error message
-            toast.error('Please add a book title to this quest before completing it. Quests without book titles will not count towards monthly totals.');
+            toast.error('Please link a book to this quest before completing it. Quests without books will not count towards monthly totals.');
             return;
         }
 
@@ -1355,8 +1224,8 @@ export class QuestController extends BaseController {
         const statusDisplay = document.getElementById('edit-quest-status-display');
         const promptDisplay = document.getElementById('edit-quest-prompt-display');
         const promptSection = document.getElementById('edit-quest-prompt-section');
-        const bookInput = document.getElementById('edit-quest-book');
-        const bookAuthorInput = document.getElementById('edit-quest-book-author');
+        const legacyBookDisplay = document.getElementById('edit-quest-legacy-book-display');
+        const editBookSelectorContainer = document.getElementById('edit-quest-book-selector-container');
         const notesInput = document.getElementById('edit-quest-notes');
         const buffsSelect = document.getElementById('edit-quest-buffs-select');
 
@@ -1404,30 +1273,31 @@ export class QuestController extends BaseController {
             }
         }
         if (typeSelect) typeSelect.value = quest.type || '';
-        if (bookInput) bookInput.value = quest.book || '';
-        if (bookAuthorInput) bookAuthorInput.value = quest.bookAuthor || '';
         if (notesInput) notesInput.value = quest.notes || '';
 
-        // Grimoire Gallery: cover (URL or uploaded data URL) and page count
-        const coverValueInput = document.getElementById('edit-quest-cover-value');
-        const coverUrlInput = document.getElementById('edit-quest-cover-url');
-        const coverPreview = document.getElementById('edit-quest-cover-preview');
-        const pageCountInput = document.getElementById('edit-quest-page-count');
-        const coverUrl = quest.coverUrl || '';
-        const pages = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
-        if (coverValueInput) coverValueInput.value = coverUrl;
-        if (coverUrlInput) coverUrlInput.value = coverUrl.startsWith('data:') ? '' : coverUrl;
-        if (coverPreview) {
-            if (coverUrl) {
-                coverPreview.src = coverUrl;
-                coverPreview.alt = quest.book ? `Cover: ${quest.book}` : 'Book cover';
-                coverPreview.style.display = 'block';
+        // Book: legacy read-only display or library book selector
+        if (legacyBookDisplay) {
+            if (!quest.bookId && (quest.book || quest.bookAuthor)) {
+                legacyBookDisplay.style.display = 'block';
+                legacyBookDisplay.textContent = [quest.book, quest.bookAuthor].filter(Boolean).join(' — ');
             } else {
-                coverPreview.src = '';
-                coverPreview.style.display = 'none';
+                legacyBookDisplay.style.display = 'none';
+                legacyBookDisplay.textContent = '';
             }
         }
-        if (pageCountInput) pageCountInput.value = pages != null ? String(pages) : '';
+        const editQuestBookIdInput = document.getElementById('edit-quest-book-id');
+        if (editQuestBookIdInput) editQuestBookIdInput.value = quest.bookId || '';
+        if (this._editDrawerBookSelector) this._editDrawerBookSelector.destroy();
+        if (editBookSelectorContainer && this.stateAdapter.getBooks) {
+            this._editDrawerBookSelector = createBookSelector(editBookSelectorContainer, this.stateAdapter, {
+                selectedBookId: quest.bookId || null,
+                placeholder: 'Link Book',
+                appendTo: 'container',
+                onSelect: (bookId) => {
+                    if (editQuestBookIdInput) editQuestBookIdInput.value = bookId || '';
+                }
+            });
+        }
 
         // Set status display
         if (statusDisplay) {
@@ -1473,7 +1343,10 @@ export class QuestController extends BaseController {
     closeQuestEditDrawer() {
         if (!this.questEditDrawer || !this.questEditBackdrop) return;
 
-        if (this._hideBookSearchResults) this._hideBookSearchResults();
+        if (this._editDrawerBookSelector) {
+            this._editDrawerBookSelector.destroy();
+            this._editDrawerBookSelector = null;
+        }
 
         // Hide drawer and backdrop
         this.questEditDrawer.style.display = 'none';
@@ -1495,17 +1368,13 @@ export class QuestController extends BaseController {
         // Get values from drawer
         const month = document.getElementById('edit-quest-month')?.value || '';
         const year = document.getElementById('edit-quest-year')?.value || '';
-        const book = document.getElementById('edit-quest-book')?.value || '';
-        const bookAuthor = document.getElementById('edit-quest-book-author')?.value || '';
         const notes = document.getElementById('edit-quest-notes')?.value || '';
-        const coverValueInput = document.getElementById('edit-quest-cover-value');
-        const pageCountInput = document.getElementById('edit-quest-page-count');
-        const coverUrl = coverValueInput?.value?.trim() || null;
-        const pageCount = pageCountInput?.value ? parseInt(pageCountInput.value, 10) : null;
-        const pageCountRaw = pageCount != null && !isNaN(pageCount) ? pageCount : null;
-        const pageCountEffective = pageCountRaw;
         const buffsSelect = document.getElementById('edit-quest-buffs-select');
         const selectedBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
+
+        const selectedBookId = (this._editDrawerBookSelector ? this._editDrawerBookSelector.getSelectedBookId() : null)
+            || document.getElementById('edit-quest-book-id')?.value?.trim()
+            || null;
 
         // Get the original quest to preserve type and prompt
         const originalQuestList = characterState[this.resolveQuestListKey(this.editingQuestInfo.list)] || [];
@@ -1515,13 +1384,22 @@ export class QuestController extends BaseController {
             return;
         }
 
+        const bookFromLibrary = selectedBookId ? this.stateAdapter.getBook(selectedBookId) : null;
+        const book = bookFromLibrary ? (bookFromLibrary.title ?? '') : '';
+        const bookAuthor = bookFromLibrary ? (bookFromLibrary.author ?? '') : '';
+        const coverUrl = bookFromLibrary ? (bookFromLibrary.cover ?? null) : null;
         const type = originalQuest.type || '';
+        const questId = originalQuest.id || null;
+        const previousBookId = originalQuest.bookId || null;
 
-        // Update quest (preserve prompt, restorationData, etc. from original)
-        const updates = { month, year, type, book, bookAuthor, notes, buffs: selectedBuffs };
-        updates.coverUrl = coverUrl;
-        updates.pageCountRaw = pageCountRaw != null && !isNaN(pageCountRaw) ? pageCountRaw : null;
-        updates.pageCountEffective = pageCountEffective != null && !isNaN(pageCountEffective) ? pageCountEffective : null;
+        // Update book links: unlink from old, link to new
+        if (questId) {
+            if (previousBookId && previousBookId !== selectedBookId) this.stateAdapter.unlinkQuestFromBook(previousBookId, questId);
+            if (selectedBookId) this.stateAdapter.linkQuestToBook(selectedBookId, questId);
+        }
+
+        // Update quest (preserve prompt, restorationData, etc. from original). Include coverUrl so archive Cover toggle shows linked book.
+        const updates = { month, year, type, book, bookAuthor, coverUrl, notes, buffs: selectedBuffs, bookId: selectedBookId || null };
         
         // Preserve prompt (quest type cannot be changed when editing)
         if (originalQuest.prompt) {
@@ -1572,4 +1450,3 @@ export class QuestController extends BaseController {
         toast.success('Quest updated successfully');
     }
 }
-

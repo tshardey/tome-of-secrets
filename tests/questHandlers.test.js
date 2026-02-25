@@ -18,10 +18,13 @@ describe('Quest Handlers', () => {
     let formElements;
 
     beforeEach(() => {
-        // Create mock form elements
+        // Create mock form elements (book-first: bookId + title/author from library)
         formElements = {
             monthInput: { value: 'January' },
             yearInput: { value: '2024' },
+            bookIdInput: { value: 'test-book-id' },
+            bookTitleForQuest: 'Test Book',
+            bookAuthorForQuest: 'Test Author',
             bookInput: { value: 'Test Book' },
             notesInput: { value: 'Test notes' },
             statusSelect: { value: 'active' },

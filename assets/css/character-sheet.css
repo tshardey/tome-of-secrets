@@ -1069,6 +1069,22 @@
     font-style: italic;
 }
 
+.form-hint {
+    margin-top: 6px;
+    color: #8a7a61;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.edit-quest-legacy-book-display {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: rgba(184, 159, 98, 0.1);
+    border-radius: 4px;
+    color: #c4a962;
+    font-size: 0.9rem;
+}
+
 .book-edit-links-display {
     color: #8a7a61;
     font-size: 0.9rem;

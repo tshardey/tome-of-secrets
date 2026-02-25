@@ -26,8 +26,34 @@ describe('Character Sheet', () => {
     loadHTML('character-sheet.md');
 
     // Initialize the event listeners and dynamic content
-    // This function would be the entry point of your character sheet's JavaScript
     await initializeCharacterSheet();
+
+    // Library books for add-quest book selector (Phase 4) - set after init so stateAdapter sees them
+    const makeBook = (id, title, author = '') => ({
+      id,
+      title,
+      author,
+      cover: null,
+      pageCount: null,
+      status: 'reading',
+      dateAdded: new Date().toISOString(),
+      dateCompleted: null,
+      links: { questIds: [], curriculumPromptIds: [] }
+    });
+    characterState[STORAGE_KEYS.BOOKS] = {
+      'the-test-book': makeBook('the-test-book', 'The Test Book'),
+      'a-finished-story': makeBook('a-finished-story', 'A Finished Story'),
+      'test-book': makeBook('test-book', 'Test Book'),
+      'unique-book-title': makeBook('unique-book-title', 'Unique Book Title'),
+      'dungeon-book': makeBook('dungeon-book', 'Dungeon Book'),
+      'author-book': makeBook('author-book', 'Author Book'),
+      'extra-reading-book': makeBook('extra-reading-book', 'Extra Reading Book'),
+      'extra-book': makeBook('extra-book', 'Extra Book'),
+      'monster-manual': makeBook('monster-manual', 'Monster Manual'),
+      'original-book': makeBook('original-book', 'Original Book'),
+      'updated-room-book': makeBook('updated-room-book', 'Updated Room Book'),
+      'another-original-book': makeBook('another-original-book', 'Another Original Book')
+    };
   });
 
   describe('JSON wiring smoke tests', () => {
@@ -1668,7 +1694,7 @@ describe('Character Sheet', () => {
       
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'The Test Book';
+      document.getElementById('new-quest-book-id').value = 'the-test-book';
 
       // Select the quest type to reveal the correct prompt dropdown
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1705,7 +1731,7 @@ describe('Character Sheet', () => {
       const sideQuestSelect = document.getElementById('side-quest-select');
       sideQuestSelect.value = sideQuests["4"]; // The Wandering Merchant's Request
 
-      document.getElementById('new-quest-book').value = 'A Finished Story';
+      document.getElementById('new-quest-book-id').value = 'a-finished-story';
       document.getElementById('add-quest-button').click();
 
       // Click the "Complete" button on the active quest
@@ -1725,7 +1751,7 @@ describe('Character Sheet', () => {
       // Add a Side Quest instead since genre quests require setup
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '♣ Side Quest';
@@ -1747,7 +1773,7 @@ describe('Character Sheet', () => {
       // Add a quest
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '♣ Side Quest';
@@ -1780,7 +1806,7 @@ describe('Character Sheet', () => {
       // Add and complete a quest with a specific book
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Unique Book Title';
+      document.getElementById('new-quest-book-id').value = 'unique-book-title';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '♣ Side Quest';
@@ -1801,7 +1827,7 @@ describe('Character Sheet', () => {
       // Add another quest with the same book
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Unique Book Title';
+      document.getElementById('new-quest-book-id').value = 'unique-book-title';
 
       questTypeSelect.value = '♣ Side Quest';
       questTypeSelect.dispatchEvent(new Event('change'));
@@ -1894,7 +1920,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form for a dungeon crawl
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-book-id').value = 'dungeon-book';
 
       // Simulate selecting a dungeon quest and a specific room/encounter
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1916,7 +1942,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form for a dungeon crawl
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Author Book';
+      document.getElementById('new-quest-book-id').value = 'author-book';
 
       // Simulate selecting Room 8 (The Author's Study) which has NO encounters
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1949,7 +1975,7 @@ describe('Character Sheet', () => {
       // Add a dungeon quest and mark it as completed (no buffs selected)
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-book-id').value = 'dungeon-book';
       document.getElementById('new-quest-status').value = 'completed';
 
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1986,7 +2012,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form
       document.getElementById('quest-month').value = 'December';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
 
       // Select the Organize the Stacks quest type
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -2027,7 +2053,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Extra Reading Book';
+      document.getElementById('new-quest-book-id').value = 'extra-reading-book';
 
       // Select the Extra Credit quest type
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -2069,7 +2095,7 @@ describe('Character Sheet', () => {
       // Add an Extra Credit quest
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Extra Book';
+      document.getElementById('new-quest-book-id').value = 'extra-book';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '⭐ Extra Credit';
@@ -2104,7 +2130,7 @@ describe('Character Sheet', () => {
         // --- 1. Setup for Defeat (default) ---
         document.getElementById('quest-month').value = 'January';
         document.getElementById('quest-year').value = '2026';
-        document.getElementById('new-quest-book').value = 'Monster Manual';
+        document.getElementById('new-quest-book-id').value = 'monster-manual';
         const questTypeSelect = document.getElementById('new-quest-type');
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
@@ -2126,7 +2152,7 @@ describe('Character Sheet', () => {
         // --- 4. Setup for Befriend (re-adding the quest) ---
         // The form is reset after adding, so we need to re-select everything.
         characterState.activeAssignments = []; // Clear state for the second part of the test
-        document.getElementById('new-quest-book').value = 'Monster Manual';
+        document.getElementById('new-quest-book-id').value = 'monster-manual';
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
         document.getElementById('dungeon-room-select').value = '4';
@@ -2144,7 +2170,7 @@ describe('Character Sheet', () => {
         // 1. Add a dungeon quest
         document.getElementById('quest-month').value = 'December';
         document.getElementById('quest-year').value = '2025';
-        document.getElementById('new-quest-book').value = 'Original Book';
+        document.getElementById('new-quest-book-id').value = 'original-book';
         const questTypeSelect = document.getElementById('new-quest-type');
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
@@ -2159,7 +2185,7 @@ describe('Character Sheet', () => {
         editBtn.click();
 
         // 3. Change the book title
-        document.getElementById('new-quest-book').value = 'Updated Room Book';
+        document.getElementById('new-quest-book-id').value = 'updated-room-book';
 
         // 4. Click "Update Quest"
         document.getElementById('add-quest-button').click();
@@ -2178,7 +2204,7 @@ describe('Character Sheet', () => {
         // 1. Add a dungeon quest
         document.getElementById('quest-month').value = 'December';
         document.getElementById('quest-year').value = '2025';
-        document.getElementById('new-quest-book').value = 'Another Original Book';
+        document.getElementById('new-quest-book-id').value = 'another-original-book';
         const questTypeSelect = document.getElementById('new-quest-type');
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
@@ -2636,7 +2662,7 @@ describe('Character Sheet', () => {
       const firstGenreOption = genreSelect?.options?.[1];
       genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
       
       // Select the passive item via the hidden JSON input used by the card-based UI
       const hiddenBuffsInput = document.getElementById('quest-buffs-select');
@@ -2674,7 +2700,7 @@ describe('Character Sheet', () => {
       const firstGenreOption = genreSelect?.options?.[1];
       genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
       
       // Select Archivist Bonus via the hidden JSON input used by the card-based UI
       const hiddenBuffsInput = document.getElementById('quest-buffs-select');
@@ -2711,7 +2737,7 @@ describe('Character Sheet', () => {
       const dungeonEncounterSelect = document.getElementById('dungeon-encounter-select');
       dungeonEncounterSelect.value = "Librarian's Spirit";
       
-      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-book-id').value = 'dungeon-book';
       
       // Add quest as active
       document.getElementById('new-quest-status').value = 'active';

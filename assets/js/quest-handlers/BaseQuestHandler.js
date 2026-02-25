@@ -41,11 +41,15 @@ export class BaseQuestHandler {
             }
         }
         
+        const bookId = (this.formElements.bookIdInput && this.formElements.bookIdInput.value) ? this.formElements.bookIdInput.value.trim() : null;
+        const bookTitle = (this.formElements.bookTitleForQuest != null) ? String(this.formElements.bookTitleForQuest) : (this.formElements.bookInput ? this.formElements.bookInput.value : '');
+        const bookAuthor = (this.formElements.bookAuthorForQuest != null) ? String(this.formElements.bookAuthorForQuest) : (this.formElements.bookAuthorInput ? this.formElements.bookAuthorInput.value : '');
         return {
             month: this.formElements.monthInput.value,
             year: this.formElements.yearInput.value,
-            book: this.formElements.bookInput.value,
-            bookAuthor: this.formElements.bookAuthorInput ? this.formElements.bookAuthorInput.value : '',
+            bookId: bookId || null,
+            book: bookTitle,
+            bookAuthor: bookAuthor,
             notes: this.formElements.notesInput.value,
             status: this.formElements.statusSelect.value,
             selectedBuffs: selectedBuffs,
@@ -55,14 +59,18 @@ export class BaseQuestHandler {
     }
 
     /**
-     * Get base validator with common rules for all quest types
-     * @returns {Validator} Validator instance with common rules
+     * Get base validator with common rules for all quest types.
+     * Book is required via bookId (library selection) or legacy book title.
      */
     getBaseValidator() {
         const validator = new Validator();
         validator.addRule('month', required('Month is required'));
         validator.addRule('year', required('Year is required'));
-        validator.addRule('book', required('Book title is required'));
+        validator.addRule('bookId', (value, data) => {
+            if (value && String(value).trim()) return null;
+            if (data.book && String(data.book).trim()) return null;
+            return 'Please select a book from the Library.';
+        });
         return validator;
     }
 
@@ -74,7 +82,8 @@ export class BaseQuestHandler {
         return {
             month: this.formElements.monthInput,
             year: this.formElements.yearInput,
-            book: this.formElements.bookInput,
+            bookId: this.formElements.bookIdInput || this.formElements.bookSelectorContainer,
+            book: this.formElements.bookIdInput || this.formElements.bookSelectorContainer,
             prompt: this.formElements.promptInput || 
                    this.formElements.genreQuestSelect || 
                    this.formElements.sideQuestSelect ||

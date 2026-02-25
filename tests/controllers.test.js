@@ -960,9 +960,9 @@ describe('Controllers', () => {
             expect(realStateAdapter.getCompletedQuests()).toHaveLength(0);
             expect(realStateAdapter.getActiveAssignments()[0]).toEqual(questWithoutBook);
 
-            // Error toast should be shown
+            // Error toast should be shown (book-first: link a book)
             expect(toastSpy).toHaveBeenCalledWith(
-                expect.stringContaining('Please add a book title')
+                expect.stringContaining('Please link a book')
             );
 
             // UI should be re-rendered
