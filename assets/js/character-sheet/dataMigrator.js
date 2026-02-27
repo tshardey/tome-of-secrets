@@ -169,6 +169,54 @@ function migrateToVersion5(state) {
 }
 
 /**
+ * Migration from schema version 5 to version 6
+ * - Rename legacy genre quest name "Memoirs/Biographies" to "Memoir/Biography"
+ *   anywhere it appears in saved character state (selected genres, quest prompts, etc.)
+ */
+function migrateToVersion6(state) {
+    const migrated = { ...state };
+    const LEGACY = 'Memoirs/Biographies';
+    const CURRENT = 'Memoir/Biography';
+
+    function replaceString(value) {
+        if (typeof value === 'string' && value.includes(LEGACY)) {
+            return value.split(LEGACY).join(CURRENT);
+        }
+        return value;
+    }
+
+    function deepReplace(value) {
+        if (Array.isArray(value)) {
+            return value.map(item => {
+                if (item && (typeof item === 'object' || Array.isArray(item))) {
+                    return deepReplace(item);
+                }
+                return replaceString(item);
+            });
+        }
+        if (value && typeof value === 'object') {
+            const result = { ...value };
+            Object.keys(result).forEach(key => {
+                const v = result[key];
+                if (v && (typeof v === 'object' || Array.isArray(v))) {
+                    result[key] = deepReplace(v);
+                } else {
+                    result[key] = replaceString(v);
+                }
+            });
+            return result;
+        }
+        return replaceString(value);
+    }
+
+    Object.keys(migrated).forEach(key => {
+        migrated[key] = deepReplace(migrated[key]);
+    });
+
+    return migrated;
+}
+
+/**
  * Migration from schema version 3 to version 4
  * - Adds Grimoire Gallery metadata to all quests: coverUrl, pageCountRaw, pageCountEffective
  * - Values are null for existing quests; populated when user selects a book via API or edits
@@ -357,6 +405,9 @@ export function migrateState(state) {
                 break;
             case 5:
                 migratedState = migrateToVersion5(migratedState);
+                break;
+            case 6:
+                migratedState = migrateToVersion6(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

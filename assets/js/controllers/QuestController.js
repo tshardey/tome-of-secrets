@@ -864,6 +864,11 @@ export class QuestController extends BaseController {
         completedQuest.month = assignedQuest.month;
         completedQuest.year = assignedQuest.year;
 
+        // Ensure quest has an id so book link can be stored (e.g. legacy or addActiveQuests-added quests)
+        if (!completedQuest.id) {
+            completedQuest.id = generateQuestId();
+        }
+
         // Calculate and add blueprints to rewards BEFORE storing the quest
         applyBlueprintRewardToQuest(completedQuest);
 

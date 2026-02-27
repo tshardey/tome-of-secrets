@@ -17,8 +17,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 3: Added quest date tracking (dateAdded, dateCompleted)
  * Version 4: Added Grimoire Gallery metadata on quests (coverUrl, pageCountRaw, pageCountEffective)
  * Version 5: Book-First Paradigm - books and exchangeProgram state; quests have bookId and id
+ * Version 6: Rename legacy genre quest name "Memoirs/Biographies" -> "Memoir/Biography" in saved state
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /**
  * Schema version key in localStorage

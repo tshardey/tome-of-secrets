@@ -260,6 +260,76 @@ describe('Data Validation', () => {
             expect(typeof validated[STORAGE_KEYS.ATMOSPHERIC_BUFFS]).toBe('object');
             expect(typeof validated[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe('number');
         });
+
+        test('should migrate legacy quests with book data into books state (schema v4 to v5)', () => {
+            // Start from schema version 4 so migrateState will apply the v5 migration.
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '4');
+
+            const sharedTitle = 'Shared Legacy Book';
+            const sharedAuthor = 'Legacy Author';
+
+            // Legacy quests: no id/bookId fields, but with book metadata.
+            const legacyActiveQuests = [
+                {
+                    type: '♣ Side Quest',
+                    prompt: 'Legacy Active',
+                    book: sharedTitle,
+                    bookAuthor: sharedAuthor,
+                    month: 'January',
+                    year: '2024',
+                    coverUrl: 'https://example.com/cover.jpg',
+                    pageCountRaw: 350,
+                    rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [], modifiedBy: [] }
+                }
+            ];
+            const legacyCompletedQuests = [
+                {
+                    type: '♥ Organize the Stacks',
+                    prompt: 'Legacy Completed',
+                    book: sharedTitle,
+                    bookAuthor: sharedAuthor,
+                    month: 'February',
+                    year: '2024',
+                    coverUrl: 'https://example.com/cover.jpg',
+                    pageCountEffective: 350,
+                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                }
+            ];
+
+            // Store legacy data without BOOKS / EXTERNAL_CURRICULUM keys.
+            safeSetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, legacyActiveQuests);
+            safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, legacyCompletedQuests);
+            safeSetJSON(STORAGE_KEYS.DISCARDED_QUESTS, []);
+
+            const loaded = loadAndMigrateState();
+            const validated = validateCharacterState(loaded);
+
+            // Books state should be created and deduplicated by title+author.
+            const books = validated[STORAGE_KEYS.BOOKS];
+            expect(books).toBeDefined();
+            const bookIds = Object.keys(books);
+            expect(bookIds.length).toBe(1);
+
+            const book = books[bookIds[0]];
+            expect(book.title).toBe(sharedTitle);
+            expect(book.author).toBe(sharedAuthor);
+            expect(book.status).toBe('reading'); // Still reading because there is an active quest for this book.
+            expect(Array.isArray(book.links.questIds)).toBe(true);
+            expect(book.links.questIds.length).toBe(2);
+
+            // Quests should now have ids and bookIds pointing at the migrated Book.
+            const activeQuest = validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0];
+            const completedQuest = validated[STORAGE_KEYS.COMPLETED_QUESTS][0];
+            expect(typeof activeQuest.id).toBe('string');
+            expect(typeof completedQuest.id).toBe('string');
+            expect(activeQuest.bookId).toBe(book.id);
+            expect(completedQuest.bookId).toBe(book.id);
+
+            // External curriculum state should be initialized to the expected shape.
+            expect(validated[STORAGE_KEYS.EXTERNAL_CURRICULUM]).toBeDefined();
+            expect(validated[STORAGE_KEYS.EXTERNAL_CURRICULUM].curriculums).toBeDefined();
+            expect(typeof validated[STORAGE_KEYS.EXTERNAL_CURRICULUM].curriculums).toBe('object');
+        });
     });
 
     describe('validateFormDataSafe', () => {
@@ -300,8 +370,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 5', () => {
-            expect(SCHEMA_VERSION).toBe(5);
+        test('schema version should be 6', () => {
+            expect(SCHEMA_VERSION).toBe(6);
         });
     });
 });
@@ -362,6 +432,41 @@ describe('Data Migration', () => {
             expect(Array.isArray(migrated[STORAGE_KEYS.INVENTORY_ITEMS])).toBe(true);
             expect(typeof migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS]).toBe('object');
             expect(migrated[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe(0);
+        });
+
+        test('should rename legacy genre quest name "Memoirs/Biographies" to "Memoir/Biography" in saved state', () => {
+            // Start from schema version 5 so only the v6 migration runs.
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '5');
+
+            const legacyGenre = 'Memoirs/Biographies';
+            const currentGenre = 'Memoir/Biography';
+
+            const state = {
+                [STORAGE_KEYS.SELECTED_GENRES]: [legacyGenre, 'Fantasy'],
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+                    {
+                        type: '♥ Organize the Stacks',
+                        prompt: `Read a book from ${legacyGenre}`,
+                        book: 'Test Book',
+                        month: 'January',
+                        year: '2024',
+                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                    }
+                ],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
+            };
+
+            const migrated = migrateState(state);
+
+            // Selected genres array should have the updated name.
+            expect(migrated[STORAGE_KEYS.SELECTED_GENRES]).toContain(currentGenre);
+            expect(migrated[STORAGE_KEYS.SELECTED_GENRES]).not.toContain(legacyGenre);
+
+            // Quest prompt text should also be updated.
+            const activeQuest = migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0];
+            expect(activeQuest.prompt).toContain(currentGenre);
+            expect(activeQuest.prompt).not.toContain(legacyGenre);
         });
     });
 
