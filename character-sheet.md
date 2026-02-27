@@ -27,6 +27,9 @@ permalink: /character-sheet.html
         <button type="button" data-tab-target="quests" role="tab" aria-selected="false">
             <span>📅</span> Quests
         </button>
+        <button type="button" data-tab-target="external-curriculum" role="tab" aria-selected="false">
+            <span>📋</span> External Curriculum
+        </button>
         <button type="button" data-tab-target="archived" role="tab" aria-selected="false">
             <span>📦</span> Archived
         </button>
@@ -415,7 +418,6 @@ permalink: /character-sheet.html
     </div>
 </div>
 </div>
-</div>
 <!-- END TAB 4: ENVIRONMENT -->
 
 <!-- TAB 5: LIBRARY -->
@@ -774,9 +776,56 @@ permalink: /character-sheet.html
     </div>
 </div>
 </div>
-<!-- END TAB 5: QUESTS -->
+<!-- END TAB 6: QUESTS -->
 
-<!-- TAB 6: ARCHIVED QUESTS -->
+<!-- TAB: EXTERNAL CURRICULUM -->
+<div class="tab-panel" data-tab-panel="external-curriculum" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-external-curriculum-add-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📋 Add Curriculum</h2>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="external-curriculum-add-panel-body"
+                    aria-expanded="true"
+                    aria-controls="external-curriculum-add-panel-body">
+                Hide
+            </button>
+        </div>
+        <div class="rpg-panel-body" id="external-curriculum-add-panel-body">
+            <div id="external-curriculum-add-form" class="curriculum-add-form" role="form" aria-label="Add a curriculum">
+                <div class="form-row">
+                    <label for="external-curriculum-name"><strong>Curriculum name:</strong></label>
+                    <input type="text" id="external-curriculum-name" class="curriculum-name-input" placeholder="e.g. Book Club 2025" />
+                </div>
+                <div class="form-row">
+                    <label for="external-curriculum-type"><strong>Type:</strong></label>
+                    <select id="external-curriculum-type">
+                        <option value="prompt">Prompt-based (categories & prompts)</option>
+                        <option value="book-club">Book Club (list of books)</option>
+                        <option value="bingo">Bingo Board (5×5)</option>
+                    </select>
+                </div>
+                <div class="form-row curriculum-add-actions">
+                    <button type="button" id="external-curriculum-add-btn" class="rpg-btn rpg-btn-primary">Add Curriculum</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-external-curriculum-list-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">Your Curriculums</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="external-curriculum-list" class="curriculum-list" aria-label="List of external curriculums"></div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB: EXTERNAL CURRICULUM -->
+
+<!-- TAB 7: ARCHIVED QUESTS -->
 <div class="tab-panel" data-tab-panel="archived" role="tabpanel">
     <div class="form-section">
         <h2>📦 Archived Quests</h2>
@@ -834,9 +883,9 @@ permalink: /character-sheet.html
         </div>
     </div>
 </div>
-<!-- END TAB 6: ARCHIVED QUESTS -->
+<!-- END TAB 7: ARCHIVED QUESTS -->
 
-<!-- TAB 7: CURSES -->
+<!-- TAB 8: CURSES -->
 <div class="tab-panel" data-tab-panel="curses" role="tabpanel">
     <div class="form-section">
         <h2>📜 The Shroud's Curse</h2>
@@ -889,7 +938,7 @@ permalink: /character-sheet.html
 
     </div>
 </div>
-<!-- END TAB 7: CURSES -->
+<!-- END TAB 8: CURSES -->
 
 </div>
 <!-- END TAB CONTAINER -->

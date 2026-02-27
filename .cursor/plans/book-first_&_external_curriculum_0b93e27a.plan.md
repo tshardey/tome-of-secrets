@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: phase-6-curriculum-tab
     content: "Phase 6: External Curriculum tab -- add tab HTML, create ExternalCurriculumController.js with batch prompt entry, wire into character-sheet.js, write externalCurriculumController.test.js"
-    status: pending
+    status: completed
   - id: phase-7-legacy-migration
     content: "Phase 7: Legacy migration -- review/fix migrateToVersion5 for full book model, deduplication, status inference, update dataValidation.test.js"
     status: pending

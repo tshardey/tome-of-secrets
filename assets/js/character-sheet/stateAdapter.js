@@ -1008,16 +1008,29 @@ export class StateAdapter {
         };
     }
 
+    /** Public getter for external curriculum data (curriculums object). */
+    getExternalCurriculum() {
+        return { ...this._getExternalCurriculumRaw().curriculums };
+    }
+
     _persistExternalCurriculum(data) {
         this.state[STORAGE_KEYS.EXTERNAL_CURRICULUM] = data;
         void setStateKey(STORAGE_KEYS.EXTERNAL_CURRICULUM, data);
         this.emit(EVENTS.EXTERNAL_CURRICULUM_CHANGED, { ...data });
     }
 
-    addCurriculum(name) {
+    addCurriculum(name, type) {
         const curriculums = { ...this._getExternalCurriculumRaw().curriculums };
         const id = this._generateId();
-        curriculums[id] = { id, name: typeof name === 'string' ? name : '', categories: {} };
+        let curriculumType = 'prompt';
+        if (type === 'book-club') curriculumType = 'book-club';
+        else if (type === 'bingo') curriculumType = 'bingo';
+        curriculums[id] = {
+            id,
+            name: typeof name === 'string' ? name : '',
+            type: curriculumType,
+            categories: {}
+        };
         this._persistExternalCurriculum({ curriculums });
         return curriculums[id];
     }
@@ -1030,6 +1043,14 @@ export class StateAdapter {
         if (!curriculum) return null;
         if (updates && typeof updates === 'object') {
             if (typeof updates.name === 'string') curriculum.name = updates.name;
+            if (typeof updates.type === 'string') {
+                if (updates.type === 'book-club' || updates.type === 'bingo' || updates.type === 'prompt') {
+                    curriculum.type = updates.type;
+                }
+            }
+            if (Array.isArray(updates.boardPromptIds)) {
+                curriculum.boardPromptIds = updates.boardPromptIds.filter(id => typeof id === 'string');
+            }
             if (updates.categories && typeof updates.categories === 'object') curriculum.categories = updates.categories;
         }
         curriculums[curriculumId] = curriculum;
@@ -1060,6 +1081,53 @@ export class StateAdapter {
         curriculums[curriculumId] = curriculum;
         this._persistExternalCurriculum({ curriculums });
         return categories[categoryId];
+    }
+
+    updateCategory(curriculumId, categoryId, updates) {
+        if (!curriculumId || typeof curriculumId !== 'string' || !categoryId || typeof categoryId !== 'string') return null;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = curriculums[curriculumId];
+        if (!curriculum) return null;
+        const categories = { ...(curriculum.categories || {}) };
+        const category = categories[categoryId];
+        if (!category) return null;
+        if (updates && typeof updates === 'object' && typeof updates.name === 'string') {
+            category.name = updates.name;
+        }
+        categories[categoryId] = category;
+        curriculum.categories = categories;
+        curriculums[curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return category;
+    }
+
+    deleteCategory(curriculumId, categoryId) {
+        if (!curriculumId || typeof curriculumId !== 'string' || !categoryId || typeof categoryId !== 'string') return false;
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = curriculums[curriculumId];
+        if (!curriculum) return false;
+        const categories = { ...(curriculum.categories || {}) };
+        const category = categories[categoryId];
+        if (!category) return false;
+        const prompts = category.prompts || {};
+        for (const promptId of Object.keys(prompts)) {
+            const prompt = prompts[promptId];
+            if (prompt && prompt.bookId) {
+                const book = this.getBook(prompt.bookId);
+                if (book && book.links) {
+                    const links = book.links;
+                    const curriculumPromptIds = (links.curriculumPromptIds || []).filter(id => id !== promptId);
+                    this.updateBook(prompt.bookId, { links: { questIds: links.questIds || [], curriculumPromptIds } });
+                }
+            }
+        }
+        delete categories[categoryId];
+        curriculum.categories = categories;
+        curriculums[curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return true;
     }
 
     addPrompts(curriculumId, categoryId, promptTexts) {
@@ -1166,6 +1234,34 @@ export class StateAdapter {
         curriculums[loc.curriculumId] = curriculum;
         this._persistExternalCurriculum({ curriculums });
         return prompt;
+    }
+
+    deletePrompt(promptId) {
+        if (!promptId || typeof promptId !== 'string') return false;
+        const loc = this._findPromptLocation(promptId);
+        if (!loc) return false;
+        const prompt = loc.prompts[promptId];
+        if (prompt && prompt.bookId) {
+            const book = this.getBook(prompt.bookId);
+            if (book && book.links) {
+                const links = book.links;
+                const curriculumPromptIds = (links.curriculumPromptIds || []).filter(id => id !== promptId);
+                this.updateBook(prompt.bookId, { links: { questIds: links.questIds || [], curriculumPromptIds } });
+            }
+        }
+        const prompts = { ...loc.prompts };
+        delete prompts[promptId];
+        const data = this._getExternalCurriculumRaw();
+        const curriculums = { ...data.curriculums };
+        const curriculum = { ...curriculums[loc.curriculumId] };
+        const categories = { ...curriculum.categories };
+        const category = { ...categories[loc.categoryId] };
+        category.prompts = prompts;
+        categories[loc.categoryId] = category;
+        curriculum.categories = categories;
+        curriculums[loc.curriculumId] = curriculum;
+        this._persistExternalCurriculum({ curriculums });
+        return true;
     }
 
     /**

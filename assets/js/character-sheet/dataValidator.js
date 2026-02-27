@@ -460,17 +460,37 @@ function validateCurriculum(curriculum, context = 'curriculum') {
     if (!curriculum || typeof curriculum !== 'object') return null;
     const id = typeof curriculum.id === 'string' && curriculum.id.trim() ? curriculum.id.trim() : null;
     if (!id) return null;
+
+    // Curriculum type: supports multiple UI/behavior modes.
+    // Default to 'prompt' (prompt-based list) for existing data.
+    const rawType = typeof curriculum.type === 'string' ? curriculum.type : 'prompt';
+    let type;
+    if (rawType === 'book-club') type = 'book-club';
+    else if (rawType === 'bingo') type = 'bingo';
+    else type = 'prompt';
+
     const categoriesRaw = curriculum.categories && typeof curriculum.categories === 'object' ? curriculum.categories : {};
     const categories = {};
     for (const cid in categoriesRaw) {
         const c = validateCurriculumCategory(categoriesRaw[cid], `${context}.categories[${cid}]`);
         if (c && c.id) categories[c.id] = c;
     }
-    return {
+    const validated = {
         id,
         name: typeof curriculum.name === 'string' ? curriculum.name : '',
+        type,
         categories
     };
+
+    // Optional bingo board layout: array of prompt ids, persisted order.
+    if (type === 'bingo') {
+        const boardRaw = Array.isArray(curriculum.boardPromptIds) ? curriculum.boardPromptIds : [];
+        validated.boardPromptIds = boardRaw
+            .filter(idVal => typeof idVal === 'string' && idVal.trim())
+            .map(idVal => idVal.trim());
+    }
+
+    return validated;
 }
 
 /**

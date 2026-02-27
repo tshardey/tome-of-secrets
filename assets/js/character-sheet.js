@@ -28,6 +28,7 @@ import { AtmosphericBuffDeckController } from './controllers/AtmosphericBuffDeck
 import { GenreQuestDeckController } from './controllers/GenreQuestDeckController.js';
 import { SideQuestDeckController } from './controllers/SideQuestDeckController.js';
 import { LibraryController } from './controllers/LibraryController.js';
+import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -263,6 +264,7 @@ export async function initializeCharacterSheet() {
     const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
     const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
     const libraryController = new LibraryController(stateAdapter, form, dependencies);
+    const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
 
     const addSelectedBtn = document.getElementById('add-selected-cards-btn');
     function updateDeckActionsLabel() {
@@ -302,11 +304,13 @@ export async function initializeCharacterSheet() {
     genreQuestDeckController.initialize();
     sideQuestDeckController.initialize();
     libraryController.initialize();
+    externalCurriculumController.initialize();
 
     // --- COLLAPSIBLE PANELS (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards) ---
     (function setupCollapsiblePanels() {
         const configs = [
             { buttonSelector: '.rpg-library-add-panel .panel-toggle-btn', storageKey: 'library-add-panel-body' },
+            { buttonSelector: '.rpg-external-curriculum-add-panel .panel-toggle-btn', storageKey: 'external-curriculum-add-panel-body' },
             { buttonSelector: '.rpg-add-quest-panel .panel-toggle-btn', storageKey: 'add-quest-panel-body' },
             { buttonSelector: '.rpg-temporary-buffs-panel .panel-toggle-btn', storageKey: 'temporary-buffs-panel-body' },
             { buttonSelector: '.rpg-quest-card-draw-panel .panel-toggle-btn', storageKey: 'quest-card-draw-panel-body' }

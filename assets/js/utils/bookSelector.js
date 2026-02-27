@@ -149,7 +149,8 @@ export function createBookSelector(container, stateAdapter, options = {}) {
             style.marginTop = '4px';
             container.appendChild(dropdownEl);
         } else {
-            style.position = 'absolute';
+            // fixed so top/left are viewport coords (match getBoundingClientRect); avoids wrong position when inside transformed/scroll containers
+            style.position = 'fixed';
             style.left = `${buttonRect.left}px`;
             style.top = `${buttonRect.bottom + 4}px`;
             style.minWidth = `${Math.max(buttonRect.width, 220)}px`;

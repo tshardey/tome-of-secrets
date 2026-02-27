@@ -27,6 +27,7 @@ describe('External curriculum state (StateAdapter)', () => {
       expect(curriculum).not.toBeNull();
       expect(curriculum.id).toBeDefined();
       expect(curriculum.name).toBe('My Reading List');
+      expect(curriculum.type).toBe('prompt');
       expect(curriculum.categories).toEqual({});
       expect(handler).toHaveBeenCalled();
     });
@@ -39,6 +40,15 @@ describe('External curriculum state (StateAdapter)', () => {
 
       expect(updated).not.toBeNull();
       expect(updated.name).toBe('Updated Name');
+    });
+
+    it('updates curriculum type and boardPromptIds', () => {
+      const c = adapter.addCurriculum('Bingo');
+      const updated = adapter.updateCurriculum(c.id, { type: 'bingo', boardPromptIds: ['p1', 'p2'] });
+
+      expect(updated).not.toBeNull();
+      expect(updated.type).toBe('bingo');
+      expect(updated.boardPromptIds).toEqual(['p1', 'p2']);
     });
 
     it('returns null for unknown id', () => {
@@ -186,6 +196,7 @@ describe('External curriculum validation', () => {
         'c1': {
           id: 'c1',
           name: 'Reading Challenge',
+            type: 'prompt',
           categories: {
             'cat1': {
               id: 'cat1',
@@ -228,6 +239,7 @@ describe('External curriculum validation', () => {
         'c1': {
           id: 'c1',
           name: 'C',
+            type: 'prompt',
           categories: {
             'cat1': {
               id: 'cat1',
