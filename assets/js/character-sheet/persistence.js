@@ -16,7 +16,7 @@ const DB_NAME = 'tomeOfSecrets';
 const DB_VERSION = 1;
 const STORE_NAME = 'state';
 
-// These keys tend to grow without bound (especially `completedQuests`).
+// These keys tend to grow without bound (quests, books with covers, curriculum data).
 export const LARGE_STATE_KEYS = new Set([
     STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
     STORAGE_KEYS.COMPLETED_QUESTS,
@@ -28,7 +28,9 @@ export const LARGE_STATE_KEYS = new Set([
     STORAGE_KEYS.ACTIVE_CURSES,
     STORAGE_KEYS.COMPLETED_CURSES,
     STORAGE_KEYS.TEMPORARY_BUFFS,
-    STORAGE_KEYS.BUFF_MONTH_COUNTER
+    STORAGE_KEYS.BUFF_MONTH_COUNTER,
+    STORAGE_KEYS.BOOKS,
+    STORAGE_KEYS.EXTERNAL_CURRICULUM
 ]);
 
 let dbPromise = null;
