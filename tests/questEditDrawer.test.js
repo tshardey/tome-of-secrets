@@ -31,12 +31,59 @@ describe('Quest Edit Drawer', () => {
         characterState.temporaryBuffs = [];
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
         characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
-
         // Load the character sheet HTML
         loadHTML('character-sheet.md');
 
         // Initialize the character sheet
         await initializeCharacterSheet();
+
+        // Library books for book selector in edit drawer (Phase 4) - set after init so stateAdapter sees them
+        characterState[STORAGE_KEYS.BOOKS] = {
+            'test-book-1': {
+                id: 'test-book-1',
+                title: 'Updated Book',
+                author: 'Updated Author',
+                cover: null,
+                pageCount: null,
+                status: 'reading',
+                dateAdded: new Date().toISOString(),
+                dateCompleted: null,
+                links: { questIds: [], curriculumPromptIds: [] }
+            },
+            'test-book-2': {
+                id: 'test-book-2',
+                title: 'Updated Dungeon Book',
+                author: '',
+                cover: null,
+                pageCount: null,
+                status: 'reading',
+                dateAdded: new Date().toISOString(),
+                dateCompleted: null,
+                links: { questIds: [], curriculumPromptIds: [] }
+            },
+            'test-book-3': {
+                id: 'test-book-3',
+                title: 'Updated Restoration Book',
+                author: '',
+                cover: null,
+                pageCount: null,
+                status: 'reading',
+                dateAdded: new Date().toISOString(),
+                dateCompleted: null,
+                links: { questIds: [], curriculumPromptIds: [] }
+            },
+            'test-book-4': {
+                id: 'test-book-4',
+                title: 'Updated Completed Book',
+                author: '',
+                cover: null,
+                pageCount: null,
+                status: 'reading',
+                dateAdded: new Date().toISOString(),
+                dateCompleted: null,
+                links: { questIds: [], curriculumPromptIds: [] }
+            }
+        };
 
         // Clear toast mocks
         toast.success.mockClear();
@@ -99,11 +146,13 @@ describe('Quest Edit Drawer', () => {
             // Check drawer fields
             expect(document.getElementById('edit-quest-month').value).toBe('January');
             // Year dropdown should be populated with the quest's year
-            // If the year isn't in the default range (2025+), it will be added to the dropdown
             expect(document.getElementById('edit-quest-year').value).toBe('2024');
             expect(document.getElementById('edit-quest-type').value).toBe('♥ Organize the Stacks');
-            expect(document.getElementById('edit-quest-book').value).toBe('Test Book');
-            expect(document.getElementById('edit-quest-book-author').value).toBe('Test Author');
+            // Legacy quest (no bookId): legacy display shows book/author
+            const legacyDisplay = document.getElementById('edit-quest-legacy-book-display');
+            expect(legacyDisplay.style.display).not.toBe('none');
+            expect(legacyDisplay.textContent).toContain('Test Book');
+            expect(legacyDisplay.textContent).toContain('Test Author');
             expect(document.getElementById('edit-quest-notes').value).toBe('Test notes');
         });
 
@@ -363,9 +412,8 @@ describe('Quest Edit Drawer', () => {
             const editBtn = document.querySelector('.edit-quest-btn[data-index="0"]');
             editBtn.click();
 
-            // Modify fields
-            document.getElementById('edit-quest-book').value = 'Updated Book';
-            document.getElementById('edit-quest-book-author').value = 'Updated Author';
+            // Modify fields: link a library book via hidden input (book selector writes here)
+            document.getElementById('edit-quest-book-id').value = 'test-book-1';
             document.getElementById('edit-quest-notes').value = 'Updated notes';
             document.getElementById('edit-quest-month').value = 'February';
 
@@ -373,8 +421,9 @@ describe('Quest Edit Drawer', () => {
             const saveBtn = document.getElementById('save-quest-changes-btn');
             saveBtn.click();
 
-            // Check quest was updated
+            // Check quest was updated (book title/author from library)
             const quest = characterState.activeAssignments[0];
+            expect(quest.bookId).toBe('test-book-1');
             expect(quest.book).toBe('Updated Book');
             expect(quest.bookAuthor).toBe('Updated Author');
             expect(quest.notes).toBe('Updated notes');
@@ -410,17 +459,18 @@ describe('Quest Edit Drawer', () => {
             const editBtn = document.querySelector('.edit-quest-btn[data-index="0"]');
             editBtn.click();
 
-            // Change only editable fields
-            document.getElementById('edit-quest-book').value = 'Updated Dungeon Book';
+            // Change only editable fields: link library book
+            document.getElementById('edit-quest-book-id').value = 'test-book-2';
             document.getElementById('edit-quest-notes').value = 'New notes';
 
             // Save
             document.getElementById('save-quest-changes-btn').click();
 
-            // Verify type and prompt are preserved
+            // Verify type and prompt are preserved; book from library
             const quest = characterState.activeAssignments[0];
             expect(quest.type).toBe('♠ Dungeon Crawl');
             expect(quest.prompt).toBe(dungeonRooms['1'].challenge);
+            expect(quest.bookId).toBe('test-book-2');
             expect(quest.book).toBe('Updated Dungeon Book');
             expect(quest.notes).toBe('New notes');
         });
@@ -455,15 +505,16 @@ describe('Quest Edit Drawer', () => {
             const editBtn = document.querySelector('.edit-quest-btn[data-index="0"]');
             editBtn.click();
 
-            // Update book
-            document.getElementById('edit-quest-book').value = 'Updated Restoration Book';
+            // Link library book
+            document.getElementById('edit-quest-book-id').value = 'test-book-3';
 
             // Save
             document.getElementById('save-quest-changes-btn').click();
 
-            // Verify restorationData is preserved
+            // Verify restorationData is preserved; book from library
             const quest = characterState.activeAssignments[0];
             expect(quest.restorationData).toEqual(restorationData);
+            expect(quest.bookId).toBe('test-book-3');
             expect(quest.book).toBe('Updated Restoration Book');
         });
 
@@ -627,9 +678,8 @@ describe('Quest Edit Drawer', () => {
             const editBtn = document.querySelector('.edit-quest-btn[data-index="0"]');
             editBtn.click();
 
-            // Clear all fields
-            document.getElementById('edit-quest-book').value = '';
-            document.getElementById('edit-quest-book-author').value = '';
+            // Clear all fields (book selector = unlink; no library book selected)
+            document.getElementById('edit-quest-book-id').value = '';
             document.getElementById('edit-quest-notes').value = '';
             document.getElementById('edit-quest-month').value = '';
             document.getElementById('edit-quest-year').value = '';
@@ -675,11 +725,12 @@ describe('Quest Edit Drawer', () => {
             expect(drawer.style.display).toBe('flex');
             expect(document.getElementById('edit-quest-status-display').textContent).toBe('Completed');
 
-            // Update and save
-            document.getElementById('edit-quest-book').value = 'Updated Completed Book';
+            // Link library book and save
+            document.getElementById('edit-quest-book-id').value = 'test-book-4';
             document.getElementById('save-quest-changes-btn').click();
 
-            // Verify update was applied to completed quests
+            // Verify update was applied to completed quests (title from library)
+            expect(characterState.completedQuests[0].bookId).toBe('test-book-4');
             expect(characterState.completedQuests[0].book).toBe('Updated Completed Book');
             expect(characterState.activeAssignments.length).toBe(0);
         });

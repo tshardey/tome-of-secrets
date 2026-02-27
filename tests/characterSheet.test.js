@@ -26,8 +26,34 @@ describe('Character Sheet', () => {
     loadHTML('character-sheet.md');
 
     // Initialize the event listeners and dynamic content
-    // This function would be the entry point of your character sheet's JavaScript
     await initializeCharacterSheet();
+
+    // Library books for add-quest book selector (Phase 4) - set after init so stateAdapter sees them
+    const makeBook = (id, title, author = '') => ({
+      id,
+      title,
+      author,
+      cover: null,
+      pageCount: null,
+      status: 'reading',
+      dateAdded: new Date().toISOString(),
+      dateCompleted: null,
+      links: { questIds: [], curriculumPromptIds: [] }
+    });
+    characterState[STORAGE_KEYS.BOOKS] = {
+      'the-test-book': makeBook('the-test-book', 'The Test Book'),
+      'a-finished-story': makeBook('a-finished-story', 'A Finished Story'),
+      'test-book': makeBook('test-book', 'Test Book'),
+      'unique-book-title': makeBook('unique-book-title', 'Unique Book Title'),
+      'dungeon-book': makeBook('dungeon-book', 'Dungeon Book'),
+      'author-book': makeBook('author-book', 'Author Book'),
+      'extra-reading-book': makeBook('extra-reading-book', 'Extra Reading Book'),
+      'extra-book': makeBook('extra-book', 'Extra Book'),
+      'monster-manual': makeBook('monster-manual', 'Monster Manual'),
+      'original-book': makeBook('original-book', 'Original Book'),
+      'updated-room-book': makeBook('updated-room-book', 'Updated Room Book'),
+      'another-original-book': makeBook('another-original-book', 'Another Original Book')
+    };
   });
 
   describe('JSON wiring smoke tests', () => {
@@ -178,6 +204,124 @@ describe('Character Sheet', () => {
         expect(backgroundSelect.classList.contains('rpg-attribute-select')).toBe(true);
         expect(schoolSelect.classList.contains('rpg-attribute-select')).toBe(true);
         expect(sanctumSelect.classList.contains('rpg-attribute-select')).toBe(true);
+      });
+    });
+
+    describe('Collapsible panels', () => {
+      it('should toggle Add Quest panel visibility when header toggle is clicked', () => {
+        // Switch to Quests tab
+        const questsTab = document.querySelector('[data-tab-target="quests"]');
+        if (questsTab) {
+          questsTab.click();
+        }
+
+        const addQuestBody = document.getElementById('add-quest-panel-body');
+        const addQuestToggle = document.querySelector('.rpg-add-quest-panel .panel-toggle-btn');
+
+        expect(addQuestBody).toBeTruthy();
+        expect(addQuestToggle).toBeTruthy();
+        // Initially expanded
+        expect(addQuestToggle.getAttribute('aria-expanded')).toBe('true');
+        expect(addQuestToggle.textContent).toContain('Hide');
+        expect(addQuestBody.style.display === '' || addQuestBody.style.display === 'block').toBe(true);
+
+        // Collapse
+        addQuestToggle.click();
+        expect(addQuestToggle.getAttribute('aria-expanded')).toBe('false');
+        expect(addQuestToggle.textContent).toContain('Show');
+        expect(addQuestBody.style.display).toBe('none');
+
+        // Expand again
+        addQuestToggle.click();
+        expect(addQuestToggle.getAttribute('aria-expanded')).toBe('true');
+        expect(addQuestToggle.textContent).toContain('Hide');
+        expect(addQuestBody.style.display === '' || addQuestBody.style.display === 'block').toBe(true);
+      });
+
+      it('should toggle Add Book panel visibility when header toggle is clicked', () => {
+        // Switch to Library tab
+        const libraryTab = document.querySelector('[data-tab-target="library"]');
+        if (libraryTab) {
+          libraryTab.click();
+        }
+
+        const addBookBody = document.getElementById('library-add-panel-body');
+        const addBookToggle = document.querySelector('.rpg-library-add-panel .panel-toggle-btn');
+
+        expect(addBookBody).toBeTruthy();
+        expect(addBookToggle).toBeTruthy();
+        // Initially expanded
+        expect(addBookToggle.getAttribute('aria-expanded')).toBe('true');
+        expect(addBookToggle.textContent).toContain('Hide');
+        expect(addBookBody.style.display === '' || addBookBody.style.display === 'block').toBe(true);
+
+        // Collapse
+        addBookToggle.click();
+        expect(addBookToggle.getAttribute('aria-expanded')).toBe('false');
+        expect(addBookToggle.textContent).toContain('Show');
+        expect(addBookBody.style.display).toBe('none');
+
+        // Expand again
+        addBookToggle.click();
+        expect(addBookToggle.getAttribute('aria-expanded')).toBe('true');
+        expect(addBookToggle.textContent).toContain('Hide');
+        expect(addBookBody.style.display === '' || addBookBody.style.display === 'block').toBe(true);
+      });
+
+      it('should toggle Active Temporary Buffs panel visibility when header toggle is clicked', () => {
+        const envTab = document.querySelector('[data-tab-target="environment"]');
+        if (envTab) envTab.click();
+
+        const body = document.getElementById('temporary-buffs-panel-body');
+        const toggle = document.querySelector('.rpg-temporary-buffs-panel .panel-toggle-btn');
+        expect(body).toBeTruthy();
+        expect(toggle).toBeTruthy();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        toggle.click();
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(body.style.display).toBe('none');
+        toggle.click();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      });
+
+      it('should toggle Draw Quest Cards panel visibility when header toggle is clicked', () => {
+        const questsTab = document.querySelector('[data-tab-target="quests"]');
+        if (questsTab) questsTab.click();
+
+        const body = document.getElementById('quest-card-draw-panel-body');
+        const toggle = document.querySelector('.rpg-quest-card-draw-panel .panel-toggle-btn');
+        expect(body).toBeTruthy();
+        expect(toggle).toBeTruthy();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        toggle.click();
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(body.style.display).toBe('none');
+        toggle.click();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      });
+    });
+
+    describe('Collapsible panel persistence', () => {
+      it('should restore collapsed panel state on init (simulates refresh)', async () => {
+        localStorage.clear();
+        characterState.inventoryItems = [];
+        characterState.equippedItems = [];
+        characterState.activeAssignments = [];
+        characterState.completedQuests = [];
+        characterState.discardedQuests = [];
+        characterState.activeCurses = [];
+        characterState.completedCurses = [];
+        safeSetJSON(STORAGE_KEYS.COLLAPSED_PANELS, { 'library-add-panel-body': true });
+        loadHTML('character-sheet.md');
+        await initializeCharacterSheet();
+
+        const addBookBody = document.getElementById('library-add-panel-body');
+        const addBookToggle = document.querySelector('.rpg-library-add-panel .panel-toggle-btn');
+        expect(addBookBody).toBeTruthy();
+        expect(addBookToggle).toBeTruthy();
+        expect(addBookBody.style.display).toBe('none');
+        expect(addBookToggle.getAttribute('aria-expanded')).toBe('false');
+        expect(addBookToggle.textContent).toContain('Show');
       });
     });
 
@@ -399,115 +543,37 @@ describe('Character Sheet', () => {
       });
     });
 
-    describe('Genre Badges Panel', () => {
-      it('should render RPG genres panel', () => {
-        const genresPanel = document.querySelector('.rpg-genres-panel');
-        const genresDisplay = document.getElementById('selected-genres-display');
-        
-        expect(genresPanel).toBeTruthy();
-        expect(genresDisplay).toBeTruthy();
-      });
-
-      it('should display selected genres as badges', () => {
-        const stateAdapter = new StateAdapter(characterState);
-        
-        // Set selected genres
-        stateAdapter.setSelectedGenres(['Fantasy', 'Horror', 'Mystery']);
-        
-        // Re-render genres display (this would normally be done by the UI)
-        const genresDisplay = document.getElementById('selected-genres-display');
-        if (genresDisplay) {
-          const selectedGenres = stateAdapter.getSelectedGenres();
-          if (selectedGenres.length > 0) {
-            let html = '';
-            selectedGenres.forEach((genre, index) => {
-              html += `
-                <div class="selected-genre-item">
-                  <span class="genre-number">${index + 1}.</span>
-                  <span class="genre-name">${genre}</span>
-                </div>
-              `;
-            });
-            genresDisplay.innerHTML = html;
-          }
-        }
-        
-        const genreItems = document.querySelectorAll('.selected-genre-item');
-        expect(genreItems.length).toBe(3);
-        
-        // Check badge styling
-        genreItems.forEach(item => {
-          expect(item.classList.contains('selected-genre-item')).toBe(true);
-        });
-      });
-
-      it('should show genre number badges correctly', () => {
-        const stateAdapter = new StateAdapter(characterState);
-        
-        // Set selected genres
-        stateAdapter.setSelectedGenres(['Fantasy', 'Horror']);
-        
-        const genresDisplay = document.getElementById('selected-genres-display');
-        if (genresDisplay) {
-          const selectedGenres = stateAdapter.getSelectedGenres();
-          let html = '';
-          selectedGenres.forEach((genre, index) => {
-            html += `
-              <div class="selected-genre-item">
-                <span class="genre-number">${index + 1}.</span>
-                <span class="genre-name">${genre}</span>
-              </div>
-            `;
-          });
-          genresDisplay.innerHTML = html;
-        }
-        
-        const genreNumbers = document.querySelectorAll('.genre-number');
-        expect(genreNumbers.length).toBe(2);
-        expect(genreNumbers[0].textContent).toBe('1.');
-        expect(genreNumbers[1].textContent).toBe('2.');
-      });
-    });
-
     describe('RPG Panel Structure', () => {
       it('should render all RPG panels with correct structure', () => {
         const heroSection = document.querySelector('.rpg-hero-section');
         const xpPanel = document.querySelector('.rpg-xp-panel');
         const statsPanel = document.querySelector('.rpg-stats-panel');
-        const genresPanel = document.querySelector('.rpg-genres-panel');
         
         expect(heroSection).toBeTruthy();
         expect(xpPanel).toBeTruthy();
         expect(statsPanel).toBeTruthy();
-        expect(genresPanel).toBeTruthy();
       });
 
       it('should have panel headers with titles', () => {
         const xpPanelHeader = document.querySelector('.rpg-xp-panel .rpg-panel-header');
         const statsPanelHeader = document.querySelector('.rpg-stats-panel .rpg-panel-header');
-        const genresPanelHeader = document.querySelector('.rpg-genres-panel .rpg-panel-header');
         
         expect(xpPanelHeader).toBeTruthy();
         expect(statsPanelHeader).toBeTruthy();
-        expect(genresPanelHeader).toBeTruthy();
         
         const xpTitle = xpPanelHeader.querySelector('.rpg-panel-title');
         const statsTitle = statsPanelHeader.querySelector('.rpg-panel-title');
-        const genresTitle = genresPanelHeader.querySelector('.rpg-panel-title');
         
         expect(xpTitle).toBeTruthy();
         expect(statsTitle).toBeTruthy();
-        expect(genresTitle).toBeTruthy();
       });
 
       it('should have panel bodies with content', () => {
         const xpPanelBody = document.querySelector('.rpg-xp-panel .rpg-panel-body');
         const statsPanelBody = document.querySelector('.rpg-stats-panel .rpg-panel-body');
-        const genresPanelBody = document.querySelector('.rpg-genres-panel .rpg-panel-body');
         
         expect(xpPanelBody).toBeTruthy();
         expect(statsPanelBody).toBeTruthy();
-        expect(genresPanelBody).toBeTruthy();
       });
     });
 
@@ -1668,7 +1734,7 @@ describe('Character Sheet', () => {
       
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'The Test Book';
+      document.getElementById('new-quest-book-id').value = 'the-test-book';
 
       // Select the quest type to reveal the correct prompt dropdown
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1705,7 +1771,7 @@ describe('Character Sheet', () => {
       const sideQuestSelect = document.getElementById('side-quest-select');
       sideQuestSelect.value = sideQuests["4"]; // The Wandering Merchant's Request
 
-      document.getElementById('new-quest-book').value = 'A Finished Story';
+      document.getElementById('new-quest-book-id').value = 'a-finished-story';
       document.getElementById('add-quest-button').click();
 
       // Click the "Complete" button on the active quest
@@ -1725,7 +1791,7 @@ describe('Character Sheet', () => {
       // Add a Side Quest instead since genre quests require setup
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '♣ Side Quest';
@@ -1747,7 +1813,7 @@ describe('Character Sheet', () => {
       // Add a quest
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '♣ Side Quest';
@@ -1780,7 +1846,7 @@ describe('Character Sheet', () => {
       // Add and complete a quest with a specific book
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Unique Book Title';
+      document.getElementById('new-quest-book-id').value = 'unique-book-title';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '♣ Side Quest';
@@ -1801,7 +1867,7 @@ describe('Character Sheet', () => {
       // Add another quest with the same book
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Unique Book Title';
+      document.getElementById('new-quest-book-id').value = 'unique-book-title';
 
       questTypeSelect.value = '♣ Side Quest';
       questTypeSelect.dispatchEvent(new Event('change'));
@@ -1894,7 +1960,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form for a dungeon crawl
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-book-id').value = 'dungeon-book';
 
       // Simulate selecting a dungeon quest and a specific room/encounter
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1916,7 +1982,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form for a dungeon crawl
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Author Book';
+      document.getElementById('new-quest-book-id').value = 'author-book';
 
       // Simulate selecting Room 8 (The Author's Study) which has NO encounters
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1949,7 +2015,7 @@ describe('Character Sheet', () => {
       // Add a dungeon quest and mark it as completed (no buffs selected)
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-book-id').value = 'dungeon-book';
       document.getElementById('new-quest-status').value = 'completed';
 
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -1986,7 +2052,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form
       document.getElementById('quest-month').value = 'December';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
 
       // Select the Organize the Stacks quest type
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -2027,7 +2093,7 @@ describe('Character Sheet', () => {
       // Fill out the quest form
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Extra Reading Book';
+      document.getElementById('new-quest-book-id').value = 'extra-reading-book';
 
       // Select the Extra Credit quest type
       const questTypeSelect = document.getElementById('new-quest-type');
@@ -2069,7 +2135,7 @@ describe('Character Sheet', () => {
       // Add an Extra Credit quest
       document.getElementById('quest-month').value = 'November';
       document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book').value = 'Extra Book';
+      document.getElementById('new-quest-book-id').value = 'extra-book';
 
       const questTypeSelect = document.getElementById('new-quest-type');
       questTypeSelect.value = '⭐ Extra Credit';
@@ -2104,7 +2170,7 @@ describe('Character Sheet', () => {
         // --- 1. Setup for Defeat (default) ---
         document.getElementById('quest-month').value = 'January';
         document.getElementById('quest-year').value = '2026';
-        document.getElementById('new-quest-book').value = 'Monster Manual';
+        document.getElementById('new-quest-book-id').value = 'monster-manual';
         const questTypeSelect = document.getElementById('new-quest-type');
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
@@ -2126,7 +2192,7 @@ describe('Character Sheet', () => {
         // --- 4. Setup for Befriend (re-adding the quest) ---
         // The form is reset after adding, so we need to re-select everything.
         characterState.activeAssignments = []; // Clear state for the second part of the test
-        document.getElementById('new-quest-book').value = 'Monster Manual';
+        document.getElementById('new-quest-book-id').value = 'monster-manual';
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
         document.getElementById('dungeon-room-select').value = '4';
@@ -2144,7 +2210,7 @@ describe('Character Sheet', () => {
         // 1. Add a dungeon quest
         document.getElementById('quest-month').value = 'December';
         document.getElementById('quest-year').value = '2025';
-        document.getElementById('new-quest-book').value = 'Original Book';
+        document.getElementById('new-quest-book-id').value = 'original-book';
         const questTypeSelect = document.getElementById('new-quest-type');
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
@@ -2159,7 +2225,7 @@ describe('Character Sheet', () => {
         editBtn.click();
 
         // 3. Change the book title
-        document.getElementById('new-quest-book').value = 'Updated Room Book';
+        document.getElementById('new-quest-book-id').value = 'updated-room-book';
 
         // 4. Click "Update Quest"
         document.getElementById('add-quest-button').click();
@@ -2178,7 +2244,7 @@ describe('Character Sheet', () => {
         // 1. Add a dungeon quest
         document.getElementById('quest-month').value = 'December';
         document.getElementById('quest-year').value = '2025';
-        document.getElementById('new-quest-book').value = 'Another Original Book';
+        document.getElementById('new-quest-book-id').value = 'another-original-book';
         const questTypeSelect = document.getElementById('new-quest-type');
         questTypeSelect.value = '♠ Dungeon Crawl';
         questTypeSelect.dispatchEvent(new Event('change'));
@@ -2209,77 +2275,6 @@ describe('Character Sheet', () => {
         expect(encounterQuest.notes).toBe('Encounter notes added.'); // The notes are updated
         expect(encounterQuest.prompt).toBe(dungeonRooms['2'].encounters['Mysterious Nymph'].befriend); // Prompt should not change
         expect(roomQuest.notes).toBe(''); // Room quest notes should be untouched
-    });
-  });
-
-  describe('Selected Genres Display', () => {
-    it('should display placeholder text when no genres are selected', async () => {
-      // Clear localStorage to ensure no genres are selected
-      localStorage.clear();
-      
-      // Re-initialize to load the empty state
-      await initializeCharacterSheet();
-      
-      const display = document.getElementById('selected-genres-display');
-      expect(display.textContent).toContain('No genres selected yet');
-      expect(display.textContent).toContain('View Genre Quests');
-    });
-
-    it('should display selected genres from localStorage', async () => {
-      // Set up some genres in localStorage
-      const genres = ['Fantasy', 'Sci-Fi', 'Romance', 'Mystery', 'Thriller', 'Classic'];
-      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
-      
-      // Re-initialize to load the genres
-      await initializeCharacterSheet();
-      
-      const display = document.getElementById('selected-genres-display');
-      
-      // Should display all selected genres
-      genres.forEach(genre => {
-        expect(display.textContent).toContain(genre);
-      });
-      
-      // Should have numbered items
-      expect(display.textContent).toContain('1.');
-      expect(display.textContent).toContain('2.');
-      expect(display.textContent).toContain('3.');
-    });
-
-    it('should update when localStorage changes', async () => {
-      // Start with no genres
-      localStorage.clear();
-      await initializeCharacterSheet();
-      
-      let display = document.getElementById('selected-genres-display');
-      expect(display.textContent).toContain('No genres selected yet');
-      
-      // Add genres to localStorage
-      const genres = ['Fantasy', 'Sci-Fi'];
-      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, JSON.stringify(genres));
-      
-      // Re-initialize to pick up the changes
-      await initializeCharacterSheet();
-      
-      display = document.getElementById('selected-genres-display');
-      expect(display.textContent).toContain('Fantasy');
-      expect(display.textContent).toContain('Sci-Fi');
-    });
-
-    it('should handle empty localStorage gracefully', async () => {
-      localStorage.clear();
-      await initializeCharacterSheet();
-      
-      const display = document.getElementById('selected-genres-display');
-      expect(display.textContent).toContain('No genres selected yet');
-    });
-
-    it('should handle invalid JSON in localStorage gracefully', async () => {
-      localStorage.setItem(STORAGE_KEYS.SELECTED_GENRES, 'invalid json');
-      await initializeCharacterSheet();
-      
-      const display = document.getElementById('selected-genres-display');
-      expect(display.textContent).toContain('No genres selected yet');
     });
   });
 
@@ -2636,7 +2631,7 @@ describe('Character Sheet', () => {
       const firstGenreOption = genreSelect?.options?.[1];
       genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
       
       // Select the passive item via the hidden JSON input used by the card-based UI
       const hiddenBuffsInput = document.getElementById('quest-buffs-select');
@@ -2674,7 +2669,7 @@ describe('Character Sheet', () => {
       const firstGenreOption = genreSelect?.options?.[1];
       genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
-      document.getElementById('new-quest-book').value = 'Test Book';
+      document.getElementById('new-quest-book-id').value = 'test-book';
       
       // Select Archivist Bonus via the hidden JSON input used by the card-based UI
       const hiddenBuffsInput = document.getElementById('quest-buffs-select');
@@ -2711,7 +2706,7 @@ describe('Character Sheet', () => {
       const dungeonEncounterSelect = document.getElementById('dungeon-encounter-select');
       dungeonEncounterSelect.value = "Librarian's Spirit";
       
-      document.getElementById('new-quest-book').value = 'Dungeon Book';
+      document.getElementById('new-quest-book-id').value = 'dungeon-book';
       
       // Add quest as active
       document.getElementById('new-quest-status').value = 'active';

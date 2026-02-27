@@ -26,7 +26,7 @@ function setupForm() {
             <input type="number" id="familiar-slots" value="0" />
             <!-- Transient fields that should NOT be persisted -->
             <input type="text" id="new-quest-prompt" value="" />
-            <input type="text" id="new-quest-book" value="" />
+            <input type="hidden" id="new-quest-book-id" value="" />
             <select id="item-select">
                 <option value="">-- Select an item --</option>
             </select>

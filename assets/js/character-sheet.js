@@ -27,6 +27,8 @@ import { DungeonDeckController } from './controllers/DungeonDeckController.js';
 import { AtmosphericBuffDeckController } from './controllers/AtmosphericBuffDeckController.js';
 import { GenreQuestDeckController } from './controllers/GenreQuestDeckController.js';
 import { SideQuestDeckController } from './controllers/SideQuestDeckController.js';
+import { LibraryController } from './controllers/LibraryController.js';
+import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -261,6 +263,8 @@ export async function initializeCharacterSheet() {
     const atmosphericBuffDeckController = new AtmosphericBuffDeckController(stateAdapter, form, dependencies);
     const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
     const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
+    const libraryController = new LibraryController(stateAdapter, form, dependencies);
+    const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
 
     const addSelectedBtn = document.getElementById('add-selected-cards-btn');
     function updateDeckActionsLabel() {
@@ -274,6 +278,19 @@ export async function initializeCharacterSheet() {
     }
     dependencies.updateDeckActionsLabel = updateDeckActionsLabel;
 
+    dependencies.onBookMarkedComplete = (result) => {
+        if (result.synergyRewards && (result.synergyRewards.inkDrops > 0 || result.synergyRewards.paperScraps > 0)) {
+            updateCurrency(result.synergyRewards);
+        }
+        (result.movedQuests || []).forEach((quest) => {
+            questController.completeMovedQuestFromBook(quest);
+        });
+        if (result.movedQuests && result.movedQuests.length > 0) {
+            ui.renderActiveAssignments();
+            ui.renderCompletedQuests();
+        }
+    };
+
     // Initialize controllers
     characterController.initialize();
     abilityController.initialize();
@@ -286,6 +303,54 @@ export async function initializeCharacterSheet() {
     atmosphericBuffDeckController.initialize();
     genreQuestDeckController.initialize();
     sideQuestDeckController.initialize();
+    libraryController.initialize();
+    externalCurriculumController.initialize();
+
+    // --- COLLAPSIBLE PANELS (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards) ---
+    (function setupCollapsiblePanels() {
+        const configs = [
+            { buttonSelector: '.rpg-library-add-panel .panel-toggle-btn', storageKey: 'library-add-panel-body' },
+            { buttonSelector: '.rpg-external-curriculum-add-panel .panel-toggle-btn', storageKey: 'external-curriculum-add-panel-body' },
+            { buttonSelector: '.rpg-add-quest-panel .panel-toggle-btn', storageKey: 'add-quest-panel-body' },
+            { buttonSelector: '.rpg-temporary-buffs-panel .panel-toggle-btn', storageKey: 'temporary-buffs-panel-body' },
+            { buttonSelector: '.rpg-quest-card-draw-panel .panel-toggle-btn', storageKey: 'quest-card-draw-panel-body' }
+        ];
+
+        const stored = safeGetJSON(STORAGE_KEYS.COLLAPSED_PANELS, {});
+
+        const saveCollapsed = (bodyId, isCollapsed) => {
+            const next = { ...safeGetJSON(STORAGE_KEYS.COLLAPSED_PANELS, {}) };
+            if (isCollapsed) next[bodyId] = true;
+            else delete next[bodyId];
+            safeSetJSON(STORAGE_KEYS.COLLAPSED_PANELS, next);
+        };
+
+        configs.forEach((cfg, index) => {
+            const btn = document.querySelector(cfg.buttonSelector);
+            if (!btn) return;
+            const targetId = btn.getAttribute('data-panel-target');
+            const body = targetId ? document.getElementById(targetId) : btn.closest('.rpg-panel')?.querySelector('.rpg-panel-body');
+            if (!body) return;
+
+            // Derive a stable storage key even if id/target attributes are missing
+            const bodyKey = body.id || targetId || cfg.storageKey || `${cfg.buttonSelector || 'panel'}-${index}`;
+            let collapsed = Boolean(stored[bodyKey]);
+
+            const applyState = () => {
+                body.style.display = collapsed ? 'none' : '';
+                btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                btn.textContent = collapsed ? 'Show' : 'Hide';
+            };
+
+            applyState();
+
+            btn.addEventListener('click', () => {
+                collapsed = !collapsed;
+                saveCollapsed(bodyKey, collapsed);
+                applyState();
+            });
+        });
+    })();
 
     // Consolidated deck actions: one "Add selected" and one "Clear draw" for all deck types
     const clearDrawBtn = document.getElementById('clear-drawn-cards-btn');

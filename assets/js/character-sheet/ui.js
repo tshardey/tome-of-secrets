@@ -28,6 +28,20 @@ import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffVie
 import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
 import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffService.js';
 
+/**
+ * Effective cover URL for a quest: from linked library book when quest.bookId is set, else quest.coverUrl.
+ * Ensures archive cards show the current book cover after linking/unlinking in the edit drawer.
+ */
+function getEffectiveQuestCoverUrl(quest) {
+    if (!quest) return null;
+    const books = characterState[STORAGE_KEYS.BOOKS];
+    if (quest.bookId && books && typeof books === 'object' && books[quest.bookId]) {
+        const cover = books[quest.bookId].cover;
+        if (typeof cover === 'string' && cover.trim()) return cover;
+    }
+    return typeof quest.coverUrl === 'string' && quest.coverUrl.trim() ? quest.coverUrl : null;
+}
+
 export function updateXpNeeded(levelInput, xpNeededInput) {
     const currentLevel = parseIntOr(levelInput?.value || levelInput, 1);
     // xpLevels is keyed by strings ("1", "2", ...) from JSON
@@ -622,7 +636,7 @@ export function renderCompletedQuests() {
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
-                pickFront({ posterUrl: viewModel.cardImage, coverUrl: viewModel.quest.coverUrl || null, fitMode: 'cover' }).url,
+                pickFront({ posterUrl: viewModel.cardImage, coverUrl: getEffectiveQuestCoverUrl(viewModel.quest), fitMode: 'cover' }).url,
                 viewModel.title,
                 { frontFit: 'cover', shape: 'tall' }
             )
@@ -639,7 +653,7 @@ export function renderCompletedQuests() {
                 originalIndex,
                 pickFront({
                     posterUrl: viewModel.cardImage,
-                    coverUrl: viewModel.quest.coverUrl || null,
+                    coverUrl: getEffectiveQuestCoverUrl(viewModel.quest),
                     fitMode: faceMode === 'cover' ? 'contain' : 'contain'
                 }).url,
                 viewModel.title,
@@ -657,7 +671,7 @@ export function renderCompletedQuests() {
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
-                pickFront({ posterUrl: viewModel.cardImage, coverUrl: viewModel.quest.coverUrl || null, fitMode: 'cover' }).url,
+                pickFront({ posterUrl: viewModel.cardImage, coverUrl: getEffectiveQuestCoverUrl(viewModel.quest), fitMode: 'cover' }).url,
                 viewModel.title,
                 { frontFit: 'cover', shape: 'tall' }
             )
@@ -673,7 +687,7 @@ export function renderCompletedQuests() {
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
-                pickFront({ posterUrl: viewModel.cardImage, coverUrl: viewModel.quest.coverUrl || null, fitMode: 'cover' }).url,
+                pickFront({ posterUrl: viewModel.cardImage, coverUrl: getEffectiveQuestCoverUrl(viewModel.quest), fitMode: 'cover' }).url,
                 viewModel.title,
                 { frontFit: 'cover', shape: 'tall' }
             )
@@ -726,8 +740,8 @@ export function renderCompletedQuests() {
                 })();
 
                 const frontUrl = isOther
-                    ? (quest.coverUrl || null)
-                    : pickFront({ posterUrl, coverUrl: quest.coverUrl || null, fitMode: 'cover' }).url;
+                    ? getEffectiveQuestCoverUrl(quest)
+                    : pickFront({ posterUrl, coverUrl: getEffectiveQuestCoverUrl(quest), fitMode: 'cover' }).url;
 
                 const cardTitle = quest.book || quest.prompt || quest.type || '—';
                 const card = renderTomeArchiveCard(

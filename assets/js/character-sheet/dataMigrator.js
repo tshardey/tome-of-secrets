@@ -83,19 +83,36 @@ function migrateToVersion5(state) {
     if (!(STORAGE_KEYS.BOOKS in migrated) || typeof migrated[STORAGE_KEYS.BOOKS] !== 'object') {
         migrated[STORAGE_KEYS.BOOKS] = {};
     }
-    if (!(STORAGE_KEYS.EXCHANGE_PROGRAM in migrated) || typeof migrated[STORAGE_KEYS.EXCHANGE_PROGRAM] !== 'object') {
-        migrated[STORAGE_KEYS.EXCHANGE_PROGRAM] = {};
+    if (!(STORAGE_KEYS.EXTERNAL_CURRICULUM in migrated) || typeof migrated[STORAGE_KEYS.EXTERNAL_CURRICULUM] !== 'object') {
+        migrated[STORAGE_KEYS.EXTERNAL_CURRICULUM] = { curriculums: {} };
     }
 
     const books = { ...migrated[STORAGE_KEYS.BOOKS] };
+    const now = new Date().toISOString();
+    /** Dedupe key: normalized "title|author" so multiple quests for the same book share one Book */
+    const bookIdByTitleAuthor = new Map();
     const questKeys = [
         STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
         STORAGE_KEYS.COMPLETED_QUESTS,
         STORAGE_KEYS.DISCARDED_QUESTS
     ];
 
+    function titleAuthorKey(quest) {
+        const title = (typeof quest.book === 'string' ? quest.book : '').toLowerCase().trim();
+        const author = (typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '').toLowerCase().trim();
+        return `${title}|${author}`;
+    }
+
     questKeys.forEach(key => {
         if (!Array.isArray(migrated[key])) return;
+        const isCompletedList = key === STORAGE_KEYS.COMPLETED_QUESTS;
+        const activeQuestIds = isCompletedList
+            ? new Set(
+                (Array.isArray(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) ? migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] : [])
+                    .map(q => q && q.id)
+                    .filter(Boolean)
+            )
+            : new Set();
         migrated[key] = migrated[key].map(quest => {
             if (!quest || typeof quest !== 'object') return quest;
             const hasBookData = quest.book || quest.bookAuthor || quest.coverUrl != null ||
@@ -104,18 +121,40 @@ function migrateToVersion5(state) {
             const questId = quest.id || generateId();
             let bookId = quest.bookId || null;
             if (hasBookData) {
-                bookId = bookId || generateId();
-                books[bookId] = {
-                    id: bookId,
-                    title: typeof quest.book === 'string' ? quest.book : '',
-                    author: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
-                    coverUrl: typeof quest.coverUrl === 'string' ? quest.coverUrl : null,
-                    pageCountRaw: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? quest.pageCountRaw : null,
-                    pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? quest.pageCountEffective : null,
-                    links: {
-                        tomeQuestId: questId
+                const keyTA = titleAuthorKey(quest);
+                const existingBookId = bookIdByTitleAuthor.get(keyTA);
+                if (existingBookId && books[existingBookId]) {
+                    bookId = existingBookId;
+                    const existingBook = books[bookId];
+                    if (existingBook.links && Array.isArray(existingBook.links.questIds) && !existingBook.links.questIds.includes(questId)) {
+                        existingBook.links.questIds.push(questId);
                     }
-                };
+                    if (isCompletedList) {
+                        const hasActiveQuest = existingBook.links && Array.isArray(existingBook.links.questIds) &&
+                            existingBook.links.questIds.some(qid => activeQuestIds.has(qid));
+                        if (!hasActiveQuest) {
+                            existingBook.status = 'completed';
+                            existingBook.dateCompleted = typeof quest.dateCompleted === 'string' ? quest.dateCompleted : now;
+                        }
+                    }
+                } else {
+                    bookId = bookId || generateId();
+                    bookIdByTitleAuthor.set(keyTA, bookId);
+                    books[bookId] = {
+                        id: bookId,
+                        title: typeof quest.book === 'string' ? quest.book : '',
+                        author: typeof quest.bookAuthor === 'string' ? quest.bookAuthor : '',
+                        cover: typeof quest.coverUrl === 'string' ? quest.coverUrl : (typeof quest.cover === 'string' ? quest.cover : null),
+                        pageCount: typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw) ? Math.max(0, Math.floor(quest.pageCountRaw)) : (typeof quest.pageCount === 'number' && !isNaN(quest.pageCount) ? Math.max(0, Math.floor(quest.pageCount)) : null),
+                        status: isCompletedList ? 'completed' : 'reading',
+                        dateAdded: typeof quest.dateAdded === 'string' ? quest.dateAdded : now,
+                        dateCompleted: isCompletedList ? (typeof quest.dateCompleted === 'string' ? quest.dateCompleted : now) : null,
+                        links: {
+                            questIds: [questId],
+                            curriculumPromptIds: []
+                        }
+                    };
+                }
             }
             return {
                 ...quest,
@@ -126,6 +165,54 @@ function migrateToVersion5(state) {
     });
 
     migrated[STORAGE_KEYS.BOOKS] = books;
+    return migrated;
+}
+
+/**
+ * Migration from schema version 5 to version 6
+ * - Rename legacy genre quest name "Memoirs/Biographies" to "Memoir/Biography"
+ *   anywhere it appears in saved character state (selected genres, quest prompts, etc.)
+ */
+function migrateToVersion6(state) {
+    const migrated = { ...state };
+    const LEGACY = 'Memoirs/Biographies';
+    const CURRENT = 'Memoir/Biography';
+
+    function replaceString(value) {
+        if (typeof value === 'string' && value.includes(LEGACY)) {
+            return value.split(LEGACY).join(CURRENT);
+        }
+        return value;
+    }
+
+    function deepReplace(value) {
+        if (Array.isArray(value)) {
+            return value.map(item => {
+                if (item && (typeof item === 'object' || Array.isArray(item))) {
+                    return deepReplace(item);
+                }
+                return replaceString(item);
+            });
+        }
+        if (value && typeof value === 'object') {
+            const result = { ...value };
+            Object.keys(result).forEach(key => {
+                const v = result[key];
+                if (v && (typeof v === 'object' || Array.isArray(v))) {
+                    result[key] = deepReplace(v);
+                } else {
+                    result[key] = replaceString(v);
+                }
+            });
+            return result;
+        }
+        return replaceString(value);
+    }
+
+    Object.keys(migrated).forEach(key => {
+        migrated[key] = deepReplace(migrated[key]);
+    });
+
     return migrated;
 }
 
@@ -319,6 +406,9 @@ export function migrateState(state) {
             case 5:
                 migratedState = migrateToVersion5(migratedState);
                 break;
+            case 6:
+                migratedState = migrateToVersion6(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -366,13 +456,15 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
         STORAGE_KEYS.BOOKS,
-        STORAGE_KEYS.EXCHANGE_PROGRAM
+        STORAGE_KEYS.EXTERNAL_CURRICULUM
     ];
 
     stateKeys.forEach(key => {
         let defaultValue;
-        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS || key === STORAGE_KEYS.EXCHANGE_PROGRAM) {
+        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS) {
             defaultValue = {};
+        } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
+            defaultValue = { curriculums: {} };
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
@@ -386,4 +478,3 @@ export function loadAndMigrateState() {
     // Migrate state to current schema version
     return migrateState(state);
 }
-

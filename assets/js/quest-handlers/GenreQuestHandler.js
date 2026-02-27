@@ -60,6 +60,7 @@ export class GenreQuestHandler extends BaseQuestHandler {
             year: common.year,
             type: this.type,
             prompt: prompt,
+            bookId: common.bookId || null,
             book: common.book,
             bookAuthor: common.bookAuthor,
             notes: common.notes,
