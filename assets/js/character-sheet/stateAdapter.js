@@ -1190,6 +1190,19 @@ export class StateAdapter {
         }
 
         prompt.bookId = newBookId;
+        // Sync completedAt with linked book: set when book is completed, clear when linking to incomplete or unlinking
+        if (newBookId) {
+            const book = this._getBooksRaw()[newBookId];
+            if (book && book.status === 'completed') {
+                prompt.completedAt = (book.dateCompleted && typeof book.dateCompleted === 'string')
+                    ? book.dateCompleted
+                    : new Date().toISOString();
+            } else {
+                prompt.completedAt = null;
+            }
+        } else {
+            prompt.completedAt = null;
+        }
         prompts[promptId] = prompt;
         const data = this._getExternalCurriculumRaw();
         const curriculums = { ...data.curriculums };
@@ -1348,4 +1361,3 @@ export class StateAdapter {
 }
 
 export { EVENTS as STATE_EVENTS };
-

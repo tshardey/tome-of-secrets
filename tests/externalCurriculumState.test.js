@@ -164,6 +164,58 @@ describe('External curriculum state (StateAdapter)', () => {
       const book = adapter.addBook({ title: 'B' });
       expect(adapter.linkBookToPrompt('bad-prompt-id', book.id)).toBeNull();
     });
+
+    it('when linking an already-completed book, sets prompt completedAt so curriculum shows as complete', () => {
+      const completedAt = '2025-01-15T12:00:00.000Z';
+      const book = adapter.addBook({
+        title: 'Already Done',
+        status: 'completed',
+        dateCompleted: completedAt,
+        links: { questIds: [], curriculumPromptIds: [] }
+      });
+      const curriculum = adapter.addCurriculum('C');
+      const category = adapter.addCategory(curriculum.id, 'Cat');
+      const [prompt] = adapter.addPrompts(curriculum.id, category.id, ['Read this book']);
+
+      const updated = adapter.linkBookToPrompt(prompt.id, book.id);
+
+      expect(updated).not.toBeNull();
+      expect(updated.bookId).toBe(book.id);
+      expect(updated.completedAt).toBe(completedAt);
+      const data = state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
+      const promptAfter = data.curriculums[curriculum.id].categories[category.id].prompts[prompt.id];
+      expect(promptAfter.completedAt).toBe(completedAt);
+    });
+
+    it('clears completedAt when linking prompt to an incomplete book (or unlinking)', () => {
+      const completedAt = '2025-01-15T12:00:00.000Z';
+      const completedBook = adapter.addBook({
+        title: 'Done',
+        status: 'completed',
+        dateCompleted: completedAt,
+        links: { questIds: [], curriculumPromptIds: [] }
+      });
+      const readingBook = adapter.addBook({
+        title: 'In Progress',
+        status: 'reading',
+        links: { questIds: [], curriculumPromptIds: [] }
+      });
+      const curriculum = adapter.addCurriculum('C');
+      const category = adapter.addCategory(curriculum.id, 'Cat');
+      const [prompt] = adapter.addPrompts(curriculum.id, category.id, ['Read this']);
+
+      adapter.linkBookToPrompt(prompt.id, completedBook.id);
+      let data = state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
+      expect(data.curriculums[curriculum.id].categories[category.id].prompts[prompt.id].completedAt).toBe(completedAt);
+
+      adapter.linkBookToPrompt(prompt.id, readingBook.id);
+      data = state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
+      expect(data.curriculums[curriculum.id].categories[category.id].prompts[prompt.id].completedAt).toBeNull();
+
+      adapter.linkBookToPrompt(prompt.id, null);
+      data = state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
+      expect(data.curriculums[curriculum.id].categories[category.id].prompts[prompt.id].completedAt).toBeNull();
+    });
   });
 
   describe('markPromptComplete', () => {
