@@ -930,6 +930,13 @@ export class StateAdapter {
         return true;
     }
 
+    /**
+     * Mark a book complete: set status/dateCompleted, cascade to linked quests and curriculum prompts,
+     * and compute synergy rewards. Caller should apply synergyRewards (e.g. updateCurrency) and run
+     * handleRestorationProjectCompletion for any movedQuests that are restoration projects.
+     * @param {string} bookId
+     * @returns {{ book: Object, movedQuests: Object[], synergyRewards: { xp: number, inkDrops: number, paperScraps: number, items: string[] } } | null}
+     */
     markBookComplete(bookId) {
         if (!bookId || typeof bookId !== 'string') return null;
         const books = { ...this._getBooksRaw() };
@@ -940,8 +947,53 @@ export class StateAdapter {
         book.dateCompleted = now;
         books[bookId] = book;
         this._persistBooks(books);
-        // Cascade (move linked quests, complete curriculum prompts) is Phase 5
-        return book;
+
+        const links = book.links && typeof book.links === 'object'
+            ? book.links
+            : { questIds: [], curriculumPromptIds: [] };
+        const questIds = Array.isArray(links.questIds) ? links.questIds : [];
+        const curriculumPromptIds = Array.isArray(links.curriculumPromptIds) ? links.curriculumPromptIds : [];
+
+        const movedQuests = [];
+        const questIdsSet = new Set(questIds.map(id => String(id)));
+        const isLinked = (q) => {
+            if (!q) return false;
+            const idStr = q.id != null ? String(q.id) : '';
+            return (idStr && questIdsSet.has(idStr)) || q.bookId === bookId;
+        };
+        for (;;) {
+            const active = this.getActiveAssignments() || [];
+            const idx = active.findIndex(isLinked);
+            if (idx < 0) break;
+            const moved = this.moveQuest(
+                STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+                idx,
+                STORAGE_KEYS.COMPLETED_QUESTS,
+                q => ({ ...q, dateCompleted: now })
+            );
+            if (moved) {
+                movedQuests.push(moved);
+                if (moved.id && !questIdsSet.has(String(moved.id))) {
+                    this.linkQuestToBook(bookId, moved.id);
+                }
+            } else {
+                break;
+            }
+        }
+
+        for (const promptId of curriculumPromptIds) {
+            if (promptId && typeof promptId === 'string') {
+                this.markPromptComplete(promptId);
+            }
+        }
+
+        const hasQuestLinks = questIds.length > 0;
+        const hasCurriculumLinks = curriculumPromptIds.length > 0;
+        const paperScraps = hasCurriculumLinks ? 5 : 0;
+        const inkDrops = hasQuestLinks && hasCurriculumLinks ? 10 : 0;
+        const synergyRewards = { xp: 0, inkDrops, paperScraps, items: [] };
+
+        return { book, movedQuests, synergyRewards };
     }
 
     // ==========================================

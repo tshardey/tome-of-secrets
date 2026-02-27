@@ -106,6 +106,13 @@ function migrateToVersion5(state) {
     questKeys.forEach(key => {
         if (!Array.isArray(migrated[key])) return;
         const isCompletedList = key === STORAGE_KEYS.COMPLETED_QUESTS;
+        const activeQuestIds = isCompletedList
+            ? new Set(
+                (Array.isArray(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) ? migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] : [])
+                    .map(q => q && q.id)
+                    .filter(Boolean)
+            )
+            : new Set();
         migrated[key] = migrated[key].map(quest => {
             if (!quest || typeof quest !== 'object') return quest;
             const hasBookData = quest.book || quest.bookAuthor || quest.coverUrl != null ||

@@ -974,6 +974,99 @@ export class QuestController extends BaseController {
     }
 
     /**
+     * Run full completion flow for a quest that was moved to completed by markBookComplete.
+     * Recalculates rewards, receipt, runs restoration if needed, updates the quest in completed list,
+     * shows receipt, applies currency, and updates counters.
+     * @param {Object} quest - Quest already in completed list (minimal, with dateCompleted)
+     * @returns {Object|null} The finalized completed quest, or null
+     */
+    completeMovedQuestFromBook(quest) {
+        const { stateAdapter } = this;
+        const { ui: uiModule } = this.dependencies;
+
+        const background = this.keeperBackgroundSelect?.value || '';
+        const wizardSchoolSelect = document.getElementById('wizardSchool');
+        const wizardSchool = wizardSchoolSelect?.value || '';
+        const completedQuest = BaseQuestHandler.completeActiveQuest(quest, background, wizardSchool);
+
+        completedQuest.dateCompleted = quest.dateCompleted || new Date().toISOString();
+        if (!completedQuest.dateAdded) {
+            completedQuest.dateAdded = completedQuest.dateCompleted;
+        }
+        const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
+        completedQuest.month = assignedQuest.month;
+        completedQuest.year = assignedQuest.year;
+
+        applyBlueprintRewardToQuest(completedQuest);
+
+        const restorationSuccess = this.handleRestorationProjectCompletion(completedQuest);
+        if (!restorationSuccess) {
+            const completedList = stateAdapter.getCompletedQuests() || [];
+            const idx = completedList.findIndex(q => q && (String(q.id) === String(quest.id)));
+            if (idx >= 0) {
+                const restored = stateAdapter.removeQuest(STORAGE_KEYS.COMPLETED_QUESTS, idx);
+                if (restored) stateAdapter.addActiveQuests(restored);
+            }
+            return null; // Exit without receipt, currency, or counters so no duplicate rewards
+        }
+
+        const completedList = stateAdapter.getCompletedQuests() || [];
+        const idx = completedList.findIndex(q => q && (String(q.id) === String(quest.id)));
+        if (idx >= 0) {
+            stateAdapter.updateQuest(STORAGE_KEYS.COMPLETED_QUESTS, idx, completedQuest);
+        }
+
+        const bookName = trimOrEmpty(
+            completedQuest.bookId ? (stateAdapter.getBook(completedQuest.bookId)?.title ?? completedQuest.book) : completedQuest.book
+        );
+        const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
+
+        this.awardBlueprintsForQuest(completedQuest);
+
+        if (completedQuest.receipt && uiModule.displayCalculationReceipt) {
+            uiModule.displayCalculationReceipt(
+                completedQuest.receipt,
+                completedQuest.type,
+                completedQuest.prompt
+            );
+        }
+        if (this.updateCurrency) {
+            this.updateCurrency(completedQuest.rewards);
+        }
+
+        if (isNewBook && this.completedBooksSet && this.saveCompletedBooksSet) {
+            this.completedBooksSet.add(bookName);
+            this.saveCompletedBooksSet();
+            const booksCompleted = document.getElementById('books-completed-month');
+            if (booksCompleted) {
+                const currentBooks = parseIntOr(booksCompleted.value, 0);
+                if (currentBooks < 10) {
+                    booksCompleted.value = currentBooks + 1;
+                    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+                    if (shelfColors.length < 10) {
+                        shelfColors.push(uiModule.getRandomShelfColor());
+                        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
+                        characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
+                        if (uiModule.renderShelfBooks) uiModule.renderShelfBooks(currentBooks + 1, shelfColors);
+                    }
+                }
+            }
+        }
+
+        const wearableSlotsInput = document.getElementById('wearable-slots');
+        const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+        const familiarSlotsInput = document.getElementById('familiar-slots');
+        if (uiModule.renderLoadout && wearableSlotsInput && nonWearableSlotsInput && familiarSlotsInput) {
+            uiModule.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+        }
+        if (completedQuest.type === '🔨 Restoration Project' && uiModule.renderPassiveEquipment) {
+            uiModule.renderPassiveEquipment();
+        }
+
+        return completedQuest;
+    }
+
+    /**
      * Handle restoration project completion
      * Spends blueprints and marks the project as completed
      * @param {Object} quest - The completed quest

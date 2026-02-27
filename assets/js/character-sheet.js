@@ -276,6 +276,19 @@ export async function initializeCharacterSheet() {
     }
     dependencies.updateDeckActionsLabel = updateDeckActionsLabel;
 
+    dependencies.onBookMarkedComplete = (result) => {
+        if (result.synergyRewards && (result.synergyRewards.inkDrops > 0 || result.synergyRewards.paperScraps > 0)) {
+            updateCurrency(result.synergyRewards);
+        }
+        (result.movedQuests || []).forEach((quest) => {
+            questController.completeMovedQuestFromBook(quest);
+        });
+        if (result.movedQuests && result.movedQuests.length > 0) {
+            ui.renderActiveAssignments();
+            ui.renderCompletedQuests();
+        }
+    };
+
     // Initialize controllers
     characterController.initialize();
     abilityController.initialize();

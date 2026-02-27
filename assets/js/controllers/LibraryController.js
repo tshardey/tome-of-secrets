@@ -107,6 +107,8 @@ export class LibraryController extends BaseController {
         this.stateAdapter.on(STATE_EVENTS.BOOKS_CHANGED, () => {
             this.renderBooks();
         });
+
+        this._onBookMarkedComplete = this.dependencies.onBookMarkedComplete || null;
     }
 
     _runBookSearch(query, author, resultsContainer) {
@@ -438,7 +440,11 @@ export class LibraryController extends BaseController {
     handleMarkComplete(bookId) {
         const book = this.stateAdapter.getBook(bookId);
         if (!book || book.status === 'completed') return;
-        this.stateAdapter.markBookComplete(bookId);
+        const result = this.stateAdapter.markBookComplete(bookId);
+        if (!result) return;
+        if (this._onBookMarkedComplete) {
+            this._onBookMarkedComplete(result);
+        }
         this.renderBooks();
         this.saveState();
     }

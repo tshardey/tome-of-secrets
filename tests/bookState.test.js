@@ -136,13 +136,16 @@ describe('Book state (StateAdapter)', () => {
   });
 
   describe('markBookComplete', () => {
-    it('sets status and dateCompleted', () => {
+    it('sets status and dateCompleted and returns result with book, movedQuests, synergyRewards', () => {
       const book = adapter.addBook({ title: 'In Progress', status: 'reading' });
-      const completed = adapter.markBookComplete(book.id);
+      const result = adapter.markBookComplete(book.id);
 
-      expect(completed).not.toBeNull();
-      expect(completed.status).toBe('completed');
-      expect(completed.dateCompleted).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result.book).toBeDefined();
+      expect(result.book.status).toBe('completed');
+      expect(result.book.dateCompleted).toBeDefined();
+      expect(result.movedQuests).toEqual([]);
+      expect(result.synergyRewards).toEqual({ xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
       expect(adapter.getBooksByStatus('completed')).toHaveLength(1);
     });
   });
