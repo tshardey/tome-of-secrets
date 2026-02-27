@@ -58,10 +58,22 @@ export function createBookSelector(container, stateAdapter, options = {}) {
     let ignoreNextDocumentClick = false;
 
     function getBooksList() {
+        let list;
         if (statusFilter && typeof stateAdapter.getBooksByStatus === 'function') {
-            return stateAdapter.getBooksByStatus(statusFilter);
+            list = stateAdapter.getBooksByStatus(statusFilter);
+        } else {
+            list = typeof stateAdapter.getBooks === 'function' ? stateAdapter.getBooks() : [];
         }
-        return typeof stateAdapter.getBooks === 'function' ? stateAdapter.getBooks() : [];
+        // Most recently added first, then alphabetically by title
+        return [...list].sort((a, b) => {
+            const dateA = a.dateAdded || '';
+            const dateB = b.dateAdded || '';
+            const cmp = dateB.localeCompare(dateA);
+            if (cmp !== 0) return cmp;
+            const titleA = (a.title || '').toLowerCase();
+            const titleB = (b.title || '').toLowerCase();
+            return titleA.localeCompare(titleB);
+        });
     }
 
     function closeDropdown() {
@@ -75,33 +87,54 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         }
     }
 
+    function filterBooksBySearch(books, searchTrim) {
+        if (!searchTrim) return books;
+        const q = searchTrim.toLowerCase();
+        return books.filter((book) => {
+            const title = (book.title || '').toLowerCase();
+            const author = (book.author || '').toLowerCase();
+            return title.includes(q) || author.includes(q);
+        });
+    }
+
+    function renderDropdownList(books, searchTrim) {
+        const filtered = filterBooksBySearch(books, searchTrim);
+        if (filtered.length === 0) {
+            return searchTrim
+                ? '<p class="book-selector-empty">No books match your search.</p>'
+                : '<p class="book-selector-empty">No books in library. Add books in the Library tab first.</p>';
+        }
+        return filtered
+            .map((book) => {
+                const titleEsc = escapeHtml(book.title || 'Untitled');
+                const authorEsc = escapeHtml(book.author || '');
+                const coverHtml = book.cover
+                    ? `<img class="book-selector-option-cover" src="${escapeAttr(book.cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+                    : '<span class="book-selector-option-placeholder">No cover</span>';
+                return `
+                    <button type="button" class="book-selector-option" data-book-id="${escapeAttr(book.id)}">
+                        <span class="book-selector-option-cover-wrap">${coverHtml}</span>
+                        <span class="book-selector-option-text">
+                            <span class="book-selector-option-title">${titleEsc}</span>
+                            ${authorEsc ? `<span class="book-selector-option-author">${authorEsc}</span>` : ''}
+                        </span>
+                    </button>`;
+            })
+            .join('');
+    }
+
     function openDropdown(buttonRect) {
         closeDropdown();
         const books = getBooksList();
-        const listContent =
-            books.length === 0
-                ? '<p class="book-selector-empty">No books in library. Add books in the Library tab first.</p>'
-                : books
-                      .map((book) => {
-                          const titleEsc = escapeHtml(book.title || 'Untitled');
-                          const authorEsc = escapeHtml(book.author || '');
-                          const coverHtml = book.cover
-                              ? `<img class="book-selector-option-cover" src="${escapeAttr(book.cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-                              : '<span class="book-selector-option-placeholder">No cover</span>';
-                          return `
-                            <button type="button" class="book-selector-option" data-book-id="${escapeAttr(book.id)}">
-                                <span class="book-selector-option-cover-wrap">${coverHtml}</span>
-                                <span class="book-selector-option-text">
-                                    <span class="book-selector-option-title">${titleEsc}</span>
-                                    ${authorEsc ? `<span class="book-selector-option-author">${authorEsc}</span>` : ''}
-                                </span>
-                            </button>`;
-                      })
-                      .join('');
+        const searchHtml =
+            '<div class="book-selector-search-wrap">' +
+            '<input type="text" class="book-selector-search-input" placeholder="Search books…" autocomplete="off" aria-label="Search books" />' +
+            '</div>';
+        const listHtml = '<div class="book-selector-options-list">' + renderDropdownList(books, '') + '</div>';
 
         dropdownEl = document.createElement('div');
         dropdownEl.className = 'book-selector-dropdown';
-        dropdownEl.innerHTML = listContent;
+        dropdownEl.innerHTML = searchHtml + listHtml;
 
         const style = dropdownEl.style;
         style.minWidth = '220px';
@@ -123,17 +156,27 @@ export function createBookSelector(container, stateAdapter, options = {}) {
             document.body.appendChild(dropdownEl);
         }
 
-        dropdownEl.querySelectorAll('.book-selector-option').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = btn.getAttribute('data-book-id');
-                if (id) {
-                    selectedBookId = id;
-                    closeDropdown();
-                    onSelect(id);
-                    render();
-                }
+        const optionsListEl = dropdownEl.querySelector('.book-selector-options-list');
+        const searchInput = dropdownEl.querySelector('.book-selector-search-input');
+        if (searchInput && optionsListEl) {
+            searchInput.addEventListener('click', (e) => e.stopPropagation());
+            searchInput.addEventListener('input', () => {
+                const searchTrim = (searchInput.value || '').trim();
+                optionsListEl.innerHTML = renderDropdownList(books, searchTrim);
             });
+            searchInput.focus();
+        }
+        optionsListEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('.book-selector-option');
+            if (!btn) return;
+            e.stopPropagation();
+            const id = btn.getAttribute('data-book-id');
+            if (id) {
+                selectedBookId = id;
+                closeDropdown();
+                onSelect(id);
+                render();
+            }
         });
 
         clickOutsideHandler = (e) => {

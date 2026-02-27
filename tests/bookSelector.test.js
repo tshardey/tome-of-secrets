@@ -153,7 +153,7 @@ describe('bookSelector', () => {
     });
 
     describe('dropdown', () => {
-        it('opens dropdown with book list when Link Book is clicked', () => {
+        it('opens dropdown with book list when Link Book is clicked (most recently added first)', () => {
             selectorApi = createBookSelector(container, stateAdapter, {});
             const trigger = container.querySelector('.book-selector-trigger');
             trigger.click();
@@ -161,8 +161,9 @@ describe('bookSelector', () => {
             expect(dropdown).toBeTruthy();
             const options = dropdown.querySelectorAll('.book-selector-option');
             expect(options.length).toBe(2);
-            expect(options[0].getAttribute('data-book-id')).toBe('b1');
-            expect(options[1].getAttribute('data-book-id')).toBe('b2');
+            // Sorted by dateAdded desc then title: b2 (2025-01-02) then b1 (2025-01-01)
+            expect(options[0].getAttribute('data-book-id')).toBe('b2');
+            expect(options[1].getAttribute('data-book-id')).toBe('b1');
             expect(stateAdapter.getBooks).toHaveBeenCalled();
         });
 
@@ -183,6 +184,22 @@ describe('bookSelector', () => {
             expect(stateAdapter.getBooksByStatus).toHaveBeenCalledWith('reading');
             const dropdown = document.body.querySelector('.book-selector-dropdown');
             expect(dropdown.querySelectorAll('.book-selector-option').length).toBe(1);
+        });
+
+        it('shows search input and filters list by title/author', () => {
+            selectorApi = createBookSelector(container, stateAdapter, {});
+            const trigger = container.querySelector('.book-selector-trigger');
+            trigger.click();
+            const dropdown = document.body.querySelector('.book-selector-dropdown');
+            const searchInput = dropdown.querySelector('.book-selector-search-input');
+            expect(searchInput).toBeTruthy();
+            expect(searchInput.placeholder).toContain('Search');
+            const optionsList = dropdown.querySelector('.book-selector-options-list');
+            expect(optionsList.querySelectorAll('.book-selector-option').length).toBe(2);
+            searchInput.value = 'Second';
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            expect(optionsList.querySelectorAll('.book-selector-option').length).toBe(1);
+            expect(optionsList.querySelector('.book-selector-option').getAttribute('data-book-id')).toBe('b2');
         });
 
         it('shows empty message when library has no books', () => {

@@ -878,6 +878,11 @@ export class QuestController extends BaseController {
             return;
         }
 
+        // Ensure the completed quest is linked to its book for cascade / synergy logic
+        if (completedQuest.bookId && completedQuest.id && typeof stateAdapter.linkQuestToBook === 'function') {
+            stateAdapter.linkQuestToBook(completedQuest.bookId, completedQuest.id);
+        }
+
         // Add to completed quests (wrap in array for consistency)
         stateAdapter.addCompletedQuests([completedQuest]);
 

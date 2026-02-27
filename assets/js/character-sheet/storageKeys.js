@@ -26,6 +26,8 @@ export const STORAGE_KEYS = Object.freeze({
     DUNGEON_COMPLETION_DRAWS_REDEEMED: 'dungeonCompletionDrawsRedeemed',
     // Archive UI preferences
     ARCHIVE_CARD_FACE_MODE: 'archiveCardFaceMode',
+    // Collapsible panel state (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards)
+    COLLAPSED_PANELS: 'characterSheetCollapsedPanels',
     // Book-First Paradigm (Schema v5)
     BOOKS: 'books',
     /** Persisted as 'exchangeProgram' for backward compatibility; UI name is External Curriculum. */

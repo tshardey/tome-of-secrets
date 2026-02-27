@@ -981,15 +981,31 @@ describe('Controllers', () => {
                 month: 'January',
                 year: '2024',
                 book: 'Test Book Title', // Has book title
+                bookId: 'book-1',
                 prompt: 'Test Prompt',
                 rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
                 buffs: []
             };
 
-            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [questWithBook];
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
             state[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+            state[STORAGE_KEYS.BOOKS] = {
+                'book-1': {
+                    id: 'book-1',
+                    title: 'Test Book Title',
+                    author: 'Author',
+                    cover: null,
+                    pageCount: null,
+                    status: 'reading',
+                    dateAdded: new Date().toISOString(),
+                    dateCompleted: null,
+                    links: { questIds: [], curriculumPromptIds: [] }
+                }
+            };
 
             const realStateAdapter = new StateAdapter(state);
+            // Use real addActiveQuests so quest gets a proper id like in normal flows
+            realStateAdapter.addActiveQuests([questWithBook]);
             const localDependencies = {
                 ui: {
                     renderActiveAssignments: jest.fn(),
@@ -1012,6 +1028,12 @@ describe('Controllers', () => {
             // Quest should be moved to completed
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
             expect(realStateAdapter.getCompletedQuests().length).toBeGreaterThan(0);
+
+            // Book should be linked to completed quest for cascade / synergy logic
+            const completed = realStateAdapter.getCompletedQuests().slice(-1)[0];
+            const book = realStateAdapter.getBook('book-1');
+            expect(completed.bookId).toBe('book-1');
+            expect(book.links.questIds).toContain(completed.id);
         });
 
         it('should set dateAdded when creating a quest (Schema v3)', () => {

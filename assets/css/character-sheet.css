@@ -643,7 +643,8 @@
     min-width: 0;
 }
 
-.library-book-search-row .library-search-results {
+.library-book-search-row .library-search-results,
+.book-edit-search-row .library-search-results {
     position: static;
     margin-top: 8px;
     max-height: 240px;
@@ -1027,13 +1028,48 @@
 }
 
 .book-selector-dropdown {
-    max-height: 280px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: 320px;
     background: #2a231d;
     border: 2px solid #54483b;
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     padding: 6px;
+}
+
+.book-selector-search-wrap {
+    flex-shrink: 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #54483b;
+    margin-bottom: 4px;
+}
+
+.book-selector-search-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: #d4c8b0;
+    background: rgba(42, 35, 29, 0.9);
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.book-selector-search-input::placeholder {
+    color: #8a7a61;
+}
+
+.book-selector-search-input:focus {
+    outline: none;
+    border-color: #b89f62;
+}
+
+.book-selector-options-list {
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
 }
 
 .book-selector-option {
@@ -2047,6 +2083,11 @@
     padding: 16px 20px;
     border-bottom: 2px solid #54483b;
     background: linear-gradient(180deg, rgba(84, 72, 59, 0.4) 0%, rgba(84, 72, 59, 0.2) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .rpg-panel-title {
@@ -2055,6 +2096,34 @@
     font-size: 1.3em;
     color: #b89f62;
     font-weight: 600;
+}
+
+.panel-toggle-btn {
+    margin-left: auto;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    font-family: 'Lora', serif;
+    color: #f5f0e6;
+    background: transparent;
+    border: 1px solid rgba(184, 159, 98, 0.6);
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.panel-toggle-btn::after {
+    content: '▾';
+    font-size: 0.8rem;
+}
+
+.panel-toggle-btn[aria-expanded="false"]::after {
+    content: '▸';
+}
+
+.panel-toggle-btn:hover {
+    background: rgba(184, 159, 98, 0.12);
 }
 
 .rpg-panel-subtitle {
@@ -3083,7 +3152,8 @@
     box-shadow: 0 0 0 3px rgba(184, 159, 98, 0.2);
 }
 
-.rpg-add-quest-panel button {
+/* Form buttons only; header .panel-toggle-btn keeps its own size */
+.rpg-add-quest-panel .rpg-panel-body button {
     padding: 10px 24px;
     font-family: 'Lora', serif;
     font-size: 1em;

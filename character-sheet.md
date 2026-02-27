@@ -148,16 +148,6 @@ permalink: /character-sheet.html
         </div>
     </div>
 
-    <!-- Selected Genres Panel (used for Organize the Stacks / Genre selection) -->
-    <div class="rpg-panel rpg-genres-panel">
-        <div class="rpg-panel-header">
-            <h2 class="rpg-panel-title">📚 Selected Genres</h2>
-        </div>
-        <div class="rpg-panel-body">
-            <div id="selected-genres-display"></div>
-        </div>
-    </div>
-
 </div>
 <!-- END TAB 1: CHARACTER -->
 
@@ -359,8 +349,15 @@ permalink: /character-sheet.html
             <h3 class="rpg-panel-title">✨ Active Temporary Buffs</h3>
             <p class="rpg-panel-subtitle"><strong>Remember:</strong> When you complete all dungeon rooms, open the Quests tab and click “♠ View Dungeons” to roll on the Dungeon Completion Rewards table. Some rewards are temporary buffs that will be automatically added.</p>
             <p class="rpg-panel-subtitle">Temporary buffs are automatically added when earned from side quests and dungeon rewards. Buffs last for the remainder of the current month and the next month unless otherwise specified. One-time buffs are consumed when used.</p>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="temporary-buffs-panel-body"
+                    aria-expanded="true"
+                    aria-controls="temporary-buffs-panel-body">
+                Hide
+            </button>
         </div>
-        <div class="rpg-panel-body">
+        <div class="rpg-panel-body" id="temporary-buffs-panel-body">
             <div class="rpg-add-buff-form">
                 <div class="form-row" style="gap: 12px; align-items: center;">
                     <select id="temp-buff-select" class="rpg-select" style="flex: 1;">
@@ -427,8 +424,15 @@ permalink: /character-sheet.html
     <div class="rpg-panel rpg-library-add-panel">
         <div class="rpg-panel-header">
             <h2 class="rpg-panel-title">📚 Add a Book</h2>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="library-add-panel-body"
+                    aria-expanded="true"
+                    aria-controls="library-add-panel-body">
+                Hide
+            </button>
         </div>
-        <div class="rpg-panel-body">
+        <div class="rpg-panel-body" id="library-add-panel-body">
             <div id="library-add-book-form" class="library-add-form" role="form" aria-label="Add a book">
                 <div class="form-row library-book-search-row">
                     <label for="library-book-title"><strong>Title:</strong></label>
@@ -618,8 +622,15 @@ permalink: /character-sheet.html
     <div class="rpg-panel rpg-quest-card-draw-panel">
         <div class="rpg-panel-header">
             <h3 class="rpg-panel-title">🎴 Draw Quest Cards</h3>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="quest-card-draw-panel-body"
+                    aria-expanded="true"
+                    aria-controls="quest-card-draw-panel-body">
+                Hide
+            </button>
         </div>
-        <div class="rpg-panel-body">
+        <div class="rpg-panel-body" id="quest-card-draw-panel-body">
             <div class="quest-deck-interface">
                 <div class="deck-section">
                     <div class="deck-group">
@@ -661,8 +672,15 @@ permalink: /character-sheet.html
     <div class="rpg-panel rpg-add-quest-panel">
         <div class="rpg-panel-header">
             <h3 class="rpg-panel-title">➕ Add Quest</h3>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="add-quest-panel-body"
+                    aria-expanded="true"
+                    aria-controls="add-quest-panel-body">
+                Hide
+            </button>
         </div>
-        <div class="rpg-panel-body">
+        <div class="rpg-panel-body" id="add-quest-panel-body">
             <div class="add-quest-form">
             <div class="form-row">
                 <select id="quest-month">
@@ -1057,6 +1075,16 @@ permalink: /character-sheet.html
     <div class="quest-edit-body">
         <form id="book-edit-form">
             <input type="hidden" id="book-edit-id" value="" />
+            <div class="form-row book-edit-search-row">
+                <label for="book-edit-search-query"><strong>Look up book:</strong></label>
+                <div class="library-search-input-and-results">
+                    <div class="library-search-wrap">
+                        <input type="text" id="book-edit-search-query" class="library-title-input" placeholder="Search to update title, author, cover…" autocomplete="off" aria-label="Search for book details" />
+                        <button type="button" id="book-edit-search-btn" class="rpg-btn rpg-btn-secondary lookup-book-btn" title="Search API for book details">Look up</button>
+                    </div>
+                    <div id="book-edit-search-results" class="book-search-results library-search-results" aria-live="polite" style="display: none;"></div>
+                </div>
+            </div>
             <div class="form-row">
                 <label for="book-edit-title"><strong>Title:</strong></label>
                 <input type="text" id="book-edit-title" placeholder="Book Title" required />

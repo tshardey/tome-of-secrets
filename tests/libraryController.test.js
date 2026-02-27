@@ -24,6 +24,16 @@ function createLibraryFormHTML() {
             <button type="button" id="cancel-book-edit-btn">Cancel</button>
             <button type="button" id="save-book-edit-btn">Save</button>
             <input type="hidden" id="book-edit-id" />
+            <div class="form-row">
+                <label for="book-edit-search-query">Look up book:</label>
+                <div class="library-search-input-and-results">
+                    <div class="library-search-wrap">
+                        <input type="text" id="book-edit-search-query" />
+                        <button type="button" id="book-edit-search-btn">Look up</button>
+                    </div>
+                    <div id="book-edit-search-results" style="display:none;"></div>
+                </div>
+            </div>
             <input type="text" id="book-edit-title" />
             <input type="text" id="book-edit-author" />
             <input type="number" id="book-edit-page-count" />
@@ -229,6 +239,24 @@ describe('LibraryController', () => {
             expect(document.getElementById('book-edit-page-count').value).toBe('300');
             expect(document.getElementById('book-edit-status').value).toBe('reading');
             expect(document.getElementById('book-edit-drawer').style.display).toBe('flex');
+        });
+
+        it('should wire edit search button and inputs to BookMetadataService.searchBooks', async () => {
+            const { searchBooks } = require('../assets/js/services/BookMetadataService.js');
+            searchBooks.mockResolvedValueOnce([]);
+
+            const controller = new LibraryController(stateAdapter, form, dependencies);
+            controller.initialize();
+            controller.handleEditBook('book-1');
+
+            const searchInput = document.getElementById('book-edit-search-query');
+            const searchBtn = document.getElementById('book-edit-search-btn');
+
+            // Type explicit query and click button
+            searchInput.value = 'Test Book';
+            searchBtn.click();
+
+            expect(searchBooks).toHaveBeenCalledWith('Test Book', undefined, expect.any(AbortSignal));
         });
 
         it('should save edits and close drawer', () => {

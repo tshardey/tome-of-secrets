@@ -18,6 +18,7 @@ export class LibraryController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
         super(stateAdapter, form, dependencies);
         this._searchAbortController = null;
+        this._editSearchAbortController = null;
         this._editingBookId = null;
     }
 
@@ -82,6 +83,7 @@ export class LibraryController extends BaseController {
         }
 
         this._setupBookEditCoverHandlers();
+        this._setupBookEditSearch();
 
         this.addEventListener(document, 'keydown', (e) => {
             if (e.key === 'Escape' && bookEditDrawer && bookEditDrawer.style.display !== 'none') {
@@ -177,6 +179,137 @@ export class LibraryController extends BaseController {
         }
         const coverUrl = book.coverUrl || '';
         this._setAddFormCover(coverUrl, coverUrl);
+    }
+
+    _setupBookEditSearch() {
+        const searchBtn = document.getElementById('book-edit-search-btn');
+        const searchInput = document.getElementById('book-edit-search-query');
+        const searchResults = document.getElementById('book-edit-search-results');
+        const titleInput = document.getElementById('book-edit-title');
+        const authorInput = document.getElementById('book-edit-author');
+        if (!searchResults) return;
+
+        const runSearch = () => {
+            const explicit = trimOrEmpty(searchInput?.value || '');
+            const titleVal = trimOrEmpty(titleInput?.value || '');
+            const authorVal = trimOrEmpty(authorInput?.value || '');
+            const query = explicit || titleVal;
+            const author = explicit ? '' : authorVal;
+            if (!query || query.length < BOOK_SEARCH_MIN_LENGTH) {
+                searchResults.style.display = 'none';
+                searchResults.innerHTML = '';
+                return;
+            }
+            this._runBookSearchEdit(query, author, searchResults);
+        };
+
+        if (searchBtn) {
+            this.addEventListener(searchBtn, 'click', () => {
+                runSearch();
+            });
+        }
+
+        let debounceTimer = null;
+        const debouncedRun = () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, BOOK_SEARCH_DEBOUNCE_MS);
+        };
+
+        if (searchInput) {
+            this.addEventListener(searchInput, 'input', debouncedRun);
+        }
+        if (titleInput) {
+            this.addEventListener(titleInput, 'input', debouncedRun);
+        }
+    }
+
+    _runBookSearchEdit(query, author, resultsContainer) {
+        if (!query || !resultsContainer) return;
+        if (this._editSearchAbortController) this._editSearchAbortController.abort();
+        this._editSearchAbortController = new AbortController();
+        const signal = this._editSearchAbortController.signal;
+        resultsContainer.innerHTML = '<span class="book-search-loading">Searching…</span>';
+        resultsContainer.style.display = 'block';
+
+        searchBooks(query, author || undefined, signal)
+            .then((results) => {
+                if (signal.aborted) return;
+                this._renderEditSearchResults(results, resultsContainer);
+            })
+            .catch((err) => {
+                if (err.name === 'AbortError') return;
+                resultsContainer.innerHTML = '<span class="book-search-error">Search failed.</span>';
+                resultsContainer.style.display = 'block';
+            });
+    }
+
+    _renderEditSearchResults(results, container) {
+        container.innerHTML = '';
+        if (!results || results.length === 0) {
+            container.innerHTML = '<span class="book-search-empty">No results.</span>';
+            container.style.display = 'block';
+            return;
+        }
+        results.forEach((book) => {
+            const authorStr = Array.isArray(book.authors) && book.authors.length ? book.authors.join(', ') : '';
+            const pageStr = book.pageCount != null && book.pageCount !== '' ? ` · ${Number(book.pageCount)} pp` : '';
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'book-search-result-item';
+            if (book.coverUrl) {
+                const img = document.createElement('img');
+                img.className = 'book-search-result-cover';
+                img.src = book.coverUrl;
+                img.alt = '';
+                item.appendChild(img);
+            }
+            const text = document.createElement('span');
+            text.className = 'book-search-result-text';
+            text.textContent = `${book.title}${authorStr ? ` — ${authorStr}` : ''}${pageStr}`;
+            item.appendChild(text);
+            item.addEventListener('click', () => {
+                this._applySearchResultToEditForm(book);
+                container.style.display = 'none';
+                container.innerHTML = '';
+            });
+            container.appendChild(item);
+        });
+        container.style.display = 'block';
+    }
+
+    _applySearchResultToEditForm(book) {
+        const titleEl = document.getElementById('book-edit-title');
+        const authorEl = document.getElementById('book-edit-author');
+        const pageCountEl = document.getElementById('book-edit-page-count');
+        const authorStr = Array.isArray(book.authors) && book.authors.length ? book.authors.join(', ') : '';
+        if (titleEl) titleEl.value = book.title || '';
+        if (authorEl) authorEl.value = authorStr || '';
+        if (pageCountEl && book.pageCount != null && book.pageCount !== '') {
+            pageCountEl.value = String(Number(book.pageCount));
+        } else if (pageCountEl) {
+            pageCountEl.value = '';
+        }
+        const coverUrl = book.coverUrl || '';
+        const valueEl = document.getElementById('book-edit-cover-value');
+        const urlEl = document.getElementById('book-edit-cover-url');
+        const preview = document.getElementById('book-edit-cover-preview');
+        const placeholder = document.getElementById('book-edit-cover-placeholder');
+        const v = (coverUrl || '').trim() || '';
+        if (valueEl) valueEl.value = v;
+        if (urlEl) urlEl.value = coverUrl && !coverUrl.startsWith('data:') ? coverUrl : '';
+        if (preview) {
+            if (v) {
+                preview.src = v;
+                preview.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'inline';
+            }
+        }
+        const searchInput = document.getElementById('book-edit-search-query');
+        if (searchInput) searchInput.value = '';
     }
 
     _setAddFormCover(value, urlInputValue = null) {
@@ -384,6 +517,14 @@ export class LibraryController extends BaseController {
             linksDisplay.textContent = parts.join(', ') || '—';
         }
 
+        const searchQueryEl = document.getElementById('book-edit-search-query');
+        const searchResultsEl = document.getElementById('book-edit-search-results');
+        if (searchQueryEl) searchQueryEl.value = '';
+        if (searchResultsEl) {
+            searchResultsEl.style.display = 'none';
+            searchResultsEl.innerHTML = '';
+        }
+
         const drawer = document.getElementById('book-edit-drawer');
         const backdrop = document.getElementById('book-edit-backdrop');
         if (drawer) drawer.style.display = 'flex';
@@ -449,6 +590,19 @@ export class LibraryController extends BaseController {
         this.saveState();
     }
 
+    _sortBooksForDisplay(books) {
+        if (!books || !books.length) return [];
+        return [...books].sort((a, b) => {
+            const dateA = a.dateAdded || '';
+            const dateB = b.dateAdded || '';
+            const cmp = dateB.localeCompare(dateA);
+            if (cmp !== 0) return cmp;
+            const titleA = (a.title || '').toLowerCase();
+            const titleB = (b.title || '').toLowerCase();
+            return titleA.localeCompare(titleB);
+        });
+    }
+
     renderBooks() {
         const reading = document.getElementById('library-cards-reading');
         const completed = document.getElementById('library-cards-completed');
@@ -457,9 +611,9 @@ export class LibraryController extends BaseController {
 
         const byStatus = (status) => this.stateAdapter.getBooksByStatus(status);
 
-        reading.innerHTML = this._renderCardList(byStatus('reading'));
-        completed.innerHTML = this._renderCardList(byStatus('completed'));
-        other.innerHTML = this._renderCardList(byStatus('other'));
+        reading.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('reading')));
+        completed.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('completed')));
+        other.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('other')));
     }
 
     _renderCardList(books) {
