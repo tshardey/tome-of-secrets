@@ -402,23 +402,17 @@ describe('Data Migration', () => {
             expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.inkDrops).toBe(10);
         });
 
-        test('should not migrate if already at current version', () => {
+        test('should not migrate if already at current version and no repair needed', () => {
             saveSchemaVersion();
+            // State with no quests that have book data (or already have bookId) so repair is not run
             const state = {
-                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
-                    {
-                        type: '♥ Organize the Stacks',
-                        prompt: 'Fantasy',
-                        book: 'Test',
-                        month: 'Jan',
-                        year: '2024',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
-                    }
-                ]
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
             };
 
             const migrated = migrateState(state);
-            expect(migrated).toBe(state); // Should return same object if no migration needed
+            expect(migrated).toBe(state); // Same object when at current version and no books repair needed
         });
 
         test('should add missing state keys with defaults', () => {
@@ -432,6 +426,38 @@ describe('Data Migration', () => {
             expect(Array.isArray(migrated[STORAGE_KEYS.INVENTORY_ITEMS])).toBe(true);
             expect(typeof migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS]).toBe('object');
             expect(migrated[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe(0);
+        });
+
+        test('should repair books from quests when already at current schema version', () => {
+            // Schema was already bumped (e.g. from a previous deploy) but quests were never migrated to books
+            saveSchemaVersion();
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+                    {
+                        type: '♥ Organize the Stacks',
+                        prompt: 'Fantasy',
+                        book: 'Existing Quest Book',
+                        bookAuthor: 'Author',
+                        month: 'January',
+                        year: '2024',
+                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                    }
+                ],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: [],
+                [STORAGE_KEYS.BOOKS]: {}
+            };
+
+            const migrated = migrateState(state);
+
+            expect(migrated).not.toBe(state);
+            const books = migrated[STORAGE_KEYS.BOOKS];
+            expect(Object.keys(books).length).toBe(1);
+            const book = Object.values(books)[0];
+            expect(book.title).toBe('Existing Quest Book');
+            expect(book.author).toBe('Author');
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].bookId).toBe(book.id);
+            expect(book.links.questIds).toContain(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].id);
         });
 
         test('should rename legacy genre quest name "Memoirs/Biographies" to "Memoir/Biography" in saved state', () => {

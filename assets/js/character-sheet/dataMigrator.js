@@ -368,6 +368,38 @@ function migrateToVersion1(state) {
 }
 
 /**
+ * Returns true if state has quests with book data (book/bookAuthor/cover/page count)
+ * but no valid Book entry (missing or invalid bookId reference). Used to run the
+ * v5 book-extraction as a one-time repair when the schema version was already bumped.
+ */
+function needsBooksRepair(state) {
+    if (SCHEMA_VERSION < 5) return false;
+    const books = state[STORAGE_KEYS.BOOKS];
+    const bookIds = books && typeof books === 'object' && !Array.isArray(books)
+        ? new Set(Object.keys(books))
+        : new Set();
+    const questKeys = [
+        STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
+        STORAGE_KEYS.COMPLETED_QUESTS,
+        STORAGE_KEYS.DISCARDED_QUESTS
+    ];
+    for (const key of questKeys) {
+        const list = state[key];
+        if (!Array.isArray(list)) continue;
+        for (const quest of list) {
+            if (!quest || typeof quest !== 'object') continue;
+            const hasBookData = quest.book || quest.bookAuthor || quest.coverUrl != null ||
+                (typeof quest.pageCountRaw === 'number' && !isNaN(quest.pageCountRaw)) ||
+                (typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective));
+            if (!hasBookData) continue;
+            const hasValidBook = typeof quest.bookId === 'string' && bookIds.has(quest.bookId);
+            if (!hasValidBook) return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Run all necessary migrations to bring data to current schema version
  * @param {Object} state - Current state object
  * @returns {Object} - Migrated state object
@@ -375,8 +407,12 @@ function migrateToVersion1(state) {
 export function migrateState(state) {
     const storedVersion = getStoredSchemaVersion();
     
-    // If already at current version, no migration needed
+    // If already at current version, run idempotent repair for books if needed.
     if (storedVersion === SCHEMA_VERSION) {
+        if (storedVersion >= 5 && needsBooksRepair(state)) {
+            console.log('Repairing: extracting books from quests while already at current schema version.');
+            return migrateToVersion5(state);
+        }
         return state;
     }
 
