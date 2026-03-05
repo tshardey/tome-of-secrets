@@ -88,7 +88,7 @@ describe('ui.renderCompletedQuests dungeon archive sections', () => {
     expect(encounters[0].querySelector('.edit-quest-btn')?.dataset.index).toBe('2');
   });
 
-  test('groups archived quests by month/year with most recent first', () => {
+  test('when grouping by quest type, renders flat list of cards (no month subgroups)', () => {
     const completed = [
       {
         type: '♥ Organize the Stacks',
@@ -123,13 +123,11 @@ describe('ui.renderCompletedQuests dungeon archive sections', () => {
     const monthHeadings = document.querySelectorAll('.other-quests-section .quest-cards-container .archive-month-heading');
     const cards = document.querySelectorAll('.other-quests-section .quest-cards-container .tome-card');
 
-    expect(monthHeadings).toHaveLength(2);
-    expect(monthHeadings[0].textContent).toBe('February 2026');
-    expect(monthHeadings[1].textContent).toBe('January 2026');
+    expect(monthHeadings).toHaveLength(0);
     expect(cards).toHaveLength(3);
   });
 
-  test('uses legacy month/year when dateCompleted is missing (no Unknown date)', () => {
+  test('uses legacy month/year when dateCompleted is missing and renders flat list by type', () => {
     const completed = [
       {
         type: '♥ Organize the Stacks',
@@ -156,12 +154,10 @@ describe('ui.renderCompletedQuests dungeon archive sections', () => {
     ui.renderCompletedQuests();
 
     const monthHeadings = document.querySelectorAll('.other-quests-section .quest-cards-container .archive-month-heading');
-    const unknownHeadings = Array.from(monthHeadings).filter(h => h.textContent === 'Unknown date');
+    const cards = document.querySelectorAll('.other-quests-section .quest-cards-container .tome-card');
 
-    expect(unknownHeadings).toHaveLength(0);
-    expect(monthHeadings).toHaveLength(2);
-    expect(monthHeadings[0].textContent).toBe('December 2025');
-    expect(monthHeadings[1].textContent).toBe('November 2025');
+    expect(monthHeadings).toHaveLength(0);
+    expect(cards).toHaveLength(2);
   });
 });
 

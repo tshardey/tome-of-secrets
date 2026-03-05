@@ -26,6 +26,7 @@ export const STORAGE_KEYS = Object.freeze({
     DUNGEON_COMPLETION_DRAWS_REDEEMED: 'dungeonCompletionDrawsRedeemed',
     // Archive UI preferences
     ARCHIVE_CARD_FACE_MODE: 'archiveCardFaceMode',
+    ARCHIVE_GROUP_BY: 'archiveGroupBy', // 'month' | 'type'
     // Collapsible panel state (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards)
     COLLAPSED_PANELS: 'characterSheetCollapsedPanels',
     // Book-First Paradigm (Schema v5)

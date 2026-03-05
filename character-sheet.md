@@ -583,7 +583,7 @@ permalink: /character-sheet.html
             </div>
 
             <div class="rpg-monthly-stats">
-                <div class="rpg-monthly-stat-item">
+                <div class="rpg-monthly-stat-item rpg-monthly-stat-item--hidden" id="books-completed-month-wrap" aria-hidden="true">
                     <label for="books-completed-month" class="rpg-monthly-stat-label">📚 Books Completed</label>
                     <input type="number" id="books-completed-month" class="rpg-stat-input" value="0" min="0" max="10" />
                 </div>
@@ -596,7 +596,7 @@ permalink: /character-sheet.html
                 </div>
             </div>
             <p class="rpg-panel-subtitle" style="margin-top: 12px;">
-                <strong>End of Month:</strong> Awards 15 XP per book completed, 5 Paper Scraps per journal entry (+3 for Scribe's Acolyte), processes atmospheric buffs, and resets all monthly counters.
+                <strong>End of Month:</strong> Book completion XP is awarded when you mark a book complete in the Library. End of Month awards 5 Paper Scraps per journal entry (+3 for Scribe's Acolyte), processes atmospheric buffs, and resets monthly counters.
             </p>
         </div>
     </div>
@@ -838,14 +838,20 @@ permalink: /character-sheet.html
                 <button type="button" class="archive-face-toggle-btn" data-archive-face="poster" aria-pressed="true">Poster</button>
                 <button type="button" class="archive-face-toggle-btn" data-archive-face="cover" aria-pressed="false">Cover</button>
             </div>
-            <nav class="archive-jump-links" aria-label="Jump to archive section">
+            <div class="archive-group-by-toggle" role="group" aria-label="Group archived quests by">
+                <span class="archive-group-by-toggle__label">Group by:</span>
+                <button type="button" class="archive-group-by-btn" data-archive-group-by="month" aria-pressed="false">Month / Year</button>
+                <button type="button" class="archive-group-by-btn" data-archive-group-by="type" aria-pressed="true">Quest type</button>
+            </div>
+            <nav class="archive-jump-links archive-jump-links--type-mode" aria-label="Jump to archive section">
                 <a href="#archive-rooms" class="archive-jump-link">♠ Rooms</a>
                 <a href="#archive-encounters" class="archive-jump-link">♠ Encounters</a>
                 <a href="#archive-genre" class="archive-jump-link">♥ Genre</a>
                 <a href="#archive-side" class="archive-jump-link">♣ Side</a>
                 <a href="#archive-other" class="archive-jump-link">Other</a>
             </nav>
-            <div class="completed-quests-sections">
+            <div id="archive-by-month-container" class="completed-quests-by-month" aria-hidden="true" style="display: none;"></div>
+            <div class="completed-quests-sections completed-quests-sections--by-type">
                 <!-- Dungeon Section -->
                 <div id="archive-rooms" class="dungeon-archive-section archive-section-anchor">
                     <h4>Dungeon Rooms</h4>
@@ -1168,6 +1174,10 @@ permalink: /character-sheet.html
                     <option value="completed">Completed</option>
                     <option value="other">Other</option>
                 </select>
+            </div>
+            <div class="form-row" id="book-edit-date-completed-row">
+                <label for="book-edit-date-completed"><strong>Date completed (optional):</strong></label>
+                <input type="date" id="book-edit-date-completed" class="library-date-input" placeholder="YYYY-MM-DD" aria-label="Date book was completed" />
             </div>
             <div id="book-edit-links-section" class="form-row book-edit-links" style="display: none;">
                 <label><strong>Linked:</strong></label>

@@ -3,9 +3,8 @@
  * 
  * Manages:
  * - Processing atmospheric buff rewards
- * - Processing book completion XP
  * - Processing journal entry rewards
- * - Resetting monthly counters
+ * - Resetting monthly counters (book completion XP is awarded when marking a book complete in Library)
  */
 
 import { BaseController } from './BaseController.js';
@@ -51,19 +50,11 @@ export class EndOfMonthController extends BaseController {
             // Apply atmospheric buff ink drops
             updateCurrency(atmosphericRewards);
 
-            // Calculate and add book completion XP using RewardCalculator
+            // Book completion XP is now awarded when marking a book complete in the Library (not at end of month).
+            // Reset books completed counter and shelf for the new month.
             const booksCompletedInput = document.getElementById('books-completed-month');
             if (booksCompletedInput) {
-                const booksCompleted = parseIntOr(booksCompletedInput.value, 0);
-                const bookRewards = RewardCalculator.calculateBookCompletionRewards(booksCompleted);
-
-                updateCurrency(bookRewards);
-
-                // Reset books completed counter to 0
                 booksCompletedInput.value = 0;
-                
-                // Clear shelf book colors and re-render empty shelf
-                // Update both localStorage and characterState to keep them in sync
                 safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
                 characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = [];
                 uiModule.renderShelfBooks(0, []);

@@ -707,30 +707,7 @@ export class QuestController extends BaseController {
                     if (this.updateCurrency) this.updateCurrency(quest.rewards);
                 });
 
-                // Update book counter if new book
-                if (isNewBook && this.completedBooksSet && this.saveCompletedBooksSet) {
-                    this.completedBooksSet.add(bookName);
-                    this.saveCompletedBooksSet();
-
-                    const booksCompleted = document.getElementById('books-completed-month');
-                    if (booksCompleted) {
-                        const currentBooks = parseIntOr(booksCompleted.value, 0);
-                        // Only increment if we haven't reached the maximum of 10
-                        if (currentBooks < 10) {
-                            booksCompleted.value = currentBooks + 1;
-                            
-                            // Add random color for new book and re-render shelf (only if under limit)
-                            const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
-                            if (shelfColors.length < 10) {
-                                shelfColors.push(uiModule.getRandomShelfColor());
-                                // Update both localStorage and characterState to keep them in sync
-                                safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
-                                characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
-                                uiModule.renderShelfBooks(currentBooks + 1, shelfColors);
-                            }
-                        }
-                    }
-                }
+                // Book count is updated only when marking a book complete in the Library tab, not when completing a quest.
 
                 uiModule.renderCompletedQuests();
                 const wearableSlotsInput = document.getElementById('wearable-slots');
@@ -936,27 +913,7 @@ export class QuestController extends BaseController {
             uiModule.renderPassiveEquipment();
         }
 
-        // Increment books completed counter only if this is a new book
-        if (isNewBook && this.completedBooksSet) {
-            const booksCompleted = document.getElementById('books-completed-month');
-            if (booksCompleted) {
-                const currentBooks = parseIntOr(booksCompleted.value, 0);
-                // Only increment if we haven't reached the maximum of 10
-                if (currentBooks < 10) {
-                    booksCompleted.value = currentBooks + 1;
-                    
-                    // Add random color for new book and re-render shelf (only if under limit)
-                    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
-                    if (shelfColors.length < 10) {
-                        shelfColors.push(uiModule.getRandomShelfColor());
-                        // Update both localStorage and characterState to keep them in sync
-                        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
-                        characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
-                        uiModule.renderShelfBooks(currentBooks + 1, shelfColors);
-                    }
-                }
-            }
-        }
+        // Book count is updated only when marking a book complete in the Library tab, not when completing a quest.
 
         uiModule.renderActiveAssignments();
         uiModule.renderCompletedQuests();
@@ -1044,24 +1001,7 @@ export class QuestController extends BaseController {
             this.updateCurrency(completedQuest.rewards);
         }
 
-        if (isNewBook && this.completedBooksSet && this.saveCompletedBooksSet) {
-            this.completedBooksSet.add(bookName);
-            this.saveCompletedBooksSet();
-            const booksCompleted = document.getElementById('books-completed-month');
-            if (booksCompleted) {
-                const currentBooks = parseIntOr(booksCompleted.value, 0);
-                if (currentBooks < 10) {
-                    booksCompleted.value = currentBooks + 1;
-                    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
-                    if (shelfColors.length < 10) {
-                        shelfColors.push(uiModule.getRandomShelfColor());
-                        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
-                        characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
-                        if (uiModule.renderShelfBooks) uiModule.renderShelfBooks(currentBooks + 1, shelfColors);
-                    }
-                }
-            }
-        }
+        // Book count is updated only when marking a book complete in the Library tab, not when completing a quest via markBookComplete.
 
         const wearableSlotsInput = document.getElementById('wearable-slots');
         const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
