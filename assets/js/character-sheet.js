@@ -14,6 +14,7 @@ import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { runAllRepairs } from './character-sheet/postLoadRepair.js';
+import { RewardCalculator } from './services/RewardCalculator.js';
 
 // Import controllers
 import { CharacterController } from './controllers/CharacterController.js';
@@ -114,6 +115,8 @@ export async function initializeCharacterSheet() {
         safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, booksArray);
     }
 
+    // Populate completedBooksSet from storage so deduplication works after reload (before callback/controllers use it)
+    initializeCompletedBooksSet();
 
     function updateCurrency(rewards) {
         if (!rewards) return;
@@ -288,6 +291,26 @@ export async function initializeCharacterSheet() {
         if (result.movedQuests && result.movedQuests.length > 0) {
             ui.renderActiveAssignments();
             ui.renderCompletedQuests();
+        }
+        // Book count and XP: only when marking a book complete in Library (not from quest completion)
+        if (result.book && result.book.title && completedBooksSet && !completedBooksSet.has(result.book.title)) {
+            completedBooksSet.add(result.book.title);
+            if (saveCompletedBooksSet) saveCompletedBooksSet();
+            const booksCompletedInput = document.getElementById('books-completed-month');
+            if (booksCompletedInput) {
+                const current = parseIntOr(booksCompletedInput.value, 0);
+                if (current < 10) {
+                    booksCompletedInput.value = current + 1;
+                    updateCurrency(RewardCalculator.calculateBookCompletionRewards(1));
+                    const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+                    if (shelfColors.length < 10) {
+                        const newColors = [...shelfColors, ui.getRandomShelfColor()];
+                        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, newColors);
+                        characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = newColors;
+                        ui.renderShelfBooks(current + 1, newColors);
+                    }
+                }
+            }
         }
     };
 
@@ -580,6 +603,17 @@ export async function initializeCharacterSheet() {
             }
             return;
         }
+
+        // Archive tab: group by (Month/Year vs Quest type)
+        const groupByBtn = target.closest('.archive-group-by-btn');
+        if (groupByBtn) {
+            const mode = groupByBtn.getAttribute('data-archive-group-by');
+            if (mode === 'month' || mode === 'type') {
+                safeSetJSON(STORAGE_KEYS.ARCHIVE_GROUP_BY, mode);
+                ui.renderCompletedQuests();
+            }
+            return;
+        }
         
         // Handle archive card clicks:
         // - Desktop pointers: hover flips (CSS), click opens edit drawer
@@ -654,11 +688,10 @@ export async function initializeCharacterSheet() {
     }
 
     // --- INITIALIZE STATE-DEPENDENT UI ---
-    initializeCompletedBooksSet();
-    
+    // completedBooksSet already populated earlier so shelf sync and callbacks see correct set
     // Run post-load repairs to fix any inconsistencies in saved data
     runAllRepairs(stateAdapter, ui);
-    
+
     // Sync dusty blueprints input from characterState (stored separately from form)
     const dustyBlueprintsInput = document.getElementById('dustyBlueprints');
     if (dustyBlueprintsInput) {

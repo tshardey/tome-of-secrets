@@ -330,17 +330,20 @@
     margin-bottom: 16px;
 }
 
-/* Month/year grouping within archive sections (most recent first) */
+/* Month/year grouping: same style as quest section titles (Dungeon Rooms, etc.) */
 .archive-month-heading {
     font-family: 'Lora', serif;
-    font-size: 1rem;
-    color: #8b7355;
-    margin: 20px 0 10px 0;
-    font-weight: 600;
+    font-size: 1.3rem;
+    color: #b89f62;
+    margin: 0 0 16px 0;
+    font-weight: inherit;
     grid-column: 1 / -1; /* span full width when inside a grid */
 }
 .archive-month-heading:first-child {
     margin-top: 0;
+}
+.archive-month-heading:not(:first-child) {
+    margin-top: 24px;
 }
 
 .dungeon-archive-cards-grid {
@@ -550,6 +553,37 @@
 }
 
 #completed-quests-container .archive-face-toggle-btn[aria-pressed="true"] {
+    background: rgba(184, 159, 98, 0.25);
+    border-color: rgba(184, 159, 98, 0.9);
+}
+
+#completed-quests-container .archive-group-by-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 14px 0;
+    flex-wrap: wrap;
+}
+
+#completed-quests-container .archive-group-by-toggle__label {
+    font-size: 0.9rem;
+    color: rgba(212, 200, 176, 0.9);
+    font-family: 'Lora', serif;
+}
+
+#completed-quests-container .archive-group-by-btn {
+    border: 1px solid rgba(184, 159, 98, 0.45);
+    background: rgba(42, 35, 29, 0.65);
+    color: rgba(245, 240, 230, 0.95);
+    font-family: 'Lora', serif;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#completed-quests-container .archive-group-by-btn[aria-pressed="true"] {
     background: rgba(184, 159, 98, 0.25);
     border-color: rgba(184, 159, 98, 0.9);
 }

@@ -556,11 +556,13 @@ function groupByMonthYearDesc(items, getQuest) {
 }
 
 /**
- * Append a month/year heading and then cards to a container. renderCard(item) returns the card element.
+ * Append a month/year heading (with optional count) and then cards to a container. renderCard(item) returns the card element.
+ * @param {boolean} [showCount=true] - If true, append " (n)" to the heading label
  */
-function appendGroupedArchiveCards(container, groups, completedQuests, renderCard) {
+function appendGroupedArchiveCards(container, groups, completedQuests, renderCard, showCount = true) {
     for (const group of groups) {
-        const heading = createElement('h5', { class: 'archive-month-heading' }, group.label);
+        const label = showCount ? `${group.label} (${group.items.length})` : group.label;
+        const heading = createElement('h5', { class: 'archive-month-heading' }, label);
         container.appendChild(heading);
         for (const item of group.items) {
             const quest = item.quest;
@@ -570,15 +572,56 @@ function appendGroupedArchiveCards(container, groups, completedQuests, renderCar
     }
 }
 
+/**
+ * Append cards in a flat list (no month/year subgroups). Used when grouping by quest type only.
+ * Items are shown in completion date order (newest first) via sortKey.
+ */
+function appendFlatArchiveCards(container, items, completedQuests, renderCard) {
+    const sorted = [...items].sort((a, b) => {
+        const keyA = getMonthYearFromQuest(a.quest).sortKey;
+        const keyB = getMonthYearFromQuest(b.quest).sortKey;
+        return keyB.localeCompare(keyA);
+    });
+    for (const item of sorted) {
+        const quest = item.quest;
+        const originalIndex = completedQuests.findIndex(q => q === quest);
+        container.appendChild(renderCard(item, originalIndex));
+    }
+}
+
 export function renderCompletedQuests() {
     const container = document.getElementById('completed-quests-container');
     if (!container) return;
 
     const faceMode = safeGetJSON(STORAGE_KEYS.ARCHIVE_CARD_FACE_MODE, 'poster');
+    const groupBy = safeGetJSON(STORAGE_KEYS.ARCHIVE_GROUP_BY, 'type');
+
     const toggleButtons = container.querySelectorAll('.archive-face-toggle-btn');
     for (const btn of toggleButtons) {
         const mode = btn.getAttribute('data-archive-face');
         btn.setAttribute('aria-pressed', mode === faceMode ? 'true' : 'false');
+    }
+    const groupByButtons = container.querySelectorAll('.archive-group-by-btn');
+    for (const btn of groupByButtons) {
+        const mode = btn.getAttribute('data-archive-group-by');
+        btn.setAttribute('aria-pressed', mode === groupBy ? 'true' : 'false');
+    }
+
+    const byMonthContainer = container.querySelector('#archive-by-month-container');
+    const typeSections = container.querySelector('.completed-quests-sections--by-type');
+    const jumpLinks = container.querySelector('.archive-jump-links--type-mode');
+    if (byMonthContainer && typeSections) {
+        if (groupBy === 'month') {
+            byMonthContainer.style.display = '';
+            byMonthContainer.setAttribute('aria-hidden', 'false');
+            typeSections.style.display = 'none';
+            if (jumpLinks) jumpLinks.style.display = 'none';
+        } else {
+            byMonthContainer.style.display = 'none';
+            byMonthContainer.setAttribute('aria-hidden', 'true');
+            typeSections.style.display = '';
+            if (jumpLinks) jumpLinks.style.display = '';
+        }
     }
 
     const pickFront = ({ posterUrl, coverUrl, fitMode = 'cover' }) => {
@@ -596,6 +639,7 @@ export function renderCompletedQuests() {
     if (!dungeonRoomsContainer || !dungeonEncountersContainer || !cardsContainer) return;
     
     // Clear containers (only clear if they exist)
+    if (byMonthContainer) clearElement(byMonthContainer);
     if (dungeonRoomsContainer) clearElement(dungeonRoomsContainer);
     if (dungeonEncountersContainer) clearElement(dungeonEncountersContainer);
     if (genreQuestsContainer) clearElement(genreQuestsContainer);
@@ -610,8 +654,69 @@ export function renderCompletedQuests() {
     
     // Get quests from state using storage key
     const completedQuests = characterState[STORAGE_KEYS.COMPLETED_QUESTS] || [];
+
+    /** Build archive card props (frontUrl, title, shape, frontFit) for any quest for "by month" view */
+    const getArchiveCardPropsForQuest = (quest) => {
+        if (!quest) return { frontUrl: null, title: '—', shape: 'tall', frontFit: 'cover' };
+        if (quest.type === '♠ Dungeon Crawl') {
+            const vms = createDungeonArchiveCardsViewModel([quest]);
+            const vm = vms[0];
+            if (!vm) return { frontUrl: getEffectiveQuestCoverUrl(quest), title: quest.book || '—', shape: 'tall', frontFit: 'cover' };
+            const url = pickFront({
+                posterUrl: vm.cardImage,
+                coverUrl: getEffectiveQuestCoverUrl(quest),
+                fitMode: vm.isEncounter ? 'contain' : 'cover'
+            }).url;
+            return {
+                frontUrl: url,
+                title: vm.title,
+                shape: vm.isEncounter ? 'square' : 'tall',
+                frontFit: vm.isEncounter ? 'contain' : 'cover'
+            };
+        }
+        if (quest.type === '♥ Organize the Stacks') {
+            const vms = createGenreQuestArchiveCardsViewModel([quest]);
+            const vm = vms[0];
+            const url = pickFront({ posterUrl: vm?.cardImage, coverUrl: getEffectiveQuestCoverUrl(quest), fitMode: 'cover' }).url;
+            return { frontUrl: url || getEffectiveQuestCoverUrl(quest), title: vm?.title || quest.book || '—', shape: 'tall', frontFit: 'cover' };
+        }
+        if (quest.type === '♣ Side Quest') {
+            const vms = createSideQuestArchiveCardsViewModel([quest]);
+            const vm = vms[0];
+            const url = pickFront({ posterUrl: vm?.cardImage, coverUrl: getEffectiveQuestCoverUrl(quest), fitMode: 'cover' }).url;
+            return { frontUrl: url || getEffectiveQuestCoverUrl(quest), title: vm?.title || quest.prompt || '—', shape: 'tall', frontFit: 'cover' };
+        }
+        const frontUrl = getEffectiveQuestCoverUrl(quest);
+        const title = quest.book || quest.prompt || quest.type || '—';
+        return { frontUrl, title, shape: 'tall', frontFit: 'cover' };
+    };
     
-    // Separate quests by type
+    // Group-by-month view: single list grouped by completion month with counts
+    if (groupBy === 'month' && byMonthContainer && completedQuests.length > 0) {
+        const byMonthGroups = groupByMonthYearDesc(
+            completedQuests.map((quest, idx) => ({ quest, originalIndex: idx })),
+            (item) => item.quest
+        );
+        byMonthContainer.classList.add('tome-cards-grid', 'dungeon-archive-cards-grid');
+        for (const group of byMonthGroups) {
+            const heading = createElement('h5', { class: 'archive-month-heading' }, `${group.label} (${group.items.length})`);
+            byMonthContainer.appendChild(heading);
+            for (const item of group.items) {
+                const { quest, originalIndex } = item;
+                const props = getArchiveCardPropsForQuest(quest);
+                const card = renderTomeArchiveCard(
+                    quest,
+                    originalIndex,
+                    props.frontUrl,
+                    props.title,
+                    { frontFit: props.frontFit, shape: props.shape }
+                );
+                byMonthContainer.appendChild(card);
+            }
+        }
+    }
+    
+    // Separate quests by type (for group-by-type view)
     const dungeonQuests = completedQuests.filter(quest => quest.type === '♠ Dungeon Crawl');
     const genreQuests = completedQuests.filter(quest => quest.type === '♥ Organize the Stacks');
     const sideQuests = completedQuests.filter(quest => quest.type === '♣ Side Quest');
@@ -628,26 +733,29 @@ export function renderCompletedQuests() {
     const roomViewModels = allDungeonViewModels.filter(vm => !vm.isEncounter);
     const encounterViewModels = allDungeonViewModels.filter(vm => vm.isEncounter);
     
-    // Render dungeon room cards grouped by month/year (most recent first)
+    // Render dungeon room cards: flat list when grouping by type, or by month when grouping by month (month view uses byMonthContainer)
     if (roomViewModels.length > 0) {
         dungeonRoomsContainer.classList.add('tome-cards-grid');
-        const roomGroups = groupByMonthYearDesc(roomViewModels, vm => vm.quest);
-        appendGroupedArchiveCards(dungeonRoomsContainer, roomGroups, completedQuests, (viewModel, originalIndex) =>
+        const roomRenderCard = (viewModel, originalIndex) =>
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
                 pickFront({ posterUrl: viewModel.cardImage, coverUrl: getEffectiveQuestCoverUrl(viewModel.quest), fitMode: 'cover' }).url,
                 viewModel.title,
                 { frontFit: 'cover', shape: 'tall' }
-            )
-        );
+            );
+        appendFlatArchiveCards(dungeonRoomsContainer, roomViewModels, completedQuests, roomRenderCard);
+    }
+    const archiveRoomsSection = dungeonRoomsContainer.closest('.dungeon-archive-section');
+    if (archiveRoomsSection) {
+        const h4 = archiveRoomsSection.querySelector('h4');
+        if (h4) h4.textContent = `Dungeon Rooms (${roomViewModels.length})`;
     }
     
-    // Render dungeon encounter cards grouped by month/year (most recent first)
+    // Render dungeon encounter cards: flat list when grouping by type
     if (encounterViewModels.length > 0) {
         dungeonEncountersContainer.classList.add('tome-cards-grid');
-        const encounterGroups = groupByMonthYearDesc(encounterViewModels, vm => vm.quest);
-        appendGroupedArchiveCards(dungeonEncountersContainer, encounterGroups, completedQuests, (viewModel, originalIndex) =>
+        const encounterRenderCard = (viewModel, originalIndex) =>
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
@@ -658,40 +766,57 @@ export function renderCompletedQuests() {
                 }).url,
                 viewModel.title,
                 { frontFit: 'contain', shape: 'square' }
-            )
-        );
+            );
+        appendFlatArchiveCards(dungeonEncountersContainer, encounterViewModels, completedQuests, encounterRenderCard);
+    }
+    const archiveEncountersSection = dungeonEncountersContainer.closest('.dungeon-archive-section');
+    if (archiveEncountersSection) {
+        const h4 = archiveEncountersSection.querySelector('h4');
+        if (h4) h4.textContent = `Dungeon Encounters (${encounterViewModels.length})`;
     }
     
-    // Render genre quest cards as Tome Cards (flip: cover front, stat block back)
+    // Render genre quest cards: flat list when grouping by type
     if (genreQuestsContainer && genreQuests.length > 0) {
         genreQuestsContainer.classList.add('tome-cards-grid');
         const genreViewModels = createGenreQuestArchiveCardsViewModel(genreQuests);
-        const genreGroups = groupByMonthYearDesc(genreViewModels, vm => vm.quest);
-        appendGroupedArchiveCards(genreQuestsContainer, genreGroups, completedQuests, (viewModel, originalIndex) =>
+        const genreRenderCard = (viewModel, originalIndex) =>
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
                 pickFront({ posterUrl: viewModel.cardImage, coverUrl: getEffectiveQuestCoverUrl(viewModel.quest), fitMode: 'cover' }).url,
                 viewModel.title,
                 { frontFit: 'cover', shape: 'tall' }
-            )
-        );
+            );
+        appendFlatArchiveCards(genreQuestsContainer, genreViewModels, completedQuests, genreRenderCard);
+    }
+    if (genreQuestsContainer) {
+        const archiveGenreSection = genreQuestsContainer.closest('.dungeon-archive-section');
+        if (archiveGenreSection) {
+            const h4 = archiveGenreSection.querySelector('h4');
+            if (h4) h4.textContent = `Organize the Stacks (Genre Quests) (${genreQuests.length})`;
+        }
     }
 
-    // Render side quest cards as Tome Cards (flip: cover front, stat block back)
+    // Render side quest cards: flat list when grouping by type
     if (sideQuestsContainer && sideQuests.length > 0) {
         sideQuestsContainer.classList.add('tome-cards-grid');
         const sideViewModels = createSideQuestArchiveCardsViewModel(sideQuests);
-        const sideGroups = groupByMonthYearDesc(sideViewModels, vm => vm.quest);
-        appendGroupedArchiveCards(sideQuestsContainer, sideGroups, completedQuests, (viewModel, originalIndex) =>
+        const sideRenderCard = (viewModel, originalIndex) =>
             renderTomeArchiveCard(
                 viewModel.quest,
                 originalIndex,
                 pickFront({ posterUrl: viewModel.cardImage, coverUrl: getEffectiveQuestCoverUrl(viewModel.quest), fitMode: 'cover' }).url,
                 viewModel.title,
                 { frontFit: 'cover', shape: 'tall' }
-            )
-        );
+            );
+        appendFlatArchiveCards(sideQuestsContainer, sideViewModels, completedQuests, sideRenderCard);
+    }
+    if (sideQuestsContainer) {
+        const archiveSideSection = sideQuestsContainer.closest('.dungeon-archive-section');
+        if (archiveSideSection) {
+            const h4 = archiveSideSection.querySelector('h4');
+            if (h4) h4.textContent = `Side Quests (${sideQuests.length})`;
+        }
     }
     
     // Render other quest cards (includes genre/side quests if their containers don't exist) grouped by month/year
@@ -704,7 +829,7 @@ export function renderCompletedQuests() {
         ];
     
     if (questsToRenderInOther.length > 0) {
-        // Render "Other" as Tome Cards too (these quests generally don't have posters, so cover is the best tile).
+        // Render "Other" as Tome Cards: flat list when grouping by type
         cardsContainer.classList.add('dungeon-archive-cards-grid', 'tome-cards-grid');
 
         const isPosterlessOtherType = (quest) =>
@@ -717,43 +842,28 @@ export function renderCompletedQuests() {
             const viewModels = createQuestListViewModel([quest], 'completed', background, wizardSchool);
             return { ...viewModels[0], quest, index: originalIndex };
         });
-        const otherGroups = groupByMonthYearDesc(otherViewModels, vm => vm.quest);
-        for (const group of otherGroups) {
-            const heading = createElement('h5', { class: 'archive-month-heading' }, group.label);
-            cardsContainer.appendChild(heading);
-            for (const viewModel of group.items) {
-                const quest = viewModel.quest;
-                const isOther = isPosterlessOtherType(quest);
-
-                const posterUrl = (() => {
-                    if (!quest) return null;
-                    if (quest.type === '♠ Dungeon Crawl') {
-                        return createDungeonArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
-                    }
-                    if (quest.type === '♥ Organize the Stacks') {
-                        return createGenreQuestArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
-                    }
-                    if (quest.type === '♣ Side Quest') {
-                        return createSideQuestArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
-                    }
-                    return null;
-                })();
-
-                const frontUrl = isOther
-                    ? getEffectiveQuestCoverUrl(quest)
-                    : pickFront({ posterUrl, coverUrl: getEffectiveQuestCoverUrl(quest), fitMode: 'cover' }).url;
-
-                const cardTitle = quest.book || quest.prompt || quest.type || '—';
-                const card = renderTomeArchiveCard(
-                    quest,
-                    viewModel.index,
-                    frontUrl,
-                    cardTitle,
-                    { frontFit: 'cover', shape: 'tall' }
-                );
-                cardsContainer.appendChild(card);
-            }
-        }
+        const otherRenderCard = (viewModel, originalIndex) => {
+            const quest = viewModel.quest;
+            const isOther = isPosterlessOtherType(quest);
+            const posterUrl = (() => {
+                if (!quest) return null;
+                if (quest.type === '♠ Dungeon Crawl') return createDungeonArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
+                if (quest.type === '♥ Organize the Stacks') return createGenreQuestArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
+                if (quest.type === '♣ Side Quest') return createSideQuestArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
+                return null;
+            })();
+            const frontUrl = isOther
+                ? getEffectiveQuestCoverUrl(quest)
+                : pickFront({ posterUrl, coverUrl: getEffectiveQuestCoverUrl(quest), fitMode: 'cover' }).url;
+            const cardTitle = quest.book || quest.prompt || quest.type || '—';
+            return renderTomeArchiveCard(quest, originalIndex, frontUrl, cardTitle, { frontFit: 'cover', shape: 'tall' });
+        };
+        appendFlatArchiveCards(cardsContainer, otherViewModels, completedQuests, otherRenderCard);
+    }
+    const archiveOtherSection = document.getElementById('archive-other');
+    if (archiveOtherSection) {
+        const h4 = archiveOtherSection.querySelector('h4');
+        if (h4) h4.textContent = `Other Quests (${questsToRenderInOther.length})`;
     }
     
     const summary = document.getElementById('completed-summary');

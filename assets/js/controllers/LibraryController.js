@@ -483,6 +483,24 @@ export class LibraryController extends BaseController {
         }
         if (statusEl) statusEl.value = book.status || 'reading';
 
+        const dateCompletedEl = document.getElementById('book-edit-date-completed');
+        if (dateCompletedEl) {
+            if (book.dateCompleted && typeof book.dateCompleted === 'string') {
+                try {
+                    const d = new Date(book.dateCompleted);
+                    if (!isNaN(d.getTime())) {
+                        dateCompletedEl.value = d.toISOString().slice(0, 10);
+                    } else {
+                        dateCompletedEl.value = '';
+                    }
+                } catch (_) {
+                    dateCompletedEl.value = '';
+                }
+            } else {
+                dateCompletedEl.value = '';
+            }
+        }
+
         if (valueEl) valueEl.value = book.cover || '';
         const preview = document.getElementById('book-edit-cover-preview');
         const placeholder = document.getElementById('book-edit-cover-placeholder');
@@ -566,12 +584,21 @@ export class LibraryController extends BaseController {
         const statusEl = document.getElementById('book-edit-status');
         const status = statusEl?.value === 'completed' || statusEl?.value === 'other' ? statusEl.value : 'reading';
 
+        const dateCompletedInput = document.getElementById('book-edit-date-completed');
+        let dateCompleted = null;
+        if (dateCompletedInput && dateCompletedInput.value && dateCompletedInput.value.trim()) {
+            const dateStr = dateCompletedInput.value.trim();
+            const parsed = new Date(dateStr + 'T12:00:00Z');
+            if (!isNaN(parsed.getTime())) dateCompleted = parsed.toISOString();
+        }
+
         this.stateAdapter.updateBook(bookId, {
             title,
             author,
             cover,
             pageCount: pageCountNum,
-            status
+            status,
+            dateCompleted
         });
         this._closeBookEditDrawer();
         this.renderBooks();
@@ -603,6 +630,33 @@ export class LibraryController extends BaseController {
         });
     }
 
+    /**
+     * Group completed books by completion year (from dateCompleted), most recent first.
+     * Books without dateCompleted are grouped under "Unknown".
+     * @returns {Array<{ year: string, books: Object[] }>}
+     */
+    _groupCompletedBooksByYear(completedBooks) {
+        if (!completedBooks || completedBooks.length === 0) return [];
+        const byYear = new Map();
+        for (const book of completedBooks) {
+            const dateStr = book.dateCompleted || book.dateAdded || '';
+            const year = dateStr ? String(new Date(dateStr).getFullYear()) : 'Unknown';
+            if (!byYear.has(year)) byYear.set(year, []);
+            byYear.get(year).push(book);
+        }
+        for (const books of byYear.values()) {
+            books.sort((a, b) => {
+                const dateA = a.dateCompleted || a.dateAdded || '';
+                const dateB = b.dateCompleted || b.dateAdded || '';
+                return dateB.localeCompare(dateA) || (a.title || '').localeCompare(b.title || '');
+            });
+        }
+        const years = Array.from(byYear.keys()).filter((y) => y !== 'Unknown');
+        years.sort((a, b) => Number(b) - Number(a));
+        if (byYear.has('Unknown')) years.push('Unknown');
+        return years.map((year) => ({ year, books: byYear.get(year) }));
+    }
+
     renderBooks() {
         const reading = document.getElementById('library-cards-reading');
         const completed = document.getElementById('library-cards-completed');
@@ -612,8 +666,26 @@ export class LibraryController extends BaseController {
         const byStatus = (status) => this.stateAdapter.getBooksByStatus(status);
 
         reading.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('reading')));
-        completed.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('completed')));
+        const completedBooks = byStatus('completed');
+        completed.innerHTML = this._renderCompletedByYear(completedBooks);
+        completed.classList.toggle('library-cards-completed--by-year', completedBooks.length > 0);
         other.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('other')));
+    }
+
+    _renderCompletedByYear(completedBooks) {
+        if (!completedBooks || completedBooks.length === 0) {
+            return '<p class="library-empty-section">None</p>';
+        }
+        const groups = this._groupCompletedBooksByYear(completedBooks);
+        return groups
+            .map(
+                ({ year, books }) =>
+                    `<div class="library-completed-year-group">` +
+                    `<h4 class="library-year-heading">${this._escapeHtml(year)} (${books.length})</h4>` +
+                    `<div class="library-cards-grid">${this._renderCardList(books)}</div>` +
+                    `</div>`
+            )
+            .join('');
     }
 
     _renderCardList(books) {

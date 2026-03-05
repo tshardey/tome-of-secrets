@@ -1693,9 +1693,9 @@ describe('Character Sheet', () => {
         'The Candlight Study': { daysUsed: 10, isActive: true }
       };
 
-      // Set up books completed counter
+      // Set up books completed counter (book completion XP is now awarded when marking complete in Library, not at end of month)
       const booksCompletedInput = document.getElementById('books-completed-month');
-      booksCompletedInput.value = '3'; // 3 unique books
+      booksCompletedInput.value = '3';
 
       // Get initial values
       const xpInput = document.getElementById('xp-current');
@@ -1707,9 +1707,9 @@ describe('Character Sheet', () => {
       const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
 
-      // Verify XP was added (15 XP per book = 45 XP)
+      // Book completion XP is no longer added at end of month (awarded when marking book complete in Library)
       const finalXP = parseInt(xpInput.value, 10) || 0;
-      expect(finalXP).toBe(initialXP + 45);
+      expect(finalXP).toBe(initialXP);
 
       // Verify ink drops were added (10 days * 1 ink drop per day = 10 ink drops)
       const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
@@ -1842,8 +1842,8 @@ describe('Character Sheet', () => {
       expect(finalPaperScraps).toBeGreaterThan(initialPaperScraps);
     });
 
-    it('should track unique books in completedBooksSet', () => {
-      // Add and complete a quest with a specific book
+    it('should not increment books completed counter when completing a quest (counter only updates when marking book complete in Library)', () => {
+      // Add and complete a quest with a book - book count is no longer updated by quest completion
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
       document.getElementById('new-quest-book-id').value = 'unique-book-title';
@@ -1860,28 +1860,9 @@ describe('Character Sheet', () => {
       expect(completeBtn1).toBeTruthy();
       completeBtn1.click();
 
-      // Check books completed counter
+      // Books completed counter is only updated when marking a book complete in Library tab, not when completing a quest
       const booksCompletedInput = document.getElementById('books-completed-month');
-      expect(parseInt(booksCompletedInput.value, 10)).toBe(1);
-
-      // Add another quest with the same book
-      document.getElementById('quest-month').value = 'October';
-      document.getElementById('quest-year').value = '2025';
-      document.getElementById('new-quest-book-id').value = 'unique-book-title';
-
-      questTypeSelect.value = '♣ Side Quest';
-      questTypeSelect.dispatchEvent(new Event('change'));
-
-      document.getElementById('side-quest-select').value = sideQuests['2'];
-      document.getElementById('add-quest-button').click();
-
-      // Complete the second quest
-      const completeBtn2 = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
-      expect(completeBtn2).toBeTruthy();
-      completeBtn2.click();
-
-      // Books completed should still be 1 (same book)
-      expect(parseInt(booksCompletedInput.value, 10)).toBe(1);
+      expect(parseInt(booksCompletedInput.value, 10)).toBe(0);
     });
 
     it('should sync bookshelf input value from completedBooksSet on initialization', () => {
