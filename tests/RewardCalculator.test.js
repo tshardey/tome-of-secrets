@@ -292,25 +292,26 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
 
     test('should check both temporaryBuffs and temporaryBuffsFromRewards', () => {
         // This test verifies that the RewardCalculator checks both sources
-        const modifier = RewardCalculator._getModifier('Long Read Focus', false, false);
+        const result = RewardCalculator._getModifier('Long Read Focus', false, false);
         
         // Long Read Focus should exist in temporaryBuffsFromRewards (legacy)
         // or temporaryBuffs (new)
-        expect(modifier).toBeDefined();
+        expect(result.modifier).toBeDefined();
     });
 
     test('should use passiveRewardModifier for items in passive slots', () => {
-        // Setup: Add an item to a passive slot
+        // Setup: Add an item to a passive slot; quest meets page condition (>= 500)
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
             { itemName: "The Bookwyrm's Scale" }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
+        const quest = { pageCountEffective: 600 };
         // The Bookwyrm's Scale in passive slot should give +5 ink drops (passive), not +10 (active)
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] The Bookwyrm\'s Scale'
-        ]);
+        ], { quest });
 
         expect(modified.inkDrops).toBe(15); // 10 base + 5 passive bonus
         expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
@@ -320,7 +321,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 
     test('should use active rewardModifier for equipped items, even if also in passive slot', () => {
-        // Setup: Item in both passive slot AND equipped
+        // Setup: Item in both passive slot AND equipped; quest meets page condition (>= 500)
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
             { itemName: "The Bookwyrm's Scale" }
         ];
@@ -329,10 +330,11 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         ];
 
         const base = new Reward({ inkDrops: 10 });
+        const quest = { pageCountEffective: 600 };
         // When equipped, should use active modifier (+10), not passive (+5)
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] The Bookwyrm\'s Scale'
-        ]);
+        ], { quest });
 
         expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
         expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
@@ -363,17 +365,18 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 
     test('should use active modifier for items not in passive slots', () => {
-        // Setup: No passive slots, item is just equipped
+        // Setup: No passive slots, item is just equipped; quest meets page condition (>= 500)
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
             { name: "The Bookwyrm's Scale" }
         ];
 
         const base = new Reward({ inkDrops: 10 });
+        const quest = { pageCountEffective: 600 };
         // Should use active modifier (+10)
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] The Bookwyrm\'s Scale'
-        ]);
+        ], { quest });
 
         expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
         expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
@@ -383,23 +386,103 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 
     test('should handle passive multiplier modifiers correctly', () => {
-        // Setup: Add an item with a passive multiplier to a passive slot
+        // Setup: Add an item with a passive multiplier to a passive slot; Page Sprite requires < 300 pages
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
             { itemName: 'Page Sprite' }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        // Page Sprite passive: x1.5 multiplier (active is x2)
+        const quest = { pageCountEffective: 200 };
+        // Page Sprite passive: x1.5 multiplier (active is x2) when book under 300 pages
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] Page Sprite'
-        ]);
+        ], { quest });
 
         expect(modified.inkDrops).toBe(15); // 10 * 1.5 = 15
         expect(modified.modifiedBy).toContain('Page Sprite');
 
         // Cleanup
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+    });
+
+    describe('page-count-aware item modifiers', () => {
+        test('should apply Bookwyrm\'s Scale when pageCountEffective >= 500', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "The Bookwyrm's Scale" }];
+            const base = new Reward({ inkDrops: 10 });
+            const modified = RewardCalculator.applyModifiers(base, ['[Item] The Bookwyrm\'s Scale'], {
+                quest: { pageCountEffective: 500 }
+            });
+            expect(modified.inkDrops).toBe(20);
+            expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
+
+        test('should skip Bookwyrm\'s Scale when pageCountEffective < 500', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "The Bookwyrm's Scale" }];
+            const base = new Reward({ inkDrops: 10 });
+            const modified = RewardCalculator.applyModifiers(base, ['[Item] The Bookwyrm\'s Scale'], {
+                quest: { pageCountEffective: 320 }
+            });
+            expect(modified.inkDrops).toBe(10);
+            expect(modified.modifiedBy).not.toContain("The Bookwyrm's Scale");
+            const skipEntry = modified.receipt.modifiers.find(m =>
+                m.source === "The Bookwyrm's Scale" && m.description && m.description.includes('skipped')
+            );
+            expect(skipEntry).toBeDefined();
+            expect(skipEntry.description).toContain('320 pages < 500 threshold');
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
+
+        test('should skip page-condition item when page count unknown', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "The Bookwyrm's Scale" }];
+            const base = new Reward({ inkDrops: 10 });
+            const modified = RewardCalculator.applyModifiers(base, ['[Item] The Bookwyrm\'s Scale'], {});
+            expect(modified.inkDrops).toBe(10);
+            expect(modified.modifiedBy).not.toContain("The Bookwyrm's Scale");
+            const skipEntry = modified.receipt.modifiers.find(m =>
+                m.source === "The Bookwyrm's Scale" && m.description && m.description.includes('page count unknown')
+            );
+            expect(skipEntry).toBeDefined();
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
+
+        test('should apply Tome of Potential when pageCountEffective >= 400', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Tome of Potential' }];
+            const base = new Reward({ inkDrops: 10 });
+            const modified = RewardCalculator.applyModifiers(base, ['[Item] Tome of Potential'], {
+                quest: { pageCountEffective: 450 }
+            });
+            expect(modified.inkDrops).toBe(30); // 10 * 3
+            expect(modified.modifiedBy).toContain('Tome of Potential');
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
+
+        test('should apply Page Sprite when pageCountEffective < 300', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Page Sprite' }];
+            const base = new Reward({ inkDrops: 10 });
+            const modified = RewardCalculator.applyModifiers(base, ['[Item] Page Sprite'], {
+                quest: { pageCountEffective: 200 }
+            });
+            expect(modified.inkDrops).toBe(20); // 10 * 2
+            expect(modified.modifiedBy).toContain('Page Sprite');
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
+
+        test('should skip Page Sprite when pageCountEffective >= 300', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Page Sprite' }];
+            const base = new Reward({ inkDrops: 10 });
+            const modified = RewardCalculator.applyModifiers(base, ['[Item] Page Sprite'], {
+                quest: { pageCountEffective: 350 }
+            });
+            expect(modified.inkDrops).toBe(10);
+            expect(modified.modifiedBy).not.toContain('Page Sprite');
+            const skipEntry = modified.receipt.modifiers.find(m =>
+                m.source === 'Page Sprite' && m.description && m.description.includes('skipped')
+            );
+            expect(skipEntry).toBeDefined();
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
     });
 });
 

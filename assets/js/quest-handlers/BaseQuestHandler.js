@@ -119,9 +119,9 @@ export class BaseQuestHandler {
     calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null) {
         let finalRewards = baseRewards;
 
-        // Apply buff modifiers if any buffs are selected
+        // Apply buff modifiers if any buffs are selected (pass quest for page-count-aware items)
         if (selectedBuffs && selectedBuffs.length > 0) {
-            finalRewards = RewardCalculator.applyModifiers(baseRewards, selectedBuffs);
+            finalRewards = RewardCalculator.applyModifiers(baseRewards, selectedBuffs, { quest });
         }
 
         // Always apply background bonuses (independent of buffs)
@@ -136,6 +136,26 @@ export class BaseQuestHandler {
     }
 
     /**
+     * Enrich a quest with page count from its linked book (for page-count-aware reward modifiers).
+     * Mutates quest in place; no-op if getBook is missing, quest has no bookId, or book has no page count.
+     * @param {Object} quest - Quest object (may have bookId)
+     * @param {function(string): Object|null} getBook - Function to resolve book by id (e.g. stateAdapter.getBook)
+     */
+    static enrichQuestWithBookPageCount(quest, getBook) {
+        if (!quest || !getBook || typeof getBook !== 'function' || !quest.bookId) return;
+        const book = getBook(quest.bookId);
+        if (!book) return;
+        const pc = typeof book.pageCount === 'number' && !isNaN(book.pageCount)
+            ? book.pageCount
+            : (typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? book.pageCountRaw : null);
+        if (pc != null) {
+            const value = Math.max(0, Math.floor(pc));
+            quest.pageCountEffective = value;
+            quest.pageCountRaw = value;
+        }
+    }
+
+    /**
      * Process quests for completion (apply modifiers and convert to JSON)
      * @param {Array} quests - Array of quest objects with base rewards
      * @param {Array} selectedBuffs - Selected buff/item names
@@ -144,7 +164,9 @@ export class BaseQuestHandler {
      * @returns {Array} Quests with finalized rewards
      */
     processCompletedQuests(quests, selectedBuffs, background, wizardSchool = null) {
+        const getBook = this.data && typeof this.data.getBook === 'function' ? this.data.getBook : null;
         return quests.map(quest => {
+            if (getBook) BaseQuestHandler.enrichQuestWithBookPageCount(quest, getBook);
             const finalRewards = this.calculateFinalRewards(
                 quest.rewards,
                 quest,
@@ -233,9 +255,9 @@ export class BaseQuestHandler {
         
         let finalRewards = baseRewards;
         
-        // Apply buff modifiers if any buffs are selected
+        // Apply buff modifiers if any buffs are selected (pass quest for page-count-aware items)
         if (quest.buffs && quest.buffs.length > 0) {
-            finalRewards = RewardCalculator.applyModifiers(baseRewards, quest.buffs);
+            finalRewards = RewardCalculator.applyModifiers(baseRewards, quest.buffs, { quest });
             // Preserve items after applying modifiers
             if (quest.rewards?.items && Array.isArray(quest.rewards.items)) {
                 finalRewards.items = [...finalRewards.items, ...quest.rewards.items];

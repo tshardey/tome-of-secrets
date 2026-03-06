@@ -236,15 +236,49 @@ export class RewardCalculator {
     }
 
     /**
+     * Check if page count meets a condition { min?, max? }
+     * @private
+     */
+    static _meetsPageCondition(pageCount, condition) {
+        if (!condition || (condition.min == null && condition.max == null)) return true;
+        if (pageCount == null || typeof pageCount !== 'number' || isNaN(pageCount)) return false;
+        if (condition.min != null && pageCount < condition.min) return false;
+        if (condition.max != null && pageCount > condition.max) return false;
+        return true;
+    }
+
+    /**
+     * Get skip reason for page-condition items when condition is not met (for receipt)
+     * @private
+     */
+    static _getPageConditionSkipReason(cleanName, pageCountEffective, condition) {
+        if (!condition || (condition.min == null && condition.max == null)) return null;
+        if (pageCountEffective == null || typeof pageCountEffective !== 'number' || isNaN(pageCountEffective)) {
+            return 'page count unknown';
+        }
+        if (condition.min != null && pageCountEffective < condition.min) {
+            return `${pageCountEffective} pages < ${condition.min} threshold`;
+        }
+        if (condition.max != null && pageCountEffective > condition.max) {
+            return `${pageCountEffective} pages > ${condition.max} threshold`;
+        }
+        return null;
+    }
+
+    /**
      * Apply buff and item modifiers to base rewards
      * @param {Reward} baseRewards - Base rewards to modify
      * @param {Array<string>} appliedBuffs - Array of buff/item names (with prefixes)
+     * @param {Object} [options] - Optional context: { quest } for page-count-aware item modifiers
      * @returns {Reward} - Modified rewards
      */
-    static applyModifiers(baseRewards, appliedBuffs = []) {
+    static applyModifiers(baseRewards, appliedBuffs = [], options = {}) {
         if (!appliedBuffs || appliedBuffs.length === 0) {
             return baseRewards.clone();
         }
+
+        const quest = options.quest != null ? options.quest : {};
+        const pageCountEffective = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
 
         const modified = baseRewards.clone();
         const multipliers = [];
@@ -252,8 +286,21 @@ export class RewardCalculator {
         // First pass: Apply additive bonuses
         appliedBuffs.forEach(buffName => {
             const { cleanName, isItem, isBackground } = this._parseBuffName(buffName);
-            const modifier = this._getModifier(cleanName, isItem, isBackground);
+            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective });
 
+            // Page-condition skip: add receipt and do not apply
+            if (result.skipReason) {
+                modified.receipt.modifiers.push({
+                    source: cleanName,
+                    type: 'item',
+                    value: null,
+                    description: `${cleanName}: skipped (${result.skipReason})`,
+                    currency: null
+                });
+                return;
+            }
+
+            const modifier = result.modifier;
             if (modifier) {
                 // Track modifier application in receipt
                 const modifierEntry = {
@@ -422,51 +469,60 @@ export class RewardCalculator {
     }
 
     /**
-     * Get modifier data for a buff/item/background
+     * Get modifier data for a buff/item/background. Returns { modifier, skipReason? } for
+     * page-condition items when condition is not met; otherwise { modifier } or { modifier: null }.
      * @private
      */
-    static _getModifier(cleanName, isItem, isBackground) {
+    static _getModifier(cleanName, isItem, isBackground, context = {}) {
+        const pageCountEffective = context.pageCountEffective;
+
         // Background bonuses
         if (isBackground) {
             if (cleanName === 'Archivist Bonus' || cleanName === 'Prophet Bonus' || cleanName === 'Cartographer Bonus') {
-                return { inkDrops: GAME_CONFIG.backgrounds.backgroundBonus.inkDrops };
+                return { modifier: { inkDrops: GAME_CONFIG.backgrounds.backgroundBonus.inkDrops } };
             }
-            return null;
+            return { modifier: null };
         }
 
-        // Item modifiers
+        // Item modifiers (including page-condition checks)
         if (isItem && data.allItems[cleanName]) {
             const item = data.allItems[cleanName];
-            
+
             // Check if this item is currently in a passive slot (not equipped)
-            // If so, use passiveRewardModifier; otherwise use rewardModifier
             const passiveItemSlots = characterState?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
             const passiveFamiliarSlots = characterState?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
             const isInPassiveSlot = passiveItemSlots.some(slot => slot.itemName === cleanName) ||
                                    passiveFamiliarSlots.some(slot => slot.itemName === cleanName);
-            
-            // Check if item is also equipped (if so, use active modifier)
             const equippedItems = characterState?.[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
             const isEquipped = equippedItems.some(equipped => equipped.name === cleanName);
-            
-            // If item is in a passive slot AND not equipped, use passiveRewardModifier
-            if (isInPassiveSlot && !isEquipped && item.passiveRewardModifier) {
-                return item.passiveRewardModifier;
+            const forPassive = isInPassiveSlot && !isEquipped;
+
+            // Use passive condition when in passive slot, fall back to pageCondition when passive variant not defined
+            const condition = forPassive
+                ? (item.passivePageCondition ?? item.pageCondition)
+                : item.pageCondition;
+            if (condition && (condition.min != null || condition.max != null)) {
+                if (!this._meetsPageCondition(pageCountEffective, condition)) {
+                    const skipReason = this._getPageConditionSkipReason(cleanName, pageCountEffective, condition);
+                    return { modifier: null, skipReason };
+                }
             }
-            
-            // Otherwise use the regular rewardModifier
-            return item.rewardModifier;
+
+            if (forPassive && item.passiveRewardModifier) {
+                return { modifier: item.passiveRewardModifier };
+            }
+            return { modifier: item.rewardModifier };
         }
 
         // Temporary buff modifiers (check both new and legacy sources)
         if (data.temporaryBuffs && data.temporaryBuffs[cleanName]) {
-            return data.temporaryBuffs[cleanName].rewardModifier;
+            return { modifier: data.temporaryBuffs[cleanName].rewardModifier };
         }
         if (data.temporaryBuffsFromRewards && data.temporaryBuffsFromRewards[cleanName]) {
-            return data.temporaryBuffsFromRewards[cleanName].rewardModifier;
+            return { modifier: data.temporaryBuffsFromRewards[cleanName].rewardModifier };
         }
 
-        return null;
+        return { modifier: null };
     }
 
     /**
@@ -491,9 +547,9 @@ export class RewardCalculator {
         // Get base rewards
         let rewards = this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName, isBefriend });
 
-        // Apply buff/item modifiers
+        // Apply buff/item modifiers (pass quest for page-count-aware items)
         if (appliedBuffs.length > 0) {
-            rewards = this.applyModifiers(rewards, appliedBuffs);
+            rewards = this.applyModifiers(rewards, appliedBuffs, { quest });
         }
 
         // Apply background bonuses

@@ -2591,40 +2591,37 @@ describe('Character Sheet', () => {
       characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
     });
 
-    it('should apply passive item modifier when selected in quest buffs', () => {
+    it('should apply passive item modifier when selected in quest buffs (page-count-aware: no page count skips bonus)', () => {
       const { characterState } = require('../assets/js/character-sheet/state.js');
       const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
       
-      // Setup: Add an item to a passive slot
+      // Setup: Add an item to a passive slot (Bookwyrm's Scale requires page count >= 500)
       characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
         { itemName: "The Bookwyrm's Scale" }
       ];
       characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
       
-      // Create a quest with the passive item buff
+      // Create a quest with the passive item buff (no book page count on new quest form)
       document.getElementById('quest-month').value = 'October';
       document.getElementById('quest-year').value = '2025';
       document.getElementById('new-quest-type').value = '♥ Organize the Stacks';
       document.getElementById('new-quest-type').dispatchEvent(new Event('change'));
       
       const genreSelect = document.getElementById('genre-quest-select');
-      // Pick a valid option from the populated dropdown (avoid brittle hard-coded strings)
       const firstGenreOption = genreSelect?.options?.[1];
       genreSelect.value = firstGenreOption ? firstGenreOption.value : '';
       
       document.getElementById('new-quest-book-id').value = 'test-book';
       
-      // Select the passive item via the hidden JSON input used by the card-based UI
       const hiddenBuffsInput = document.getElementById('quest-buffs-select');
       hiddenBuffsInput.value = JSON.stringify(["[Item] The Bookwyrm's Scale"]);
       
-      // Add quest as completed
       document.getElementById('new-quest-status').value = 'completed';
       document.getElementById('add-quest-button').click();
       
-      // Check that quest was added with passive bonus (+5, not +10)
+      // Without quest page count, page-condition items are skipped (conservative: require known page count)
       const completedQuest = characterState.completedQuests[characterState.completedQuests.length - 1];
-      expect(completedQuest.rewards.inkDrops).toBe(15); // 10 base + 5 passive bonus
+      expect(completedQuest.rewards.inkDrops).toBe(10); // base only; Bookwyrm's Scale skipped (page count unknown)
       expect(completedQuest.buffs).toContain("[Item] The Bookwyrm's Scale");
       
       // Cleanup

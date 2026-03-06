@@ -1092,9 +1092,16 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
         }
     }
     
-    // Add active temporary buffs
+    // Add active temporary buffs (exclude utility-only buffs that don't affect quest rewards)
+    const TEMP_BUFFS_EXCLUDED_FROM_QUEST_BONUSES = new Set([
+        "The Librarian's Hoard",
+        "Unwavering Resolve",
+        "The Archivist's Favor",
+        "Librarian's Blessing"
+    ]);
     const activeBuffs = characterState.temporaryBuffs.filter(buff => buff.status === 'active');
     activeBuffs.forEach((buff) => {
+        if (TEMP_BUFFS_EXCLUDED_FROM_QUEST_BONUSES.has(buff.name)) return;
         bonuses.push({
             value: `[Buff] ${buff.name}`,
             name: buff.name,
