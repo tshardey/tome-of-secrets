@@ -81,7 +81,9 @@
         },
         "passiveRewardModifier": {
             "inkDrops": 5
-        }
+        },
+        "pageCondition": { "min": 500 },
+        "passivePageCondition": { "min": 500 }
     },
     "Key of the Archive": {
         "id": "key-of-the-archive",
@@ -109,7 +111,9 @@
         },
         "passiveRewardModifier": {
             "inkDropsMultiplier": 1.5
-        }
+        },
+        "pageCondition": { "min": 400 },
+        "passivePageCondition": { "min": 400 }
     },
     "Librarian's Quill": {
         "id": "librarians-quill",
@@ -123,7 +127,8 @@
         },
         "passiveRewardModifier": {
             "paperScraps": 1
-        }
+        },
+        "excludeFromQuestBonuses": true
     },
     "Chalice of Restoration": {
         "id": "chalice-of-restoration",
@@ -133,7 +138,8 @@
         "bonus": "Once per month, you may use this item to remove a Worn Page penalty.",
         "passiveBonus": "Once every 2 months, you may use this item to remove a Worn Page penalty (passive).",
         "rewardModifier": {},
-        "passiveRewardModifier": {}
+        "passiveRewardModifier": {},
+        "excludeFromQuestBonuses": true
     },
     "Lantern of Foresight": {
         "id": "lantern-of-foresight",
@@ -181,7 +187,8 @@
         "bonus": "Once per month, you may use this familiar's insight to switch a genre-based quest to its opposing genre.",
         "passiveBonus": "Once every 2 months, you may switch a genre quest to its opposing genre (passive).",
         "rewardModifier": {},
-        "passiveRewardModifier": {}
+        "passiveRewardModifier": {},
+        "excludeFromQuestBonuses": true
     },
     "Tome-Bound Cat": {
         "id": "tome-bound-cat",
@@ -259,7 +266,9 @@
         },
         "passiveRewardModifier": {
             "inkDropsMultiplier": 1.5
-        }
+        },
+        "pageCondition": { "max": 299 },
+        "passivePageCondition": { "max": 299 }
     },
     "The Grand Key": {
         "id": "the-grand-key",

@@ -605,8 +605,9 @@ export class QuestController extends BaseController {
                 restorationProjectSelect: this.restorationProjectSelect
             };
 
-            // Get handler for quest type
-            const handler = QuestHandlerFactory.getHandler(type, formElements, data);
+            // Get handler for quest type (pass getBook so handlers can propagate book page count to quests)
+            const dataWithGetBook = { ...data, getBook: (bookId) => stateAdapter.getBook(bookId) };
+            const handler = QuestHandlerFactory.getHandler(type, formElements, dataWithGetBook);
 
             // Clear any previous errors
             const questFormContainer = document.querySelector('.add-quest-form');
@@ -822,6 +823,9 @@ export class QuestController extends BaseController {
         // Check if this is a new book
         const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
+        // Propagate book page count to quest so page-count-aware buffs (e.g. Bookwyrm's Scale) apply correctly
+        BaseQuestHandler.enrichQuestWithBookPageCount(questToMove, (id) => stateAdapter.getBook(id));
+
         // Use the BaseQuestHandler helper to finalize rewards
         const background = this.keeperBackgroundSelect?.value || '';
         const wizardSchoolSelect = document.getElementById('wizardSchool');
@@ -950,6 +954,9 @@ export class QuestController extends BaseController {
     completeMovedQuestFromBook(quest) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
+
+        // Propagate book page count to quest so page-count-aware buffs apply correctly
+        BaseQuestHandler.enrichQuestWithBookPageCount(quest, (id) => stateAdapter.getBook(id));
 
         const background = this.keeperBackgroundSelect?.value || '';
         const wizardSchoolSelect = document.getElementById('wizardSchool');
