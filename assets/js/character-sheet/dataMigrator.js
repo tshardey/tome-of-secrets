@@ -217,6 +217,18 @@ function migrateToVersion6(state) {
 }
 
 /**
+ * Migration from schema version 6 to version 7
+ * - Adds characterState.series (empty object) for The Archive series tracker
+ */
+function migrateToVersion7(state) {
+    const migrated = { ...state };
+    if (!(STORAGE_KEYS.SERIES in migrated) || typeof migrated[STORAGE_KEYS.SERIES] !== 'object' || Array.isArray(migrated[STORAGE_KEYS.SERIES])) {
+        migrated[STORAGE_KEYS.SERIES] = {};
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 3 to version 4
  * - Adds Grimoire Gallery metadata to all quests: coverUrl, pageCountRaw, pageCountEffective
  * - Values are null for existing quests; populated when user selects a book via API or edits
@@ -445,6 +457,9 @@ export function migrateState(state) {
             case 6:
                 migratedState = migrateToVersion6(migratedState);
                 break;
+            case 7:
+                migratedState = migrateToVersion7(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -492,12 +507,13 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
         STORAGE_KEYS.BOOKS,
-        STORAGE_KEYS.EXTERNAL_CURRICULUM
+        STORAGE_KEYS.EXTERNAL_CURRICULUM,
+        STORAGE_KEYS.SERIES
     ];
 
     stateKeys.forEach(key => {
         let defaultValue;
-        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS) {
+        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS || key === STORAGE_KEYS.SERIES) {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };

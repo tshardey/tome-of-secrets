@@ -18,8 +18,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 4: Added Grimoire Gallery metadata on quests (coverUrl, pageCountRaw, pageCountEffective)
  * Version 5: Book-First Paradigm - books and exchangeProgram state; quests have bookId and id
  * Version 6: Rename legacy genre quest name "Memoirs/Biographies" -> "Memoir/Biography" in saved state
+ * Version 7: The Archive - series tracker (series state)
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /**
  * Schema version key in localStorage
@@ -514,6 +515,40 @@ function validateExternalCurriculum(externalCurriculum) {
 }
 
 /**
+ * Validate and fix a single series object (The Archive)
+ * @param {*} seriesEntry - Series object { id, name, bookIds }
+ * @param {string} context - Context for error messages
+ * @returns {Object|null} - Validated series object, or null if unfixable
+ */
+function validateSeriesEntry(seriesEntry, context = 'series') {
+    if (!seriesEntry || typeof seriesEntry !== 'object') return null;
+    const id = typeof seriesEntry.id === 'string' && seriesEntry.id.trim() ? seriesEntry.id.trim() : null;
+    if (!id) return null;
+    const name = typeof seriesEntry.name === 'string' ? seriesEntry.name.trim() : '';
+    const bookIds = Array.isArray(seriesEntry.bookIds)
+        ? seriesEntry.bookIds.filter(x => typeof x === 'string' && x.trim())
+        : [];
+    return { id, name, bookIds };
+}
+
+/**
+ * Validate and fix the series state object (The Archive)
+ * @param {*} series - series state (id -> { id, name, bookIds })
+ * @returns {Object} - Validated series object
+ */
+function validateSeriesState(series) {
+    if (!series || typeof series !== 'object' || Array.isArray(series)) {
+        return {};
+    }
+    const validated = {};
+    for (const id in series) {
+        const s = validateSeriesEntry(series[id], `series[${id}]`);
+        if (s && s.id) validated[s.id] = s;
+    }
+    return validated;
+}
+
+/**
  * Validate and fix a genre dice selection value
  * @param {*} value - Value to validate
  * @param {string} defaultValue - Default value if invalid
@@ -724,6 +759,7 @@ export function validateCharacterState(state) {
     );
     validated[STORAGE_KEYS.BOOKS] = validateBooks(state[STORAGE_KEYS.BOOKS]);
     validated[STORAGE_KEYS.EXTERNAL_CURRICULUM] = validateExternalCurriculum(state[STORAGE_KEYS.EXTERNAL_CURRICULUM]);
+    validated[STORAGE_KEYS.SERIES] = validateSeriesState(state[STORAGE_KEYS.SERIES]);
 
     return validated;
 }

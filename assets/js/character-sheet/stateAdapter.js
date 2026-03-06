@@ -23,7 +23,9 @@ const EVENTS = Object.freeze({
     CLAIMED_ROOM_REWARDS_CHANGED: 'claimedRoomRewardsChanged',
     // Book-First Paradigm (Schema v5)
     BOOKS_CHANGED: 'booksChanged',
-    EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged'
+    EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged',
+    // The Archive – series tracker
+    SERIES_CHANGED: 'seriesChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -870,6 +872,7 @@ export class StateAdapter {
         if (!(bookId in books)) return false;
         delete books[bookId];
         this._persistBooks(books);
+        this._removeBookFromAllSeries(bookId);
         return true;
     }
 
@@ -927,6 +930,109 @@ export class StateAdapter {
         const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
         const questIds = (links.questIds || []).filter(id => id !== questId);
         this.updateBook(bookId, { links: { questIds, curriculumPromptIds: links.curriculumPromptIds || [] } });
+        return true;
+    }
+
+    // ==========================================
+    // Series (The Archive – book tagging)
+    // ==========================================
+
+    _getSeriesRaw() {
+        const series = this.state[STORAGE_KEYS.SERIES];
+        return series && typeof series === 'object' && !Array.isArray(series) ? series : {};
+    }
+
+    _persistSeries(series) {
+        this.state[STORAGE_KEYS.SERIES] = series;
+        void setStateKey(STORAGE_KEYS.SERIES, series);
+        this.emit(EVENTS.SERIES_CHANGED, { ...series });
+    }
+
+    _removeBookFromAllSeries(bookId) {
+        const series = this._getSeriesRaw();
+        let changed = false;
+        const next = {};
+        for (const [id, s] of Object.entries(series)) {
+            if (!s || !Array.isArray(s.bookIds)) continue;
+            const bookIds = s.bookIds.filter(bid => bid !== bookId);
+            if (bookIds.length !== s.bookIds.length) changed = true;
+            next[id] = { ...s, bookIds };
+        }
+        if (changed) this._persistSeries(next);
+    }
+
+    addSeries(data) {
+        if (!data || typeof data !== 'object') return null;
+        const series = { ...this._getSeriesRaw() };
+        const id = (typeof data.id === 'string' && data.id.trim()) ? data.id.trim() : this._generateId();
+        const name = typeof data.name === 'string' ? data.name.trim() : '';
+        if (!name) return null;
+        const bookIds = Array.isArray(data.bookIds) ? data.bookIds.filter(x => typeof x === 'string') : [];
+        series[id] = { id, name, bookIds };
+        this._persistSeries(series);
+        return series[id];
+    }
+
+    updateSeries(seriesId, updates) {
+        if (!seriesId || typeof seriesId !== 'string') return null;
+        const series = { ...this._getSeriesRaw() };
+        const s = series[seriesId];
+        if (!s) return null;
+        if (updates && typeof updates === 'object') {
+            if (typeof updates.name === 'string' && updates.name.trim()) s.name = updates.name.trim();
+            if (Array.isArray(updates.bookIds)) s.bookIds = updates.bookIds.filter(x => typeof x === 'string');
+        }
+        series[seriesId] = s;
+        this._persistSeries(series);
+        return s;
+    }
+
+    deleteSeries(seriesId) {
+        if (!seriesId || typeof seriesId !== 'string') return false;
+        const series = { ...this._getSeriesRaw() };
+        if (!(seriesId in series)) return false;
+        delete series[seriesId];
+        this._persistSeries(series);
+        return true;
+    }
+
+    getSeries(seriesId) {
+        if (!seriesId || typeof seriesId !== 'string') return null;
+        const s = this._getSeriesRaw()[seriesId];
+        return s ? { ...s, bookIds: [...(s.bookIds || [])] } : null;
+    }
+
+    getSeriesList() {
+        const raw = this._getSeriesRaw();
+        return Object.keys(raw).map(id => {
+            const s = raw[id];
+            return s ? { ...s, bookIds: [...(s.bookIds || [])] } : null;
+        }).filter(Boolean);
+    }
+
+    /** Returns the first series that contains this bookId, or null. */
+    getSeriesForBook(bookId) {
+        if (!bookId || typeof bookId !== 'string') return null;
+        const list = this.getSeriesList();
+        return list.find(s => (s.bookIds || []).includes(bookId)) || null;
+    }
+
+    addBookToSeries(seriesId, bookId) {
+        if (!seriesId || !bookId || typeof seriesId !== 'string' || typeof bookId !== 'string') return false;
+        const s = this.getSeries(seriesId);
+        if (!s) return false;
+        if (s.bookIds.includes(bookId)) return true;
+        const bookIds = [...s.bookIds, bookId];
+        this.updateSeries(seriesId, { bookIds });
+        return true;
+    }
+
+    removeBookFromSeries(seriesId, bookId) {
+        if (!seriesId || !bookId || typeof seriesId !== 'string' || typeof bookId !== 'string') return false;
+        const s = this.getSeries(seriesId);
+        if (!s) return false;
+        const bookIds = s.bookIds.filter(id => id !== bookId);
+        this.updateSeries(seriesId, { bookIds });
         return true;
     }
 
