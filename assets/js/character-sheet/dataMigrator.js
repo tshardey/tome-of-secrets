@@ -219,11 +219,15 @@ function migrateToVersion6(state) {
 /**
  * Migration from schema version 6 to version 7
  * - Adds characterState.series (empty object) for The Archive series tracker
+ * - Adds characterState.claimedSeriesRewards (empty array) for series completion souvenir claims
  */
 function migrateToVersion7(state) {
     const migrated = { ...state };
     if (!(STORAGE_KEYS.SERIES in migrated) || typeof migrated[STORAGE_KEYS.SERIES] !== 'object' || Array.isArray(migrated[STORAGE_KEYS.SERIES])) {
         migrated[STORAGE_KEYS.SERIES] = {};
+    }
+    if (!(STORAGE_KEYS.CLAIMED_SERIES_REWARDS in migrated) || !Array.isArray(migrated[STORAGE_KEYS.CLAIMED_SERIES_REWARDS])) {
+        migrated[STORAGE_KEYS.CLAIMED_SERIES_REWARDS] = [];
     }
     return migrated;
 }
@@ -508,7 +512,8 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
         STORAGE_KEYS.BOOKS,
         STORAGE_KEYS.EXTERNAL_CURRICULUM,
-        STORAGE_KEYS.SERIES
+        STORAGE_KEYS.SERIES,
+        STORAGE_KEYS.CLAIMED_SERIES_REWARDS
     ];
 
     stateKeys.forEach(key => {
@@ -517,6 +522,8 @@ export function loadAndMigrateState() {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };
+        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS) {
+            defaultValue = [];
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {

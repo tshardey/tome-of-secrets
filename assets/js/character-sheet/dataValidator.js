@@ -760,6 +760,10 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.BOOKS] = validateBooks(state[STORAGE_KEYS.BOOKS]);
     validated[STORAGE_KEYS.EXTERNAL_CURRICULUM] = validateExternalCurriculum(state[STORAGE_KEYS.EXTERNAL_CURRICULUM]);
     validated[STORAGE_KEYS.SERIES] = validateSeriesState(state[STORAGE_KEYS.SERIES]);
+    validated[STORAGE_KEYS.CLAIMED_SERIES_REWARDS] = validateStringArray(
+        state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS],
+        STORAGE_KEYS.CLAIMED_SERIES_REWARDS
+    );
 
     return validated;
 }

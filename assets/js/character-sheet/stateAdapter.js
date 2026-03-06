@@ -25,7 +25,8 @@ const EVENTS = Object.freeze({
     BOOKS_CHANGED: 'booksChanged',
     EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged',
     // The Archive – series tracker
-    SERIES_CHANGED: 'seriesChanged'
+    SERIES_CHANGED: 'seriesChanged',
+    CLAIMED_SERIES_REWARDS_CHANGED: 'claimedSeriesRewardsChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -1034,6 +1035,47 @@ export class StateAdapter {
         const bookIds = s.bookIds.filter(id => id !== bookId);
         this.updateSeries(seriesId, { bookIds });
         return true;
+    }
+
+    /**
+     * Whether all books in the series are completed (status === 'completed').
+     * Empty series is not complete.
+     * @param {string} seriesId
+     * @returns {boolean}
+     */
+    isSeriesComplete(seriesId) {
+        const s = this.getSeries(seriesId);
+        if (!s || !Array.isArray(s.bookIds) || s.bookIds.length === 0) return false;
+        const books = this._getBooksRaw();
+        return s.bookIds.every(bookId => {
+            const book = books[bookId];
+            return book && book.status === 'completed';
+        });
+    }
+
+    getClaimedSeriesRewards() {
+        const raw = this.state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS];
+        return Array.isArray(raw) ? [...raw] : [];
+    }
+
+    /**
+     * Record that the keeper has claimed the series completion (souvenir) reward for this series.
+     * @param {string} seriesId
+     * @returns {boolean} true if added (idempotent: already claimed still returns true)
+     */
+    addClaimedSeriesReward(seriesId) {
+        if (!seriesId || typeof seriesId !== 'string') return false;
+        const list = this.getClaimedSeriesRewards();
+        if (list.includes(seriesId)) return true;
+        list.push(seriesId);
+        this.state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS] = list;
+        void setStateKey(STORAGE_KEYS.CLAIMED_SERIES_REWARDS, list);
+        this.emit(EVENTS.CLAIMED_SERIES_REWARDS_CHANGED, [...list]);
+        return true;
+    }
+
+    hasClaimedSeriesReward(seriesId) {
+        return this.getClaimedSeriesRewards().includes(seriesId);
     }
 
     /**

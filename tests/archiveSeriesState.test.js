@@ -127,4 +127,41 @@ describe('Archive series state (StateAdapter)', () => {
       expect(validated[STORAGE_KEYS.SERIES]).toEqual({});
     });
   });
+
+  describe('series completion and claimed rewards', () => {
+    it('isSeriesComplete is false for empty series', () => {
+      const s = adapter.addSeries({ name: 'Empty' });
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+    });
+
+    it('isSeriesComplete is false until all books are completed', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const b2 = adapter.addBook({ title: 'B2', author: 'A' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id] });
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+      adapter.markBookComplete(b1.id);
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+      adapter.markBookComplete(b2.id);
+      expect(adapter.isSeriesComplete(s.id)).toBe(true);
+    });
+
+    it('getClaimedSeriesRewards returns empty array initially', () => {
+      expect(adapter.getClaimedSeriesRewards()).toEqual([]);
+    });
+
+    it('addClaimedSeriesReward adds series id and emits', () => {
+      const handler = jest.fn();
+      adapter.on(STATE_EVENTS.CLAIMED_SERIES_REWARDS_CHANGED, handler);
+      adapter.addClaimedSeriesReward('s1');
+      expect(adapter.getClaimedSeriesRewards()).toContain('s1');
+      expect(adapter.hasClaimedSeriesReward('s1')).toBe(true);
+      expect(handler).toHaveBeenCalled();
+    });
+
+    it('addClaimedSeriesReward is idempotent', () => {
+      adapter.addClaimedSeriesReward('s1');
+      adapter.addClaimedSeriesReward('s1');
+      expect(adapter.getClaimedSeriesRewards()).toEqual(['s1']);
+    });
+  });
 });

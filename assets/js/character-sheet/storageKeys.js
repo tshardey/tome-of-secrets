@@ -34,7 +34,9 @@ export const STORAGE_KEYS = Object.freeze({
     /** Persisted as 'exchangeProgram' for backward compatibility; UI name is External Curriculum. */
     EXTERNAL_CURRICULUM: 'exchangeProgram',
     // The Archive – series tracker (Phase 6)
-    SERIES: 'series'
+    SERIES: 'series',
+    /** Series IDs for which the keeper has claimed the completion (souvenir) reward. */
+    CLAIMED_SERIES_REWARDS: 'claimedSeriesRewards'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -62,7 +64,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
     STORAGE_KEYS.BOOKS,
     STORAGE_KEYS.EXTERNAL_CURRICULUM,
-    STORAGE_KEYS.SERIES
+    STORAGE_KEYS.SERIES,
+    STORAGE_KEYS.CLAIMED_SERIES_REWARDS
 ]);
 
 export function createEmptyCharacterState() {
@@ -91,7 +94,8 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0,
         [STORAGE_KEYS.BOOKS]: {},
         [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} },
-        [STORAGE_KEYS.SERIES]: {}
+        [STORAGE_KEYS.SERIES]: {},
+        [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: []
     };
 }
 
