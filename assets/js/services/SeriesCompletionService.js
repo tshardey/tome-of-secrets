@@ -10,6 +10,27 @@ import { seriesCompletionRewards, allItems, temporaryBuffsFromRewards, getItem }
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 
 /**
+ * Build set of owned item names from stateAdapter using getInventoryItems, getEquippedItems,
+ * and passive slots when available. Avoids depending on getOwnedItemNames() so callers work
+ * even if that method is missing.
+ * @param {Object} stateAdapter
+ * @returns {Set<string>}
+ */
+function getOwnedItemNamesFromAdapter(stateAdapter) {
+    const names = new Set();
+    if (!stateAdapter) return names;
+    const inventory = (typeof stateAdapter.getInventoryItems === 'function' && stateAdapter.getInventoryItems()) || [];
+    inventory.forEach(item => { if (item && item.name) names.add(item.name); });
+    const equipped = (typeof stateAdapter.getEquippedItems === 'function' && stateAdapter.getEquippedItems()) || [];
+    equipped.forEach(item => { if (item && item.name) names.add(item.name); });
+    const passiveItemSlots = (typeof stateAdapter.getPassiveItemSlots === 'function' && stateAdapter.getPassiveItemSlots()) || [];
+    passiveItemSlots.forEach(slot => { if (slot && slot.itemName) names.add(slot.itemName); });
+    const passiveFamiliarSlots = (typeof stateAdapter.getPassiveFamiliarSlots === 'function' && stateAdapter.getPassiveFamiliarSlots()) || [];
+    passiveFamiliarSlots.forEach(slot => { if (slot && slot.itemName) names.add(slot.itemName); });
+    return names;
+}
+
+/**
  * Check if the keeper can claim the series completion reward (series is complete and not yet claimed).
  * @param {string} seriesId - Series ID
  * @param {Object} stateAdapter - StateAdapter instance
@@ -56,7 +77,7 @@ export function applySeriesCompletionReward(reward, deps) {
             return { applied: false, rewardName: name, rewardText };
         }
         const itemName = item.name || linkText;
-        const owned = stateAdapter.getOwnedItemNames ? stateAdapter.getOwnedItemNames() : new Set();
+        const owned = getOwnedItemNamesFromAdapter(stateAdapter);
         if (owned.has(itemName)) {
             return { applied: false, alreadyOwned: true, rewardName: name, rewardText };
         }

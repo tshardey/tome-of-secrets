@@ -969,7 +969,14 @@ export class StateAdapter {
         const name = typeof data.name === 'string' ? data.name.trim() : '';
         if (!name) return null;
         const bookIds = Array.isArray(data.bookIds) ? data.bookIds.filter(x => typeof x === 'string') : [];
-        series[id] = { id, name, bookIds };
+        const releasedCount = typeof data.releasedCount === 'number' && !isNaN(data.releasedCount) && data.releasedCount >= 0
+            ? Math.floor(data.releasedCount)
+            : 0;
+        const expectedCount = typeof data.expectedCount === 'number' && !isNaN(data.expectedCount) && data.expectedCount >= 0
+            ? Math.floor(data.expectedCount)
+            : 0;
+        const isCompletedSeries = typeof data.isCompletedSeries === 'boolean' ? data.isCompletedSeries : false;
+        series[id] = { id, name, bookIds, releasedCount, expectedCount, isCompletedSeries };
         this._persistSeries(series);
         return series[id];
     }
@@ -982,6 +989,13 @@ export class StateAdapter {
         if (updates && typeof updates === 'object') {
             if (typeof updates.name === 'string' && updates.name.trim()) s.name = updates.name.trim();
             if (Array.isArray(updates.bookIds)) s.bookIds = updates.bookIds.filter(x => typeof x === 'string');
+            if (typeof updates.releasedCount === 'number' && !isNaN(updates.releasedCount) && updates.releasedCount >= 0) {
+                s.releasedCount = Math.floor(updates.releasedCount);
+            }
+            if (typeof updates.expectedCount === 'number' && !isNaN(updates.expectedCount) && updates.expectedCount >= 0) {
+                s.expectedCount = Math.floor(updates.expectedCount);
+            }
+            if (typeof updates.isCompletedSeries === 'boolean') s.isCompletedSeries = updates.isCompletedSeries;
         }
         series[seriesId] = s;
         this._persistSeries(series);
@@ -1000,14 +1014,28 @@ export class StateAdapter {
     getSeries(seriesId) {
         if (!seriesId || typeof seriesId !== 'string') return null;
         const s = this._getSeriesRaw()[seriesId];
-        return s ? { ...s, bookIds: [...(s.bookIds || [])] } : null;
+        if (!s) return null;
+        return {
+            ...s,
+            bookIds: [...(s.bookIds || [])],
+            releasedCount: typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0,
+            expectedCount: typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0,
+            isCompletedSeries: typeof s.isCompletedSeries === 'boolean' ? s.isCompletedSeries : false
+        };
     }
 
     getSeriesList() {
         const raw = this._getSeriesRaw();
         return Object.keys(raw).map(id => {
             const s = raw[id];
-            return s ? { ...s, bookIds: [...(s.bookIds || [])] } : null;
+            if (!s) return null;
+            return {
+                ...s,
+                bookIds: [...(s.bookIds || [])],
+                releasedCount: typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0,
+                expectedCount: typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0,
+                isCompletedSeries: typeof s.isCompletedSeries === 'boolean' ? s.isCompletedSeries : false
+            };
         }).filter(Boolean);
     }
 

@@ -233,6 +233,42 @@ function migrateToVersion7(state) {
 }
 
 /**
+ * Migration from schema version 7 to version 8
+ * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
+ * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
+ */
+function migrateToVersion8(state) {
+    const migrated = { ...state };
+    const series = migrated[STORAGE_KEYS.SERIES];
+    if (!series || typeof series !== 'object' || Array.isArray(series)) {
+        return migrated;
+    }
+    const upgraded = {};
+    for (const id in series) {
+        const s = series[id];
+        if (!s || typeof s !== 'object') continue;
+        const releasedCount = typeof s.releasedCount === 'number' && !isNaN(s.releasedCount) && s.releasedCount >= 0
+            ? Math.floor(s.releasedCount)
+            : 0;
+        const expectedCount = typeof s.expectedCount === 'number' && !isNaN(s.expectedCount) && s.expectedCount >= 0
+            ? Math.floor(s.expectedCount)
+            : 0;
+        const isCompletedSeries = typeof s.isCompletedSeries === 'boolean' ? s.isCompletedSeries : false;
+        upgraded[id] = {
+            ...s,
+            id: s.id || id,
+            name: typeof s.name === 'string' ? s.name.trim() : '',
+            bookIds: Array.isArray(s.bookIds) ? s.bookIds.filter(x => typeof x === 'string' && x.trim()) : [],
+            releasedCount,
+            expectedCount,
+            isCompletedSeries
+        };
+    }
+    migrated[STORAGE_KEYS.SERIES] = upgraded;
+    return migrated;
+}
+
+/**
  * Migration from schema version 3 to version 4
  * - Adds Grimoire Gallery metadata to all quests: coverUrl, pageCountRaw, pageCountEffective
  * - Values are null for existing quests; populated when user selects a book via API or edits
@@ -463,6 +499,9 @@ export function migrateState(state) {
                 break;
             case 7:
                 migratedState = migrateToVersion7(migratedState);
+                break;
+            case 8:
+                migratedState = migrateToVersion8(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

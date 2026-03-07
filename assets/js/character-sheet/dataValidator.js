@@ -19,8 +19,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 5: Book-First Paradigm - books and exchangeProgram state; quests have bookId and id
  * Version 6: Rename legacy genre quest name "Memoirs/Biographies" -> "Memoir/Biography" in saved state
  * Version 7: The Archive - series tracker (series state)
+ * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /**
  * Schema version key in localStorage
@@ -516,7 +517,7 @@ function validateExternalCurriculum(externalCurriculum) {
 
 /**
  * Validate and fix a single series object (The Archive)
- * @param {*} seriesEntry - Series object { id, name, bookIds }
+ * @param {*} seriesEntry - Series object { id, name, bookIds, releasedCount?, expectedCount?, isCompletedSeries? }
  * @param {string} context - Context for error messages
  * @returns {Object|null} - Validated series object, or null if unfixable
  */
@@ -528,12 +529,19 @@ function validateSeriesEntry(seriesEntry, context = 'series') {
     const bookIds = Array.isArray(seriesEntry.bookIds)
         ? seriesEntry.bookIds.filter(x => typeof x === 'string' && x.trim())
         : [];
-    return { id, name, bookIds };
+    const releasedCount = typeof seriesEntry.releasedCount === 'number' && !isNaN(seriesEntry.releasedCount) && seriesEntry.releasedCount >= 0
+        ? Math.floor(seriesEntry.releasedCount)
+        : 0;
+    const expectedCount = typeof seriesEntry.expectedCount === 'number' && !isNaN(seriesEntry.expectedCount) && seriesEntry.expectedCount >= 0
+        ? Math.floor(seriesEntry.expectedCount)
+        : 0;
+    const isCompletedSeries = typeof seriesEntry.isCompletedSeries === 'boolean' ? seriesEntry.isCompletedSeries : false;
+    return { id, name, bookIds, releasedCount, expectedCount, isCompletedSeries };
 }
 
 /**
  * Validate and fix the series state object (The Archive)
- * @param {*} series - series state (id -> { id, name, bookIds })
+ * @param {*} series - series state (id -> { id, name, bookIds, releasedCount, expectedCount, isCompletedSeries })
  * @returns {Object} - Validated series object
  */
 function validateSeriesState(series) {
