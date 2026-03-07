@@ -184,15 +184,59 @@ describe('Archive series state (StateAdapter)', () => {
       expect(adapter.isSeriesComplete(s.id)).toBe(false);
     });
 
-    it('isSeriesComplete is false until all books are completed', () => {
+    it('isSeriesComplete is false when author has not finished (isCompletedSeries false)', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 1, isCompletedSeries: false });
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+    });
+
+    it('isSeriesComplete is false when releasedCount !== expectedCount', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 3, isCompletedSeries: true });
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+    });
+
+    it('isSeriesComplete is false when keeper has not read enough (completedCount < releasedCount)', () => {
       const b1 = adapter.addBook({ title: 'B1', author: 'A' });
       const b2 = adapter.addBook({ title: 'B2', author: 'A' });
-      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id] });
+      adapter.markBookComplete(b1.id);
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id], releasedCount: 2, expectedCount: 2, isCompletedSeries: true });
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+    });
+
+    it('isSeriesComplete is true when author finished, counts match, and keeper completed all released', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const b2 = adapter.addBook({ title: 'B2', author: 'A' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id], releasedCount: 2, expectedCount: 2, isCompletedSeries: true });
       expect(adapter.isSeriesComplete(s.id)).toBe(false);
       adapter.markBookComplete(b1.id);
       expect(adapter.isSeriesComplete(s.id)).toBe(false);
       adapter.markBookComplete(b2.id);
       expect(adapter.isSeriesComplete(s.id)).toBe(true);
+    });
+
+    it('getSeriesProgressSummary returns counts and isKeeperComplete', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const b2 = adapter.addBook({ title: 'B2', author: 'A' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id], releasedCount: 2, expectedCount: 2, isCompletedSeries: true });
+      let summary = adapter.getSeriesProgressSummary(s.id);
+      expect(summary).not.toBeNull();
+      expect(summary.completedCount).toBe(0);
+      expect(summary.linkedCount).toBe(2);
+      expect(summary.releasedCount).toBe(2);
+      expect(summary.expectedCount).toBe(2);
+      expect(summary.isCompletedSeries).toBe(true);
+      expect(summary.isKeeperComplete).toBe(false);
+      adapter.markBookComplete(b1.id);
+      summary = adapter.getSeriesProgressSummary(s.id);
+      expect(summary.completedCount).toBe(1);
+      expect(summary.isKeeperComplete).toBe(false);
+      adapter.markBookComplete(b2.id);
+      summary = adapter.getSeriesProgressSummary(s.id);
+      expect(summary.completedCount).toBe(2);
+      expect(summary.isKeeperComplete).toBe(true);
     });
 
     it('getClaimedSeriesRewards returns empty array initially', () => {

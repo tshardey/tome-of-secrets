@@ -1066,19 +1066,64 @@ export class StateAdapter {
     }
 
     /**
-     * Whether all books in the series are completed (status === 'completed').
-     * Empty series is not complete.
+     * Number of linked books (in library) that have status === 'completed'.
+     * @param {string} seriesId
+     * @returns {number}
+     */
+    getSeriesCompletedCount(seriesId) {
+        const s = this.getSeries(seriesId);
+        if (!s || !Array.isArray(s.bookIds)) return 0;
+        const books = this._getBooksRaw();
+        return s.bookIds.filter(bookId => {
+            const book = books[bookId];
+            return book && book.status === 'completed';
+        }).length;
+    }
+
+    /**
+     * Derived progress summary for a series (for UI and completion checks).
+     * @param {string} seriesId
+     * @returns {{ completedCount: number, inProgressCount: number, linkedCount: number, releasedCount: number, expectedCount: number, isCompletedSeries: boolean, isKeeperComplete: boolean } | null}
+     */
+    getSeriesProgressSummary(seriesId) {
+        const s = this.getSeries(seriesId);
+        if (!s) return null;
+        const bookIds = s.bookIds || [];
+        const books = this._getBooksRaw();
+        let completedCount = 0;
+        let inProgressCount = 0;
+        for (const bookId of bookIds) {
+            const book = books[bookId];
+            if (!book) continue;
+            if (book.status === 'completed') completedCount += 1;
+            else if (book.status === 'reading') inProgressCount += 1;
+        }
+        const releasedCount = typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0;
+        const expectedCount = typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0;
+        const isCompletedSeries = s.isCompletedSeries === true;
+        const isKeeperComplete = releasedCount > 0 && releasedCount === expectedCount && isCompletedSeries && completedCount >= releasedCount;
+        return {
+            completedCount,
+            inProgressCount,
+            linkedCount: bookIds.length,
+            releasedCount,
+            expectedCount,
+            isCompletedSeries,
+            isKeeperComplete
+        };
+    }
+
+    /**
+     * Whether the series is eligible for claiming the completion reward.
+     * Requires: author has finished the series (isCompletedSeries), releasedCount === expectedCount,
+     * and the keeper has read every released book (completed linked count >= releasedCount).
      * @param {string} seriesId
      * @returns {boolean}
      */
     isSeriesComplete(seriesId) {
-        const s = this.getSeries(seriesId);
-        if (!s || !Array.isArray(s.bookIds) || s.bookIds.length === 0) return false;
-        const books = this._getBooksRaw();
-        return s.bookIds.every(bookId => {
-            const book = books[bookId];
-            return book && book.status === 'completed';
-        });
+        const summary = this.getSeriesProgressSummary(seriesId);
+        if (!summary) return false;
+        return summary.isKeeperComplete;
     }
 
     getClaimedSeriesRewards() {
