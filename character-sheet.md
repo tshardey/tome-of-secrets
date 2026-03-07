@@ -25,7 +25,7 @@ permalink: /character-sheet.html
             <span>📚</span> Library
         </button>
         <button type="button" data-tab-target="campaigns" role="tab" aria-selected="false">
-            <span>📖</span> Campaigns
+            <span>🗺️</span> Campaigns
         </button>
         <button type="button" data-tab-target="quests" role="tab" aria-selected="false">
             <span>📅</span> Quests
@@ -515,7 +515,7 @@ permalink: /character-sheet.html
 <div class="rpg-tab-content">
     <div class="rpg-panel rpg-campaigns-add-panel">
         <div class="rpg-panel-header">
-            <h2 class="rpg-panel-title">📖 Add a Campaign (Series)</h2>
+            <h2 class="rpg-panel-title">🗺️ Add a Campaign (Series)</h2>
             <button type="button"
                     class="panel-toggle-btn"
                     data-panel-target="campaigns-add-panel-body"
@@ -525,16 +525,31 @@ permalink: /character-sheet.html
             </button>
         </div>
         <div class="rpg-panel-body" id="campaigns-add-panel-body">
-            <div class="form-row campaigns-add-row">
-                <label for="campaigns-series-name"><strong>Series name:</strong></label>
-                <input type="text" id="campaigns-series-name" class="campaigns-name-input" placeholder="e.g. Stormlight Archive" />
-                <button type="button" id="campaigns-add-series-btn" class="rpg-btn rpg-btn-primary">Add Series</button>
+            <div class="campaigns-add-form">
+                <div class="form-row campaigns-add-row">
+                    <label for="campaigns-series-name"><strong>Series name:</strong></label>
+                    <input type="text" id="campaigns-series-name" class="campaigns-name-input" placeholder="e.g. Stormlight Archive" />
+                </div>
+                <div class="form-row campaigns-add-row campaigns-meta-row">
+                    <label for="campaigns-released-count"><strong>Released:</strong></label>
+                    <input type="number" id="campaigns-released-count" class="campaigns-number-input" min="0" value="0" aria-label="Books released so far" />
+                    <label for="campaigns-expected-count"><strong>Expected total:</strong></label>
+                    <input type="number" id="campaigns-expected-count" class="campaigns-number-input" min="0" value="0" aria-label="Expected total books in series" />
+                    <label class="campaigns-checkbox-label campaigns-author-finished" for="campaigns-is-completed-series">
+                        <input type="checkbox" id="campaigns-is-completed-series" class="campaigns-seal-input" aria-label="Author has finished the series" />
+                        <span class="campaigns-seal" aria-hidden="true"></span>
+                        <span class="campaigns-author-finished-text">Author finished series</span>
+                    </label>
+                </div>
+                <div class="form-row campaigns-add-row">
+                    <button type="button" id="campaigns-add-series-btn" class="rpg-btn rpg-btn-primary">Add Series</button>
+                </div>
             </div>
         </div>
     </div>
     <div class="rpg-panel rpg-campaigns-list-panel">
         <div class="rpg-panel-header">
-            <h2 class="rpg-panel-title">Your Campaigns</h2>
+            <h2 class="rpg-panel-title">🗺️ Your Campaigns</h2>
         </div>
         <div class="rpg-panel-body">
             <div id="campaigns-series-list" class="campaigns-series-list" aria-live="polite"></div>
