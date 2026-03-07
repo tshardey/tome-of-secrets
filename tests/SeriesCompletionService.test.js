@@ -25,6 +25,11 @@ describe('SeriesCompletionService', () => {
   });
 
   describe('canClaimSeriesCompletionReward', () => {
+    it('returns false when seriesId or adapter is missing', () => {
+      expect(canClaimSeriesCompletionReward(null, adapter)).toBe(false);
+      expect(canClaimSeriesCompletionReward('s1', null)).toBe(false);
+    });
+
     it('returns false when series is not complete (book not completed)', () => {
       const b1 = adapter.addBook({ title: 'B1', author: 'A' });
       const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 1, isCompletedSeries: true });
@@ -67,6 +72,21 @@ describe('SeriesCompletionService', () => {
       const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id], releasedCount: 2, expectedCount: 2, isCompletedSeries: true });
       expect(canClaimSeriesCompletionReward(s.id, adapter)).toBe(false);
     });
+
+    it('returns true only when author finished, counts match, keeper read all released, and not claimed', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const b2 = adapter.addBook({ title: 'B2', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      adapter.updateBook(b2.id, { status: 'completed' });
+      const s = adapter.addSeries({
+        name: 'S',
+        bookIds: [b1.id, b2.id],
+        releasedCount: 2,
+        expectedCount: 2,
+        isCompletedSeries: true
+      });
+      expect(canClaimSeriesCompletionReward(s.id, adapter)).toBe(true);
+    });
   });
 
   describe('getSeriesCompletionRewardByRoll', () => {
@@ -86,6 +106,34 @@ describe('SeriesCompletionService', () => {
       const result = claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
       expect(result.claimed).toBe(false);
       expect(result.error).toBeDefined();
+    });
+
+    it('returns claimed: false with error when author has not finished (isCompletedSeries false)', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 1, isCompletedSeries: false });
+      const result = claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
+      expect(result.claimed).toBe(false);
+      expect(result.error).toBe('Series not complete.');
+    });
+
+    it('returns claimed: false when releasedCount !== expectedCount', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 3, isCompletedSeries: true });
+      const result = claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
+      expect(result.claimed).toBe(false);
+      expect(result.error).toBe('Series not complete.');
+    });
+
+    it('returns claimed: false when keeper has only partially read', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const b2 = adapter.addBook({ title: 'B2', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id, b2.id], releasedCount: 2, expectedCount: 2, isCompletedSeries: true });
+      const result = claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
+      expect(result.claimed).toBe(false);
+      expect(result.error).toBe('Series not complete.');
     });
 
     it('returns claimed: true and applies reward when author finished and keeper read all', () => {

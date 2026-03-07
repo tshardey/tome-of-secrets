@@ -123,6 +123,24 @@ describe('Archive series state (StateAdapter)', () => {
       const series = adapter.getSeries(s.id);
       expect(series.bookIds).toEqual([b2.id]);
     });
+
+    it('recalculates isSeriesComplete after deleted book (was complete, now incomplete)', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const b2 = adapter.addBook({ title: 'B2', author: 'A' });
+      adapter.markBookComplete(b1.id);
+      adapter.markBookComplete(b2.id);
+      const s = adapter.addSeries({
+        name: 'S',
+        bookIds: [b1.id, b2.id],
+        releasedCount: 2,
+        expectedCount: 2,
+        isCompletedSeries: true
+      });
+      expect(adapter.isSeriesComplete(s.id)).toBe(true);
+      adapter.deleteBook(b1.id);
+      expect(adapter.getSeries(s.id).bookIds).toEqual([b2.id]);
+      expect(adapter.isSeriesComplete(s.id)).toBe(false);
+    });
   });
 
   describe('validation', () => {
@@ -157,6 +175,24 @@ describe('Archive series state (StateAdapter)', () => {
       const validated = validateCharacterState({});
       expect(validated[STORAGE_KEYS.SERIES]).toEqual({});
     });
+
+    it('defaults invalid publication fields (non-number, negative) to 0 or false', () => {
+      state[STORAGE_KEYS.SERIES] = {
+        s1: {
+          id: 's1',
+          name: 'Invalid Numbers',
+          bookIds: [],
+          releasedCount: 'two',
+          expectedCount: -1,
+          isCompletedSeries: 'yes'
+        }
+      };
+      const validated = validateCharacterState(state);
+      expect(validated[STORAGE_KEYS.SERIES].s1.name).toBe('Invalid Numbers');
+      expect(validated[STORAGE_KEYS.SERIES].s1.releasedCount).toBe(0);
+      expect(validated[STORAGE_KEYS.SERIES].s1.expectedCount).toBe(0);
+      expect(validated[STORAGE_KEYS.SERIES].s1.isCompletedSeries).toBe(false);
+    });
   });
 
   describe('migration to v8 (series publication metadata)', () => {
@@ -174,6 +210,23 @@ describe('Archive series state (StateAdapter)', () => {
         releasedCount: 0,
         expectedCount: 0,
         isCompletedSeries: false
+      });
+    });
+
+    it('preserves existing publication fields when migrating v7 to v8', () => {
+      localStorage.setItem(SCHEMA_VERSION_KEY, '7');
+      state = createEmptyCharacterState();
+      state[STORAGE_KEYS.SERIES] = {
+        s1: { id: 's1', name: 'With Metadata', bookIds: ['b1', 'b2'], releasedCount: 2, expectedCount: 2, isCompletedSeries: true }
+      };
+      const migrated = migrateState(state);
+      expect(migrated[STORAGE_KEYS.SERIES].s1).toMatchObject({
+        id: 's1',
+        name: 'With Metadata',
+        bookIds: ['b1', 'b2'],
+        releasedCount: 2,
+        expectedCount: 2,
+        isCompletedSeries: true
       });
     });
   });
@@ -232,11 +285,28 @@ describe('Archive series state (StateAdapter)', () => {
       adapter.markBookComplete(b1.id);
       summary = adapter.getSeriesProgressSummary(s.id);
       expect(summary.completedCount).toBe(1);
+      expect(summary.inProgressCount).toBe(1);
       expect(summary.isKeeperComplete).toBe(false);
       adapter.markBookComplete(b2.id);
       summary = adapter.getSeriesProgressSummary(s.id);
       expect(summary.completedCount).toBe(2);
+      expect(summary.inProgressCount).toBe(0);
       expect(summary.isKeeperComplete).toBe(true);
+    });
+
+    it('getSeriesProgressSummary returns null for unknown series id', () => {
+      expect(adapter.getSeriesProgressSummary('none')).toBeNull();
+    });
+
+    it('getSeriesProgressSummary reports inProgressCount and zero completed for no released', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 0, expectedCount: 1, isCompletedSeries: false });
+      const summary = adapter.getSeriesProgressSummary(s.id);
+      expect(summary).not.toBeNull();
+      expect(summary.completedCount).toBe(0);
+      expect(summary.linkedCount).toBe(1);
+      expect(summary.releasedCount).toBe(0);
+      expect(summary.isKeeperComplete).toBe(false);
     });
 
     it('getClaimedSeriesRewards returns empty array initially', () => {
