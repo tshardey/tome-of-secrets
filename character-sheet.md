@@ -24,6 +24,9 @@ permalink: /character-sheet.html
         <button type="button" data-tab-target="library" role="tab" aria-selected="false">
             <span>📚</span> Library
         </button>
+        <button type="button" data-tab-target="campaigns" role="tab" aria-selected="false">
+            <span>📖</span> Campaigns
+        </button>
         <button type="button" data-tab-target="quests" role="tab" aria-selected="false">
             <span>📅</span> Quests
         </button>
@@ -506,6 +509,40 @@ permalink: /character-sheet.html
 </div>
 </div>
 <!-- END TAB 5: LIBRARY -->
+
+<!-- TAB 5b: CAMPAIGNS (series tracker) -->
+<div class="tab-panel" data-tab-panel="campaigns" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-campaigns-add-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📖 Add a Campaign (Series)</h2>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="campaigns-add-panel-body"
+                    aria-expanded="true"
+                    aria-controls="campaigns-add-panel-body">
+                Hide
+            </button>
+        </div>
+        <div class="rpg-panel-body" id="campaigns-add-panel-body">
+            <div class="form-row campaigns-add-row">
+                <label for="campaigns-series-name"><strong>Series name:</strong></label>
+                <input type="text" id="campaigns-series-name" class="campaigns-name-input" placeholder="e.g. Stormlight Archive" />
+                <button type="button" id="campaigns-add-series-btn" class="rpg-btn rpg-btn-primary">Add Series</button>
+            </div>
+        </div>
+    </div>
+    <div class="rpg-panel rpg-campaigns-list-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">Your Campaigns</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="campaigns-series-list" class="campaigns-series-list" aria-live="polite"></div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB 5b: CAMPAIGNS -->
 
 <!-- TAB 6: QUESTS -->
 <div class="tab-panel" data-tab-panel="quests" role="tabpanel">
@@ -1178,6 +1215,12 @@ permalink: /character-sheet.html
             <div class="form-row" id="book-edit-date-completed-row">
                 <label for="book-edit-date-completed"><strong>Date completed (optional):</strong></label>
                 <input type="date" id="book-edit-date-completed" class="library-date-input" placeholder="YYYY-MM-DD" aria-label="Date book was completed" />
+            </div>
+            <div class="form-row">
+                <label for="book-edit-series"><strong>Series (Campaign):</strong></label>
+                <select id="book-edit-series" class="rpg-select" aria-label="Tag this book to a series">
+                    <option value="">— None —</option>
+                </select>
             </div>
             <div id="book-edit-links-section" class="form-row book-edit-links" style="display: none;">
                 <label><strong>Linked:</strong></label>
