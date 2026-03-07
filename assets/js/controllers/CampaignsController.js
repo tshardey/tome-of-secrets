@@ -130,13 +130,9 @@ export class CampaignsController extends BaseController {
         const updateCurrency = this.dependencies.updateCurrency;
         const result = claimSeriesCompletionReward(seriesId, this.stateAdapter, { updateCurrency });
         if (result.claimed && result.applied) {
-            if (result.applied.applied && updateCurrency && result.reward?.reward) {
-                // Reward may have been applied (currency, item, etc.) - updateCurrency already called by service for currency
-                // If it was an item or buff, we just need to refresh; state is updated
-            }
             this.renderSeriesList();
             this.saveState();
-            if (result.reward) {
+            if (result.applied.applied === true && result.reward) {
                 toast.success(result.reward.reward || `Claimed: ${result.reward.name}`);
             }
         } else if (!result.claimed && result.error) {
