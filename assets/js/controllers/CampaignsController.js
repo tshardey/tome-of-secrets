@@ -1,13 +1,22 @@
 /**
- * CampaignsController - Handles Campaigns tab: series (campaigns) CRUD, completion status, claim souvenir reward.
+ * CampaignsController - Handles Campaigns tab: series (campaigns) CRUD, completion status, expedition map.
  *
  * - Add series: inline form (name + Add Series button)
- * - List series: name, book count, completed (Y/N), Claim reward button when complete and unclaimed, Edit name, Delete
+ * - Expedition map: shows shared expedition track, current stop, and stop detail (name, story, reward)
+ * - List series: name, book count, completed (Y/N), Edit name, Delete. Progression is automatic when a series completes.
  */
 
 import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
-import { claimSeriesCompletionReward } from '../services/SeriesCompletionService.js';
+import {
+    getSeriesExpedition,
+    getSeriesExpeditionStopIndex,
+    getCurrentSeriesExpeditionStop,
+    getNextSeriesExpeditionStop,
+    canClaimSeriesCompletionReward,
+    advanceSeriesExpedition
+} from '../services/SeriesCompletionService.js';
+import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { toast } from '../ui/toast.js';
 
@@ -20,6 +29,8 @@ export class CampaignsController extends BaseController {
         const form = this.form;
         if (!form) return;
 
+        this.tryAdvanceExpedition();
+        this.renderExpeditionMap();
         this.renderSeriesList();
 
         const addBtn = document.getElementById('campaigns-add-series-btn');
@@ -39,15 +50,9 @@ export class CampaignsController extends BaseController {
             });
         }
 
-        form.addEventListener('click', (e) => {
-            const claimBtn = e.target.closest('.campaigns-claim-reward-btn');
+        this.addEventListener(form, 'click', (e) => {
             const deleteBtn = e.target.closest('.campaigns-delete-series-btn');
             const editBtn = e.target.closest('.campaigns-edit-series-btn');
-            if (claimBtn && claimBtn.dataset.seriesId) {
-                e.preventDefault();
-                this.handleClaimReward(claimBtn.dataset.seriesId);
-                return;
-            }
             if (deleteBtn && deleteBtn.dataset.seriesId) {
                 e.preventDefault();
                 this.handleDeleteSeries(deleteBtn.dataset.seriesId);
@@ -60,9 +65,117 @@ export class CampaignsController extends BaseController {
             }
         });
 
-        this.stateAdapter.on(STATE_EVENTS.SERIES_CHANGED, () => this.renderSeriesList());
-        this.stateAdapter.on(STATE_EVENTS.BOOKS_CHANGED, () => this.renderSeriesList());
+        this.stateAdapter.on(STATE_EVENTS.SERIES_CHANGED, () => {
+            this.tryAdvanceExpedition();
+            this.renderExpeditionMap();
+            this.renderSeriesList();
+        });
+        this.stateAdapter.on(STATE_EVENTS.BOOKS_CHANGED, () => {
+            this.tryAdvanceExpedition();
+            this.renderExpeditionMap();
+            this.renderSeriesList();
+        });
         this.stateAdapter.on(STATE_EVENTS.CLAIMED_SERIES_REWARDS_CHANGED, () => this.renderSeriesList());
+        this.stateAdapter.on(STATE_EVENTS.SERIES_EXPEDITION_PROGRESS_CHANGED, () => {
+            this.renderExpeditionMap();
+            this.renderSeriesList();
+        });
+    }
+
+    /**
+     * If any completed series has not yet advanced the expedition, advance by one stop and show toast.
+     */
+    tryAdvanceExpedition() {
+        const list = this.stateAdapter.getSeriesList() || [];
+        const canClaimSeries = list.find(s => canClaimSeriesCompletionReward(s.id, this.stateAdapter));
+        if (!canClaimSeries) return;
+        const updateCurrency = this.dependencies?.updateCurrency;
+        const result = advanceSeriesExpedition(canClaimSeries.id, this.stateAdapter, { updateCurrency });
+        if (result.advanced && result.stop) {
+            this.saveState();
+            // Refresh character UI so XP, level, and permanent bonuses (including expedition passives) update
+            const ui = this.dependencies?.ui;
+            if (ui) {
+                const levelInput = document.getElementById('level');
+                const xpNeededInput = document.getElementById('xp-needed');
+                if (levelInput) ui.updateXpNeeded(levelInput, xpNeededInput);
+                ui.updateXpProgressBar();
+                if (levelInput) ui.renderPermanentBonuses(levelInput);
+            }
+            const rewardText = result.applied?.rewardText || result.stop.reward?.text || '';
+            toast.success(result.stop.name + (rewardText ? ` — ${rewardText}` : ''));
+        }
+    }
+
+    /**
+     * Render the expedition map: map image, stop markers (past/current/locked), and detail panel.
+     */
+    renderExpeditionMap() {
+        const container = document.getElementById('expedition-map-container');
+        const imgEl = document.getElementById('expedition-map-image');
+        const markersEl = document.getElementById('expedition-map-markers');
+        const placeholderEl = document.getElementById('expedition-detail-placeholder');
+        const contentEl = document.getElementById('expedition-detail-content');
+        const nameEl = document.getElementById('expedition-detail-name');
+        const storyEl = document.getElementById('expedition-detail-story');
+        const rewardEl = document.getElementById('expedition-detail-reward');
+
+        if (!container || !markersEl) return;
+
+        const expedition = getSeriesExpedition();
+        const stopIndex = getSeriesExpeditionStopIndex(this.stateAdapter);
+        const currentStop = getCurrentSeriesExpeditionStop(this.stateAdapter);
+        const nextStop = getNextSeriesExpeditionStop(this.stateAdapter);
+        const stops = expedition.stops || [];
+
+        if (!expedition.mapImage || stops.length === 0) {
+            container.setAttribute('aria-hidden', 'true');
+            if (placeholderEl) placeholderEl.hidden = false;
+            if (contentEl) contentEl.hidden = true;
+            if (imgEl) imgEl.removeAttribute('src');
+            markersEl.innerHTML = '';
+            return;
+        }
+
+        container.setAttribute('aria-hidden', 'false');
+        const baseurl = typeof window !== 'undefined' && window.__BASEURL ? window.__BASEURL : '';
+        if (imgEl) {
+            imgEl.src = toLocalOrCdnUrl(expedition.mapImage, baseurl);
+            imgEl.alt = expedition.name || 'Expedition map';
+        }
+
+        markersEl.innerHTML = stops
+            .map((stop, i) => {
+                const isPast = i < stopIndex;
+                const isCurrent = i === stopIndex - 1;
+                const isLocked = i >= stopIndex;
+                const stateClass = isPast
+                    ? 'expedition-stop-marker--past'
+                    : isCurrent
+                        ? 'expedition-stop-marker--current'
+                        : 'expedition-stop-marker--locked';
+                // Data uses normalized-100 with origin bottom-left (y up); CSS uses top-left (y down). Flip y.
+                const x = typeof stop.position?.x === 'number' ? stop.position.x : 0;
+                const yData = typeof stop.position?.y === 'number' ? stop.position.y : 0;
+                const yCss = 100 - yData;
+                const name = stop.name || `Stop ${i + 1}`;
+                return `<span class="expedition-stop-marker ${stateClass}" style="left:${x}%;top:${yCss}%;" data-stop-index="${i}" title="${this._escapeAttr(name)}" role="listitem">${i + 1}</span>`;
+            })
+            .join('');
+
+        const detailStop = currentStop || nextStop;
+        if (detailStop && nameEl && storyEl && rewardEl) {
+            if (placeholderEl) placeholderEl.hidden = true;
+            if (contentEl) contentEl.hidden = false;
+            nameEl.textContent = detailStop.name || '';
+            storyEl.textContent = detailStop.story || '';
+            const rewardText = detailStop.reward && typeof detailStop.reward.text === 'string' ? detailStop.reward.text : '';
+            rewardEl.textContent = rewardText ? `Reward: ${rewardText}` : '';
+            rewardEl.style.display = rewardText ? '' : 'none';
+        } else {
+            if (placeholderEl) placeholderEl.hidden = false;
+            if (contentEl) contentEl.hidden = true;
+        }
     }
 
     handleAddSeries() {
@@ -182,21 +295,6 @@ export class CampaignsController extends BaseController {
         if (cancelBtn) this.addEventListener(cancelBtn, 'click', (e) => { e.preventDefault(); cancel(); });
     }
 
-    handleClaimReward(seriesId) {
-        if (!seriesId) return;
-        const updateCurrency = this.dependencies.updateCurrency;
-        const result = claimSeriesCompletionReward(seriesId, this.stateAdapter, { updateCurrency });
-        if (result.claimed && result.applied) {
-            this.renderSeriesList();
-            this.saveState();
-            if (result.applied.applied === true && result.reward) {
-                toast.success(result.reward.reward || `Claimed: ${result.reward.name}`);
-            }
-        } else if (!result.claimed && result.error) {
-            toast.info(result.error);
-        }
-    }
-
     renderSeriesList() {
         const container = document.getElementById('campaigns-series-list');
         if (!container) return;
@@ -216,14 +314,12 @@ export class CampaignsController extends BaseController {
                 const expected = typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0;
                 const authorFinished = !!s.isCompletedSeries;
                 const isComplete = this.stateAdapter.isSeriesComplete(s.id);
-                const hasClaimed = this.stateAdapter.hasClaimedSeriesReward(s.id);
-                const canClaim = isComplete && !hasClaimed;
+                const hasAdvanced = this.stateAdapter.hasSeriesAdvancedExpedition && this.stateAdapter.hasSeriesAdvancedExpedition(s.id);
                 const nameEsc = this._escapeHtml(s.name || 'Unnamed');
                 const idAttr = this._escapeAttr(s.id);
-                const claimBtn = canClaim
-                    ? `<button type="button" class="rpg-btn rpg-btn-primary campaigns-claim-reward-btn" data-series-id="${idAttr}" title="Claim series completion souvenir">Claim souvenir</button>`
-                    : '';
-                const statusText = hasClaimed ? 'Souvenir claimed' : isComplete ? 'Complete' : `${completedCount}/${linkedCount} read`;
+                const statusText = isComplete
+                    ? (hasAdvanced ? 'Complete · Expedition advanced' : 'Complete')
+                    : `${completedCount}/${linkedCount} read`;
                 const metaParts = [];
                 if (released > 0 || expected > 0) {
                     metaParts.push(`${released} released / ${expected} expected`);
@@ -243,16 +339,16 @@ export class CampaignsController extends BaseController {
                            }).join('')}
                        </div>`
                     : '';
+                const completeClass = isComplete ? ' campaigns-series-card--complete' : '';
                 return `
-                    <div class="campaigns-series-card" data-series-id="${idAttr}">
+                    <div class="campaigns-series-card${completeClass}" data-series-id="${idAttr}">
                         <div class="campaigns-series-main">
-                            <span class="campaigns-series-name">${nameEsc}</span>
+                            <span class="campaigns-series-name">${isComplete ? '✓ ' : ''}${nameEsc}</span>
                             <span class="campaigns-series-meta">${this._escapeHtml(metaLine)}</span>
                             <span class="campaigns-series-progress">${completedCount} of ${linkedCount} linked read · ${statusText}</span>
                             ${coverStrip}
                         </div>
                         <div class="campaigns-series-actions">
-                            ${claimBtn}
                             <button type="button" class="rpg-btn rpg-btn-secondary campaigns-edit-series-btn" data-series-id="${idAttr}" aria-label="Edit series">Edit</button>
                             <button type="button" class="rpg-btn rpg-btn-secondary campaigns-delete-series-btn" data-series-id="${idAttr}" aria-label="Delete series">Delete</button>
                         </div>

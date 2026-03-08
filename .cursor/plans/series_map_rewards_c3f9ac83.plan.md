@@ -10,13 +10,13 @@ todos:
     status: completed
   - id: persist-expedition-progress
     content: Add expedition progress state and defaults in `storageKeys.js`, `stateAdapter.js`, and `dataMigrator.js`.
-    status: pending
+    status: completed
   - id: render-campaign-map
     content: Add expedition map and stop detail rendering to `character-sheet.md`, `CampaignsController.js`, and `character-sheet.css`, removing the old claim button UX.
-    status: pending
+    status: completed
   - id: update-tests
     content: Rewrite `tests/SeriesCompletionService.test.js` to validate sequential stop advancement and reward application.
-    status: pending
+    status: completed
 isProject: false
 ---
 

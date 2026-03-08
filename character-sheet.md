@@ -547,6 +547,25 @@ permalink: /character-sheet.html
             </div>
         </div>
     </div>
+    <div class="rpg-panel rpg-campaigns-map-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">🗺️ Expedition Map</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="expedition-map-container" class="expedition-map-container" aria-hidden="true">
+                <img id="expedition-map-image" class="expedition-map-image" src="" alt="" />
+                <div id="expedition-map-markers" class="expedition-map-markers" role="list" aria-label="Expedition stops"></div>
+            </div>
+            <div id="expedition-stop-detail" class="expedition-stop-detail" aria-live="polite">
+                <p id="expedition-detail-placeholder" class="expedition-detail-placeholder">Complete series to advance along the expedition.</p>
+                <div id="expedition-detail-content" class="expedition-detail-content" hidden>
+                    <h3 id="expedition-detail-name" class="expedition-detail-name"></h3>
+                    <p id="expedition-detail-story" class="expedition-detail-story"></p>
+                    <p id="expedition-detail-reward" class="expedition-detail-reward"></p>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="rpg-panel rpg-campaigns-list-panel">
         <div class="rpg-panel-header">
             <h2 class="rpg-panel-title">🗺️ Your Campaigns</h2>

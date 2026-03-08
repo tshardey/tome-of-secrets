@@ -2,7 +2,7 @@
     "id": "expedition-for-the-unwritten-ember",
     "name": "Expedition for the Unwritten Ember",
     "mapName": "expeditionForTheUnwrittenEmber",
-    "baseMapImage": "assets/maps/chronicle_map.png",
+    "baseMapImage": "assets/maps/chronicle-map.png",
     "coordinateSystem": "normalized-100",
     "stops": [
         {
@@ -10,7 +10,7 @@
             "order": 1,
             "name": "The Wrought-Iron Threshold",
             "story": "You push past the heavy gates of the Grand Library, stepping into the foggy moors. The expedition to save your Sanctum begins.",
-            "position": { "x": 10, "y": 15 },
+            "position": { "x": 8, "y": 12 },
             "reward": {
                 "type": "currency",
                 "xp": 0,
@@ -24,7 +24,7 @@
             "order": 2,
             "name": "The Ashen Crossroads",
             "story": "At the intersection of forgotten roads, you trade tales with a wandering merchant for a map that points toward the Ember.",
-            "position": { "x": 20, "y": 40 },
+            "position": { "x": 28, "y": 65 },
             "reward": {
                 "type": "passive-rule-modifier",
                 "text": "Permanent Passive: Organize the Stacks (Hearts) quests now grant +20 XP (was +15)."
@@ -35,7 +35,7 @@
             "order": 3,
             "name": "The Whispering Woods",
             "story": "The trees here mimic the rustle of pages. You navigate the twisting paths by following the faint scent of old parchment.",
-            "position": { "x": 35, "y": 65 },
+            "position": { "x": 45, "y": 65 },
             "reward": {
                 "type": "currency",
                 "xp": 100,
@@ -49,7 +49,7 @@
             "order": 4,
             "name": "The Sunken Observatory",
             "story": "An abandoned astrologer's tower offers refuge from the elements. You salvage an ancient brass lens from the ruins.",
-            "position": { "x": 50, "y": 70 },
+            "position": { "x": 60, "y": 70 },
             "reward": {
                 "type": "item-slot-bonus",
                 "slotId": "expedition-display-slot",
@@ -86,7 +86,7 @@
             "order": 7,
             "name": "The Echoing Caverns",
             "story": "Descending into the dark, you learn to read ancient runes carved into the stone. You recognize the repeating patterns of long epics.",
-            "position": { "x": 85, "y": 45 },
+            "position": { "x": 82, "y": 35 },
             "reward": {
                 "type": "passive-rule-modifier",
                 "text": "Permanent Passive: All books read for a Series grant +15 Ink Drops (was +10)."
@@ -108,7 +108,7 @@
             "order": 9,
             "name": "The Caldera's Core",
             "story": "You brave the deepest chamber and claim the Unwritten Ember. Its warmth pulses against your chest, eager to mend your home.",
-            "position": { "x": 40, "y": 25 },
+            "position": { "x": 40, "y": 35 },
             "reward": {
                 "type": "currency",
                 "xp": 250,
@@ -122,7 +122,7 @@
             "order": 10,
             "name": "The Reawakened Sanctum",
             "story": "You return victorious. Pressing the Ember into the floorboards, your domain blooms with renewed, vibrant magic.",
-            "position": { "x": 10, "y": 15 },
+            "position": { "x": 17, "y": 22 },
             "reward": {
                 "type": "familiar-slot-bonus",
                 "slotId": "expedition-adoption-slot",

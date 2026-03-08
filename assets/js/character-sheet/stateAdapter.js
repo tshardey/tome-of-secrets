@@ -1166,11 +1166,13 @@ export class StateAdapter {
      * Record that a series advanced the expedition to the given stop. Idempotent per (seriesId, stopId).
      * @param {string} seriesId
      * @param {string} stopId
-     * @returns {boolean} true if added
+     * @returns {boolean} true if added, false if duplicate or invalid
      */
     addSeriesExpeditionAdvance(seriesId, stopId) {
         if (!seriesId || !stopId || typeof seriesId !== 'string' || typeof stopId !== 'string') return false;
         const list = this.getSeriesExpeditionProgress();
+        const alreadyExists = list.some(p => p.seriesId === seriesId && p.stopId === stopId);
+        if (alreadyExists) return false;
         const entry = { seriesId, stopId, claimedAt: new Date().toISOString() };
         list.push(entry);
         this.state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = list;

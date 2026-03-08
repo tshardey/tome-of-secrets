@@ -100,6 +100,21 @@ export function getNextSeriesExpeditionStop(stateAdapter) {
 }
 
 /**
+ * Get the list of permanent passive bonus texts from expedition stops the keeper has reached.
+ * Used to display expedition-granted passive-rule-modifier rewards in the Permanent bonuses section.
+ * @param {{ seriesId: string, stopId: string, claimedAt: string }[]} progress - From stateAdapter.getSeriesExpeditionProgress()
+ * @returns {string[]} Reward text for each passive-rule-modifier stop in progress
+ */
+export function getExpeditionPassiveBonuses(progress) {
+    if (!Array.isArray(progress) || progress.length === 0) return [];
+    const expedition = getSeriesExpedition();
+    const stopIds = new Set(progress.map(p => p && p.stopId).filter(Boolean));
+    return (expedition.stops || [])
+        .filter(s => stopIds.has(s.id) && s.reward && s.reward.type === 'passive-rule-modifier' && typeof s.reward.text === 'string')
+        .map(s => s.reward.text);
+}
+
+/**
  * Check if the keeper can advance the expedition with this series (series is complete and not yet counted).
  * @param {string} seriesId - Series ID
  * @param {Object} stateAdapter - StateAdapter instance

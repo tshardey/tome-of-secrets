@@ -16,15 +16,22 @@ function stripLocalImagesPrefix(path) {
   const raw = String(path || '');
 
   // Common local forms we might encounter.
-  // - assets/images/foo.png
-  // - /assets/images/foo.png
-  // - <baseurl>/assets/images/foo.png
+  // - assets/images/foo.png, assets/maps/foo.png
+  // - /assets/images/foo.png, /assets/maps/foo.png
+  // - <baseurl>/assets/...
+  // CDN bucket expects paths like "images/..." and "maps/..." (no "assets/" prefix).
   const baseurl = normalizeBase(getMetaContent('baseurl') || window.__BASEURL || '');
   const prefixes = [
     'assets/images/',
     '/assets/images/',
     `${baseurl}/assets/images/`,
+    'assets/',
+    '/assets/',
+    `${baseurl}/assets/`,
   ].filter(Boolean);
+
+  // Try longest matches first so assets/images/ is used before assets/ (assets/maps/ → maps/...)
+  prefixes.sort((a, b) => b.length - a.length);
 
   for (const prefix of prefixes) {
     if (raw.startsWith(prefix)) return raw.slice(prefix.length);
