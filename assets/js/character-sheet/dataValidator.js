@@ -18,8 +18,11 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 4: Added Grimoire Gallery metadata on quests (coverUrl, pageCountRaw, pageCountEffective)
  * Version 5: Book-First Paradigm - books and exchangeProgram state; quests have bookId and id
  * Version 6: Rename legacy genre quest name "Memoirs/Biographies" -> "Memoir/Biography" in saved state
+ * Version 7: The Archive - series tracker (series state)
+ * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
+ * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 9;
 
 /**
  * Schema version key in localStorage
@@ -514,6 +517,47 @@ function validateExternalCurriculum(externalCurriculum) {
 }
 
 /**
+ * Validate and fix a single series object (The Archive)
+ * @param {*} seriesEntry - Series object { id, name, bookIds, releasedCount?, expectedCount?, isCompletedSeries? }
+ * @param {string} context - Context for error messages
+ * @returns {Object|null} - Validated series object, or null if unfixable
+ */
+function validateSeriesEntry(seriesEntry, context = 'series') {
+    if (!seriesEntry || typeof seriesEntry !== 'object') return null;
+    const id = typeof seriesEntry.id === 'string' && seriesEntry.id.trim() ? seriesEntry.id.trim() : null;
+    if (!id) return null;
+    const name = typeof seriesEntry.name === 'string' ? seriesEntry.name.trim() : '';
+    const bookIds = Array.isArray(seriesEntry.bookIds)
+        ? seriesEntry.bookIds.filter(x => typeof x === 'string' && x.trim())
+        : [];
+    const releasedCount = typeof seriesEntry.releasedCount === 'number' && !isNaN(seriesEntry.releasedCount) && seriesEntry.releasedCount >= 0
+        ? Math.floor(seriesEntry.releasedCount)
+        : 0;
+    const expectedCount = typeof seriesEntry.expectedCount === 'number' && !isNaN(seriesEntry.expectedCount) && seriesEntry.expectedCount >= 0
+        ? Math.floor(seriesEntry.expectedCount)
+        : 0;
+    const isCompletedSeries = typeof seriesEntry.isCompletedSeries === 'boolean' ? seriesEntry.isCompletedSeries : false;
+    return { id, name, bookIds, releasedCount, expectedCount, isCompletedSeries };
+}
+
+/**
+ * Validate and fix the series state object (The Archive)
+ * @param {*} series - series state (id -> { id, name, bookIds, releasedCount, expectedCount, isCompletedSeries })
+ * @returns {Object} - Validated series object
+ */
+function validateSeriesState(series) {
+    if (!series || typeof series !== 'object' || Array.isArray(series)) {
+        return {};
+    }
+    const validated = {};
+    for (const id in series) {
+        const s = validateSeriesEntry(series[id], `series[${id}]`);
+        if (s && s.id) validated[s.id] = s;
+    }
+    return validated;
+}
+
+/**
  * Validate and fix a genre dice selection value
  * @param {*} value - Value to validate
  * @param {string} defaultValue - Default value if invalid
@@ -593,6 +637,42 @@ function validatePassiveSlotArray(slots, context = 'passiveSlots') {
             validated.push(validatedSlot);
         } else {
             console.warn(`Skipping invalid passive slot at ${context}[${index}]`);
+        }
+    });
+    return validated;
+}
+
+/**
+ * Validate a single series expedition progress entry { seriesId, stopId, claimedAt }
+ * @param {*} entry - Raw progress entry
+ * @param {string} context - Context for error messages
+ * @returns {Object|null} - Validated entry or null if invalid
+ */
+function validateExpeditionProgressEntry(entry, context = 'expeditionProgress') {
+    if (!entry || typeof entry !== 'object') return null;
+    const seriesId = typeof entry.seriesId === 'string' && entry.seriesId.trim() ? entry.seriesId.trim() : null;
+    const stopId = typeof entry.stopId === 'string' && entry.stopId.trim() ? entry.stopId.trim() : null;
+    if (!seriesId || !stopId) return null;
+    const claimedAt = typeof entry.claimedAt === 'string' ? entry.claimedAt : new Date(0).toISOString();
+    return { seriesId, stopId, claimedAt };
+}
+
+/**
+ * Validate and fix series expedition progress array (Schema v9)
+ * @param {*} progress - Array of { seriesId, stopId, claimedAt }
+ * @param {string} context - Context for error messages
+ * @returns {Array} - Validated array
+ */
+function validateSeriesExpeditionProgress(progress, context = STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS) {
+    if (!Array.isArray(progress)) {
+        console.warn(`Invalid ${context}: not an array, using empty array`);
+        return [];
+    }
+    const validated = [];
+    progress.forEach((entry, index) => {
+        const validatedEntry = validateExpeditionProgressEntry(entry, `${context}[${index}]`);
+        if (validatedEntry) {
+            validated.push(validatedEntry);
         }
     });
     return validated;
@@ -724,6 +804,15 @@ export function validateCharacterState(state) {
     );
     validated[STORAGE_KEYS.BOOKS] = validateBooks(state[STORAGE_KEYS.BOOKS]);
     validated[STORAGE_KEYS.EXTERNAL_CURRICULUM] = validateExternalCurriculum(state[STORAGE_KEYS.EXTERNAL_CURRICULUM]);
+    validated[STORAGE_KEYS.SERIES] = validateSeriesState(state[STORAGE_KEYS.SERIES]);
+    validated[STORAGE_KEYS.CLAIMED_SERIES_REWARDS] = validateStringArray(
+        state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS],
+        STORAGE_KEYS.CLAIMED_SERIES_REWARDS
+    );
+    validated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = validateSeriesExpeditionProgress(
+        state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS],
+        STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
+    );
 
     return validated;
 }
@@ -736,4 +825,3 @@ export function validateCharacterState(state) {
 export function validateFormDataSafe(formData) {
     return validateFormData(formData);
 }
-

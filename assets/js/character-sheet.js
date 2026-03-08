@@ -29,6 +29,7 @@ import { AtmosphericBuffDeckController } from './controllers/AtmosphericBuffDeck
 import { GenreQuestDeckController } from './controllers/GenreQuestDeckController.js';
 import { SideQuestDeckController } from './controllers/SideQuestDeckController.js';
 import { LibraryController } from './controllers/LibraryController.js';
+import { CampaignsController } from './controllers/CampaignsController.js';
 import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
 
 // Track unique books completed for XP calculation
@@ -251,7 +252,8 @@ export async function initializeCharacterSheet() {
     const dependencies = {
         ui,
         data: dataModule,
-        saveState
+        saveState,
+        updateCurrency
     };
 
     // --- CONTROLLERS ---
@@ -267,6 +269,7 @@ export async function initializeCharacterSheet() {
     const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
     const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
     const libraryController = new LibraryController(stateAdapter, form, dependencies);
+    const campaignsController = new CampaignsController(stateAdapter, form, dependencies);
     const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
 
     const addSelectedBtn = document.getElementById('add-selected-cards-btn');
@@ -327,12 +330,14 @@ export async function initializeCharacterSheet() {
     genreQuestDeckController.initialize();
     sideQuestDeckController.initialize();
     libraryController.initialize();
+    campaignsController.initialize();
     externalCurriculumController.initialize();
 
     // --- COLLAPSIBLE PANELS (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards) ---
     (function setupCollapsiblePanels() {
         const configs = [
             { buttonSelector: '.rpg-library-add-panel .panel-toggle-btn', storageKey: 'library-add-panel-body' },
+            { buttonSelector: '.rpg-campaigns-add-panel .panel-toggle-btn', storageKey: 'campaigns-add-panel-body' },
             { buttonSelector: '.rpg-external-curriculum-add-panel .panel-toggle-btn', storageKey: 'external-curriculum-add-panel-body' },
             { buttonSelector: '.rpg-add-quest-panel .panel-toggle-btn', storageKey: 'add-quest-panel-body' },
             { buttonSelector: '.rpg-temporary-buffs-panel .panel-toggle-btn', storageKey: 'temporary-buffs-panel-body' },

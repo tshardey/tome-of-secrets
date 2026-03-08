@@ -217,6 +217,70 @@ function migrateToVersion6(state) {
 }
 
 /**
+ * Migration from schema version 6 to version 7
+ * - Adds characterState.series (empty object) for The Archive series tracker
+ * - Adds characterState.claimedSeriesRewards (empty array) for series completion souvenir claims
+ */
+function migrateToVersion7(state) {
+    const migrated = { ...state };
+    if (!(STORAGE_KEYS.SERIES in migrated) || typeof migrated[STORAGE_KEYS.SERIES] !== 'object' || Array.isArray(migrated[STORAGE_KEYS.SERIES])) {
+        migrated[STORAGE_KEYS.SERIES] = {};
+    }
+    if (!(STORAGE_KEYS.CLAIMED_SERIES_REWARDS in migrated) || !Array.isArray(migrated[STORAGE_KEYS.CLAIMED_SERIES_REWARDS])) {
+        migrated[STORAGE_KEYS.CLAIMED_SERIES_REWARDS] = [];
+    }
+    return migrated;
+}
+
+/**
+ * Migration from schema version 8 to version 9
+ * - Adds seriesExpeditionProgress (empty array) for deterministic expedition advancement
+ */
+function migrateToVersion9(state) {
+    const migrated = { ...state };
+    if (!(STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS in migrated) || !Array.isArray(migrated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS])) {
+        migrated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = [];
+    }
+    return migrated;
+}
+
+/**
+ * Migration from schema version 7 to version 8
+ * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
+ * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
+ */
+function migrateToVersion8(state) {
+    const migrated = { ...state };
+    const series = migrated[STORAGE_KEYS.SERIES];
+    if (!series || typeof series !== 'object' || Array.isArray(series)) {
+        return migrated;
+    }
+    const upgraded = {};
+    for (const id in series) {
+        const s = series[id];
+        if (!s || typeof s !== 'object') continue;
+        const releasedCount = typeof s.releasedCount === 'number' && !isNaN(s.releasedCount) && s.releasedCount >= 0
+            ? Math.floor(s.releasedCount)
+            : 0;
+        const expectedCount = typeof s.expectedCount === 'number' && !isNaN(s.expectedCount) && s.expectedCount >= 0
+            ? Math.floor(s.expectedCount)
+            : 0;
+        const isCompletedSeries = typeof s.isCompletedSeries === 'boolean' ? s.isCompletedSeries : false;
+        upgraded[id] = {
+            ...s,
+            id: s.id || id,
+            name: typeof s.name === 'string' ? s.name.trim() : '',
+            bookIds: Array.isArray(s.bookIds) ? s.bookIds.filter(x => typeof x === 'string' && x.trim()) : [],
+            releasedCount,
+            expectedCount,
+            isCompletedSeries
+        };
+    }
+    migrated[STORAGE_KEYS.SERIES] = upgraded;
+    return migrated;
+}
+
+/**
  * Migration from schema version 3 to version 4
  * - Adds Grimoire Gallery metadata to all quests: coverUrl, pageCountRaw, pageCountEffective
  * - Values are null for existing quests; populated when user selects a book via API or edits
@@ -445,6 +509,15 @@ export function migrateState(state) {
             case 6:
                 migratedState = migrateToVersion6(migratedState);
                 break;
+            case 7:
+                migratedState = migrateToVersion7(migratedState);
+                break;
+            case 8:
+                migratedState = migrateToVersion8(migratedState);
+                break;
+            case 9:
+                migratedState = migrateToVersion9(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -492,15 +565,20 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
         STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
         STORAGE_KEYS.BOOKS,
-        STORAGE_KEYS.EXTERNAL_CURRICULUM
+        STORAGE_KEYS.EXTERNAL_CURRICULUM,
+        STORAGE_KEYS.SERIES,
+        STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
+        STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
     ];
 
     stateKeys.forEach(key => {
         let defaultValue;
-        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS) {
+        if (key === STORAGE_KEYS.ATMOSPHERIC_BUFFS || key === STORAGE_KEYS.BOOKS || key === STORAGE_KEYS.SERIES) {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };
+        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS) {
+            defaultValue = [];
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {

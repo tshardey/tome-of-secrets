@@ -543,6 +543,16 @@ export class LibraryController extends BaseController {
             searchResultsEl.innerHTML = '';
         }
 
+        // Series (campaign) selector: tag this book to a series
+        const seriesSelect = document.getElementById('book-edit-series');
+        if (seriesSelect) {
+            const currentSeries = this.stateAdapter.getSeriesForBook(bookId);
+            const seriesList = this.stateAdapter.getSeriesList();
+            seriesSelect.innerHTML = '<option value="">— None —</option>' +
+                seriesList.map((s) => `<option value="${this._escapeAttr(s.id)}">${this._escapeHtml(s.name || 'Unnamed')}</option>`).join('');
+            seriesSelect.value = currentSeries ? currentSeries.id : '';
+        }
+
         const drawer = document.getElementById('book-edit-drawer');
         const backdrop = document.getElementById('book-edit-backdrop');
         if (drawer) drawer.style.display = 'flex';
@@ -590,6 +600,18 @@ export class LibraryController extends BaseController {
             const dateStr = dateCompletedInput.value.trim();
             const parsed = new Date(dateStr + 'T12:00:00Z');
             if (!isNaN(parsed.getTime())) dateCompleted = parsed.toISOString();
+        }
+
+        // Update series (campaign) tagging
+        const seriesSelect = document.getElementById('book-edit-series');
+        if (seriesSelect) {
+            const newSeriesId = (seriesSelect.value || '').trim() || null;
+            const currentSeries = this.stateAdapter.getSeriesForBook(bookId);
+            const currentSeriesId = currentSeries ? currentSeries.id : null;
+            if (newSeriesId !== currentSeriesId) {
+                if (currentSeriesId) this.stateAdapter.removeBookFromSeries(currentSeriesId, bookId);
+                if (newSeriesId) this.stateAdapter.addBookToSeries(newSeriesId, bookId);
+            }
         }
 
         this.stateAdapter.updateBook(bookId, {

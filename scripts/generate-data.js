@@ -31,6 +31,7 @@ const JSON_EXPORTS = {
     'masteryAbilities.json': 'masteryAbilities',
     'dungeonRewards.json': 'dungeonRewards',
     'dungeonCompletionRewards.json': 'dungeonCompletionRewards',
+    'seriesCompletionRewards.json': 'seriesCompletionRewards',
     'genreQuests.json': 'genreQuests',
     'extraCreditRewards.json': 'extraCreditRewards',
     'sideQuestsDetailed.json': 'sideQuestsDetailed',

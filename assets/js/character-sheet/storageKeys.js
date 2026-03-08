@@ -32,7 +32,13 @@ export const STORAGE_KEYS = Object.freeze({
     // Book-First Paradigm (Schema v5)
     BOOKS: 'books',
     /** Persisted as 'exchangeProgram' for backward compatibility; UI name is External Curriculum. */
-    EXTERNAL_CURRICULUM: 'exchangeProgram'
+    EXTERNAL_CURRICULUM: 'exchangeProgram',
+    // The Archive – series tracker (Phase 6)
+    SERIES: 'series',
+    /** Series IDs for which the keeper has claimed the completion (souvenir) reward. */
+    CLAIMED_SERIES_REWARDS: 'claimedSeriesRewards',
+    /** Expedition progress: [{ seriesId, stopId, claimedAt }] — which series have advanced the shared track. */
+    SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -59,7 +65,10 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.CLAIMED_ROOM_REWARDS,
     STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED,
     STORAGE_KEYS.BOOKS,
-    STORAGE_KEYS.EXTERNAL_CURRICULUM
+    STORAGE_KEYS.EXTERNAL_CURRICULUM,
+    STORAGE_KEYS.SERIES,
+    STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
+    STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
 ]);
 
 export function createEmptyCharacterState() {
@@ -87,7 +96,10 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: [],
         [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0,
         [STORAGE_KEYS.BOOKS]: {},
-        [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} }
+        [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} },
+        [STORAGE_KEYS.SERIES]: {},
+        [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
+        [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
     };
 }
 

@@ -26,6 +26,7 @@ import { createCurseListViewModel } from '../viewModels/curseViewModel.js';
 import { createAbilityViewModel } from '../viewModels/abilityViewModel.js';
 import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffViewModel.js';
 import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
+import { getExpeditionPassiveBonuses } from '../services/SeriesCompletionService.js';
 import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffService.js';
 
 /**
@@ -121,20 +122,31 @@ export function updateXpProgressBar() {
 
 export function renderPermanentBonuses(levelInput) {
     const bonusList = document.getElementById('permanentBonusesList');
-    const currentLevel = parseIntOr(levelInput.value, 1);
+    const currentLevel = parseIntOr(levelInput?.value ?? levelInput, 1);
     clearElement(bonusList);
     
-    // Create view model
+    // Create view model (level-based bonuses from JSON)
     const viewModel = createPermanentBonusesViewModel(currentLevel);
+    const expeditionPassive = getExpeditionPassiveBonuses(characterState[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] || []);
+    const hasLevelBonuses = viewModel.hasBonuses;
+    const hasExpeditionBonuses = expeditionPassive.length > 0;
     
-    if (viewModel.hasBonuses) {
+    if (hasLevelBonuses) {
         viewModel.bonuses.forEach(({ content }) => {
             const li = document.createElement('li');
-            // Permanent bonuses from JSON are trusted content
             li.innerHTML = content;
             bonusList.appendChild(li);
         });
-    } else {
+    }
+    if (hasExpeditionBonuses) {
+        expeditionPassive.forEach((text) => {
+            const li = document.createElement('li');
+            li.classList.add('permanent-bonus-expedition');
+            li.innerHTML = text;
+            bonusList.appendChild(li);
+        });
+    }
+    if (!hasLevelBonuses && !hasExpeditionBonuses) {
         const li = document.createElement('li');
         li.textContent = '-- No bonuses unlocked at this level --';
         bonusList.appendChild(li);

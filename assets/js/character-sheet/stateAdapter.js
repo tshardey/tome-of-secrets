@@ -23,7 +23,11 @@ const EVENTS = Object.freeze({
     CLAIMED_ROOM_REWARDS_CHANGED: 'claimedRoomRewardsChanged',
     // Book-First Paradigm (Schema v5)
     BOOKS_CHANGED: 'booksChanged',
-    EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged'
+    EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged',
+    // The Archive – series tracker
+    SERIES_CHANGED: 'seriesChanged',
+    CLAIMED_SERIES_REWARDS_CHANGED: 'claimedSeriesRewardsChanged',
+    SERIES_EXPEDITION_PROGRESS_CHANGED: 'seriesExpeditionProgressChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -41,7 +45,8 @@ const LIST_EVENTS = Object.freeze({
     [STORAGE_KEYS.COMPLETED_WINGS]: EVENTS.COMPLETED_WINGS_CHANGED,
     [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: EVENTS.PASSIVE_ITEM_SLOTS_CHANGED,
     [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: EVENTS.PASSIVE_FAMILIAR_SLOTS_CHANGED,
-    [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: EVENTS.CLAIMED_ROOM_REWARDS_CHANGED
+    [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: EVENTS.CLAIMED_ROOM_REWARDS_CHANGED,
+    [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: EVENTS.SERIES_EXPEDITION_PROGRESS_CHANGED
 });
 
 function sanitizeGenreList(genres) {
@@ -870,6 +875,7 @@ export class StateAdapter {
         if (!(bookId in books)) return false;
         delete books[bookId];
         this._persistBooks(books);
+        this._removeBookFromAllSeries(bookId);
         return true;
     }
 
@@ -928,6 +934,256 @@ export class StateAdapter {
         const questIds = (links.questIds || []).filter(id => id !== questId);
         this.updateBook(bookId, { links: { questIds, curriculumPromptIds: links.curriculumPromptIds || [] } });
         return true;
+    }
+
+    // ==========================================
+    // Series (The Archive – book tagging)
+    // ==========================================
+
+    _getSeriesRaw() {
+        const series = this.state[STORAGE_KEYS.SERIES];
+        return series && typeof series === 'object' && !Array.isArray(series) ? series : {};
+    }
+
+    _persistSeries(series) {
+        this.state[STORAGE_KEYS.SERIES] = series;
+        void setStateKey(STORAGE_KEYS.SERIES, series);
+        this.emit(EVENTS.SERIES_CHANGED, { ...series });
+    }
+
+    _removeBookFromAllSeries(bookId) {
+        const series = this._getSeriesRaw();
+        let changed = false;
+        const next = {};
+        for (const [id, s] of Object.entries(series)) {
+            if (!s || !Array.isArray(s.bookIds)) continue;
+            const bookIds = s.bookIds.filter(bid => bid !== bookId);
+            if (bookIds.length !== s.bookIds.length) changed = true;
+            next[id] = { ...s, bookIds };
+        }
+        if (changed) this._persistSeries(next);
+    }
+
+    addSeries(data) {
+        if (!data || typeof data !== 'object') return null;
+        const series = { ...this._getSeriesRaw() };
+        const id = (typeof data.id === 'string' && data.id.trim()) ? data.id.trim() : this._generateId();
+        const name = typeof data.name === 'string' ? data.name.trim() : '';
+        if (!name) return null;
+        const bookIds = Array.isArray(data.bookIds) ? data.bookIds.filter(x => typeof x === 'string') : [];
+        const releasedCount = typeof data.releasedCount === 'number' && !isNaN(data.releasedCount) && data.releasedCount >= 0
+            ? Math.floor(data.releasedCount)
+            : 0;
+        const expectedCount = typeof data.expectedCount === 'number' && !isNaN(data.expectedCount) && data.expectedCount >= 0
+            ? Math.floor(data.expectedCount)
+            : 0;
+        const isCompletedSeries = typeof data.isCompletedSeries === 'boolean' ? data.isCompletedSeries : false;
+        series[id] = { id, name, bookIds, releasedCount, expectedCount, isCompletedSeries };
+        this._persistSeries(series);
+        return series[id];
+    }
+
+    updateSeries(seriesId, updates) {
+        if (!seriesId || typeof seriesId !== 'string') return null;
+        const series = { ...this._getSeriesRaw() };
+        const s = series[seriesId];
+        if (!s) return null;
+        if (updates && typeof updates === 'object') {
+            if (typeof updates.name === 'string' && updates.name.trim()) s.name = updates.name.trim();
+            if (Array.isArray(updates.bookIds)) s.bookIds = updates.bookIds.filter(x => typeof x === 'string');
+            if (typeof updates.releasedCount === 'number' && !isNaN(updates.releasedCount) && updates.releasedCount >= 0) {
+                s.releasedCount = Math.floor(updates.releasedCount);
+            }
+            if (typeof updates.expectedCount === 'number' && !isNaN(updates.expectedCount) && updates.expectedCount >= 0) {
+                s.expectedCount = Math.floor(updates.expectedCount);
+            }
+            if (typeof updates.isCompletedSeries === 'boolean') s.isCompletedSeries = updates.isCompletedSeries;
+        }
+        series[seriesId] = s;
+        this._persistSeries(series);
+        return s;
+    }
+
+    deleteSeries(seriesId) {
+        if (!seriesId || typeof seriesId !== 'string') return false;
+        const series = { ...this._getSeriesRaw() };
+        if (!(seriesId in series)) return false;
+        delete series[seriesId];
+        this._persistSeries(series);
+        return true;
+    }
+
+    getSeries(seriesId) {
+        if (!seriesId || typeof seriesId !== 'string') return null;
+        const s = this._getSeriesRaw()[seriesId];
+        if (!s) return null;
+        return {
+            ...s,
+            bookIds: [...(s.bookIds || [])],
+            releasedCount: typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0,
+            expectedCount: typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0,
+            isCompletedSeries: typeof s.isCompletedSeries === 'boolean' ? s.isCompletedSeries : false
+        };
+    }
+
+    getSeriesList() {
+        const raw = this._getSeriesRaw();
+        return Object.keys(raw).map(id => {
+            const s = raw[id];
+            if (!s) return null;
+            return {
+                ...s,
+                bookIds: [...(s.bookIds || [])],
+                releasedCount: typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0,
+                expectedCount: typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0,
+                isCompletedSeries: typeof s.isCompletedSeries === 'boolean' ? s.isCompletedSeries : false
+            };
+        }).filter(Boolean);
+    }
+
+    /** Returns the first series that contains this bookId, or null. */
+    getSeriesForBook(bookId) {
+        if (!bookId || typeof bookId !== 'string') return null;
+        const list = this.getSeriesList();
+        return list.find(s => (s.bookIds || []).includes(bookId)) || null;
+    }
+
+    addBookToSeries(seriesId, bookId) {
+        if (!seriesId || !bookId || typeof seriesId !== 'string' || typeof bookId !== 'string') return false;
+        const s = this.getSeries(seriesId);
+        if (!s) return false;
+        if (s.bookIds.includes(bookId)) return true;
+        const bookIds = [...s.bookIds, bookId];
+        this.updateSeries(seriesId, { bookIds });
+        return true;
+    }
+
+    removeBookFromSeries(seriesId, bookId) {
+        if (!seriesId || !bookId || typeof seriesId !== 'string' || typeof bookId !== 'string') return false;
+        const s = this.getSeries(seriesId);
+        if (!s) return false;
+        const bookIds = s.bookIds.filter(id => id !== bookId);
+        this.updateSeries(seriesId, { bookIds });
+        return true;
+    }
+
+    /**
+     * Number of linked books (in library) that have status === 'completed'.
+     * @param {string} seriesId
+     * @returns {number}
+     */
+    getSeriesCompletedCount(seriesId) {
+        const s = this.getSeries(seriesId);
+        if (!s || !Array.isArray(s.bookIds)) return 0;
+        const books = this._getBooksRaw();
+        return s.bookIds.filter(bookId => {
+            const book = books[bookId];
+            return book && book.status === 'completed';
+        }).length;
+    }
+
+    /**
+     * Derived progress summary for a series (for UI and completion checks).
+     * @param {string} seriesId
+     * @returns {{ completedCount: number, inProgressCount: number, linkedCount: number, releasedCount: number, expectedCount: number, isCompletedSeries: boolean, isKeeperComplete: boolean } | null}
+     */
+    getSeriesProgressSummary(seriesId) {
+        const s = this.getSeries(seriesId);
+        if (!s) return null;
+        const bookIds = s.bookIds || [];
+        const books = this._getBooksRaw();
+        let completedCount = 0;
+        let inProgressCount = 0;
+        for (const bookId of bookIds) {
+            const book = books[bookId];
+            if (!book) continue;
+            if (book.status === 'completed') completedCount += 1;
+            else if (book.status === 'reading') inProgressCount += 1;
+        }
+        const releasedCount = typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0;
+        const expectedCount = typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0;
+        const isCompletedSeries = s.isCompletedSeries === true;
+        const isKeeperComplete = releasedCount > 0 && releasedCount === expectedCount && isCompletedSeries && completedCount >= releasedCount;
+        return {
+            completedCount,
+            inProgressCount,
+            linkedCount: bookIds.length,
+            releasedCount,
+            expectedCount,
+            isCompletedSeries,
+            isKeeperComplete
+        };
+    }
+
+    /**
+     * Whether the series is eligible for claiming the completion reward.
+     * Requires: author has finished the series (isCompletedSeries), releasedCount === expectedCount,
+     * and the keeper has read every released book (completed linked count >= releasedCount).
+     * @param {string} seriesId
+     * @returns {boolean}
+     */
+    isSeriesComplete(seriesId) {
+        const summary = this.getSeriesProgressSummary(seriesId);
+        if (!summary) return false;
+        return summary.isKeeperComplete;
+    }
+
+    getClaimedSeriesRewards() {
+        const raw = this.state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS];
+        return Array.isArray(raw) ? [...raw] : [];
+    }
+
+    /**
+     * Record that the keeper has claimed the series completion (souvenir) reward for this series.
+     * @param {string} seriesId
+     * @returns {boolean} true if added (idempotent: already claimed still returns true)
+     */
+    addClaimedSeriesReward(seriesId) {
+        if (!seriesId || typeof seriesId !== 'string') return false;
+        const list = this.getClaimedSeriesRewards();
+        if (list.includes(seriesId)) return true;
+        list.push(seriesId);
+        this.state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS] = list;
+        void setStateKey(STORAGE_KEYS.CLAIMED_SERIES_REWARDS, list);
+        this.emit(EVENTS.CLAIMED_SERIES_REWARDS_CHANGED, [...list]);
+        return true;
+    }
+
+    hasClaimedSeriesReward(seriesId) {
+        return this.getClaimedSeriesRewards().includes(seriesId);
+    }
+
+    /**
+     * Expedition progress: list of { seriesId, stopId, claimedAt } for series that have advanced the shared track.
+     * @returns {{ seriesId: string, stopId: string, claimedAt: string }[]}
+     */
+    getSeriesExpeditionProgress() {
+        const raw = this.state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS];
+        return Array.isArray(raw) ? [...raw] : [];
+    }
+
+    /**
+     * Record that a series advanced the expedition to the given stop. Idempotent per (seriesId, stopId).
+     * @param {string} seriesId
+     * @param {string} stopId
+     * @returns {boolean} true if added, false if duplicate or invalid
+     */
+    addSeriesExpeditionAdvance(seriesId, stopId) {
+        if (!seriesId || !stopId || typeof seriesId !== 'string' || typeof stopId !== 'string') return false;
+        const list = this.getSeriesExpeditionProgress();
+        const alreadyExists = list.some(p => p.seriesId === seriesId && p.stopId === stopId);
+        if (alreadyExists) return false;
+        const entry = { seriesId, stopId, claimedAt: new Date().toISOString() };
+        list.push(entry);
+        this.state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = list;
+        void setStateKey(STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS, list);
+        this.emit(EVENTS.SERIES_EXPEDITION_PROGRESS_CHANGED, [...list]);
+        return true;
+    }
+
+    /** Whether this series has already advanced the expedition (in expedition progress log). */
+    hasSeriesAdvancedExpedition(seriesId) {
+        return this.getSeriesExpeditionProgress().some(p => p.seriesId === seriesId);
     }
 
     /**

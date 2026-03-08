@@ -70,7 +70,10 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: [],
             [STORAGE_KEYS.DUNGEON_COMPLETION_DRAWS_REDEEMED]: 0,
             [STORAGE_KEYS.BOOKS]: {},
-            [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} }
+            [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} },
+            [STORAGE_KEYS.SERIES]: {},
+            [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
+            [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {
