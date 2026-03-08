@@ -20,8 +20,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 6: Rename legacy genre quest name "Memoirs/Biographies" -> "Memoir/Biography" in saved state
  * Version 7: The Archive - series tracker (series state)
  * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
+ * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
  */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /**
  * Schema version key in localStorage
@@ -642,6 +643,42 @@ function validatePassiveSlotArray(slots, context = 'passiveSlots') {
 }
 
 /**
+ * Validate a single series expedition progress entry { seriesId, stopId, claimedAt }
+ * @param {*} entry - Raw progress entry
+ * @param {string} context - Context for error messages
+ * @returns {Object|null} - Validated entry or null if invalid
+ */
+function validateExpeditionProgressEntry(entry, context = 'expeditionProgress') {
+    if (!entry || typeof entry !== 'object') return null;
+    const seriesId = typeof entry.seriesId === 'string' && entry.seriesId.trim() ? entry.seriesId.trim() : null;
+    const stopId = typeof entry.stopId === 'string' && entry.stopId.trim() ? entry.stopId.trim() : null;
+    if (!seriesId || !stopId) return null;
+    const claimedAt = typeof entry.claimedAt === 'string' ? entry.claimedAt : new Date(0).toISOString();
+    return { seriesId, stopId, claimedAt };
+}
+
+/**
+ * Validate and fix series expedition progress array (Schema v9)
+ * @param {*} progress - Array of { seriesId, stopId, claimedAt }
+ * @param {string} context - Context for error messages
+ * @returns {Array} - Validated array
+ */
+function validateSeriesExpeditionProgress(progress, context = STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS) {
+    if (!Array.isArray(progress)) {
+        console.warn(`Invalid ${context}: not an array, using empty array`);
+        return [];
+    }
+    const validated = [];
+    progress.forEach((entry, index) => {
+        const validatedEntry = validateExpeditionProgressEntry(entry, `${context}[${index}]`);
+        if (validatedEntry) {
+            validated.push(validatedEntry);
+        }
+    });
+    return validated;
+}
+
+/**
  * Validate and fix character form data
  * @param {*} formData - Form data object
  * @returns {Object} - Validated form data object
@@ -772,6 +809,10 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.CLAIMED_SERIES_REWARDS],
         STORAGE_KEYS.CLAIMED_SERIES_REWARDS
     );
+    validated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = validateSeriesExpeditionProgress(
+        state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS],
+        STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
+    );
 
     return validated;
 }
@@ -784,4 +825,3 @@ export function validateCharacterState(state) {
 export function validateFormDataSafe(formData) {
     return validateFormData(formData);
 }
-

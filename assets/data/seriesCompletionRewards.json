@@ -1,12 +1,133 @@
 {
-    "1": { "name": "Series Souvenir: Bookmark", "reward": "Gain +50 Ink Drops and +5 Paper Scraps." },
-    "2": { "name": "Series Souvenir: Librarian's Quill", "reward": "You find a Librarian's Quill.", "hasLink": true, "link": { "text": "Librarian's Quill", "url": "{{ site.baseurl }}/rewards.html#librarians-quill" } },
-    "3": { "name": "Series Souvenir: Page Keeper", "reward": "The next two books you complete grant a x1.5 Ink Drop bonus." },
-    "4": { "name": "Series Souvenir: Reading Journal", "reward": "Gain +75 XP." },
-    "5": { "name": "Series Souvenir: Golden Pen", "reward": "You find a Golden Pen.", "hasLink": true, "link": { "text": "Golden Pen", "url": "{{ site.baseurl }}/rewards.html#golden-pen" } },
-    "6": { "name": "Series Souvenir: Dust Jacket", "reward": "Gain +30 Ink Drops and +10 Paper Scraps." },
-    "7": { "name": "Series Souvenir: Signed Page", "reward": "Gain +100 XP." },
-    "8": { "name": "Series Souvenir: Bookplate", "reward": "You may remove one Worn Page penalty." },
-    "9": { "name": "Series Souvenir: Epilogue", "reward": "Your next 3 books grant x1.5 Ink Drops." },
-    "10": { "name": "Series Souvenir: Collector's Edition", "reward": "Gain +80 Ink Drops and +15 Paper Scraps." }
+    "id": "expedition-for-the-unwritten-ember",
+    "name": "Expedition for the Unwritten Ember",
+    "mapName": "expeditionForTheUnwrittenEmber",
+    "baseMapImage": "assets/maps/chronicle_map.png",
+    "coordinateSystem": "normalized-100",
+    "stops": [
+        {
+            "id": "stop-1",
+            "order": 1,
+            "name": "The Wrought-Iron Threshold",
+            "story": "You push past the heavy gates of the Grand Library, stepping into the foggy moors. The expedition to save your Sanctum begins.",
+            "position": { "x": 10, "y": 15 },
+            "reward": {
+                "type": "currency",
+                "xp": 0,
+                "inkDrops": 50,
+                "paperScraps": 10,
+                "text": "Gain +50 Ink Drops and +10 Paper Scraps."
+            }
+        },
+        {
+            "id": "stop-2",
+            "order": 2,
+            "name": "The Ashen Crossroads",
+            "story": "At the intersection of forgotten roads, you trade tales with a wandering merchant for a map that points toward the Ember.",
+            "position": { "x": 20, "y": 40 },
+            "reward": {
+                "type": "passive-rule-modifier",
+                "text": "Permanent Passive: Organize the Stacks (Hearts) quests now grant +20 XP (was +15)."
+            }
+        },
+        {
+            "id": "stop-3",
+            "order": 3,
+            "name": "The Whispering Woods",
+            "story": "The trees here mimic the rustle of pages. You navigate the twisting paths by following the faint scent of old parchment.",
+            "position": { "x": 35, "y": 65 },
+            "reward": {
+                "type": "currency",
+                "xp": 100,
+                "inkDrops": 0,
+                "paperScraps": 0,
+                "text": "Gain +100 XP."
+            }
+        },
+        {
+            "id": "stop-4",
+            "order": 4,
+            "name": "The Sunken Observatory",
+            "story": "An abandoned astrologer's tower offers refuge from the elements. You salvage an ancient brass lens from the ruins.",
+            "position": { "x": 50, "y": 70 },
+            "reward": {
+                "type": "item-slot-bonus",
+                "slotId": "expedition-display-slot",
+                "text": "Permanent Bonus: +1 Display Slot (Passive Item slot)."
+            }
+        },
+        {
+            "id": "stop-5",
+            "order": 5,
+            "name": "The Midnight Waystation",
+            "story": "Huddled by a solitary hearth, you document the strange magic of the outside world. Your notes have never felt more vital.",
+            "position": { "x": 75, "y": 80 },
+            "reward": {
+                "type": "passive-rule-modifier",
+                "text": "Permanent Passive: Adventure Journal entries now grant +10 Paper Scraps (was +5)."
+            }
+        },
+        {
+            "id": "stop-6",
+            "order": 6,
+            "name": "The Glass-Still Lake",
+            "story": "You cross the glassy expanse on a tethered ferry. The mist finally parts, revealing the jagged peaks where the artifact lies.",
+            "position": { "x": 90, "y": 60 },
+            "reward": {
+                "type": "currency",
+                "xp": 150,
+                "inkDrops": 50,
+                "paperScraps": 0,
+                "text": "Gain +150 XP and +50 Ink Drops."
+            }
+        },
+        {
+            "id": "stop-7",
+            "order": 7,
+            "name": "The Echoing Caverns",
+            "story": "Descending into the dark, you learn to read ancient runes carved into the stone. You recognize the repeating patterns of long epics.",
+            "position": { "x": 85, "y": 45 },
+            "reward": {
+                "type": "passive-rule-modifier",
+                "text": "Permanent Passive: All books read for a Series grant +15 Ink Drops (was +10)."
+            }
+        },
+        {
+            "id": "stop-8",
+            "order": 8,
+            "name": "The Weaver's Hollow",
+            "story": "An exiled moth-silk weaver teaches you how to spin wards from moonlight, protecting your mind from the creeping fog.",
+            "position": { "x": 65, "y": 30 },
+            "reward": {
+                "type": "passive-rule-modifier",
+                "text": "Permanent Passive: Once per month, ignore any single Shroud penalty or Spoon loss."
+            }
+        },
+        {
+            "id": "stop-9",
+            "order": 9,
+            "name": "The Caldera's Core",
+            "story": "You brave the deepest chamber and claim the Unwritten Ember. Its warmth pulses against your chest, eager to mend your home.",
+            "position": { "x": 40, "y": 25 },
+            "reward": {
+                "type": "currency",
+                "xp": 250,
+                "inkDrops": 0,
+                "paperScraps": 0,
+                "text": "Gain +250 XP."
+            }
+        },
+        {
+            "id": "stop-10",
+            "order": 10,
+            "name": "The Reawakened Sanctum",
+            "story": "You return victorious. Pressing the Ember into the floorboards, your domain blooms with renewed, vibrant magic.",
+            "position": { "x": 10, "y": 15 },
+            "reward": {
+                "type": "familiar-slot-bonus",
+                "slotId": "expedition-adoption-slot",
+                "text": "Permanent Bonus: +1 Adoption Slot (Familiar) and +10 XP for all Dungeon Rooms."
+            }
+        }
+    ]
 }

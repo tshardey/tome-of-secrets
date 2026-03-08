@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  *
- * Tests for SeriesCompletionService: canClaim, claim flow, reward by roll, apply reward.
+ * Tests for SeriesCompletionService: canClaim, expedition advancement, typed reward application.
  */
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
@@ -9,7 +9,10 @@ import {
   canClaimSeriesCompletionReward,
   claimSeriesCompletionReward,
   getSeriesCompletionRewardByRoll,
-  applySeriesCompletionReward
+  applySeriesCompletionReward,
+  getSeriesExpedition,
+  getNextSeriesExpeditionStop,
+  advanceSeriesExpedition
 } from '../assets/js/services/SeriesCompletionService.js';
 
 describe('SeriesCompletionService', () => {
@@ -89,12 +92,27 @@ describe('SeriesCompletionService', () => {
     });
   });
 
-  describe('getSeriesCompletionRewardByRoll', () => {
-    it('returns reward for roll 1-10', () => {
-      expect(getSeriesCompletionRewardByRoll(1).name).toContain('Souvenir');
-      expect(getSeriesCompletionRewardByRoll(10).name).toContain('Souvenir');
+  describe('getSeriesExpedition', () => {
+    it('returns expedition with ordered stops array', () => {
+      const expedition = getSeriesExpedition();
+      expect(expedition.stops).toBeDefined();
+      expect(Array.isArray(expedition.stops)).toBe(true);
+      expect(expedition.stops.length).toBeGreaterThan(0);
+      const first = expedition.stops[0];
+      expect(first.id).toBeDefined();
+      expect(first.order).toBe(1);
+      expect(first.name).toBeTruthy();
+      expect(first.reward).toBeDefined();
+      expect(first.reward.type).toBeDefined();
     });
-    it('clamps roll to 1-10', () => {
+  });
+
+  describe('getSeriesCompletionRewardByRoll', () => {
+    it('returns reward entry for roll 1-10 (legacy API)', () => {
+      expect(getSeriesCompletionRewardByRoll(1).name).toBeTruthy();
+      expect(getSeriesCompletionRewardByRoll(10).name).toBeTruthy();
+    });
+    it('clamps roll to valid stop index', () => {
       expect(getSeriesCompletionRewardByRoll(0)).toBeTruthy();
       expect(getSeriesCompletionRewardByRoll(11)).toBeTruthy();
     });
@@ -140,27 +158,50 @@ describe('SeriesCompletionService', () => {
       const b1 = adapter.addBook({ title: 'B1', author: 'A' });
       adapter.updateBook(b1.id, { status: 'completed' });
       const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 1, isCompletedSeries: true });
-      const result = claimSeriesCompletionReward(s.id, adapter, { updateCurrency }, 1);
+      const result = claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
       expect(result.claimed).toBe(true);
       expect(result.reward).toBeDefined();
+      expect(result.reward.name).toBeTruthy();
       expect(adapter.hasClaimedSeriesReward(s.id)).toBe(true);
     });
 
-    it('second claim returns claimed: false', () => {
+    it('second claim returns claimed: false (same series cannot advance twice)', () => {
       const b1 = adapter.addBook({ title: 'B1', author: 'A' });
       adapter.updateBook(b1.id, { status: 'completed' });
       const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 1, isCompletedSeries: true });
-      claimSeriesCompletionReward(s.id, adapter, { updateCurrency }, 1);
-      const second = claimSeriesCompletionReward(s.id, adapter, { updateCurrency }, 2);
+      claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
+      const second = claimSeriesCompletionReward(s.id, adapter, { updateCurrency });
       expect(second.claimed).toBe(false);
+    });
+
+    it('advances expedition by one stop and applies typed reward', () => {
+      const b1 = adapter.addBook({ title: 'B1', author: 'A' });
+      adapter.updateBook(b1.id, { status: 'completed' });
+      const s = adapter.addSeries({ name: 'S', bookIds: [b1.id], releasedCount: 1, expectedCount: 1, isCompletedSeries: true });
+      const nextBefore = getNextSeriesExpeditionStop(adapter);
+      expect(nextBefore).toBeTruthy();
+      const result = advanceSeriesExpedition(s.id, adapter, { updateCurrency });
+      expect(result.advanced).toBe(true);
+      expect(result.stop).toBeDefined();
+      expect(result.stop.id).toBe(nextBefore.id);
+      expect(result.applied).toBeDefined();
+      expect(result.applied.applied).toBe(true);
+      if (result.stop.reward.type === 'currency') {
+        expect(updateCurrency).toHaveBeenCalled();
+      }
     });
   });
 
   describe('applySeriesCompletionReward', () => {
-    it('applies currency reward (Bookmark)', () => {
+    it('applies typed currency reward from first expedition stop', () => {
       const reward = getSeriesCompletionRewardByRoll(1);
       applySeriesCompletionReward(reward, { stateAdapter: adapter, updateCurrency });
-      expect(updateCurrency).toHaveBeenCalledWith({ inkDrops: 50, paperScraps: 5 });
+      expect(updateCurrency).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inkDrops: 50,
+          paperScraps: 10
+        })
+      );
     });
   });
 });

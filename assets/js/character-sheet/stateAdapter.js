@@ -26,7 +26,8 @@ const EVENTS = Object.freeze({
     EXTERNAL_CURRICULUM_CHANGED: 'externalCurriculumChanged',
     // The Archive – series tracker
     SERIES_CHANGED: 'seriesChanged',
-    CLAIMED_SERIES_REWARDS_CHANGED: 'claimedSeriesRewardsChanged'
+    CLAIMED_SERIES_REWARDS_CHANGED: 'claimedSeriesRewardsChanged',
+    SERIES_EXPEDITION_PROGRESS_CHANGED: 'seriesExpeditionProgressChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -44,7 +45,8 @@ const LIST_EVENTS = Object.freeze({
     [STORAGE_KEYS.COMPLETED_WINGS]: EVENTS.COMPLETED_WINGS_CHANGED,
     [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: EVENTS.PASSIVE_ITEM_SLOTS_CHANGED,
     [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: EVENTS.PASSIVE_FAMILIAR_SLOTS_CHANGED,
-    [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: EVENTS.CLAIMED_ROOM_REWARDS_CHANGED
+    [STORAGE_KEYS.CLAIMED_ROOM_REWARDS]: EVENTS.CLAIMED_ROOM_REWARDS_CHANGED,
+    [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: EVENTS.SERIES_EXPEDITION_PROGRESS_CHANGED
 });
 
 function sanitizeGenreList(genres) {
@@ -1149,6 +1151,37 @@ export class StateAdapter {
 
     hasClaimedSeriesReward(seriesId) {
         return this.getClaimedSeriesRewards().includes(seriesId);
+    }
+
+    /**
+     * Expedition progress: list of { seriesId, stopId, claimedAt } for series that have advanced the shared track.
+     * @returns {{ seriesId: string, stopId: string, claimedAt: string }[]}
+     */
+    getSeriesExpeditionProgress() {
+        const raw = this.state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS];
+        return Array.isArray(raw) ? [...raw] : [];
+    }
+
+    /**
+     * Record that a series advanced the expedition to the given stop. Idempotent per (seriesId, stopId).
+     * @param {string} seriesId
+     * @param {string} stopId
+     * @returns {boolean} true if added
+     */
+    addSeriesExpeditionAdvance(seriesId, stopId) {
+        if (!seriesId || !stopId || typeof seriesId !== 'string' || typeof stopId !== 'string') return false;
+        const list = this.getSeriesExpeditionProgress();
+        const entry = { seriesId, stopId, claimedAt: new Date().toISOString() };
+        list.push(entry);
+        this.state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = list;
+        void setStateKey(STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS, list);
+        this.emit(EVENTS.SERIES_EXPEDITION_PROGRESS_CHANGED, [...list]);
+        return true;
+    }
+
+    /** Whether this series has already advanced the expedition (in expedition progress log). */
+    hasSeriesAdvancedExpedition(seriesId) {
+        return this.getSeriesExpeditionProgress().some(p => p.seriesId === seriesId);
     }
 
     /**

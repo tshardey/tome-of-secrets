@@ -233,6 +233,18 @@ function migrateToVersion7(state) {
 }
 
 /**
+ * Migration from schema version 8 to version 9
+ * - Adds seriesExpeditionProgress (empty array) for deterministic expedition advancement
+ */
+function migrateToVersion9(state) {
+    const migrated = { ...state };
+    if (!(STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS in migrated) || !Array.isArray(migrated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS])) {
+        migrated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = [];
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -503,6 +515,9 @@ export function migrateState(state) {
             case 8:
                 migratedState = migrateToVersion8(migratedState);
                 break;
+            case 9:
+                migratedState = migrateToVersion9(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -552,7 +567,8 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.BOOKS,
         STORAGE_KEYS.EXTERNAL_CURRICULUM,
         STORAGE_KEYS.SERIES,
-        STORAGE_KEYS.CLAIMED_SERIES_REWARDS
+        STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
+        STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
     ];
 
     stateKeys.forEach(key => {
@@ -561,7 +577,7 @@ export function loadAndMigrateState() {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };
-        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS) {
+        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS) {
             defaultValue = [];
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
