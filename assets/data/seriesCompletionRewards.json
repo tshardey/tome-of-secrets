@@ -10,7 +10,7 @@
             "order": 1,
             "name": "The Wrought-Iron Threshold",
             "story": "You push past the heavy gates of the Grand Library, stepping into the foggy moors. The expedition to save your Sanctum begins.",
-            "position": { "x": 8, "y": 12 },
+            "position": { "x": 8, "y": 62 },
             "reward": {
                 "type": "currency",
                 "xp": 0,
@@ -35,7 +35,7 @@
             "order": 3,
             "name": "The Whispering Woods",
             "story": "The trees here mimic the rustle of pages. You navigate the twisting paths by following the faint scent of old parchment.",
-            "position": { "x": 45, "y": 65 },
+            "position": { "x": 60, "y": 70 },
             "reward": {
                 "type": "currency",
                 "xp": 100,
@@ -49,7 +49,7 @@
             "order": 4,
             "name": "The Sunken Observatory",
             "story": "An abandoned astrologer's tower offers refuge from the elements. You salvage an ancient brass lens from the ruins.",
-            "position": { "x": 60, "y": 70 },
+            "position": { "x": 78, "y": 77 },
             "reward": {
                 "type": "item-slot-bonus",
                 "slotId": "expedition-display-slot",
@@ -61,7 +61,7 @@
             "order": 5,
             "name": "The Midnight Waystation",
             "story": "Huddled by a solitary hearth, you document the strange magic of the outside world. Your notes have never felt more vital.",
-            "position": { "x": 75, "y": 80 },
+            "position": { "x": 95, "y": 60 },
             "reward": {
                 "type": "passive-rule-modifier",
                 "text": "Permanent Passive: Adventure Journal entries now grant +10 Paper Scraps (was +5)."
@@ -72,7 +72,7 @@
             "order": 6,
             "name": "The Glass-Still Lake",
             "story": "You cross the glassy expanse on a tethered ferry. The mist finally parts, revealing the jagged peaks where the artifact lies.",
-            "position": { "x": 90, "y": 60 },
+            "position": { "x": 90, "y": 26 },
             "reward": {
                 "type": "currency",
                 "xp": 150,
@@ -86,7 +86,7 @@
             "order": 7,
             "name": "The Echoing Caverns",
             "story": "Descending into the dark, you learn to read ancient runes carved into the stone. You recognize the repeating patterns of long epics.",
-            "position": { "x": 82, "y": 35 },
+            "position": { "x": 58, "y": 17 },
             "reward": {
                 "type": "passive-rule-modifier",
                 "text": "Permanent Passive: All books read for a Series grant +15 Ink Drops (was +10)."
@@ -97,7 +97,7 @@
             "order": 8,
             "name": "The Weaver's Hollow",
             "story": "An exiled moth-silk weaver teaches you how to spin wards from moonlight, protecting your mind from the creeping fog.",
-            "position": { "x": 65, "y": 30 },
+            "position": { "x": 31, "y": 15 },
             "reward": {
                 "type": "passive-rule-modifier",
                 "text": "Permanent Passive: Once per month, ignore any single Shroud penalty or Spoon loss."
@@ -108,7 +108,7 @@
             "order": 9,
             "name": "The Caldera's Core",
             "story": "You brave the deepest chamber and claim the Unwritten Ember. Its warmth pulses against your chest, eager to mend your home.",
-            "position": { "x": 40, "y": 35 },
+            "position": { "x": 20, "y": 30 },
             "reward": {
                 "type": "currency",
                 "xp": 250,
@@ -122,7 +122,7 @@
             "order": 10,
             "name": "The Reawakened Sanctum",
             "story": "You return victorious. Pressing the Ember into the floorboards, your domain blooms with renewed, vibrant magic.",
-            "position": { "x": 17, "y": 22 },
+            "position": { "x": 3, "y": 45 },
             "reward": {
                 "type": "familiar-slot-bonus",
                 "slotId": "expedition-adoption-slot",
