@@ -63,7 +63,7 @@ export function createDungeonDeckViewModel(state, drawnSlots = []) {
             availableCount: encounterDeckAvailable ? 1 : 0,
             cardbackImage: toCdnImageUrlIfConfigured('assets/images/encounters/tos-cardback-encounters.png')
         },
-        drawnSlots: slots.map((slot) => createDrawnCardViewModel(slot.roomNumber, slot.encounterData)),
+        drawnSlots: slots.map((slot) => createDrawnCardViewModel(slot.roomNumber, slot.encounterData, slot.encounterAction)),
         lastSlotIndexForEncounter: lastSlotWithoutEncounter,
         availableRooms
     };
@@ -73,9 +73,10 @@ export function createDungeonDeckViewModel(state, drawnSlots = []) {
  * Create view model for drawn cards
  * @param {string} roomNumber - Room number
  * @param {Object|null} encounterData - Encounter data object (if drawn)
+ * @param {string} [encounterAction] - 'befriend' | 'defeat' when encounter has both options
  * @returns {Object} View model for drawn cards rendering
  */
-export function createDrawnCardViewModel(roomNumber, encounterData = null) {
+export function createDrawnCardViewModel(roomNumber, encounterData = null, encounterAction = undefined) {
     const roomData = data.dungeonRooms?.[roomNumber];
     if (!roomData) {
         return { room: null, encounter: null };
@@ -90,6 +91,7 @@ export function createDrawnCardViewModel(roomNumber, encounterData = null) {
         roomData
     };
     
+    const hasBefriendDefeatChoice = !!(encounterData?.befriend && encounterData?.defeat);
     const encounterCard = encounterData ? {
         name: encounterData.name,
         type: encounterData.type,
@@ -97,7 +99,9 @@ export function createDrawnCardViewModel(roomNumber, encounterData = null) {
         befriend: encounterData.befriend,
         defeat: encounterData.defeat,
         cardImage: getEncounterCardImage(encounterData),
-        encounterData
+        encounterData,
+        hasBefriendDefeatChoice,
+        encounterAction: hasBefriendDefeatChoice ? (encounterAction || 'befriend') : undefined
     } : null;
     
     return {

@@ -113,9 +113,10 @@ export function renderRoomCard(roomCardData) {
 /**
  * Render an encounter card (1:1 aspect ratio)
  * @param {Object} encounterCardData - Encounter card data from view model
+ * @param {Object} [options] - Optional: { onActionChange: (action: 'befriend'|'defeat') => void, selectedAction: 'befriend'|'defeat' }
  * @returns {HTMLElement} Encounter card element
  */
-export function renderEncounterCard(encounterCardData) {
+export function renderEncounterCard(encounterCardData, options = {}) {
     if (!encounterCardData) return null;
     
     const card = createElement('div', { class: 'card encounter-card' });
@@ -152,8 +153,44 @@ export function renderEncounterCard(encounterCardData) {
         content.appendChild(desc);
     }
     
-    // Prompt (befriend or defeat)
-    if (encounterCardData.befriend) {
+    const selectedAction = options.selectedAction ?? encounterCardData.encounterAction ?? 'befriend';
+    const showToggle = encounterCardData.hasBefriendDefeatChoice && encounterCardData.befriend && encounterCardData.defeat;
+    
+    if (showToggle && typeof options.onActionChange === 'function') {
+        const toggleWrap = createElement('div', { class: 'encounter-action-toggle-wrap' });
+        const label = createElement('span', { class: 'encounter-action-label' });
+        label.textContent = selectedAction === 'befriend' ? 'Befriend' : 'Defeat';
+        const switchLabel = createElement('label', { class: 'switch' });
+        const input = createElement('input', {
+            type: 'checkbox',
+            'aria-label': 'Befriend or Defeat',
+            checked: selectedAction === 'befriend'
+        });
+        switchLabel.appendChild(input);
+        const slider = createElement('span', { class: 'slider' });
+        switchLabel.appendChild(slider);
+        toggleWrap.appendChild(switchLabel);
+        toggleWrap.appendChild(label);
+        // Handle any click in the toggle area: stop card selection and flip befriend/defeat
+        toggleWrap.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const nextAction = selectedAction === 'befriend' ? 'defeat' : 'befriend';
+            input.checked = nextAction === 'befriend';
+            label.textContent = nextAction === 'befriend' ? 'Befriend' : 'Defeat';
+            options.onActionChange(nextAction);
+        });
+        content.appendChild(toggleWrap);
+    }
+    
+    // Prompt (befriend and/or defeat; when both, show the selected one)
+    if (showToggle) {
+        const prompt = createElement('div', { class: 'card-prompt' });
+        const promptText = selectedAction === 'befriend' ? encounterCardData.befriend : encounterCardData.defeat;
+        const labelText = selectedAction === 'befriend' ? 'Befriend' : 'Defeat';
+        prompt.innerHTML = `<strong>${escapeHtml(labelText)}:</strong> ${escapeHtml(promptText)}`;
+        content.appendChild(prompt);
+    } else if (encounterCardData.befriend) {
         const prompt = createElement('div', { class: 'card-prompt' });
         prompt.innerHTML = `<strong>Befriend:</strong> ${escapeHtml(encounterCardData.befriend)}`;
         content.appendChild(prompt);
