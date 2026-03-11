@@ -240,6 +240,94 @@ describe('DungeonDeckController', () => {
     });
   });
 
+  test('when encounter has both options and slot.encounterAction is defeat, added encounter quest uses defeat prompt and isBefriend false', () => {
+    jest.isolateModules(() => {
+      const characterState = {};
+      jest.doMock('../assets/js/character-sheet/state.js', () => ({ characterState }));
+      jest.doMock('../assets/js/character-sheet/data.js', () => ({
+        dungeonRooms: {
+          '1': {
+            challenge: 'Room challenge',
+            encountersDetailed: [{ name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' }],
+          },
+        },
+      }));
+      jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
+        RewardCalculator: {
+          getBaseRewards: jest.fn(() => ({
+            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+          })),
+        },
+      }));
+      jest.doMock('../assets/js/services/DungeonDeckService.js', () => ({
+        getAvailableRooms: jest.fn(() => ['1']),
+        getAvailableEncounters: jest.fn(() => [{ name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' }]),
+        drawRandomRoom: jest.fn(() => '1'),
+        drawRandomEncounter: jest.fn(() => null),
+        checkRoomCompletionStatus: jest.fn(() => ({
+          isFullyCompleted: false,
+          challengeCompleted: false,
+          challengeActive: false,
+          completedEncounters: new Set(),
+          activeEncounters: new Set(),
+          totalEncounters: 1,
+        })),
+      }));
+      jest.doMock('../assets/js/viewModels/dungeonDeckViewModel.js', () => ({
+        createDungeonDeckViewModel: jest.fn(() => ({
+          roomDeck: { cardbackImage: 'room-back.png', available: true, availableCount: 1 },
+          encounterDeck: { cardbackImage: 'enc-back.png', available: true, availableCount: 1 },
+          drawnSlots: [{ room: {}, encounter: {} }],
+          lastSlotIndexForEncounter: null,
+        })),
+      }));
+      jest.doMock('../assets/js/character-sheet/cardRenderer.js', () => ({
+        renderCardback: jest.fn(() => document.createElement('div')),
+        renderRoomCard: jest.fn(() => document.createElement('div')),
+        renderEncounterCard: jest.fn(() => document.createElement('div')),
+        wrapCardSelectable: jest.fn((el) => el),
+      }));
+
+      const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
+      const { DungeonDeckController } = require('../assets/js/controllers/DungeonDeckController.js');
+
+      characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [];
+      characterState[STORAGE_KEYS.COMPLETED_QUESTS] = [];
+
+      document.body.innerHTML = `
+        <form id="character-sheet">
+          <div id="room-deck-container"></div>
+          <div id="encounter-deck-container"></div>
+          <div id="drawn-card-display"></div>
+          <button id="add-quest-from-cards-btn" type="button"></button>
+          <button id="clear-drawn-cards-btn" type="button"></button>
+        </form>
+      `;
+
+      const form = document.getElementById('character-sheet');
+      const stateAdapter = { on: jest.fn(), addActiveQuests: jest.fn() };
+      const dependencies = { ui: { renderActiveAssignments: jest.fn() }, saveState: jest.fn() };
+      const controller = new DungeonDeckController(stateAdapter, form, dependencies);
+      controller.initialize();
+
+      controller.drawnSlots = [
+        {
+          roomNumber: '1',
+          encounterData: { name: 'Zombie', befriend: 'Befriend it', defeat: 'Defeat it' },
+          encounterAction: 'defeat',
+        },
+      ];
+      controller.selectedIndices = new Set([0]);
+      controller.handleAddQuestFromCards();
+
+      const added = stateAdapter.addActiveQuests.mock.calls[0][0];
+      const encounterQuest = added.find((q) => q.type === '♠ Dungeon Crawl' && q.isEncounter === true);
+      expect(encounterQuest).toBeDefined();
+      expect(encounterQuest.prompt).toBe('Defeat it');
+      expect(encounterQuest.isBefriend).toBe(false);
+    });
+  });
+
   test('room with no encounters can be added without drawing an encounter (no toast block)', () => {
     jest.isolateModules(() => {
       const characterState = {};

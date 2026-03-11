@@ -220,6 +220,22 @@
     color: #b89f62;
 }
 
+.encounter-action-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.encounter-action-toggle-wrap .switch {
+    flex-shrink: 0;
+}
+
+.encounter-action-label {
+    font-size: 0.9rem;
+    color: #b89f62;
+}
+
 /* Card Flip Animation */
 .card-flip-container {
     perspective: 1000px;

@@ -418,19 +418,26 @@ export function renderAbilityCard(abilityName, ability, index) {
  * @returns {string|null} - 'befriend', 'defeat', or null if not an encounter
  */
 function getEncounterAction(quest) {
-    // Only check dungeon crawl quests
-    // Ensure prompt is a string before using string methods
-    if (quest.type !== '♠ Dungeon Crawl' || !quest.prompt || typeof quest.prompt !== 'string') {
+    if (quest.type !== '♠ Dungeon Crawl') {
         return null;
     }
     
-    // Primary check: use new fields if available
+    // Prefer explicit isBefriend when this is an encounter quest (card flow and manual form set this)
+    if (quest.isEncounter === true && typeof quest.isBefriend === 'boolean') {
+        return quest.isBefriend ? 'befriend' : 'defeat';
+    }
+    
+    // Ensure prompt is a string for fallback matching
+    if (!quest.prompt || typeof quest.prompt !== 'string') {
+        return null;
+    }
+    
+    // Primary check: use room/encounter fields to match prompt
     if (quest.isEncounter && quest.roomNumber && quest.encounterName) {
         const roomData = data.dungeonRooms?.[quest.roomNumber];
         if (roomData && roomData.encounters) {
             const encounter = roomData.encounters[quest.encounterName];
             if (encounter) {
-                // Check if prompt matches befriend or defeat
                 if (encounter.befriend && quest.prompt === encounter.befriend) {
                     return 'befriend';
                 }

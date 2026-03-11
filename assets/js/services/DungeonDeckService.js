@@ -151,8 +151,12 @@ export function getAvailableRooms(state) {
     if (data.dungeonRooms) {
         for (const roomNumber in data.dungeonRooms) {
             const status = checkRoomCompletionStatus(roomNumber, completedQuests, activeQuests);
-            // Room is available if not fully completed and challenge is not active
-            if (!status.isFullyCompleted && !status.challengeActive) {
+            // Room is available if not fully completed and challenge is not active.
+            // If the challenge is already completed, at least one encounter must still be drawable
+            // (not completed and not already active) for the room to remain in the deck.
+            const hasDrawableEncountersAfterChallengeCompletion =
+                !status.challengeCompleted || (status.totalEncounters - status.completedEncounters.size - status.activeEncounters.size) > 0;
+            if (!status.isFullyCompleted && !status.challengeActive && hasDrawableEncountersAfterChallengeCompletion) {
                 availableRooms.push(roomNumber);
             }
         }

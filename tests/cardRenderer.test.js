@@ -15,6 +15,8 @@ describe('cardRenderer', () => {
             Object.keys(attrs).forEach(key => {
               if (key === 'class') {
                 element.className = attrs[key];
+              } else if (key === 'checked') {
+                element.checked = Boolean(attrs[key]);
               } else {
                 element.setAttribute(key, attrs[key]);
               }
@@ -327,6 +329,82 @@ describe('cardRenderer', () => {
       
       const overlay = card.querySelector('.archive-card-book-overlay');
       expect(overlay).toBeFalsy();
+    });
+  });
+
+  describe('renderEncounterCard', () => {
+    it('returns null for null input', () => {
+      expect(cardRenderer.renderEncounterCard(null)).toBeNull();
+    });
+
+    it('returns null for undefined input', () => {
+      expect(cardRenderer.renderEncounterCard(undefined)).toBeNull();
+    });
+
+    it('renders encounter card with befriend only (no toggle when no defeat)', () => {
+      const data = {
+        name: 'Friendly Creature',
+        befriend: 'Befriend prompt',
+        cardImage: 'test.png',
+      };
+      const card = cardRenderer.renderEncounterCard(data);
+      expect(card).toBeTruthy();
+      expect(card.className).toContain('encounter-card');
+      expect(card.querySelector('.encounter-action-toggle-wrap')).toBeFalsy();
+      const prompt = card.querySelector('.card-prompt');
+      expect(prompt).toBeTruthy();
+      expect(prompt.innerHTML).toContain('Befriend prompt');
+    });
+
+    it('renders encounter card with both befriend and defeat and onActionChange: shows toggle and uses click to flip', () => {
+      const onActionChange = jest.fn();
+      const data = {
+        name: 'Creature',
+        befriend: 'Befriend text',
+        defeat: 'Defeat text',
+        hasBefriendDefeatChoice: true,
+        encounterAction: 'befriend',
+      };
+      const card = cardRenderer.renderEncounterCard(data, { onActionChange, selectedAction: 'befriend' });
+      expect(card).toBeTruthy();
+      const wrap = card.querySelector('.encounter-action-toggle-wrap');
+      expect(wrap).toBeTruthy();
+      expect(card.querySelector('input[type="checkbox"]').checked).toBe(true);
+      expect(card.querySelector('.encounter-action-label').textContent).toBe('Befriend');
+
+      wrap.click();
+      expect(onActionChange).toHaveBeenCalledTimes(1);
+      expect(onActionChange).toHaveBeenCalledWith('defeat');
+    });
+
+    it('toggle wrap click flips from defeat back to befriend (works both ways)', () => {
+      const onActionChange = jest.fn();
+      const data = {
+        name: 'Creature',
+        befriend: 'Befriend text',
+        defeat: 'Defeat text',
+        hasBefriendDefeatChoice: true,
+        encounterAction: 'defeat',
+      };
+      const card = cardRenderer.renderEncounterCard(data, { onActionChange, selectedAction: 'defeat' });
+      const wrap = card.querySelector('.encounter-action-toggle-wrap');
+      expect(card.querySelector('input[type="checkbox"]').checked).toBe(false);
+      expect(card.querySelector('.encounter-action-label').textContent).toBe('Defeat');
+
+      wrap.click();
+      expect(onActionChange).toHaveBeenCalledTimes(1);
+      expect(onActionChange).toHaveBeenCalledWith('befriend');
+    });
+
+    it('when both options exist but no onActionChange, does not render toggle', () => {
+      const data = {
+        name: 'Creature',
+        befriend: 'B',
+        defeat: 'D',
+        hasBefriendDefeatChoice: true,
+      };
+      const card = cardRenderer.renderEncounterCard(data, {});
+      expect(card.querySelector('.encounter-action-toggle-wrap')).toBeFalsy();
     });
   });
 

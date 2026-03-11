@@ -122,7 +122,13 @@ export class DungeonDeckController extends BaseController {
                 if (roomCard) slotWrapper.appendChild(roomCard);
             }
             if (slotViewModel.encounter) {
-                const encounterCard = renderEncounterCard(slotViewModel.encounter);
+                const encounterCard = renderEncounterCard(slotViewModel.encounter, {
+                    selectedAction: slotViewModel.encounter.encounterAction || 'befriend',
+                    onActionChange: (action) => {
+                        this.drawnSlots[index].encounterAction = action;
+                        this.renderDecks();
+                    }
+                });
                 if (encounterCard) slotWrapper.appendChild(encounterCard);
             }
             const selectable = wrapCardSelectable(slotWrapper, index, this.selectedIndices.has(index), (idx, ev) => {
@@ -177,6 +183,7 @@ export class DungeonDeckController extends BaseController {
         if (!drawn) return;
 
         slot.encounterData = drawn;
+        slot.encounterAction = (drawn.befriend && drawn.defeat) ? 'befriend' : undefined;
         this.renderDecks();
     }
 
@@ -259,7 +266,10 @@ export class DungeonDeckController extends BaseController {
 
             if (slot.encounterData) {
                 const enc = slot.encounterData;
-                const isBefriend = !!enc.befriend;
+                const hasChoice = enc.befriend && enc.defeat;
+                const isBefriend = hasChoice
+                    ? (slot.encounterAction !== 'defeat')
+                    : !!enc.befriend;
                 const encounterPrompt = isBefriend && enc.befriend ? enc.befriend : (enc.defeat || enc.befriend);
                 const encounterRewards = RewardCalculator.getBaseRewards(
                     '♠ Dungeon Crawl',
