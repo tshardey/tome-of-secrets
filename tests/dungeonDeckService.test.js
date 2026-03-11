@@ -99,5 +99,31 @@ describe('DungeonDeckService', () => {
       expect(getAvailableEncounters('1', fullState)).toEqual([]);
     });
   });
+
+  test('room is removed from room deck when challenge is complete and remaining encounters are already active', () => {
+    jest.isolateModules(() => {
+      jest.doMock('../assets/js/character-sheet/data.js', () => ({
+        dungeonRooms: {
+          '1': { challenge: 'C1', encountersDetailed: [{ name: 'A' }, { name: 'B' }] },
+        },
+      }));
+
+      const { STORAGE_KEYS } = require('../assets/js/character-sheet/storageKeys.js');
+      const { getAvailableRooms, getAvailableEncounters } = require('../assets/js/services/DungeonDeckService.js');
+
+      const state = {
+        [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
+          { type: '♠ Dungeon Crawl', roomNumber: '1', isEncounter: true, encounterName: 'B', prompt: 'active B' },
+        ],
+        [STORAGE_KEYS.COMPLETED_QUESTS]: [
+          { type: '♠ Dungeon Crawl', roomNumber: '1', isEncounter: false, prompt: 'C1' },
+          { type: '♠ Dungeon Crawl', roomNumber: '1', isEncounter: true, encounterName: 'A', prompt: 'done A' },
+        ],
+      };
+
+      expect(getAvailableEncounters('1', state)).toEqual([]);
+      expect(getAvailableRooms(state)).toEqual([]);
+    });
+  });
 });
 
