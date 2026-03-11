@@ -15,6 +15,8 @@ describe('cardRenderer', () => {
             Object.keys(attrs).forEach(key => {
               if (key === 'class') {
                 element.className = attrs[key];
+              } else if (key === 'checked') {
+                element.checked = Boolean(attrs[key]);
               } else {
                 element.setAttribute(key, attrs[key]);
               }
