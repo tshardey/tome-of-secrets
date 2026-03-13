@@ -245,6 +245,41 @@ function migrateToVersion9(state) {
 }
 
 /**
+ * Migration from schema version 9 to version 10
+ * - Adds shoppingLog ([]), bookBoxSubscriptions ({}), bookBoxHistory ([])
+ * - Adds shelfCategory to each book; existing books get 'general'
+ */
+function migrateToVersion10(state) {
+    const migrated = { ...state };
+
+    if (!(STORAGE_KEYS.SHOPPING_LOG in migrated) || !Array.isArray(migrated[STORAGE_KEYS.SHOPPING_LOG])) {
+        migrated[STORAGE_KEYS.SHOPPING_LOG] = [];
+    }
+    if (!(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS in migrated) || typeof migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] !== 'object' || Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS])) {
+        migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = {};
+    }
+    if (!(STORAGE_KEYS.BOOK_BOX_HISTORY in migrated) || !Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY])) {
+        migrated[STORAGE_KEYS.BOOK_BOX_HISTORY] = [];
+    }
+
+    const books = migrated[STORAGE_KEYS.BOOKS];
+    if (books && typeof books === 'object' && !Array.isArray(books)) {
+        const upgraded = {};
+        for (const id in books) {
+            const b = books[id];
+            if (!b || typeof b !== 'object') continue;
+            upgraded[id] = {
+                ...b,
+                shelfCategory: typeof b.shelfCategory === 'string' && (b.shelfCategory === 'general' || b.shelfCategory === 'physical-tbr') ? b.shelfCategory : 'general'
+            };
+        }
+        migrated[STORAGE_KEYS.BOOKS] = upgraded;
+    }
+
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -518,6 +553,9 @@ export function migrateState(state) {
             case 9:
                 migratedState = migrateToVersion9(migratedState);
                 break;
+            case 10:
+                migratedState = migrateToVersion10(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -568,7 +606,10 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.EXTERNAL_CURRICULUM,
         STORAGE_KEYS.SERIES,
         STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
-        STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
+        STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
+        STORAGE_KEYS.SHOPPING_LOG,
+        STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
+        STORAGE_KEYS.BOOK_BOX_HISTORY
     ];
 
     stateKeys.forEach(key => {
@@ -577,8 +618,10 @@ export function loadAndMigrateState() {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };
-        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS) {
+        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS || key === STORAGE_KEYS.SHOPPING_LOG || key === STORAGE_KEYS.BOOK_BOX_HISTORY) {
             defaultValue = [];
+        } else if (key === STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS) {
+            defaultValue = {};
         } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {

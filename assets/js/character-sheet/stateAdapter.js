@@ -822,6 +822,7 @@ export class StateAdapter {
         const books = { ...this._getBooksRaw() };
         const id = (typeof bookData.id === 'string' && bookData.id.trim()) ? bookData.id.trim() : this._generateId();
         const now = new Date().toISOString();
+        const shelfCategory = (bookData.shelfCategory === 'physical-tbr' || bookData.shelfCategory === 'general') ? bookData.shelfCategory : 'general';
         const book = {
             id,
             title: typeof bookData.title === 'string' ? bookData.title : '',
@@ -829,6 +830,7 @@ export class StateAdapter {
             cover: typeof bookData.cover === 'string' ? bookData.cover : (typeof bookData.coverUrl === 'string' ? bookData.coverUrl : null),
             pageCount: typeof bookData.pageCount === 'number' && !isNaN(bookData.pageCount) ? Math.max(0, Math.floor(bookData.pageCount)) : (typeof bookData.pageCountRaw === 'number' && !isNaN(bookData.pageCountRaw) ? Math.max(0, Math.floor(bookData.pageCountRaw)) : null),
             status: ['reading', 'completed', 'other'].includes(bookData.status) ? bookData.status : 'reading',
+            shelfCategory,
             dateAdded: typeof bookData.dateAdded === 'string' ? bookData.dateAdded : now,
             dateCompleted: typeof bookData.dateCompleted === 'string' ? bookData.dateCompleted : null,
             links: bookData.links && typeof bookData.links === 'object'
@@ -854,6 +856,7 @@ export class StateAdapter {
             if (updates.cover !== undefined) book.cover = typeof updates.cover === 'string' ? updates.cover : null;
             if (typeof updates.pageCount === 'number' && !isNaN(updates.pageCount)) book.pageCount = Math.max(0, Math.floor(updates.pageCount));
             if (['reading', 'completed', 'other'].includes(updates.status)) book.status = updates.status;
+            if (updates.shelfCategory === 'general' || updates.shelfCategory === 'physical-tbr') book.shelfCategory = updates.shelfCategory;
             if (typeof updates.dateAdded === 'string') book.dateAdded = updates.dateAdded;
             if (updates.dateCompleted !== undefined) book.dateCompleted = typeof updates.dateCompleted === 'string' ? updates.dateCompleted : null;
             if (updates.links && typeof updates.links === 'object') {
@@ -885,7 +888,8 @@ export class StateAdapter {
         const book = books[bookId];
         if (!book) return null;
         const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
-        return { ...book, links: { ...links } };
+        const shelfCategory = (book.shelfCategory === 'physical-tbr' || book.shelfCategory === 'general') ? book.shelfCategory : 'general';
+        return { ...book, shelfCategory, links: { ...links } };
     }
 
     getBooks() {
@@ -893,7 +897,8 @@ export class StateAdapter {
         return Object.keys(books).map(id => {
             const book = books[id];
             const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
-            return { ...book, links: { ...links } };
+            const shelfCategory = (book.shelfCategory === 'physical-tbr' || book.shelfCategory === 'general') ? book.shelfCategory : 'general';
+            return { ...book, shelfCategory, links: { ...links } };
         });
     }
 

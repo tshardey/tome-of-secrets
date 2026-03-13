@@ -21,8 +21,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 7: The Archive - series tracker (series state)
  * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
  * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
+ * Version 10: Shopping/subscription state (shoppingLog, bookBoxSubscriptions, bookBoxHistory) and book shelfCategory
  */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 /**
  * Schema version key in localStorage
@@ -373,6 +374,7 @@ function validateNumber(value, defaultValue, context = 'number') {
 }
 
 const BOOK_STATUSES = ['reading', 'completed', 'other'];
+const SHELF_CATEGORIES = ['general', 'physical-tbr'];
 
 /**
  * Validate and fix a book object (Schema v5)
@@ -387,6 +389,9 @@ function validateBook(book, context = 'book') {
     const id = typeof book.id === 'string' && book.id.trim() ? book.id.trim() : null;
     if (!id) return null;
     const links = book.links && typeof book.links === 'object' ? book.links : {};
+    const shelfCategory = typeof book.shelfCategory === 'string' && SHELF_CATEGORIES.includes(book.shelfCategory)
+        ? book.shelfCategory
+        : 'general';
     return {
         id,
         title: typeof book.title === 'string' ? book.title : '',
@@ -394,6 +399,7 @@ function validateBook(book, context = 'book') {
         cover: typeof book.cover === 'string' ? book.cover : (typeof book.coverUrl === 'string' ? book.coverUrl : null),
         pageCount: typeof book.pageCount === 'number' && !isNaN(book.pageCount) ? Math.max(0, Math.floor(book.pageCount)) : (typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? Math.max(0, Math.floor(book.pageCountRaw)) : null),
         status: BOOK_STATUSES.includes(book.status) ? book.status : 'reading',
+        shelfCategory,
         dateAdded: typeof book.dateAdded === 'string' ? book.dateAdded : new Date().toISOString(),
         dateCompleted: typeof book.dateCompleted === 'string' ? book.dateCompleted : null,
         links: {
@@ -679,6 +685,113 @@ function validateSeriesExpeditionProgress(progress, context = STORAGE_KEYS.SERIE
 }
 
 /**
+ * Validate a single shopping log entry (Schema v10).
+ * Shape: { id?, optionId?, linkedBookIds?, actualMoneySpent?, storeName?, logDate?, inkDrops?, paperScraps?, ... }
+ */
+function validateShoppingLogEntry(entry, context = 'shoppingLogEntry') {
+    if (!entry || typeof entry !== 'object') return null;
+    const id = typeof entry.id === 'string' && entry.id.trim() ? entry.id.trim() : (typeof entry.logDate === 'string' ? `${entry.logDate}-${Math.random().toString(36).slice(2, 9)}` : `log-${Math.random().toString(36).slice(2, 11)}`);
+    return {
+        id,
+        optionId: typeof entry.optionId === 'string' ? entry.optionId : (typeof entry.option === 'string' ? entry.option : ''),
+        linkedBookIds: Array.isArray(entry.linkedBookIds) ? entry.linkedBookIds.filter(x => typeof x === 'string' && x.trim()) : [],
+        actualMoneySpent: typeof entry.actualMoneySpent === 'number' && !isNaN(entry.actualMoneySpent) ? entry.actualMoneySpent : null,
+        storeName: typeof entry.storeName === 'string' ? entry.storeName : (typeof entry.store === 'string' ? entry.store : null),
+        logDate: typeof entry.logDate === 'string' ? entry.logDate : new Date().toISOString().slice(0, 10),
+        inkDrops: typeof entry.inkDrops === 'number' && !isNaN(entry.inkDrops) ? Math.max(0, Math.floor(entry.inkDrops)) : 0,
+        paperScraps: typeof entry.paperScraps === 'number' && !isNaN(entry.paperScraps) ? Math.max(0, Math.floor(entry.paperScraps)) : 0
+    };
+}
+
+/**
+ * Validate shopping log array (Schema v10)
+ */
+function validateShoppingLog(log, context = STORAGE_KEYS.SHOPPING_LOG) {
+    if (!Array.isArray(log)) {
+        console.warn(`Invalid ${context}: not an array, using empty array`);
+        return [];
+    }
+    const validated = [];
+    log.forEach((entry, index) => {
+        const v = validateShoppingLogEntry(entry, `${context}[${index}]`);
+        if (v) validated.push(v);
+    });
+    return validated;
+}
+
+/**
+ * Validate a single book box subscription (Schema v10).
+ * Shape: { id, company, tier, defaultMonthlyCost?, skipsAllowedPerYear? }
+ */
+function validateBookBoxSubscription(sub, context = 'bookBoxSubscription') {
+    if (!sub || typeof sub !== 'object') return null;
+    const id = typeof sub.id === 'string' && sub.id.trim() ? sub.id.trim() : null;
+    if (!id) return null;
+    return {
+        id,
+        company: typeof sub.company === 'string' ? sub.company.trim() : '',
+        tier: typeof sub.tier === 'string' ? sub.tier.trim() : '',
+        defaultMonthlyCost: typeof sub.defaultMonthlyCost === 'number' && !isNaN(sub.defaultMonthlyCost) && sub.defaultMonthlyCost >= 0 ? sub.defaultMonthlyCost : null,
+        skipsAllowedPerYear: typeof sub.skipsAllowedPerYear === 'number' && !isNaN(sub.skipsAllowedPerYear) && sub.skipsAllowedPerYear >= 0 ? Math.floor(sub.skipsAllowedPerYear) : 0
+    };
+}
+
+/**
+ * Validate bookBoxSubscriptions object (Schema v10)
+ */
+function validateBookBoxSubscriptions(subs, context = STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS) {
+    if (!subs || typeof subs !== 'object' || Array.isArray(subs)) {
+        return {};
+    }
+    const validated = {};
+    for (const id in subs) {
+        const s = validateBookBoxSubscription(subs[id], `${context}[${id}]`);
+        if (s && s.id) validated[s.id] = s;
+    }
+    return validated;
+}
+
+/**
+ * Validate a single book box history entry (Schema v10).
+ * Shape: { id?, subscriptionId, month, year?, type: 'purchased'|'skipped', actualSpend?, inkDrops?, paperScraps?, bookIds?, reaction? }
+ */
+function validateBookBoxHistoryEntry(entry, context = 'bookBoxHistoryEntry') {
+    if (!entry || typeof entry !== 'object') return null;
+    const subscriptionId = typeof entry.subscriptionId === 'string' && entry.subscriptionId.trim() ? entry.subscriptionId.trim() : null;
+    if (!subscriptionId) return null;
+    const type = entry.type === 'purchased' || entry.type === 'skipped' ? entry.type : 'purchased';
+    const id = typeof entry.id === 'string' && entry.id.trim() ? entry.id.trim() : null;
+    return {
+        id: id || `${subscriptionId}-${entry.month || ''}-${entry.year || ''}-${Math.random().toString(36).slice(2, 9)}`,
+        subscriptionId,
+        month: typeof entry.month === 'string' ? entry.month : (typeof entry.month === 'number' ? String(entry.month) : ''),
+        year: typeof entry.year === 'string' ? entry.year : (typeof entry.year === 'number' ? String(entry.year) : ''),
+        type,
+        actualSpend: typeof entry.actualSpend === 'number' && !isNaN(entry.actualSpend) ? entry.actualSpend : null,
+        inkDrops: typeof entry.inkDrops === 'number' && !isNaN(entry.inkDrops) ? Math.max(0, Math.floor(entry.inkDrops)) : 0,
+        paperScraps: typeof entry.paperScraps === 'number' && !isNaN(entry.paperScraps) ? Math.max(0, Math.floor(entry.paperScraps)) : 0,
+        bookIds: Array.isArray(entry.bookIds) ? entry.bookIds.filter(x => typeof x === 'string' && x.trim()) : [],
+        reaction: entry.reaction === 'thumbsUp' || entry.reaction === 'thumbsDown' ? entry.reaction : null
+    };
+}
+
+/**
+ * Validate bookBoxHistory array (Schema v10)
+ */
+function validateBookBoxHistory(history, context = STORAGE_KEYS.BOOK_BOX_HISTORY) {
+    if (!Array.isArray(history)) {
+        console.warn(`Invalid ${context}: not an array, using empty array`);
+        return [];
+    }
+    const validated = [];
+    history.forEach((entry, index) => {
+        const v = validateBookBoxHistoryEntry(entry, `${context}[${index}]`);
+        if (v) validated.push(v);
+    });
+    return validated;
+}
+
+/**
  * Validate and fix character form data
  * @param {*} formData - Form data object
  * @returns {Object} - Validated form data object
@@ -813,6 +926,9 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS],
         STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
     );
+    validated[STORAGE_KEYS.SHOPPING_LOG] = validateShoppingLog(state[STORAGE_KEYS.SHOPPING_LOG], STORAGE_KEYS.SHOPPING_LOG);
+    validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
+    validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
 
     return validated;
 }

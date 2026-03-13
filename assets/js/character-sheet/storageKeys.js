@@ -38,7 +38,11 @@ export const STORAGE_KEYS = Object.freeze({
     /** Series IDs for which the keeper has claimed the completion (souvenir) reward. */
     CLAIMED_SERIES_REWARDS: 'claimedSeriesRewards',
     /** Expedition progress: [{ seriesId, stopId, claimedAt }] — which series have advanced the shared track. */
-    SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress'
+    SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress',
+    // Shopping & book box tracking (rewards overhaul)
+    SHOPPING_LOG: 'shoppingLog',
+    BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
+    BOOK_BOX_HISTORY: 'bookBoxHistory'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -68,7 +72,10 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.EXTERNAL_CURRICULUM,
     STORAGE_KEYS.SERIES,
     STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
-    STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
+    STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
+    STORAGE_KEYS.SHOPPING_LOG,
+    STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
+    STORAGE_KEYS.BOOK_BOX_HISTORY
 ]);
 
 export function createEmptyCharacterState() {
@@ -99,7 +106,10 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} },
         [STORAGE_KEYS.SERIES]: {},
         [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
-        [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
+        [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
+        [STORAGE_KEYS.SHOPPING_LOG]: [],
+        [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
+        [STORAGE_KEYS.BOOK_BOX_HISTORY]: []
     };
 }
 
