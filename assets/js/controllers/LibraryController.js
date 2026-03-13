@@ -428,12 +428,16 @@ export class LibraryController extends BaseController {
         const statusRadio = this.form?.querySelector('input[name="library-add-status"]:checked');
         const status = statusRadio?.value === 'completed' || statusRadio?.value === 'other' ? statusRadio.value : 'reading';
 
+        const shelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"]:checked');
+        const shelfCategory = shelfRadio?.value === 'physical-tbr' ? 'physical-tbr' : 'general';
+
         const book = this.stateAdapter.addBook({
             title,
             author,
             cover,
             pageCount: pageCountNum,
-            status
+            status,
+            shelfCategory
         });
         if (book) {
             this._clearAddForm();
@@ -458,6 +462,8 @@ export class LibraryController extends BaseController {
         this._setAddFormCover('', '');
         const readingRadio = this.form?.querySelector('input[name="library-add-status"][value="reading"]');
         if (readingRadio) readingRadio.checked = true;
+        const generalShelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"][value="general"]');
+        if (generalShelfRadio) generalShelfRadio.checked = true;
     }
 
     handleEditBook(bookId) {
@@ -482,6 +488,11 @@ export class LibraryController extends BaseController {
             pageCountEl.value = book.pageCount != null && !isNaN(book.pageCount) ? String(book.pageCount) : '';
         }
         if (statusEl) statusEl.value = book.status || 'reading';
+
+        const shelfCategoryEl = document.getElementById('book-edit-shelf-category');
+        if (shelfCategoryEl) {
+            shelfCategoryEl.value = book.shelfCategory === 'physical-tbr' ? 'physical-tbr' : 'general';
+        }
 
         const dateCompletedEl = document.getElementById('book-edit-date-completed');
         if (dateCompletedEl) {
@@ -602,6 +613,9 @@ export class LibraryController extends BaseController {
             if (!isNaN(parsed.getTime())) dateCompleted = parsed.toISOString();
         }
 
+        const shelfCategoryEl = document.getElementById('book-edit-shelf-category');
+        const shelfCategory = shelfCategoryEl?.value === 'physical-tbr' ? 'physical-tbr' : 'general';
+
         // Update series (campaign) tagging
         const seriesSelect = document.getElementById('book-edit-series');
         if (seriesSelect) {
@@ -620,7 +634,8 @@ export class LibraryController extends BaseController {
             cover,
             pageCount: pageCountNum,
             status,
-            dateCompleted
+            dateCompleted,
+            shelfCategory
         });
         this._closeBookEditDrawer();
         this.renderBooks();
@@ -723,6 +738,9 @@ export class LibraryController extends BaseController {
                     : '<span class="library-card-cover-placeholder">No cover</span>';
                 const pageStr = book.pageCount != null && !isNaN(book.pageCount) ? ` · ${book.pageCount} pp` : '';
                 const statusClass = book.status === 'completed' ? 'library-status-completed' : book.status === 'reading' ? 'library-status-reading' : 'library-status-other';
+                const shelfBadge = book.shelfCategory === 'physical-tbr'
+                    ? `<span class="library-shelf-badge library-shelf-physical-tbr" aria-label="Physical TBR">Physical TBR</span>`
+                    : '';
                 const markCompleteBtn =
                     book.status !== 'completed'
                         ? `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-mark-complete-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Mark complete" title="Mark complete">✓</button>`
@@ -743,6 +761,7 @@ export class LibraryController extends BaseController {
                             <div class="library-card-actions">
                                 ${markCompleteBtn}
                                 ${editBtn}
+                                ${shelfBadge}
                             </div>
                         </div>
                     </div>`;

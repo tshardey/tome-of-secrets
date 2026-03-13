@@ -73,7 +73,10 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.EXTERNAL_CURRICULUM]: { curriculums: {} },
             [STORAGE_KEYS.SERIES]: {},
             [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
-            [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
+            [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
+            [STORAGE_KEYS.SHOPPING_LOG]: [],
+            [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
+            [STORAGE_KEYS.BOOK_BOX_HISTORY]: []
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {

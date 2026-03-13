@@ -10,7 +10,7 @@ todos:
     status: in_progress
   - id: book-physical-tbr
     content: Extend books with `shelfCategory` and expose `Physical TBR` in library add/edit flows.
-    status: pending
+    status: completed
   - id: shopping-ledger
     content: Upgrade shopping options and renderer to capture purchase metadata, link books, and persist shopping log entries.
     status: pending

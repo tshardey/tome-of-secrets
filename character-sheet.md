@@ -480,6 +480,19 @@ permalink: /character-sheet.html
                         <label class="library-status-option"><input type="radio" name="library-add-status" value="other" /> Other</label>
                     </div>
                 </div>
+                <div class="form-row library-shelf-row">
+                    <label><strong>Shelf:</strong></label>
+                    <div class="library-shelf-radios">
+                        <label class="library-shelf-option">
+                            <input type="radio" name="library-add-shelf-category" value="general" checked />
+                            General library
+                        </label>
+                        <label class="library-shelf-option">
+                            <input type="radio" name="library-add-shelf-category" value="physical-tbr" />
+                            Physical TBR
+                        </label>
+                    </div>
+                </div>
                 <div class="form-row library-add-actions">
                     <button type="button" id="library-add-book-btn" class="rpg-btn rpg-btn-primary">Add Book</button>
                 </div>
@@ -1244,6 +1257,13 @@ permalink: /character-sheet.html
                     <option value="reading">Reading</option>
                     <option value="completed">Completed</option>
                     <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="book-edit-shelf-category"><strong>Shelf:</strong></label>
+                <select id="book-edit-shelf-category" class="rpg-select">
+                    <option value="general">General library</option>
+                    <option value="physical-tbr">Physical TBR</option>
                 </select>
             </div>
             <div class="form-row" id="book-edit-date-completed-row">
