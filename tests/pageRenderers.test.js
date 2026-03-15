@@ -7,6 +7,7 @@ import { initializeKeeperPage } from '../assets/js/page-renderers/keeperRenderer
 import { initializeShoppingPage } from '../assets/js/page-renderers/shoppingRenderer.js';
 import { initializeRewardsPage } from '../assets/js/page-renderers/rewardsRenderer.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { resetStateLoadedForTests } from '../assets/js/character-sheet/state.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 
 jest.mock('../assets/js/services/BookMetadataService.js', () => ({
@@ -167,8 +168,15 @@ describe('Page Renderers Hydration', () => {
       expect(costEl.textContent).toContain('Cost:');
     });
 
-    test('shows quantity input for book box subscription', async () => {
-      await initializeShoppingPage();
+    test('shows subscription-month UI for book box option (subscription select and log button)', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
+        await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -177,10 +185,15 @@ describe('Page Renderers Hydration', () => {
       );
       
       expect(bookBoxOption).toBeTruthy();
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      expect(quantityInput).toBeTruthy();
-      expect(quantityInput.value).toBe('1');
-      expect(parseInt(quantityInput.min)).toBe(1);
+      expect(bookBoxOption.classList.contains('shopping-option-subscription-month')).toBe(true);
+      const subSelect = bookBoxOption.querySelector('.shopping-subscription-select');
+      expect(subSelect).toBeTruthy();
+      expect(subSelect.options.length).toBeGreaterThan(0);
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+      expect(logButton).toBeTruthy();
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
     test('does not show quantity input for options that do not allow it', async () => {
@@ -317,83 +330,71 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(paperScrapsEl.value)).toBe(20);
     });
 
-    test('handles quantity multiplier for book box subscription', async () => {
-      // Set up resources for 3 months
+    test('logging subscription purchase deducts ink and paper', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
-      inkDropsEl.value = '100'; // 25 * 3 = 75 needed
-      paperScrapsEl.value = '100'; // 25 * 3 = 75 needed
-      
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
-        inkDrops: '100',
-        paperScraps: '100'
-      });
+      inkDropsEl.value = '100';
+      paperScrapsEl.value = '100';
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '100', paperScraps: '100' });
 
       await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookBoxOption = options.find(opt => 
+      const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      const redeemButton = bookBoxOption.querySelector('.redeem-button');
-      
-      // Set quantity to 3
-      quantityInput.value = '3';
-      
-      // Click redeem
-      redeemButton.click();
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+      expect(logButton).toBeTruthy();
+      // Purchase is selected by default; cost is 25 ink + 25 paper
+      logButton.click();
       await flushPromises();
-      
-      // Check resources were deducted (25 * 3 = 75 for each)
-      expect(parseInt(inkDropsEl.value)).toBe(25); // 100 - 75
-      expect(parseInt(paperScrapsEl.value)).toBe(25); // 100 - 75
-      
-      // Check success message shows quantity
-      const successMsg = bookBoxOption.querySelector('.success-message');
-      expect(successMsg).toBeTruthy();
-      expect(successMsg.textContent).toContain('(3x)');
+
+      expect(parseInt(inkDropsEl.value)).toBe(75); // 100 - 25
+      expect(parseInt(paperScrapsEl.value)).toBe(75); // 100 - 25
+      expect(logButton.textContent).toContain('Logged');
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
-    test('shows error when insufficient resources for quantity > 1', async () => {
-      // Set up resources for only 1 month
+    test('shows error when insufficient resources for subscription purchase', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
-      inkDropsEl.value = '30'; // Enough for 1 (25), not for 2 (50)
-      paperScrapsEl.value = '30';
-      
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
-        inkDrops: '30',
-        paperScraps: '30'
-      });
+      inkDropsEl.value = '10'; // Not enough for 25 ink + 25 paper
+      paperScrapsEl.value = '10';
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '10', paperScraps: '10' });
 
       await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookBoxOption = options.find(opt => 
+      const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      const redeemButton = bookBoxOption.querySelector('.redeem-button');
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
       const errorContainer = bookBoxOption.querySelector('.error-message');
-      
-      // Set quantity to 2
-      quantityInput.value = '2';
-      
-      // Click redeem
-      redeemButton.click();
-      
-      // Error should be shown (need 50, have 30)
+      logButton.click();
+
       expect(errorContainer.style.display).toBe('block');
       expect(errorContainer.textContent).toContain('Insufficient');
-      
-      // Resources should not be deducted
-      expect(parseInt(inkDropsEl.value)).toBe(30);
-      expect(parseInt(paperScrapsEl.value)).toBe(30);
+      expect(parseInt(inkDropsEl.value)).toBe(10);
+      expect(parseInt(paperScrapsEl.value)).toBe(10);
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
     test('works when form elements do not exist (fallback to localStorage)', async () => {
@@ -427,43 +428,40 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(formData.paperScraps)).toBe(50);
     });
 
-    test('handles minimum quantity of 1 for quantity input', async () => {
-      // Set up resources in both form and localStorage
+    test('logging subscription skip does not deduct resources', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '100';
       paperScrapsEl.value = '100';
-      
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
-        inkDrops: '100',
-        paperScraps: '100'
-      });
-      
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '100', paperScraps: '100' });
+
       await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookBoxOption = options.find(opt => 
+      const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      const redeemButton = bookBoxOption.querySelector('.redeem-button');
-      
-      // Set invalid quantity (0 or negative)
-      quantityInput.value = '0';
-      
-      // Click redeem - should use minimum of 1 due to Math.max(1, ...)
-      redeemButton.click();
+      const skipRadio = bookBoxOption.querySelector('#sub-type-skip-one-month-book-box');
+      expect(skipRadio).toBeTruthy();
+      skipRadio.checked = true;
+      skipRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+      logButton.click();
       await flushPromises();
-      
-      // Should deduct for quantity 1 (25 each) because Math.max(1, 0) = 1
-      expect(parseInt(inkDropsEl.value)).toBe(75); // 100 - 25
-      expect(parseInt(paperScrapsEl.value)).toBe(75); // 100 - 25
-      
-      const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
-      expect(parseInt(formData.inkDrops)).toBe(75); // 100 - 25
-      expect(parseInt(formData.paperScraps)).toBe(75); // 100 - 25
+
+      // Resources unchanged when skipping
+      expect(parseInt(inkDropsEl.value)).toBe(100);
+      expect(parseInt(paperScrapsEl.value)).toBe(100);
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
     test('renders shopping log entries as text even with HTML-like store names', async () => {

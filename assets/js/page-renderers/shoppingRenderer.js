@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { parseIntOr, trimOrEmpty } from '../utils/helpers.js';
 import { getStateKey, setStateKey } from '../character-sheet/persistence.js';
 import { characterState, isStateLoaded, loadState } from '../character-sheet/state.js';
-import { StateAdapter } from '../character-sheet/stateAdapter.js';
+import { StateAdapter, STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { createBookSelector } from '../utils/bookSelector.js';
 import { searchBooks } from '../services/BookMetadataService.js';
 
@@ -63,6 +63,12 @@ function appendNodeWithSpace(container, node) {
         container.appendChild(document.createTextNode(' '));
     }
     container.appendChild(node);
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function generateId() {
@@ -200,10 +206,471 @@ function showError(errorContainer, message) {
 }
 
 /**
+ * Build subscription-month card: subscription selector, purchase vs skip, then fields and actions.
+ * @param {ShoppingOption} option
+ * @returns {HTMLElement}
+ */
+function createSubscriptionMonthCard(option) {
+    const card = document.createElement('div');
+    card.className = 'shopping-option shopping-option-subscription-month';
+
+    const nameEl = document.createElement('h3');
+    nameEl.textContent = option.label;
+    card.appendChild(nameEl);
+
+    const descEl = document.createElement('p');
+    descEl.textContent = option.description;
+    card.appendChild(descEl);
+
+    const subs = stateAdapter ? stateAdapter.getBookBoxSubscriptionsList() : [];
+    const subSelectWrap = document.createElement('div');
+    subSelectWrap.className = 'shopping-subscription-select-wrap';
+    const subLabel = document.createElement('label');
+    subLabel.setAttribute('for', `sub-select-${option.id}`);
+    subLabel.textContent = 'Subscription: ';
+    const subSelect = document.createElement('select');
+    subSelect.id = `sub-select-${option.id}`;
+    subSelect.className = 'shopping-subscription-select';
+    subSelect.setAttribute('aria-label', 'Choose a book box subscription');
+    subSelectWrap.appendChild(subLabel);
+    subSelectWrap.appendChild(subSelect);
+    card.appendChild(subSelectWrap);
+
+    if (!subs.length) {
+        const msg = document.createElement('p');
+        msg.className = 'shopping-subscription-no-subs';
+        msg.textContent = 'Add a subscription in the Book Box Subscriptions tab first, then return here to log each month.';
+        card.appendChild(msg);
+        subSelect.style.display = 'none';
+        subLabel.style.display = 'none';
+        return card;
+    }
+
+    subs.forEach((s) => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = [s.company, s.tier].filter(Boolean).join(' · ') || s.id;
+        subSelect.appendChild(opt);
+    });
+
+    const monthYearWrap = document.createElement('div');
+    monthYearWrap.className = 'shopping-sub-month-year';
+    const now = new Date();
+    const monthSelect = document.createElement('select');
+    monthSelect.className = 'shopping-sub-month';
+    monthSelect.setAttribute('aria-label', 'Month');
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    months.forEach((m, i) => {
+        const o = document.createElement('option');
+        o.value = String(i + 1);
+        o.textContent = m;
+        if (i === now.getMonth()) o.selected = true;
+        monthSelect.appendChild(o);
+    });
+    const yearInput = document.createElement('input');
+    yearInput.type = 'number';
+    yearInput.className = 'shopping-sub-year';
+    yearInput.min = '2020';
+    yearInput.max = '2030';
+    yearInput.value = String(now.getFullYear());
+    yearInput.setAttribute('aria-label', 'Year');
+    monthYearWrap.appendChild(monthSelect);
+    monthYearWrap.appendChild(yearInput);
+    card.appendChild(monthYearWrap);
+
+    const typeWrap = document.createElement('div');
+    typeWrap.className = 'shopping-sub-type-wrap';
+    const typeLabel = document.createElement('span');
+    typeLabel.textContent = 'This month: ';
+    typeWrap.appendChild(typeLabel);
+    const purchaseRadio = document.createElement('input');
+    purchaseRadio.type = 'radio';
+    purchaseRadio.name = `sub-type-${option.id}`;
+    purchaseRadio.id = `sub-type-purchase-${option.id}`;
+    purchaseRadio.value = 'purchase';
+    purchaseRadio.checked = true;
+    const skipRadio = document.createElement('input');
+    skipRadio.type = 'radio';
+    skipRadio.name = `sub-type-${option.id}`;
+    skipRadio.id = `sub-type-skip-${option.id}`;
+    skipRadio.value = 'skip';
+    const purchaseLabel = document.createElement('label');
+    purchaseLabel.setAttribute('for', purchaseRadio.id);
+    purchaseLabel.textContent = 'Purchase';
+    const skipLabel = document.createElement('label');
+    skipLabel.setAttribute('for', skipRadio.id);
+    skipLabel.textContent = 'Skip';
+    typeWrap.appendChild(purchaseRadio);
+    typeWrap.appendChild(purchaseLabel);
+    typeWrap.appendChild(skipRadio);
+    typeWrap.appendChild(skipLabel);
+    card.appendChild(typeWrap);
+
+    const purchaseSection = document.createElement('div');
+    purchaseSection.className = 'shopping-sub-purchase-section';
+    const costEl = document.createElement('div');
+    costEl.className = 'shopping-cost';
+    costEl.textContent = `In-game cost: ${option.inkDrops} Ink Drops + ${option.paperScraps} Paper Scraps`;
+    purchaseSection.appendChild(costEl);
+    const metaRow = document.createElement('div');
+    metaRow.className = 'shopping-meta-row';
+    const moneyInput = document.createElement('input');
+    moneyInput.type = 'number';
+    moneyInput.className = 'shopping-money-input';
+    moneyInput.placeholder = 'Money spent (optional)';
+    moneyInput.step = '0.01';
+    moneyInput.min = '0';
+    moneyInput.setAttribute('aria-label', 'Actual money spent');
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'shopping-date-input';
+    dateInput.value = new Date().toISOString().slice(0, 10);
+    dateInput.setAttribute('aria-label', 'Date');
+    metaRow.appendChild(moneyInput);
+    metaRow.appendChild(dateInput);
+    purchaseSection.appendChild(metaRow);
+    card.appendChild(purchaseSection);
+
+    let linkedBookIds = [];
+    const bookSection = document.createElement('div');
+    bookSection.className = 'shopping-book-section';
+    const bookLabel = document.createElement('div');
+    bookLabel.className = 'shopping-book-label';
+    bookLabel.textContent = 'Link books received (optional):';
+    const linkedBooksList = document.createElement('div');
+    linkedBooksList.className = 'shopping-linked-books-list';
+    linkedBooksList.setAttribute('aria-label', 'Books linked to this month');
+    function updateLinkedBooksDisplay() {
+        clearElement(linkedBooksList);
+        linkedBooksList.style.display = linkedBookIds.length ? 'flex' : 'none';
+        linkedBookIds.forEach((bookId) => {
+            const book = stateAdapter && typeof stateAdapter.getBook === 'function' ? stateAdapter.getBook(bookId) : null;
+            const chip = document.createElement('span');
+            chip.className = 'shopping-linked-book-chip';
+            chip.textContent = book && book.title ? String(book.title) : bookId;
+            linkedBooksList.appendChild(chip);
+        });
+    }
+    const bookSelectorContainer = document.createElement('div');
+    bookSelectorContainer.className = 'shopping-book-selector-container';
+    const quickAddContainer = document.createElement('div');
+    quickAddContainer.className = 'shopping-quick-add-container';
+    const quickAddSearch = document.createElement('input');
+    quickAddSearch.type = 'text';
+    quickAddSearch.className = 'shopping-quick-add-search';
+    quickAddSearch.placeholder = 'Search title or author…';
+    const quickAddButton = document.createElement('button');
+    quickAddButton.type = 'button';
+    quickAddButton.className = 'rpg-btn rpg-btn-secondary shopping-quick-add-btn';
+    quickAddButton.textContent = 'Search books';
+    const searchResults = document.createElement('div');
+    searchResults.className = 'shopping-book-search-results';
+    searchResults.style.display = 'none';
+    quickAddContainer.appendChild(quickAddSearch);
+    quickAddContainer.appendChild(quickAddButton);
+    quickAddContainer.appendChild(searchResults);
+    bookSection.appendChild(bookLabel);
+    bookSection.appendChild(linkedBooksList);
+    bookSection.appendChild(bookSelectorContainer);
+    bookSection.appendChild(quickAddContainer);
+    card.appendChild(bookSection);
+
+    const bookSelector = createBookSelector(bookSelectorContainer, stateAdapter, {
+        selectedBookId: null,
+        placeholder: 'Select a book from Library',
+        appendTo: 'body',
+        onSelect: (bookId) => {
+            if (!bookId || !linkedBookIds.includes(bookId)) linkedBookIds = [...linkedBookIds, bookId].filter(Boolean);
+            updateLinkedBooksDisplay();
+            if (bookSelector && typeof bookSelector.setSelectedBookId === 'function') bookSelector.setSelectedBookId(null);
+        }
+    });
+
+    const runApiSearch = async () => {
+        const query = trimOrEmpty(quickAddSearch.value);
+        if (!query || query.length < 2) {
+            searchResults.style.display = 'none';
+            clearElement(searchResults);
+            return;
+        }
+        if (bookSearchAbortController) bookSearchAbortController.abort();
+        bookSearchAbortController = new AbortController();
+        const signal = bookSearchAbortController.signal;
+        searchResults.style.display = 'block';
+        clearElement(searchResults);
+        const loading = document.createElement('div');
+        loading.className = 'shopping-book-search-loading';
+        loading.textContent = 'Searching…';
+        searchResults.appendChild(loading);
+        try {
+            const results = await searchBooks(query, undefined, signal);
+            if (signal.aborted) return;
+            if (!results || results.length === 0) {
+                clearElement(searchResults);
+                const empty = document.createElement('div');
+                empty.className = 'shopping-book-search-empty';
+                empty.textContent = 'No matches found.';
+                searchResults.appendChild(empty);
+                return;
+            }
+            const list = document.createElement('div');
+            list.className = 'shopping-book-search-list';
+            results.forEach((book) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'shopping-book-search-item';
+                const authorStr = Array.isArray(book.authors) && book.authors.length ? book.authors.join(', ') : '';
+                item.innerHTML = '';
+                const coverWrap = document.createElement('span');
+                coverWrap.className = 'shopping-book-search-cover-wrap';
+                if (isSafeHttpUrl(book.coverUrl)) {
+                    const cover = document.createElement('img');
+                    cover.className = 'shopping-book-search-cover';
+                    cover.src = book.coverUrl;
+                    cover.alt = '';
+                    cover.loading = 'lazy';
+                    coverWrap.appendChild(cover);
+                } else {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'shopping-book-search-cover placeholder';
+                    placeholder.textContent = 'No cover';
+                    coverWrap.appendChild(placeholder);
+                }
+                const textWrap = document.createElement('span');
+                textWrap.className = 'shopping-book-search-text';
+                const title = document.createElement('span');
+                title.className = 'shopping-book-search-title';
+                title.textContent = book.title || '';
+                textWrap.appendChild(title);
+                if (authorStr) {
+                    const author = document.createElement('span');
+                    author.className = 'shopping-book-search-author';
+                    author.textContent = authorStr;
+                    textWrap.appendChild(author);
+                }
+                item.appendChild(coverWrap);
+                item.appendChild(textWrap);
+                item.addEventListener('click', () => {
+                    if (!stateAdapter || typeof stateAdapter.addBook !== 'function') return;
+                    const newBook = stateAdapter.addBook({
+                        title: book.title || '',
+                        author: authorStr,
+                        cover: book.coverUrl || null,
+                        pageCount: book.pageCount != null ? Number(book.pageCount) : null,
+                        status: 'reading',
+                        shelfCategory: 'physical-tbr'
+                    });
+                    if (newBook && newBook.id && !linkedBookIds.includes(newBook.id)) {
+                        linkedBookIds = [...linkedBookIds, newBook.id];
+                        updateLinkedBooksDisplay();
+                    }
+                    if (bookSelector && typeof bookSelector.setSelectedBookId === 'function') bookSelector.setSelectedBookId(null);
+                    searchResults.style.display = 'none';
+                    clearElement(searchResults);
+                    quickAddSearch.value = '';
+                });
+                list.appendChild(item);
+            });
+            clearElement(searchResults);
+            searchResults.appendChild(list);
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            searchResults.style.display = 'block';
+            clearElement(searchResults);
+            const error = document.createElement('div');
+            error.className = 'shopping-book-search-error';
+            error.textContent = 'Search failed. Please try again.';
+            searchResults.appendChild(error);
+        }
+    };
+    quickAddButton.addEventListener('click', (e) => { e.preventDefault(); runApiSearch(); });
+    let debounceTimer = null;
+    quickAddSearch.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runApiSearch, 600);
+    });
+
+    const reactionWrap = document.createElement('div');
+    reactionWrap.className = 'shopping-sub-reaction-wrap';
+    reactionWrap.innerHTML = '<span>Reaction this month:</span>';
+    const reactionNone = document.createElement('input');
+    reactionNone.type = 'radio';
+    reactionNone.name = `sub-reaction-${option.id}`;
+    reactionNone.value = 'none';
+    reactionNone.checked = true;
+    reactionNone.id = `sub-reaction-none-${option.id}`;
+    const reactionUp = document.createElement('input');
+    reactionUp.type = 'radio';
+    reactionUp.name = `sub-reaction-${option.id}`;
+    reactionUp.value = 'thumbsUp';
+    reactionUp.id = `sub-reaction-up-${option.id}`;
+    const reactionDown = document.createElement('input');
+    reactionDown.type = 'radio';
+    reactionDown.name = `sub-reaction-${option.id}`;
+    reactionDown.value = 'thumbsDown';
+    reactionDown.id = `sub-reaction-down-${option.id}`;
+    const lblNone = document.createElement('label');
+    lblNone.setAttribute('for', reactionNone.id);
+    lblNone.textContent = '—';
+    const lblUp = document.createElement('label');
+    lblUp.setAttribute('for', reactionUp.id);
+    lblUp.textContent = '👍';
+    const lblDown = document.createElement('label');
+    lblDown.setAttribute('for', reactionDown.id);
+    lblDown.textContent = '👎';
+    reactionWrap.appendChild(reactionNone);
+    reactionWrap.appendChild(lblNone);
+    reactionWrap.appendChild(reactionUp);
+    reactionWrap.appendChild(lblUp);
+    reactionWrap.appendChild(reactionDown);
+    reactionWrap.appendChild(lblDown);
+    card.appendChild(reactionWrap);
+
+    const skipSection = document.createElement('div');
+    skipSection.className = 'shopping-sub-skip-section';
+    const skipsRemainingEl = document.createElement('p');
+    skipsRemainingEl.className = 'shopping-sub-skips-remaining';
+    function updateSkipsRemaining() {
+        const sid = subSelect.value;
+        if (!sid) return;
+        const n = stateAdapter ? stateAdapter.getSubscriptionSkipsRemaining(sid) : 0;
+        skipsRemainingEl.textContent = `Skips remaining this year: ${n}`;
+    }
+    subSelect.addEventListener('change', updateSkipsRemaining);
+    updateSkipsRemaining();
+    skipSection.appendChild(skipsRemainingEl);
+    card.appendChild(skipSection);
+
+    const errorContainer = document.createElement('div');
+    errorContainer.className = 'error-message';
+    errorContainer.style.display = 'none';
+    errorContainer.style.color = '#d32f2f';
+    errorContainer.style.marginTop = '0.5rem';
+    card.appendChild(errorContainer);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'shopping-button-container';
+    const logButton = document.createElement('button');
+    logButton.type = 'button';
+    logButton.className = 'redeem-button shopping-sub-log-btn';
+    logButton.textContent = 'Log month';
+
+    function setLogButtonLabel() {
+        logButton.textContent = skipRadio.checked ? 'Log skip' : 'Log purchase';
+    }
+    purchaseRadio.addEventListener('change', setLogButtonLabel);
+    skipRadio.addEventListener('change', () => {
+        setLogButtonLabel();
+        purchaseSection.style.display = skipRadio.checked ? 'none' : 'block';
+        skipSection.style.display = skipRadio.checked ? 'block' : 'none';
+    });
+    skipSection.style.display = 'none';
+    setLogButtonLabel();
+
+    logButton.addEventListener('click', async () => {
+        const subscriptionId = subSelect.value;
+        if (!subscriptionId) {
+            showError(errorContainer, 'Select a subscription.');
+            return;
+        }
+        const month = monthSelect.value;
+        const year = trimOrEmpty(yearInput.value) || String(new Date().getFullYear());
+        const isSkip = skipRadio.checked;
+
+        if (isSkip) {
+            const skipsRemaining = stateAdapter ? stateAdapter.getSubscriptionSkipsRemaining(subscriptionId, parseInt(year, 10)) : 0;
+            if (skipsRemaining <= 0) {
+                if (!confirm('This subscription has no skips remaining for this year. Log anyway?')) return;
+            }
+            const record = stateAdapter.addBookBoxHistoryEntry({
+                subscriptionId,
+                month: month.padStart(2, '0'),
+                year,
+                type: 'skipped'
+            });
+            if (record) {
+                renderShoppingSummary();
+                logButton.disabled = true;
+                logButton.textContent = 'Logged';
+                setTimeout(() => {
+                    logButton.disabled = false;
+                    setLogButtonLabel();
+                }, 2000);
+            } else {
+                showError(errorContainer, 'Could not save skip.');
+            }
+            return;
+        }
+
+        const current = getCurrentResources();
+        if (current.inkDrops < option.inkDrops) {
+            showError(errorContainer, `Insufficient Ink Drops. You have ${current.inkDrops}, need ${option.inkDrops}.`);
+            return;
+        }
+        if (current.paperScraps < option.paperScraps) {
+            showError(errorContainer, `Insufficient Paper Scraps. You have ${current.paperScraps}, need ${option.paperScraps}.`);
+            return;
+        }
+
+        const actualMoneyRaw = moneyInput.value;
+        const actualSpend = actualMoneyRaw != null && actualMoneyRaw !== '' ? parseFloat(actualMoneyRaw) : null;
+        const logDate = dateInput.value && dateInput.value.trim() ? dateInput.value.trim() : new Date().toISOString().slice(0, 10);
+        const reactionVal = document.querySelector(`input[name="sub-reaction-${option.id}"]:checked`)?.value;
+        const reaction = reactionVal === 'thumbsUp' || reactionVal === 'thumbsDown' ? reactionVal : null;
+
+        const originalLabel = logButton.textContent;
+        logButton.disabled = true;
+        logButton.textContent = 'Logging...';
+        try {
+            stateAdapter.addBookBoxHistoryEntry({
+                subscriptionId,
+                month: month.padStart(2, '0'),
+                year,
+                type: 'purchased',
+                actualSpend: typeof actualSpend === 'number' && !isNaN(actualSpend) ? actualSpend : null,
+                inkDrops: option.inkDrops,
+                paperScraps: option.paperScraps,
+                bookIds: linkedBookIds,
+                reaction
+            });
+            await appendShoppingLogEntry({
+                optionId: option.id,
+                linkedBookIds,
+                actualMoneySpent: typeof actualSpend === 'number' && !isNaN(actualSpend) ? actualSpend : null,
+                storeName: null,
+                logDate,
+                inkDrops: option.inkDrops,
+                paperScraps: option.paperScraps
+            });
+        } catch (_) {
+            showError(errorContainer, 'Could not save. Please try again.');
+            logButton.disabled = false;
+            logButton.textContent = originalLabel;
+            return;
+        }
+        updateResources(current.inkDrops - option.inkDrops, current.paperScraps - option.paperScraps);
+        renderShoppingSummary();
+        logButton.disabled = false;
+        logButton.textContent = 'Logged';
+        setTimeout(() => {
+            logButton.textContent = originalLabel;
+        }, 2000);
+    });
+
+    buttonContainer.appendChild(logButton);
+    card.appendChild(buttonContainer);
+    return card;
+}
+
+/**
  * @param {ShoppingOption} option
  * @returns {HTMLElement}
  */
 function createShoppingOptionCard(option) {
+    if (option.type === 'subscription-month') {
+        return createSubscriptionMonthCard(option);
+    }
+
     const card = document.createElement('div');
     card.className = 'shopping-option';
 
@@ -668,6 +1135,249 @@ function renderShoppingSummary() {
     summaryContainer.appendChild(list);
 }
 
+function renderSubscriptionsList() {
+    const container = document.getElementById('book-box-subscriptions-list');
+    if (!container || !stateAdapter) return;
+
+    const list = stateAdapter.getBookBoxSubscriptionsList() || [];
+    container.innerHTML = '';
+
+    if (list.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'book-box-subscriptions-empty';
+        empty.textContent = 'No subscriptions yet. Add one above, then log each month in the Shop tab.';
+        container.appendChild(empty);
+        return;
+    }
+
+    list.forEach((sub) => {
+        const skipsRemaining = stateAdapter.getSubscriptionSkipsRemaining(sub.id);
+        const { thumbsUp, ratedMonths } = stateAdapter.getSubscriptionThumbsSummary(sub.id);
+        const thumbsLabel = ratedMonths > 0 ? `👍 ${thumbsUp}/${ratedMonths} rated` : '—';
+
+        const card = document.createElement('div');
+        card.className = 'book-box-sub-card';
+        card.dataset.bookBoxSubscriptionId = sub.id;
+
+        const viewDiv = document.createElement('div');
+        viewDiv.className = 'book-box-sub-card-view';
+        viewDiv.innerHTML = `
+            <div class="book-box-sub-card-header">
+                <strong class="book-box-sub-card-title">${escapeHtml(sub.company || 'Unnamed')}${sub.tier ? ` · ${escapeHtml(sub.tier)}` : ''}</strong>
+                <div class="book-box-sub-card-actions">
+                    <button type="button" class="rpg-btn rpg-btn-secondary book-box-sub-edit-btn" data-subscription-id="${escapeHtml(sub.id)}" aria-label="Edit subscription">Edit</button>
+                    <button type="button" class="rpg-btn rpg-btn-secondary book-box-sub-delete-btn" data-subscription-id="${escapeHtml(sub.id)}" aria-label="Delete subscription">Delete</button>
+                </div>
+            </div>
+            <div class="book-box-sub-card-meta">
+                ${sub.defaultMonthlyCost != null ? `<span>Default: $${Number(sub.defaultMonthlyCost).toFixed(2)}/mo</span>` : ''}
+                <span>Skips this year: <strong>${skipsRemaining}</strong> / ${sub.skipsAllowedPerYear ?? 0}</span>
+                <span>${thumbsLabel}</span>
+            </div>
+        `;
+
+        const editDiv = document.createElement('div');
+        editDiv.className = 'book-box-sub-card-edit';
+        editDiv.hidden = true;
+        editDiv.innerHTML = `
+            <div class="book-box-sub-edit-row">
+                <label>Company</label>
+                <input type="text" class="book-box-sub-edit-company" value="${escapeHtml(sub.company || '')}" />
+            </div>
+            <div class="book-box-sub-edit-row">
+                <label>Tier</label>
+                <input type="text" class="book-box-sub-edit-tier" value="${escapeHtml(sub.tier || '')}" />
+            </div>
+            <div class="book-box-sub-edit-row">
+                <label>Default cost ($)</label>
+                <input type="number" class="book-box-sub-edit-cost" min="0" step="0.01" value="${sub.defaultMonthlyCost != null ? escapeHtml(String(sub.defaultMonthlyCost)) : ''}" placeholder="Optional" />
+            </div>
+            <div class="book-box-sub-edit-row">
+                <label>Skips per year</label>
+                <input type="number" class="book-box-sub-edit-skips" min="0" value="${sub.skipsAllowedPerYear ?? 0}" />
+            </div>
+            <div class="book-box-sub-edit-actions">
+                <button type="button" class="rpg-btn rpg-btn-primary book-box-sub-save-edit-btn" data-subscription-id="${escapeHtml(sub.id)}">Save</button>
+                <button type="button" class="rpg-btn rpg-btn-secondary book-box-sub-cancel-edit-btn" data-subscription-id="${escapeHtml(sub.id)}">Cancel</button>
+            </div>
+        `;
+
+        card.appendChild(viewDiv);
+        card.appendChild(editDiv);
+        container.appendChild(card);
+    });
+}
+
+function setupSubscriptionsPanel() {
+    const container = document.getElementById('shopping-subscriptions-container');
+    if (!container || !stateAdapter) return;
+
+    container.innerHTML = `
+        <div class="rpg-panel rpg-book-box-subscriptions-panel">
+            <div class="rpg-panel-header">
+                <h2 class="rpg-panel-title">📦 Book Box Subscriptions</h2>
+                <p class="rpg-panel-subtitle">Define subscriptions here, then log each month in the <strong>Shop</strong> tab using “One Month of a Book Box Subscription”.</p>
+            </div>
+            <div class="rpg-panel-body">
+                <div class="book-box-subscriptions-add-form">
+                    <div class="form-row book-box-sub-form-row">
+                        <label for="book-box-sub-company"><strong>Company:</strong></label>
+                        <input type="text" id="book-box-sub-company" class="book-box-sub-input" placeholder="e.g. Fairyloot" />
+                    </div>
+                    <div class="form-row book-box-sub-form-row">
+                        <label for="book-box-sub-tier"><strong>Tier:</strong></label>
+                        <input type="text" id="book-box-sub-tier" class="book-box-sub-input" placeholder="e.g. Adult" />
+                    </div>
+                    <div class="form-row book-box-sub-form-row book-box-sub-meta-row">
+                        <label for="book-box-sub-default-cost"><strong>Default monthly cost ($):</strong></label>
+                        <input type="number" id="book-box-sub-default-cost" class="book-box-sub-number" min="0" step="0.01" placeholder="Optional" aria-label="Default monthly cost in dollars" />
+                        <label for="book-box-sub-skips"><strong>Skips per year:</strong></label>
+                        <input type="number" id="book-box-sub-skips" class="book-box-sub-number" min="0" value="0" aria-label="Skips allowed per year" />
+                    </div>
+                    <div class="form-row book-box-sub-actions">
+                        <button type="button" id="book-box-sub-add-btn" class="rpg-btn rpg-btn-primary">Add Subscription</button>
+                    </div>
+                </div>
+                <div id="book-box-subscriptions-list" class="book-box-subscriptions-list" aria-live="polite"></div>
+            </div>
+        </div>
+    `;
+
+    const addBtn = document.getElementById('book-box-sub-add-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            const company = trimOrEmpty(document.getElementById('book-box-sub-company')?.value || '');
+            const tier = trimOrEmpty(document.getElementById('book-box-sub-tier')?.value || '');
+            const defaultCostEl = document.getElementById('book-box-sub-default-cost');
+            const skipsEl = document.getElementById('book-box-sub-skips');
+            const defaultMonthlyCost = defaultCostEl && defaultCostEl.value !== '' ? parseFloat(defaultCostEl.value) : null;
+            const skipsAllowedPerYear = skipsEl ? Math.max(0, parseInt(skipsEl.value, 10) || 0) : 0;
+
+            if (!company) {
+                const listEl = document.getElementById('book-box-subscriptions-list');
+                if (listEl) {
+                    const msg = document.createElement('p');
+                    msg.className = 'book-box-sub-error';
+                    msg.setAttribute('role', 'alert');
+                    msg.textContent = 'Company name is required.';
+                    listEl.insertBefore(msg, listEl.firstChild);
+                    setTimeout(() => msg.remove(), 3000);
+                }
+                return;
+            }
+
+            stateAdapter.addBookBoxSubscription({
+                company,
+                tier,
+                defaultMonthlyCost: typeof defaultMonthlyCost === 'number' && !isNaN(defaultMonthlyCost) ? defaultMonthlyCost : null,
+                skipsAllowedPerYear
+            });
+            void setStateKey(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, characterState[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]);
+            document.getElementById('book-box-sub-company').value = '';
+            document.getElementById('book-box-sub-tier').value = '';
+            if (defaultCostEl) defaultCostEl.value = '';
+            if (skipsEl) skipsEl.value = '0';
+            renderSubscriptionsList();
+        });
+    }
+
+    container.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.book-box-sub-delete-btn');
+        const editBtn = e.target.closest('.book-box-sub-edit-btn');
+        const cancelEditBtn = e.target.closest('.book-box-sub-cancel-edit-btn');
+        const saveEditBtn = e.target.closest('.book-box-sub-save-edit-btn');
+        if (deleteBtn?.dataset.subscriptionId) {
+            e.preventDefault();
+            if (!confirm('Remove this subscription? Monthly history will be kept, but the subscription definition will be removed.')) return;
+            stateAdapter.deleteBookBoxSubscription(deleteBtn.dataset.subscriptionId);
+            void setStateKey(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, characterState[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]);
+            renderSubscriptionsList();
+            return;
+        }
+        if (editBtn?.dataset.subscriptionId) {
+            e.preventDefault();
+            const subscriptionId = editBtn.dataset.subscriptionId;
+            const sub = stateAdapter.getBookBoxSubscription(subscriptionId);
+            if (!sub) return;
+            const card = document.querySelector(`[data-book-box-subscription-id="${subscriptionId}"]`);
+            if (!card) return;
+            const viewEl = card.querySelector('.book-box-sub-card-view');
+            const editEl = card.querySelector('.book-box-sub-card-edit');
+            if (!viewEl || !editEl) return;
+            editEl.querySelector('.book-box-sub-edit-company').value = sub.company || '';
+            editEl.querySelector('.book-box-sub-edit-tier').value = sub.tier || '';
+            editEl.querySelector('.book-box-sub-edit-cost').value = sub.defaultMonthlyCost != null ? String(sub.defaultMonthlyCost) : '';
+            editEl.querySelector('.book-box-sub-edit-skips').value = String(sub.skipsAllowedPerYear ?? 0);
+            viewEl.hidden = true;
+            editEl.hidden = false;
+            return;
+        }
+        if (cancelEditBtn?.dataset.subscriptionId) {
+            e.preventDefault();
+            const card = document.querySelector(`[data-book-box-subscription-id="${cancelEditBtn.dataset.subscriptionId}"]`);
+            if (!card) return;
+            const viewEl = card.querySelector('.book-box-sub-card-view');
+            const editEl = card.querySelector('.book-box-sub-card-edit');
+            if (viewEl) viewEl.hidden = false;
+            if (editEl) editEl.hidden = true;
+            return;
+        }
+        if (saveEditBtn?.dataset.subscriptionId) {
+            e.preventDefault();
+            const subscriptionId = saveEditBtn.dataset.subscriptionId;
+            const card = document.querySelector(`[data-book-box-subscription-id="${subscriptionId}"]`);
+            if (!card) return;
+            const editEl = card.querySelector('.book-box-sub-card-edit');
+            if (!editEl) return;
+            const company = trimOrEmpty(editEl.querySelector('.book-box-sub-edit-company')?.value || '');
+            const tier = trimOrEmpty(editEl.querySelector('.book-box-sub-edit-tier')?.value || '');
+            const costInput = editEl.querySelector('.book-box-sub-edit-cost');
+            const skipsInput = editEl.querySelector('.book-box-sub-edit-skips');
+            const defaultMonthlyCost = costInput && costInput.value !== '' ? parseFloat(costInput.value) : null;
+            const skipsAllowedPerYear = skipsInput ? Math.max(0, parseInt(skipsInput.value, 10) || 0) : 0;
+            if (!company) return;
+            stateAdapter.updateBookBoxSubscription(subscriptionId, {
+                company,
+                tier,
+                defaultMonthlyCost: typeof defaultMonthlyCost === 'number' && !isNaN(defaultMonthlyCost) ? defaultMonthlyCost : null,
+                skipsAllowedPerYear
+            });
+            void setStateKey(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, characterState[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]);
+            const viewEl = card.querySelector('.book-box-sub-card-view');
+            if (viewEl) viewEl.hidden = false;
+            if (editEl) editEl.hidden = true;
+            renderSubscriptionsList();
+        }
+    });
+
+    renderSubscriptionsList();
+    stateAdapter.on(STATE_EVENTS.BOOK_BOX_SUBSCRIPTIONS_CHANGED, renderSubscriptionsList);
+    stateAdapter.on(STATE_EVENTS.BOOK_BOX_HISTORY_CHANGED, renderSubscriptionsList);
+}
+
+function setupShoppingTabs() {
+    const nav = document.querySelector('.shopping-tab-nav');
+    const panels = document.querySelectorAll('.shopping-tab-panel');
+    const buttons = document.querySelectorAll('.shopping-tab-btn');
+    if (!nav || !panels.length || !buttons.length) return;
+
+    buttons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.shoppingTab;
+            if (!tab) return;
+            buttons.forEach((b) => {
+                b.classList.toggle('active', b === btn);
+                b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+            });
+            panels.forEach((panel) => {
+                const isActive = panel.dataset.shoppingPanel === tab;
+                panel.classList.toggle('active', isActive);
+                panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+            });
+        });
+    });
+}
+
 /**
  * Initialize the shopping page
  */
@@ -675,29 +1385,31 @@ export async function initializeShoppingPage() {
     const container = document.getElementById('shopping-options-container');
     if (!container) return;
 
+    await ensureStateLoadedOnce();
+    await loadShoppingLog();
+
+    const shopPanel = document.getElementById('shopping-tab-panel-shop');
     let currencyDisplay = document.getElementById('shopping-currency-display');
-    if (!currencyDisplay) {
+    if (!currencyDisplay && shopPanel) {
         currencyDisplay = document.createElement('div');
         currencyDisplay.id = 'shopping-currency-display';
         currencyDisplay.className = 'shopping-currency-display';
-        container.parentElement?.insertBefore(currencyDisplay, container);
+        shopPanel.insertBefore(currencyDisplay, shopPanel.firstChild);
     }
 
     if (!shoppingOptions || shoppingOptions.length === 0) {
         container.innerHTML = '<p>No shopping options available.</p>';
         updateCurrencyDisplay();
-        return;
+    } else {
+        container.innerHTML = '';
+        shoppingOptions.forEach((option) => {
+            const card = createShoppingOptionCard(option);
+            container.appendChild(card);
+        });
     }
 
-    await ensureStateLoadedOnce();
-    await loadShoppingLog();
-
-    container.innerHTML = '';
-    shoppingOptions.forEach((option) => {
-        const card = createShoppingOptionCard(option);
-        container.appendChild(card);
-    });
-
+    setupShoppingTabs();
+    setupSubscriptionsPanel();
     updateCurrencyDisplay();
     renderShoppingSummary();
 }

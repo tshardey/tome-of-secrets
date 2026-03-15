@@ -1898,6 +1898,110 @@ input:checked+.slider:before {
     margin-bottom: 0;
 }
 
+/* Subscription-month card on Shopping page */
+.shopping-option-subscription-month .shopping-subscription-select-wrap {
+    margin-bottom: 0.75rem;
+}
+.shopping-option-subscription-month .shopping-subscription-select {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    background: #1a1512;
+    color: #d4c8b0;
+    min-width: 14rem;
+}
+.shopping-subscription-no-subs {
+    color: #8a7f6e;
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+.shopping-option-subscription-month .shopping-sub-month-year {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+.shopping-option-subscription-month .shopping-sub-month {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    background: #1a1512;
+    color: #d4c8b0;
+}
+.shopping-option-subscription-month .shopping-sub-year {
+    width: 5rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    background: #1a1512;
+    color: #d4c8b0;
+}
+.shopping-option-subscription-month .shopping-sub-type-wrap {
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.shopping-option-subscription-month .shopping-sub-type-wrap label {
+    margin-right: 0.25rem;
+    cursor: pointer;
+}
+.shopping-option-subscription-month .shopping-sub-purchase-section {
+    margin-bottom: 0.75rem;
+}
+.shopping-option-subscription-month .shopping-sub-reaction-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.shopping-option-subscription-month .shopping-sub-reaction-wrap label {
+    cursor: pointer;
+}
+.shopping-option-subscription-month .shopping-sub-skips-remaining {
+    margin: 0.5rem 0;
+    color: #8a7f6e;
+}
+
+/* Shopping page tabs (Shop | Book Box Subscriptions) */
+.shopping-tabs {
+    margin-top: 1rem;
+}
+.shopping-tab-nav {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #54483b;
+    padding-bottom: 0.5rem;
+}
+.shopping-tab-btn {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    color: #d4c8b0;
+    font-family: 'Lora', serif;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.shopping-tab-btn:hover {
+    background: rgba(184, 159, 98, 0.15);
+    color: #b89f62;
+}
+.shopping-tab-btn.active {
+    background: rgba(184, 159, 98, 0.25);
+    color: #b89f62;
+    border-color: #b89f62;
+}
+.shopping-tab-panel {
+    display: none;
+}
+.shopping-tab-panel.active {
+    display: block;
+}
+
 /* Currency Display on Shopping Page */
 .shopping-currency-display {
     margin-bottom: 30px;
@@ -2051,6 +2155,91 @@ input:checked+.slider:before {
 
 #permanentBonusesList li:last-child {
     margin-bottom: 0;
+}
+
+/* Book Box Subscriptions (Character tab) */
+.rpg-book-box-subscriptions-panel .book-box-sub-form-row {
+    margin-bottom: 0.75rem;
+}
+.rpg-book-box-subscriptions-panel .book-box-sub-form-row label {
+    display: inline-block;
+    min-width: 10rem;
+    margin-right: 0.5rem;
+}
+.rpg-book-box-subscriptions-panel .book-box-sub-input,
+.rpg-book-box-subscriptions-panel .book-box-sub-number {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    background: #1a1512;
+    color: #d4c8b0;
+}
+.rpg-book-box-subscriptions-panel .book-box-sub-meta-row input {
+    width: 6rem;
+}
+.rpg-book-box-subscriptions-panel .book-box-sub-actions {
+    margin-top: 1rem;
+}
+.book-box-subscriptions-list {
+    margin-top: 1.5rem;
+}
+.book-box-subscriptions-empty {
+    color: #8a7f6e;
+    font-style: italic;
+}
+.book-box-sub-card {
+    border: 1px solid #54483b;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: rgba(26, 21, 18, 0.6);
+}
+.book-box-sub-card-view .book-box-sub-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.book-box-sub-card-title {
+    color: #b89f62;
+}
+.book-box-sub-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.book-box-sub-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #8a7f6e;
+}
+.book-box-sub-card-edit .book-box-sub-edit-row {
+    margin-bottom: 0.5rem;
+}
+.book-box-sub-card-edit .book-box-sub-edit-row label {
+    display: inline-block;
+    min-width: 6rem;
+    margin-right: 0.5rem;
+}
+.book-box-sub-card-edit .book-box-sub-edit-row input {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    background: #1a1512;
+    color: #d4c8b0;
+    width: 12rem;
+}
+.book-box-sub-edit-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+}
+.book-box-sub-error {
+    color: #d32f2f;
+    margin-bottom: 0.5rem;
 }
 
 /* ==========================================================================

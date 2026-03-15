@@ -7,13 +7,13 @@ todos:
     status: completed
   - id: state-schema
     content: Add persisted shopping/subscription state, validator updates, migrator updates, and large-state persistence wiring.
-    status: in_progress
+    status: completed
   - id: book-physical-tbr
     content: Extend books with `shelfCategory` and expose `Physical TBR` in library add/edit flows.
     status: completed
   - id: shopping-ledger
     content: Upgrade shopping options and renderer to capture purchase metadata, link books, and persist shopping log entries.
-    status: pending
+    status: completed
   - id: subscription-tracking
     content: Add subscription setup on the Character Sheet plus monthly purchase/skip logging on `shopping.md`.
     status: pending
