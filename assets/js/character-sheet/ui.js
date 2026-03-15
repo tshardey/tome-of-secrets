@@ -677,9 +677,16 @@ export function renderCompletedQuests() {
             const { url } = pickFront(mode, { posterUrl: vm?.cardImage, coverUrl, fitMode: 'cover' });
             return { frontUrl: url || coverUrl, title: vm?.title || quest.prompt || '—', shape: 'tall', frontFit: 'cover' };
         }
-        // Restoration, Extra Credit, and any other type: cover only (no poster)
+        // Restoration, Extra Credit: have poster art; use pickFront so Poster/Cover toggle works
+        let posterUrl = null;
+        if (quest.type === '⭐ Extra Credit') {
+            posterUrl = getExtraCreditCardbackImage();
+        } else if (quest.type === '🔨 Restoration Project' && quest.restorationData?.projectId) {
+            posterUrl = getRestorationProjectCardFaceImage(quest.restorationData.projectId);
+        }
+        const { url } = pickFront(mode, { posterUrl, coverUrl, fitMode: 'cover' });
         return {
-            frontUrl: coverUrl,
+            frontUrl: url || coverUrl,
             title: quest.book || quest.prompt || quest.type || '—',
             shape: 'tall',
             frontFit: 'cover'
