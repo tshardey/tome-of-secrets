@@ -12,7 +12,12 @@ import { formatReceiptTooltip, calculateActiveQuestReceipt } from '../services/Q
 import { createQuestRowViewModel } from '../viewModels/questViewModel.js';
 import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
 import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
-import { getGenreQuestCardImage, getSideQuestCardImage } from '../utils/questCardImage.js';
+import {
+    getGenreQuestCardImage,
+    getSideQuestCardImage,
+    getExtraCreditCardbackImage,
+    getRestorationProjectCardFaceImage
+} from '../utils/questCardImage.js';
 import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
 
 /**
@@ -698,6 +703,14 @@ export function renderQuestCard(quest, index, listType = 'active') {
                 cardImageAlt = questName || 'Side Quest';
             }
         }
+    } else if (quest.type === '⭐ Extra Credit') {
+        // Extra Credit: show card back (no distinct front)
+        cardImage = getExtraCreditCardbackImage();
+        cardImageAlt = 'Extra Credit';
+    } else if (quest.type === '🔨 Restoration Project' && quest.restorationData?.projectId) {
+        // Restoration: show project poster (card face)
+        cardImage = getRestorationProjectCardFaceImage(quest.restorationData.projectId);
+        cardImageAlt = quest.restorationData.projectName || 'Restoration Project';
     }
     
     // Render card image if available

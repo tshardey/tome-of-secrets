@@ -736,6 +736,19 @@ permalink: /character-sheet.html
                         <div id="room-deck-container" class="card-deck available"></div>
                         <div id="encounter-deck-container" class="card-deck available" style="display: none;"></div>
                     </div>
+                    <div class="deck-group" id="restoration-deck-group">
+                        <h4 class="deck-title">🔨 Restoration Projects</h4>
+                        <div id="restoration-entry-container" class="card-deck restoration-entry-card available" role="button" tabindex="0" aria-expanded="false" aria-controls="restoration-expandable"></div>
+                        <div id="restoration-expandable" class="restoration-expandable" style="display: none;">
+                            <p class="deck-hint">Select a wing to see its restoration projects, then select cards to add.</p>
+                            <div id="restoration-wing-cards-container" class="restoration-wing-cards"></div>
+                            <div id="restoration-drawn-card-display" class="drawn-card-area"></div>
+                        </div>
+                    </div>
+                    <div class="deck-group" id="extra-credit-deck-group">
+                        <h4 class="deck-title">⭐ Extra Credit</h4>
+                        <div id="extra-credit-deck-container" class="card-deck available"></div>
+                    </div>
                 </div>
                 
                 <!-- Drawn Cards Display -->
@@ -743,6 +756,7 @@ permalink: /character-sheet.html
                     <div id="atmospheric-buff-drawn-card-display" class="drawn-card-area"></div>
                     <div id="genre-quest-drawn-card-display" class="drawn-card-area"></div>
                     <div id="side-quest-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="extra-credit-drawn-card-display" class="drawn-card-area"></div>
                     <div id="drawn-card-display" class="drawn-card-area"></div>
                 </div>
                 

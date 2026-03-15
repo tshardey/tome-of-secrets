@@ -22,8 +22,13 @@ import {
     getAtmosphericBuffCardImage,
     getGenreQuestCardImage,
     getSideQuestCardImage,
-    getQuestCardbackImage
+    getQuestCardbackImage,
+    getExtraCreditCardImage,
+    getExtraCreditCardbackImage,
+    getRestorationWingCardbackImage,
+    getRestorationProjectCardFaceImage
 } from '../utils/questCardImage.js';
+import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 
 /**
  * Create view model for atmospheric buff deck UI
@@ -104,4 +109,84 @@ export function createSideQuestDeckViewModel(state, drawnQuests = []) {
         })),
         availableQuests
     };
+}
+
+/**
+ * Create view model for a single drawn Extra Credit card (for rendering)
+ * @returns {Object} View model with cardImage for the extra credit card
+ */
+export function createExtraCreditViewModel() {
+    return {
+        cardImage: getExtraCreditCardImage()
+    };
+}
+
+/**
+ * Create view model for Extra Credit deck UI (cardback + drawn cards list)
+ * @param {Array<{cardImage: string}>} drawnCards - Array of drawn card data (each has cardImage)
+ * @returns {Object} View model: { deck: { available, cardbackImage }, drawnCards }
+ */
+export function createExtraCreditDeckViewModel(drawnCards = []) {
+    const list = Array.isArray(drawnCards) ? drawnCards : [];
+    return {
+        deck: {
+            available: true,
+            availableCount: 1,
+            cardbackImage: getExtraCreditCardbackImage()
+        },
+        drawnCards: list.map((item) => ({
+            cardImage: item && item.cardImage != null ? item.cardImage : getExtraCreditCardImage()
+        }))
+    };
+}
+
+/**
+ * Create view model for Restoration Projects: wings (card backs) and projects for selected wing (card faces)
+ * @param {Object} state - Character state object
+ * @param {string|null} selectedWingId - Numeric wing key (e.g. '1', '6') when a wing is selected
+ * @returns {Object} View model: { wings: Array<{wingId, name, cardbackImage, unlocked}>, projects: Array<{projectId, name, description, cardImage, project, wing}> }
+ */
+export function createRestorationDeckViewModel(state, selectedWingId = null) {
+    const wingsData = data.wings || {};
+    const projectsData = data.restorationProjects || {};
+    const completedProjects = (state && state.completedRestorationProjects) || [];
+    const dustyBlueprints = (state && typeof state.dustyBlueprints === 'number') ? state.dustyBlueprints : 0;
+
+    const wings = [];
+    for (const numericId in wingsData) {
+        const wing = wingsData[numericId];
+        const unlocked = wing.alwaysAccessible === true || isWingReadyForRestoration(numericId);
+        wings.push({
+            wingId: numericId,
+            numericId,
+            name: wing.name,
+            id: wing.id,
+            cardbackImage: getRestorationWingCardbackImage(wing.id),
+            unlocked
+        });
+    }
+
+    let projects = [];
+    if (selectedWingId && wingsData[selectedWingId]) {
+        const wing = wingsData[selectedWingId];
+        for (const projectId in projectsData) {
+            const project = projectsData[projectId];
+            if (project.wingId !== selectedWingId) continue;
+            if (completedProjects.includes(projectId)) continue;
+            const cost = project.cost || 0;
+            if (dustyBlueprints < cost) continue;
+            projects.push({
+                projectId,
+                name: project.name,
+                description: project.description,
+                completionPrompt: project.completionPrompt,
+                cost: project.cost,
+                cardImage: getRestorationProjectCardFaceImage(projectId),
+                project,
+                wing
+            });
+        }
+    }
+
+    return { wings, projects, selectedWingId };
 }

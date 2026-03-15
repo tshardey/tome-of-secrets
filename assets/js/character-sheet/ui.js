@@ -22,6 +22,7 @@ import { createQuestListViewModel } from '../viewModels/questViewModel.js';
 import { createDungeonArchiveCardsViewModel } from '../viewModels/dungeonArchiveCardsViewModel.js';
 import { renderDungeonArchiveCard, renderQuestArchiveCard, renderTomeArchiveCard } from './cardRenderer.js';
 import { createGenreQuestArchiveCardsViewModel, createSideQuestArchiveCardsViewModel } from '../viewModels/questArchiveCardsViewModel.js';
+import { getExtraCreditCardbackImage, getRestorationProjectCardFaceImage } from '../utils/questCardImage.js';
 import { createCurseListViewModel } from '../viewModels/curseViewModel.js';
 import { createAbilityViewModel } from '../viewModels/abilityViewModel.js';
 import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffViewModel.js';
@@ -698,6 +699,17 @@ export function renderCompletedQuests() {
             const url = pickFront({ posterUrl: vm?.cardImage, coverUrl: getEffectiveQuestCoverUrl(quest), fitMode: 'cover' }).url;
             return { frontUrl: url || getEffectiveQuestCoverUrl(quest), title: vm?.title || quest.prompt || '—', shape: 'tall', frontFit: 'cover' };
         }
+        if (quest.type === '⭐ Extra Credit') {
+            return { frontUrl: getExtraCreditCardbackImage(), title: quest.book || 'Extra Credit', shape: 'tall', frontFit: 'cover' };
+        }
+        if (quest.type === '🔨 Restoration Project' && quest.restorationData?.projectId) {
+            return {
+                frontUrl: getRestorationProjectCardFaceImage(quest.restorationData.projectId),
+                title: quest.restorationData.projectName || quest.prompt || '—',
+                shape: 'tall',
+                frontFit: 'cover'
+            };
+        }
         const frontUrl = getEffectiveQuestCoverUrl(quest);
         const title = quest.book || quest.prompt || quest.type || '—';
         return { frontUrl, title, shape: 'tall', frontFit: 'cover' };
@@ -862,6 +874,8 @@ export function renderCompletedQuests() {
                 if (quest.type === '♠ Dungeon Crawl') return createDungeonArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
                 if (quest.type === '♥ Organize the Stacks') return createGenreQuestArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
                 if (quest.type === '♣ Side Quest') return createSideQuestArchiveCardsViewModel([quest])?.[0]?.cardImage || null;
+                if (quest.type === '⭐ Extra Credit') return getExtraCreditCardbackImage();
+                if (quest.type === '🔨 Restoration Project' && quest.restorationData?.projectId) return getRestorationProjectCardFaceImage(quest.restorationData.projectId);
                 return null;
             })();
             const frontUrl = isOther

@@ -138,6 +138,73 @@
     max-width: 100%;
 }
 
+/* Extra Credit drawn card: same size as other quest cards (300px 2:3) */
+.extra-credit-card .card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Restoration entry card (card-back-restoration.png) - click to expand wings */
+.restoration-entry-card {
+    cursor: pointer;
+}
+.restoration-expandable {
+    margin-top: 12px;
+}
+
+/* Restoration Projects: wing card backs row */
+.restoration-wing-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.restoration-wing-card {
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    max-width: 120px;
+}
+
+.restoration-wing-card.available:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.restoration-wing-card.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.restoration-wing-card .cardback-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.restoration-wing-label {
+    display: block;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 4px 6px;
+    color: #b89f62;
+    background: rgba(42, 35, 29, 0.9);
+}
+
+.deck-hint {
+    font-size: 0.85rem;
+    color: #8a7a61;
+    margin: 0 0 8px 0;
+    text-align: center;
+}
+
 /* Selectable card wrapper (click / Ctrl+click to select multiple) */
 .card-selectable-wrapper {
     display: inline-block;

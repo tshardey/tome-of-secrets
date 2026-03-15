@@ -130,3 +130,55 @@ export function getQuestCardbackImage(questType) {
   const cardbackFilename = `tos-cardback-${questType}.png`;
   return toCdnImageUrlIfConfigured(`assets/images/${questType}/${cardbackFilename}`);
 }
+
+/**
+ * Extra Credit and Restoration card images (other-quests folder)
+ */
+
+const OTHER_QUESTS_IMAGE_BASE = 'assets/images/other-quests';
+
+/**
+ * Get Extra Credit card image (card face when drawn)
+ * @returns {string} Image path for card-extra-credit.png
+ */
+export function getExtraCreditCardImage() {
+  return toCdnImageUrlIfConfigured(`${OTHER_QUESTS_IMAGE_BASE}/card-extra-credit.png`);
+}
+
+/**
+ * Get Extra Credit deck cardback image (same as face for consistency)
+ * @returns {string} Image path for card-extra-credit.png
+ */
+export function getExtraCreditCardbackImage() {
+  return toCdnImageUrlIfConfigured(`${OTHER_QUESTS_IMAGE_BASE}/card-extra-credit.png`);
+}
+
+/**
+ * Get restoration wing cardback image
+ * @param {string} wingId - Wing id from wings data (e.g. 'scholarly-archives', 'heart-of-library')
+ * @returns {string} Image path for card-back-wing-{wingId}.png
+ */
+export function getRestorationWingCardbackImage(wingId) {
+  if (!wingId || typeof wingId !== 'string') return '';
+  const slug = wingId.trim().toLowerCase().replace(/\s+/g, '-');
+  return toCdnImageUrlIfConfigured(`${OTHER_QUESTS_IMAGE_BASE}/card-back-wing-${slug}.png`);
+}
+
+/**
+ * Get restoration project card face image
+ * @param {string} projectId - Project id from restorationProjects (e.g. 'restore-card-catalog')
+ * @returns {string} Image path for card-face-restoration-{projectId}.png
+ */
+export function getRestorationProjectCardFaceImage(projectId) {
+  if (!projectId || typeof projectId !== 'string') return '';
+  const slug = projectId.trim().toLowerCase().replace(/\s+/g, '-');
+  return toCdnImageUrlIfConfigured(`${OTHER_QUESTS_IMAGE_BASE}/card-face-restoration-${slug}.png`);
+}
+
+/**
+ * Get general restoration cardback (when no wing selected)
+ * @returns {string} Image path for card-back-restoration.png
+ */
+export function getRestorationCardbackImage() {
+  return toCdnImageUrlIfConfigured(`${OTHER_QUESTS_IMAGE_BASE}/card-back-restoration.png`);
+}
