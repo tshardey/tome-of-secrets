@@ -16,10 +16,10 @@ todos:
     status: completed
   - id: subscription-tracking
     content: Add subscription setup on the Character Sheet plus monthly purchase/skip logging on `shopping.md`.
-    status: pending
+    status: completed
   - id: summaries-tests
     content: Add monthly totals, thumbs-up ratio summaries, and automated coverage for new flows and migrations.
-    status: pending
+    status: completed
 isProject: false
 ---
 

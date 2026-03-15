@@ -1301,6 +1301,24 @@ export class StateAdapter {
         return [...this._getBookBoxHistoryRaw()];
     }
 
+    /**
+     * Update the reaction of a book box history entry (for editing after the fact).
+     * @param {string} entryId
+     * @param {'thumbsUp'|'thumbsDown'|null} reaction
+     * @returns {Object|null} Updated entry or null
+     */
+    updateBookBoxHistoryEntryReaction(entryId, reaction) {
+        if (!entryId || typeof entryId !== 'string') return null;
+        const list = [...this._getBookBoxHistoryRaw()];
+        const idx = list.findIndex((e) => e.id === entryId);
+        if (idx < 0) return null;
+        const entry = { ...list[idx] };
+        entry.reaction = reaction === 'thumbsUp' || reaction === 'thumbsDown' ? reaction : null;
+        list[idx] = entry;
+        this._persistBookBoxHistory(list);
+        return entry;
+    }
+
     getBookBoxHistoryForSubscription(subscriptionId) {
         if (!subscriptionId || typeof subscriptionId !== 'string') return [];
         return this._getBookBoxHistoryRaw().filter(e => e.subscriptionId === subscriptionId);

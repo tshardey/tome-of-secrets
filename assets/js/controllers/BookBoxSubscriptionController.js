@@ -185,8 +185,6 @@ export class BookBoxSubscriptionController extends BaseController {
 
         list.forEach((sub) => {
             const skipsRemaining = this.stateAdapter.getSubscriptionSkipsRemaining(sub.id);
-            const { thumbsUp, ratedMonths } = this.stateAdapter.getSubscriptionThumbsSummary(sub.id);
-            const thumbsLabel = ratedMonths > 0 ? `👍 ${thumbsUp}/${ratedMonths} rated` : '—';
 
             const card = document.createElement('div');
             card.className = 'book-box-sub-card';
@@ -205,7 +203,6 @@ export class BookBoxSubscriptionController extends BaseController {
                 <div class="book-box-sub-card-meta">
                     ${sub.defaultMonthlyCost != null ? `<span>Default: $${Number(sub.defaultMonthlyCost).toFixed(2)}/mo</span>` : ''}
                     <span>Skips this year: <strong>${skipsRemaining}</strong> / ${sub.skipsAllowedPerYear ?? 0}</span>
-                    <span>${thumbsLabel}</span>
                 </div>
             `;
 

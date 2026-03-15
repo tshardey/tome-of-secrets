@@ -279,31 +279,25 @@ function createSubscriptionMonthCard(option) {
     card.appendChild(monthYearWrap);
 
     const typeWrap = document.createElement('div');
-    typeWrap.className = 'shopping-sub-type-wrap';
+    typeWrap.className = 'shopping-sub-type-wrap shopping-sub-type-toggle-wrap';
     const typeLabel = document.createElement('span');
     typeLabel.textContent = 'This month: ';
     typeWrap.appendChild(typeLabel);
-    const purchaseRadio = document.createElement('input');
-    purchaseRadio.type = 'radio';
-    purchaseRadio.name = `sub-type-${option.id}`;
-    purchaseRadio.id = `sub-type-purchase-${option.id}`;
-    purchaseRadio.value = 'purchase';
-    purchaseRadio.checked = true;
-    const skipRadio = document.createElement('input');
-    skipRadio.type = 'radio';
-    skipRadio.name = `sub-type-${option.id}`;
-    skipRadio.id = `sub-type-skip-${option.id}`;
-    skipRadio.value = 'skip';
-    const purchaseLabel = document.createElement('label');
-    purchaseLabel.setAttribute('for', purchaseRadio.id);
-    purchaseLabel.textContent = 'Purchase';
-    const skipLabel = document.createElement('label');
-    skipLabel.setAttribute('for', skipRadio.id);
-    skipLabel.textContent = 'Skip';
-    typeWrap.appendChild(purchaseRadio);
-    typeWrap.appendChild(purchaseLabel);
-    typeWrap.appendChild(skipRadio);
-    typeWrap.appendChild(skipLabel);
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+    const typeCheckbox = document.createElement('input');
+    typeCheckbox.type = 'checkbox';
+    typeCheckbox.setAttribute('aria-label', 'Purchase or Skip');
+    typeCheckbox.checked = false;
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    switchLabel.appendChild(typeCheckbox);
+    switchLabel.appendChild(slider);
+    const typeValueLabel = document.createElement('span');
+    typeValueLabel.className = 'shopping-sub-type-label';
+    typeValueLabel.textContent = 'Purchase';
+    typeWrap.appendChild(switchLabel);
+    typeWrap.appendChild(typeValueLabel);
     card.appendChild(typeWrap);
 
     const purchaseSection = document.createElement('div');
@@ -490,42 +484,6 @@ function createSubscriptionMonthCard(option) {
         debounceTimer = setTimeout(runApiSearch, 600);
     });
 
-    const reactionWrap = document.createElement('div');
-    reactionWrap.className = 'shopping-sub-reaction-wrap';
-    reactionWrap.innerHTML = '<span>Reaction this month:</span>';
-    const reactionNone = document.createElement('input');
-    reactionNone.type = 'radio';
-    reactionNone.name = `sub-reaction-${option.id}`;
-    reactionNone.value = 'none';
-    reactionNone.checked = true;
-    reactionNone.id = `sub-reaction-none-${option.id}`;
-    const reactionUp = document.createElement('input');
-    reactionUp.type = 'radio';
-    reactionUp.name = `sub-reaction-${option.id}`;
-    reactionUp.value = 'thumbsUp';
-    reactionUp.id = `sub-reaction-up-${option.id}`;
-    const reactionDown = document.createElement('input');
-    reactionDown.type = 'radio';
-    reactionDown.name = `sub-reaction-${option.id}`;
-    reactionDown.value = 'thumbsDown';
-    reactionDown.id = `sub-reaction-down-${option.id}`;
-    const lblNone = document.createElement('label');
-    lblNone.setAttribute('for', reactionNone.id);
-    lblNone.textContent = '—';
-    const lblUp = document.createElement('label');
-    lblUp.setAttribute('for', reactionUp.id);
-    lblUp.textContent = '👍';
-    const lblDown = document.createElement('label');
-    lblDown.setAttribute('for', reactionDown.id);
-    lblDown.textContent = '👎';
-    reactionWrap.appendChild(reactionNone);
-    reactionWrap.appendChild(lblNone);
-    reactionWrap.appendChild(reactionUp);
-    reactionWrap.appendChild(lblUp);
-    reactionWrap.appendChild(reactionDown);
-    reactionWrap.appendChild(lblDown);
-    card.appendChild(reactionWrap);
-
     const skipSection = document.createElement('div');
     skipSection.className = 'shopping-sub-skip-section';
     const skipsRemainingEl = document.createElement('p');
@@ -556,14 +514,21 @@ function createSubscriptionMonthCard(option) {
     logButton.textContent = 'Log month';
 
     function setLogButtonLabel() {
-        logButton.textContent = skipRadio.checked ? 'Log skip' : 'Log purchase';
+        logButton.textContent = typeCheckbox.checked ? 'Log skip' : 'Log purchase';
     }
-    purchaseRadio.addEventListener('change', setLogButtonLabel);
-    skipRadio.addEventListener('change', () => {
+    function updateTypeDisplay() {
+        typeValueLabel.textContent = typeCheckbox.checked ? 'Skip' : 'Purchase';
+        purchaseSection.style.display = typeCheckbox.checked ? 'none' : 'block';
+        skipSection.style.display = typeCheckbox.checked ? 'block' : 'none';
         setLogButtonLabel();
-        purchaseSection.style.display = skipRadio.checked ? 'none' : 'block';
-        skipSection.style.display = skipRadio.checked ? 'block' : 'none';
+    }
+    typeWrap.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        typeCheckbox.checked = !typeCheckbox.checked;
+        updateTypeDisplay();
     });
+    typeCheckbox.addEventListener('change', updateTypeDisplay);
     skipSection.style.display = 'none';
     setLogButtonLabel();
 
@@ -575,7 +540,7 @@ function createSubscriptionMonthCard(option) {
         }
         const month = monthSelect.value;
         const year = trimOrEmpty(yearInput.value) || String(new Date().getFullYear());
-        const isSkip = skipRadio.checked;
+        const isSkip = typeCheckbox.checked;
 
         if (isSkip) {
             const skipsRemaining = stateAdapter ? stateAdapter.getSubscriptionSkipsRemaining(subscriptionId, parseInt(year, 10)) : 0;
@@ -615,8 +580,6 @@ function createSubscriptionMonthCard(option) {
         const actualMoneyRaw = moneyInput.value;
         const actualSpend = actualMoneyRaw != null && actualMoneyRaw !== '' ? parseFloat(actualMoneyRaw) : null;
         const logDate = dateInput.value && dateInput.value.trim() ? dateInput.value.trim() : new Date().toISOString().slice(0, 10);
-        const reactionVal = document.querySelector(`input[name="sub-reaction-${option.id}"]:checked`)?.value;
-        const reaction = reactionVal === 'thumbsUp' || reactionVal === 'thumbsDown' ? reactionVal : null;
 
         const originalLabel = logButton.textContent;
         logButton.disabled = true;
@@ -630,8 +593,7 @@ function createSubscriptionMonthCard(option) {
                 actualSpend: typeof actualSpend === 'number' && !isNaN(actualSpend) ? actualSpend : null,
                 inkDrops: option.inkDrops,
                 paperScraps: option.paperScraps,
-                bookIds: linkedBookIds,
-                reaction
+                bookIds: linkedBookIds
             });
             await appendShoppingLogEntry({
                 optionId: option.id,
@@ -1023,7 +985,25 @@ function renderShoppingSummary() {
     }
 
     clearElement(summaryContainer);
-    if (!shoppingLog || shoppingLog.length === 0) {
+    const byMonth = new Map();
+    (shoppingLog || []).forEach((entry) => {
+        const d = typeof entry.logDate === 'string' ? entry.logDate : '';
+        const key = d && d.length >= 7 ? d.slice(0, 7) : 'unknown';
+        if (!byMonth.has(key)) byMonth.set(key, { entries: [], inkDrops: 0, paperScraps: 0, actualMoneySpent: 0 });
+        const bucket = byMonth.get(key);
+        bucket.entries.push(entry);
+        bucket.inkDrops += typeof entry.inkDrops === 'number' ? entry.inkDrops : 0;
+        bucket.paperScraps += typeof entry.paperScraps === 'number' ? entry.paperScraps : 0;
+        const spend = typeof entry.actualMoneySpent === 'number' && !isNaN(entry.actualMoneySpent) ? entry.actualMoneySpent : 0;
+        bucket.actualMoneySpent += spend;
+    });
+
+    const months = Array.from(byMonth.keys()).sort().reverse();
+    const selectedKey = (summaryContainer.dataset.selectedMonthKey || '').trim() || months[0];
+    if (!months.includes(selectedKey)) {
+        delete summaryContainer.dataset.selectedMonthKey;
+    }
+    if (months.length === 0) {
         const heading = document.createElement('h2');
         heading.textContent = 'Shopping Log';
         const copy = document.createElement('p');
@@ -1033,26 +1013,40 @@ function renderShoppingSummary() {
         summaryContainer.appendChild(copy);
         return;
     }
-
-    const byMonth = new Map();
-    shoppingLog.forEach((entry) => {
-        const d = typeof entry.logDate === 'string' ? entry.logDate : '';
-        const key = d && d.length >= 7 ? d.slice(0, 7) : 'unknown';
-        if (!byMonth.has(key)) byMonth.set(key, { entries: [], inkDrops: 0, paperScraps: 0 });
-        const bucket = byMonth.get(key);
-        bucket.entries.push(entry);
-        bucket.inkDrops += typeof entry.inkDrops === 'number' ? entry.inkDrops : 0;
-        bucket.paperScraps += typeof entry.paperScraps === 'number' ? entry.paperScraps : 0;
-    });
-
-    const months = Array.from(byMonth.keys()).sort().reverse();
-    const latestKey = months[0];
-    const latest = byMonth.get(latestKey);
-    const monthLabel = latestKey === 'unknown' ? 'Unknown period' : latestKey;
+    const currentKey = months.includes(selectedKey) ? selectedKey : months[0];
+    if (currentKey !== selectedKey) summaryContainer.dataset.selectedMonthKey = currentKey;
+    const latest = byMonth.get(currentKey);
+    const monthLabel = currentKey === 'unknown' ? 'Unknown period' : currentKey;
 
     const heading = document.createElement('h2');
     heading.textContent = `Shopping Log — ${monthLabel}`;
     summaryContainer.appendChild(heading);
+
+    if (months.length > 1) {
+        const monthSelectWrap = document.createElement('div');
+        monthSelectWrap.className = 'shopping-log-month-select-wrap';
+        const monthLabelEl = document.createElement('label');
+        monthLabelEl.setAttribute('for', 'shopping-log-month-select');
+        monthLabelEl.textContent = 'Month: ';
+        const monthSelect = document.createElement('select');
+        monthSelect.id = 'shopping-log-month-select';
+        monthSelect.className = 'shopping-log-month-select';
+        monthSelect.setAttribute('aria-label', 'Select month to view');
+        months.forEach((key) => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = key === 'unknown' ? 'Unknown period' : key;
+            opt.selected = key === currentKey;
+            monthSelect.appendChild(opt);
+        });
+        monthSelect.addEventListener('change', () => {
+            summaryContainer.dataset.selectedMonthKey = monthSelect.value;
+            renderShoppingSummary();
+        });
+        monthSelectWrap.appendChild(monthLabelEl);
+        monthSelectWrap.appendChild(monthSelect);
+        summaryContainer.appendChild(monthSelectWrap);
+    }
 
     const totals = document.createElement('p');
     totals.className = 'shopping-log-totals';
@@ -1065,6 +1059,14 @@ function renderShoppingSummary() {
     paperStrong.textContent = String(latest.paperScraps);
     totals.appendChild(paperStrong);
     totals.appendChild(document.createTextNode(' Paper Scraps'));
+    if (latest.actualMoneySpent != null && latest.actualMoneySpent > 0) {
+        totals.appendChild(document.createTextNode(' · Money spent: '));
+        const moneyStrong = document.createElement('strong');
+        moneyStrong.textContent = `$${Number(latest.actualMoneySpent).toFixed(2)}`;
+        totals.appendChild(moneyStrong);
+    } else {
+        totals.appendChild(document.createTextNode(' · Money spent: —'));
+    }
     summaryContainer.appendChild(totals);
 
     const list = document.createElement('ul');
@@ -1152,8 +1154,6 @@ function renderSubscriptionsList() {
 
     list.forEach((sub) => {
         const skipsRemaining = stateAdapter.getSubscriptionSkipsRemaining(sub.id);
-        const { thumbsUp, ratedMonths } = stateAdapter.getSubscriptionThumbsSummary(sub.id);
-        const thumbsLabel = ratedMonths > 0 ? `👍 ${thumbsUp}/${ratedMonths} rated` : '—';
 
         const card = document.createElement('div');
         card.className = 'book-box-sub-card';
@@ -1172,7 +1172,6 @@ function renderSubscriptionsList() {
             <div class="book-box-sub-card-meta">
                 ${sub.defaultMonthlyCost != null ? `<span>Default: $${Number(sub.defaultMonthlyCost).toFixed(2)}/mo</span>` : ''}
                 <span>Skips this year: <strong>${skipsRemaining}</strong> / ${sub.skipsAllowedPerYear ?? 0}</span>
-                <span>${thumbsLabel}</span>
             </div>
         `;
 

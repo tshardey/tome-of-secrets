@@ -448,10 +448,10 @@ describe('Page Renderers Hydration', () => {
       const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      const skipRadio = bookBoxOption.querySelector('#sub-type-skip-one-month-book-box');
-      expect(skipRadio).toBeTruthy();
-      skipRadio.checked = true;
-      skipRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      const typeCheckbox = bookBoxOption.querySelector('.shopping-sub-type-toggle-wrap input[type="checkbox"]');
+      expect(typeCheckbox).toBeTruthy();
+      typeCheckbox.checked = true;
+      typeCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
       const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
       logButton.click();
       await flushPromises();
@@ -462,6 +462,84 @@ describe('Page Renderers Hydration', () => {
       } finally {
         global.indexedDB = originalIdb;
       }
+    });
+
+    test('shopping summary shows monthly totals including ink, paper, and money spent from persisted log', async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, [
+        { id: '1', optionId: 'bookish-item', logDate: today, inkDrops: 25, paperScraps: 0, actualMoneySpent: 12.99, linkedBookIds: [], storeName: null },
+        { id: '2', optionId: 'local-indie-bookstore', logDate: today, inkDrops: 100, paperScraps: 25, actualMoneySpent: 45.5, linkedBookIds: [], storeName: 'Indie Co' }
+      ]);
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '0', paperScraps: '0' });
+
+      await initializeShoppingPage();
+
+      const summary = document.getElementById('shopping-log-summary');
+      expect(summary).toBeTruthy();
+      const totalsEl = summary.querySelector('.shopping-log-totals');
+      expect(totalsEl).toBeTruthy();
+      expect(totalsEl.textContent).toContain('125');
+      expect(totalsEl.textContent).toContain('25');
+      expect(totalsEl.textContent).toContain('58.49');
+      const mainList = summary.querySelector('.shopping-log-list:not(.shopping-log-bookbox-list)');
+      expect(mainList).toBeTruthy();
+      const mainRows = mainList.querySelectorAll('.shopping-log-row');
+      expect(mainRows.length).toBe(2);
+    });
+
+    test('shopping summary shows month selector when multiple months exist', async () => {
+      resetStateLoadedForTests();
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, [
+        { id: '1', optionId: 'bookish-item', logDate: '2025-01-15', inkDrops: 25, paperScraps: 0, actualMoneySpent: null, linkedBookIds: [], storeName: null },
+        { id: '2', optionId: 'bookish-item', logDate: '2025-02-10', inkDrops: 25, paperScraps: 0, actualMoneySpent: 10, linkedBookIds: [], storeName: null }
+      ]);
+      safeSetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '0', paperScraps: '0' });
+      document.getElementById('shopping-log-summary')?.removeAttribute('data-selected-month-key');
+
+      await initializeShoppingPage();
+
+      const summary = document.getElementById('shopping-log-summary');
+      const monthSelect = summary.querySelector('.shopping-log-month-select');
+      expect(monthSelect).toBeTruthy();
+      expect(monthSelect.options.length).toBeGreaterThanOrEqual(2);
+      expect(monthSelect.value).toBe('2025-02');
+      const totalsEl = summary.querySelector('.shopping-log-totals');
+      expect(totalsEl.textContent).toContain('25');
+      expect(totalsEl.textContent).toContain('10.00');
+
+      monthSelect.value = '2025-01';
+      monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const totalsAfter = summary.querySelector('.shopping-log-totals');
+      expect(totalsAfter.textContent).toContain('25');
+      const mainList = summary.querySelector('.shopping-log-list:not(.shopping-log-bookbox-list)');
+      expect(mainList.querySelectorAll('.shopping-log-row').length).toBe(1);
+    });
+
+    test('shopping summary monthly totals match persisted log entries', async () => {
+      resetStateLoadedForTests();
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, [
+        { id: 'a', optionId: 'bookish-item', logDate: '2025-03-01', inkDrops: 25, paperScraps: 0, actualMoneySpent: 5.5, linkedBookIds: [], storeName: null },
+        { id: 'b', optionId: 'bookish-item', logDate: '2025-03-02', inkDrops: 25, paperScraps: 0, actualMoneySpent: 4.5, linkedBookIds: [], storeName: null }
+      ]);
+      safeSetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '0', paperScraps: '0' });
+      document.getElementById('shopping-log-summary')?.removeAttribute('data-selected-month-key');
+
+      await initializeShoppingPage();
+
+      const summary = document.getElementById('shopping-log-summary');
+      expect(summary.querySelector('h2')?.textContent).toContain('2025-03');
+      const totalsEl = summary.querySelector('.shopping-log-totals');
+      expect(totalsEl.textContent).toContain('50');
+      expect(totalsEl.textContent).toContain('0');
+      expect(totalsEl.textContent).toContain('10.00');
+      const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+      const marchTotalInk = log.filter(e => (e.logDate || '').startsWith('2025-03')).reduce((s, e) => s + (e.inkDrops || 0), 0);
+      const marchTotalMoney = log.filter(e => (e.logDate || '').startsWith('2025-03')).reduce((s, e) => s + (e.actualMoneySpent || 0), 0);
+      expect(marchTotalInk).toBe(50);
+      expect(marchTotalMoney).toBeCloseTo(10, 2);
     });
 
     test('renders shopping log entries as text even with HTML-like store names', async () => {

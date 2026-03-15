@@ -418,5 +418,40 @@ describe('StateAdapter', () => {
       expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
     });
   });
+
+  describe('book box subscription thumbs summary', () => {
+    it('getSubscriptionThumbsSummary returns thumbsUp and ratedMonths only for entries with reaction', () => {
+      state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = {
+        sub1: { id: 'sub1', company: 'Fairyloot', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+      };
+      state[STORAGE_KEYS.BOOK_BOX_HISTORY] = [
+        { id: 'e1', subscriptionId: 'sub1', month: '01', year: '2025', type: 'purchased', reaction: 'thumbsUp' },
+        { id: 'e2', subscriptionId: 'sub1', month: '02', year: '2025', type: 'purchased', reaction: 'thumbsDown' },
+        { id: 'e3', subscriptionId: 'sub1', month: '03', year: '2025', type: 'purchased' }
+      ];
+      const summary = adapter.getSubscriptionThumbsSummary('sub1');
+      expect(summary.thumbsUp).toBe(1);
+      expect(summary.ratedMonths).toBe(2);
+    });
+
+    it('getSubscriptionThumbsSummary ignores unrated months (no reaction)', () => {
+      state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = {
+        sub1: { id: 'sub1', company: 'Test', tier: 'Adult', defaultMonthlyCost: null, skipsAllowedPerYear: 0 }
+      };
+      state[STORAGE_KEYS.BOOK_BOX_HISTORY] = [
+        { id: 'a', subscriptionId: 'sub1', month: '01', year: '2025', type: 'purchased' },
+        { id: 'b', subscriptionId: 'sub1', month: '02', year: '2025', type: 'purchased' }
+      ];
+      const summary = adapter.getSubscriptionThumbsSummary('sub1');
+      expect(summary.thumbsUp).toBe(0);
+      expect(summary.ratedMonths).toBe(0);
+    });
+
+    it('getSubscriptionThumbsSummary returns zero for unknown subscription', () => {
+      const summary = adapter.getSubscriptionThumbsSummary('nonexistent');
+      expect(summary.thumbsUp).toBe(0);
+      expect(summary.ratedMonths).toBe(0);
+    });
+  });
 });
 
