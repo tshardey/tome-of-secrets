@@ -519,6 +519,334 @@ article h6:hover .anchor-link {
     z-index: 2;
 }
 
+/* ==========================================================================
+   Shopping Page Layout
+   ========================================================================== */
+
+.shopping-option {
+    background-color: rgba(84, 72, 59, 0.4);
+    border: 1px solid #54483b;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+.shopping-option h3 {
+    margin-top: 0;
+    margin-bottom: 0.35rem;
+    font-family: 'Lora', serif;
+    font-size: 1.25rem;
+    color: #e3d4b5;
+}
+
+.shopping-option p {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: #d4c8b0;
+}
+
+.shopping-cost {
+    font-weight: 600;
+    color: #b89f62;
+    margin-bottom: 0.75rem;
+}
+
+.shopping-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+}
+
+.shopping-meta-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) auto;
+    gap: 0.5rem;
+}
+
+.shopping-store-input,
+.shopping-money-input,
+.shopping-date-input {
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    padding: 0.35rem 0.5rem;
+    color: #f3e7d2;
+    font-family: 'Source Serif Pro', serif;
+    font-size: 0.9rem;
+}
+
+.shopping-store-input::placeholder,
+.shopping-money-input::placeholder {
+    color: #9c8a73;
+}
+
+.shopping-quantity {
+    margin-bottom: 0.5rem;
+}
+
+.shopping-quantity label {
+    margin-right: 0.35rem;
+    color: #d4c8b0;
+}
+
+.shopping-quantity-input {
+    width: 3.5rem;
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    padding: 0.2rem 0.35rem;
+    color: #f3e7d2;
+}
+
+.shopping-button-container {
+    margin-top: 0.85rem;
+}
+
+.shopping-button-container .redeem-button {
+    padding: 0.4rem 1.1rem;
+    border-radius: 4px;
+}
+
+.shopping-book-section {
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(84, 72, 59, 0.9);
+}
+
+.shopping-book-label {
+    font-size: 0.9rem;
+    color: #d4c8b0;
+    margin-bottom: 0.5rem;
+}
+
+.shopping-book-selector-container {
+    margin-bottom: 1.0rem;
+}
+
+.shopping-quick-add-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.shopping-quick-add-search {
+    background-color: #2a231d;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    padding: 0.35rem 0.5rem;
+    color: #f3e7d2;
+    font-family: 'Source Serif Pro', serif;
+    font-size: 0.9rem;
+}
+
+.shopping-quick-add-search::placeholder {
+    color: #9c8a73;
+}
+
+.shopping-book-search-results {
+    max-height: 220px;
+    overflow-y: auto;
+    background-color: #201914;
+    border-radius: 4px;
+    border: 1px solid #54483b;
+    padding: 0.35rem;
+}
+
+.shopping-book-search-loading,
+.shopping-book-search-empty,
+.shopping-book-search-error {
+    font-size: 0.85rem;
+    color: #d4c8b0;
+    padding: 0.15rem 0.25rem;
+}
+
+.shopping-book-search-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.shopping-book-search-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.25rem 0.3rem;
+    border-radius: 4px;
+    border: none;
+    background-color: transparent;
+    color: #f3e7d2;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.shopping-book-search-item:hover {
+    background-color: rgba(184, 159, 98, 0.16);
+    transform: translateY(-1px);
+}
+
+.shopping-book-search-cover-wrap {
+    width: 32px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shopping-book-search-cover {
+    width: 100%;
+    height: auto;
+    border-radius: 2px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.shopping-book-search-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.shopping-book-search-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.shopping-book-search-author,
+.shopping-book-search-meta {
+    font-size: 0.8rem;
+    color: #c1b39a;
+}
+
+.shopping-log-summary {
+    margin-top: 2rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 8px;
+    background-color: rgba(32, 25, 20, 0.95);
+    border: 1px solid #54483b;
+}
+
+.shopping-log-summary h2 {
+    margin-top: 0;
+    margin-bottom: 0.4rem;
+    font-family: 'Lora', serif;
+    font-size: 1.25rem;
+    color: #e3d4b5;
+}
+
+.shopping-log-totals {
+    margin: 0 0 0.6rem;
+    font-size: 0.9rem;
+    color: #d4c8b0;
+}
+
+.shopping-log-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.shopping-linked-books-list {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+    min-height: 0;
+}
+
+.shopping-linked-book-chip {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    color: #e3d4b5;
+    background: rgba(84, 72, 59, 0.5);
+    border: 1px solid #54483b;
+    border-radius: 4px;
+}
+
+.shopping-log-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.15rem;
+    padding: 0.35rem 0;
+    border-top: 1px solid rgba(84, 72, 59, 0.6);
+}
+
+.shopping-log-row:first-child {
+    border-top: none;
+}
+
+.shopping-log-row-main {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.shopping-log-books-details {
+    margin-top: 0.2rem;
+    margin-left: 0.5rem;
+    font-size: 0.85rem;
+
+    summary.shopping-log-books-summary {
+        cursor: pointer;
+        color: #9c8a73;
+        list-style: none;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+
+        &::before {
+            content: '▸ ';
+            display: inline-block;
+            width: 1em;
+        }
+    }
+
+    &[open] summary.shopping-log-books-summary::before {
+        content: '▾ ';
+    }
+}
+
+.shopping-log-books-list {
+    list-style: none;
+    padding-left: 1.25rem;
+    margin: 0.25rem 0 0;
+    color: #c1b39a;
+}
+
+.shopping-log-book-item {
+    padding: 0.1rem 0;
+}
+
+.shopping-log-date {
+    font-size: 0.8rem;
+    color: #9c8a73;
+    min-width: 5.5rem;
+}
+
+.shopping-log-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.shopping-log-store,
+.shopping-log-currency,
+.shopping-log-money {
+    font-size: 0.85rem;
+    color: #d4c8b0;
+}
+
+@media (max-width: 768px) {
+    .shopping-meta-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .reward-image {
     display: flex;
     justify-content: center;

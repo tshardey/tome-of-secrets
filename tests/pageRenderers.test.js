@@ -9,6 +9,12 @@ import { initializeRewardsPage } from '../assets/js/page-renderers/rewardsRender
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 
+jest.mock('../assets/js/services/BookMetadataService.js', () => ({
+  searchBooks: jest.fn(() => Promise.resolve([]))
+}));
+
+const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
+
 describe('Page Renderers Hydration', () => {
   test('sanctum.md renders sanctums from JSON', () => {
     loadHTML('sanctum.md');
@@ -48,7 +54,7 @@ describe('Page Renderers Hydration', () => {
       window.__BASEURL = '';
     });
 
-    test('displays currency information on page load', () => {
+    test('displays currency information on page load', async () => {
       // Set up form elements with currency values (form takes priority)
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -61,7 +67,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       
       const currencyDisplay = document.getElementById('shopping-currency-display');
       expect(currencyDisplay).toBeTruthy();
@@ -75,7 +81,7 @@ describe('Page Renderers Hydration', () => {
       expect(currencyDisplay.textContent).toContain('Character Sheet');
     });
 
-    test('currency display updates when form values exist', () => {
+    test('currency display updates when form values exist', async () => {
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '200';
@@ -87,14 +93,14 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '75'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       
       const currencyDisplay = document.getElementById('shopping-currency-display');
       expect(currencyDisplay.textContent).toContain('200');
       expect(currencyDisplay.textContent).toContain('75');
     });
 
-    test('currency display updates after redemption', () => {
+    test('currency display updates after redemption and logs purchase', async () => {
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '200';
@@ -105,7 +111,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -115,15 +121,26 @@ describe('Page Renderers Hydration', () => {
       
       const redeemButton = bookishItemOption.querySelector('.redeem-button');
       redeemButton.click();
+      await flushPromises();
       
       // Check currency display was updated
       const currencyDisplay = document.getElementById('shopping-currency-display');
       expect(currencyDisplay.textContent).toContain('175'); // 200 - 25
       expect(currencyDisplay.textContent).toContain('50'); // Unchanged
+
+      // Check shopping log entry was persisted
+      const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+      expect(Array.isArray(log)).toBe(true);
+      expect(log.length).toBe(1);
+      const entry = log[0];
+      expect(typeof entry.optionId).toBe('string');
+      expect(entry.inkDrops).toBe(25);
+      expect(entry.paperScraps).toBe(0);
+      expect(typeof entry.logDate).toBe('string');
     });
 
-    test('renders all shopping options from JSON', () => {
-      initializeShoppingPage();
+    test('renders all shopping options from JSON', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       expect(container).toBeTruthy();
       
@@ -139,8 +156,8 @@ describe('Page Renderers Hydration', () => {
       expect(optionTexts).toContain('Deluxe or Special Edition');
     });
 
-    test('displays cost information for each option', () => {
-      initializeShoppingPage();
+    test('displays cost information for each option', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const firstOption = container.querySelector('.shopping-option');
       
@@ -150,8 +167,8 @@ describe('Page Renderers Hydration', () => {
       expect(costEl.textContent).toContain('Cost:');
     });
 
-    test('shows quantity input for book box subscription', () => {
-      initializeShoppingPage();
+    test('shows quantity input for book box subscription', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -166,8 +183,8 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(quantityInput.min)).toBe(1);
     });
 
-    test('does not show quantity input for options that do not allow it', () => {
-      initializeShoppingPage();
+    test('does not show quantity input for options that do not allow it', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -176,11 +193,11 @@ describe('Page Renderers Hydration', () => {
       );
       
       expect(bookishItemOption).toBeTruthy();
-      const quantityInput = bookishItemOption.querySelector('input[type="number"]');
+      const quantityInput = bookishItemOption.querySelector('.shopping-quantity-input');
       expect(quantityInput).toBeNull();
     });
 
-    test('successfully redeems option with sufficient resources', () => {
+    test('successfully redeems option with sufficient resources', async () => {
       // Set up resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -193,7 +210,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -207,6 +224,7 @@ describe('Page Renderers Hydration', () => {
       
       // Click redeem
       redeemButton.click();
+      await flushPromises();
       
       // Check resources were deducted
       expect(parseInt(inkDropsEl.value)).toBe(175); // 200 - 25
@@ -223,7 +241,7 @@ describe('Page Renderers Hydration', () => {
       expect(successMsg.textContent).toContain('Redeemed successfully');
     });
 
-    test('shows error when insufficient ink drops', () => {
+    test('shows error when insufficient ink drops', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -235,7 +253,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '0'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -262,7 +280,7 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(inkDropsEl.value)).toBe(10);
     });
 
-    test('shows error when insufficient paper scraps', () => {
+    test('shows error when insufficient paper scraps', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -274,7 +292,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '20'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -299,7 +317,7 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(paperScrapsEl.value)).toBe(20);
     });
 
-    test('handles quantity multiplier for book box subscription', () => {
+    test('handles quantity multiplier for book box subscription', async () => {
       // Set up resources for 3 months
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -311,7 +329,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '100'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -327,6 +345,7 @@ describe('Page Renderers Hydration', () => {
       
       // Click redeem
       redeemButton.click();
+      await flushPromises();
       
       // Check resources were deducted (25 * 3 = 75 for each)
       expect(parseInt(inkDropsEl.value)).toBe(25); // 100 - 75
@@ -338,7 +357,7 @@ describe('Page Renderers Hydration', () => {
       expect(successMsg.textContent).toContain('(3x)');
     });
 
-    test('shows error when insufficient resources for quantity > 1', () => {
+    test('shows error when insufficient resources for quantity > 1', async () => {
       // Set up resources for only 1 month
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -350,7 +369,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '30'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -377,7 +396,7 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(paperScrapsEl.value)).toBe(30);
     });
 
-    test('works when form elements do not exist (fallback to localStorage)', () => {
+    test('works when form elements do not exist (fallback to localStorage)', async () => {
       // Remove form elements
       document.getElementById('inkDrops')?.remove();
       document.getElementById('paperScraps')?.remove();
@@ -388,7 +407,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -400,6 +419,7 @@ describe('Page Renderers Hydration', () => {
       
       // Click redeem
       redeemButton.click();
+      await flushPromises();
       
       // Check localStorage was updated
       const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
@@ -407,7 +427,7 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(formData.paperScraps)).toBe(50);
     });
 
-    test('handles minimum quantity of 1 for quantity input', () => {
+    test('handles minimum quantity of 1 for quantity input', async () => {
       // Set up resources in both form and localStorage
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -419,7 +439,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '100'
       });
       
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -435,6 +455,7 @@ describe('Page Renderers Hydration', () => {
       
       // Click redeem - should use minimum of 1 due to Math.max(1, ...)
       redeemButton.click();
+      await flushPromises();
       
       // Should deduct for quantity 1 (25 each) because Math.max(1, 0) = 1
       expect(parseInt(inkDropsEl.value)).toBe(75); // 100 - 25
@@ -443,6 +464,74 @@ describe('Page Renderers Hydration', () => {
       const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
       expect(parseInt(formData.inkDrops)).toBe(75); // 100 - 25
       expect(parseInt(formData.paperScraps)).toBe(75); // 100 - 25
+    });
+
+    test('renders shopping log entries as text even with HTML-like store names', async () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const paperScrapsEl = document.getElementById('paperScraps');
+      inkDropsEl.value = '200';
+      paperScrapsEl.value = '50';
+
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
+        inkDrops: '200',
+        paperScraps: '50'
+      });
+
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+      const bookishItemOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'Bookish Item'
+      );
+
+      const storeInput = bookishItemOption.querySelector('.shopping-store-input');
+      storeInput.value = '<img src=x onerror="window.__shoppingXss = true">';
+
+      const redeemButton = bookishItemOption.querySelector('.redeem-button');
+      redeemButton.click();
+      await flushPromises();
+
+      const summary = document.getElementById('shopping-log-summary');
+      expect(summary.querySelector('img')).toBeNull();
+      expect(summary.querySelector('script')).toBeNull();
+      expect(summary.textContent).toContain('@ <img src=x onerror="window.__shoppingXss = true">');
+      expect(window.__shoppingXss).toBeUndefined();
+    });
+
+    test('renders book search results without injecting HTML from result metadata', async () => {
+      const { searchBooks } = require('../assets/js/services/BookMetadataService.js');
+      searchBooks.mockResolvedValueOnce([
+        {
+          id: 'malicious-book',
+          title: '<img src=x onerror="window.__searchTitleXss = true">',
+          authors: ['<script>window.__searchAuthorXss = true</script>'],
+          coverUrl: 'x" onerror="window.__searchCoverXss = true',
+          pageCount: 321
+        }
+      ]);
+
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+      const indieBookstoreOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'Local Indie Bookstore'
+      );
+
+      const quickAddSearch = indieBookstoreOption.querySelector('.shopping-quick-add-search');
+      const quickAddButton = indieBookstoreOption.querySelector('.shopping-quick-add-btn');
+      quickAddSearch.value = 'malicious';
+
+      quickAddButton.click();
+      await flushPromises();
+
+      const results = indieBookstoreOption.querySelector('.shopping-book-search-results');
+      expect(results.querySelector('img')).toBeNull();
+      expect(results.querySelector('script')).toBeNull();
+      expect(results.textContent).toContain('<img src=x onerror="window.__searchTitleXss = true">');
+      expect(results.textContent).toContain('<script>window.__searchAuthorXss = true</script>');
+      expect(window.__searchTitleXss).toBeUndefined();
+      expect(window.__searchAuthorXss).toBeUndefined();
+      expect(window.__searchCoverXss).toBeUndefined();
     });
   });
 
