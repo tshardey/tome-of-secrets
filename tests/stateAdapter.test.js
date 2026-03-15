@@ -88,6 +88,34 @@ describe('StateAdapter', () => {
     expect(handlerCompleted).toHaveBeenCalledWith(state[STORAGE_KEYS.COMPLETED_QUESTS]);
   });
 
+  it('addCompletedQuests prevents duplicate quest ids', () => {
+    const quest = { id: 'restore-front-desk', type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it' };
+    adapter.addCompletedQuests(quest);
+
+    const result = adapter.addCompletedQuests({ ...quest, prompt: 'Front Desk: Restore it (duplicate attempt)' });
+
+    expect(result).toEqual([]);
+    expect(state[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
+    expect(state[STORAGE_KEYS.COMPLETED_QUESTS][0].id).toBe('restore-front-desk');
+  });
+
+  it('addCompletedQuests prevents duplicates for id-less quests with same signature', () => {
+    const questWithoutId = {
+      type: '🔨 Restoration Project',
+      prompt: 'Restore Front Desk: Complete this project',
+      book: 'Some Book',
+      month: 'March',
+      year: '2026',
+      dateCompleted: '2026-03-15T00:00:00.000Z'
+    };
+    adapter.addCompletedQuests(questWithoutId);
+
+    const result = adapter.addCompletedQuests({ ...questWithoutId });
+
+    expect(result).toEqual([]);
+    expect(state[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
+  });
+
   it('moveInventoryItemToEquipped moves items between lists', () => {
     const invHandler = jest.fn();
     const equipHandler = jest.fn();
