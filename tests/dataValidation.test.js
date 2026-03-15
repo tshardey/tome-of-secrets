@@ -148,6 +148,38 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS].length).toBe(2);
         });
 
+        test('should dedupe completed quests by id', () => {
+            const duplicateId = 'quest-dup-1';
+            const state = {
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [
+                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] } },
+                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] } }
+                ]
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
+            expect(validated[STORAGE_KEYS.COMPLETED_QUESTS][0].id).toBe(duplicateId);
+        });
+
+        test('should dedupe id-less completed quests with identical signature', () => {
+            const quest = {
+                type: '🔨 Restoration Project',
+                prompt: 'Front Desk: Restore it',
+                book: 'Book A',
+                month: 'March',
+                year: '2026',
+                dateCompleted: '2026-03-10T10:00:00.000Z',
+                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+            };
+            const state = {
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [quest, { ...quest }]
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
+        });
+
         test('should fix invalid reward values', () => {
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [

@@ -272,6 +272,43 @@ function validateQuestArray(quests, context = 'quests') {
 }
 
 /**
+ * Deduplicate completed quests while preserving order.
+ * Prefers quest id when present; falls back to a stable signature for legacy/id-less quests.
+ * This is a load-time repair for already-corrupted state and should be conservative.
+ * @param {Array} quests
+ * @returns {Array}
+ */
+function dedupeCompletedQuests(quests) {
+    if (!Array.isArray(quests) || quests.length <= 1) return Array.isArray(quests) ? quests : [];
+
+    function getDedupKey(quest) {
+        if (!quest || typeof quest !== 'object') return null;
+        const id = typeof quest.id === 'string' && quest.id.trim() ? quest.id.trim() : null;
+        if (id) return `id:${id}`;
+        const type = typeof quest.type === 'string' ? quest.type : '';
+        const prompt = typeof quest.prompt === 'string' ? quest.prompt : '';
+        const bookId = typeof quest.bookId === 'string' ? quest.bookId : '';
+        const book = typeof quest.book === 'string' ? quest.book : '';
+        const month = typeof quest.month === 'string' ? quest.month : '';
+        const year = typeof quest.year === 'string' ? quest.year : '';
+        const dateCompleted = typeof quest.dateCompleted === 'string' ? quest.dateCompleted : '';
+        return `sig:${type}|${prompt}|${bookId}|${book}|${month}|${year}|${dateCompleted}`;
+    }
+
+    const seen = new Set();
+    const deduped = [];
+    for (const quest of quests) {
+        const key = getDedupKey(quest);
+        if (key && seen.has(key)) {
+            continue;
+        }
+        if (key) seen.add(key);
+        deduped.push(quest);
+    }
+    return deduped;
+}
+
+/**
  * Validate and fix an array of items
  * @param {Array} items - Array of item objects
  * @param {string} context - Context for error messages
@@ -834,6 +871,7 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.COMPLETED_QUESTS],
         STORAGE_KEYS.COMPLETED_QUESTS
     );
+    validated[STORAGE_KEYS.COMPLETED_QUESTS] = dedupeCompletedQuests(validated[STORAGE_KEYS.COMPLETED_QUESTS]);
     validated[STORAGE_KEYS.DISCARDED_QUESTS] = validateQuestArray(
         state[STORAGE_KEYS.DISCARDED_QUESTS],
         STORAGE_KEYS.DISCARDED_QUESTS
