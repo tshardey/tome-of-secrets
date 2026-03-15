@@ -186,4 +186,44 @@ describe('questCardImage', () => {
       expect(result).toBe('assets/images/side-quests/tos-cardback-side-quests.png');
     });
   });
+
+  describe('Extra Credit and Restoration (other-quests)', () => {
+    it('getExtraCreditCardImage returns other-quests path', () => {
+      const result = questCardImage.getExtraCreditCardImage();
+      expect(result).toBe('assets/images/other-quests/card-extra-credit.png');
+    });
+
+    it('getExtraCreditCardbackImage returns other-quests path', () => {
+      const result = questCardImage.getExtraCreditCardbackImage();
+      expect(result).toBe('assets/images/other-quests/card-extra-credit.png');
+    });
+
+    it('getRestorationWingCardbackImage returns wing cardback path', () => {
+      const result = questCardImage.getRestorationWingCardbackImage('heart-of-library');
+      expect(result).toBe('assets/images/other-quests/card-back-wing-heart-of-library.png');
+    });
+
+    it('getRestorationWingCardbackImage normalizes wing id', () => {
+      const result = questCardImage.getRestorationWingCardbackImage('  Scholarly Archives ');
+      expect(result).toBe('assets/images/other-quests/card-back-wing-scholarly-archives.png');
+    });
+
+    it('getRestorationProjectCardFaceImage returns project face path', () => {
+      const result = questCardImage.getRestorationProjectCardFaceImage('restore-card-catalog');
+      expect(result).toBe('assets/images/other-quests/card-face-restoration-restore-card-catalog.png');
+    });
+
+    it('getRestorationProjectCardFaceImage("restore-grand-entrance") yields CDN path card-face-restoration-restore-grand-entrance.png', () => {
+      const result = questCardImage.getRestorationProjectCardFaceImage('restore-grand-entrance');
+      expect(result).toBe('assets/images/other-quests/card-face-restoration-restore-grand-entrance.png');
+      expect(mockImageCdn.toCdnImageUrlIfConfigured).toHaveBeenCalledWith(
+        'assets/images/other-quests/card-face-restoration-restore-grand-entrance.png'
+      );
+    });
+
+    it('getRestorationCardbackImage returns general restoration back', () => {
+      const result = questCardImage.getRestorationCardbackImage();
+      expect(result).toBe('assets/images/other-quests/card-back-restoration.png');
+    });
+  });
 });

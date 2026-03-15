@@ -28,6 +28,7 @@ import { DungeonDeckController } from './controllers/DungeonDeckController.js';
 import { AtmosphericBuffDeckController } from './controllers/AtmosphericBuffDeckController.js';
 import { GenreQuestDeckController } from './controllers/GenreQuestDeckController.js';
 import { SideQuestDeckController } from './controllers/SideQuestDeckController.js';
+import { OtherQuestDeckController } from './controllers/OtherQuestDeckController.js';
 import { LibraryController } from './controllers/LibraryController.js';
 import { CampaignsController } from './controllers/CampaignsController.js';
 import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
@@ -268,6 +269,7 @@ export async function initializeCharacterSheet() {
     const atmosphericBuffDeckController = new AtmosphericBuffDeckController(stateAdapter, form, dependencies);
     const genreQuestDeckController = new GenreQuestDeckController(stateAdapter, form, dependencies);
     const sideQuestDeckController = new SideQuestDeckController(stateAdapter, form, dependencies);
+    const otherQuestDeckController = new OtherQuestDeckController(stateAdapter, form, dependencies);
     const libraryController = new LibraryController(stateAdapter, form, dependencies);
     const campaignsController = new CampaignsController(stateAdapter, form, dependencies);
     const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
@@ -278,7 +280,9 @@ export async function initializeCharacterSheet() {
         const n = (genreQuestDeckController.selectedIndices?.size ?? 0) +
             (sideQuestDeckController.selectedIndices?.size ?? 0) +
             (atmosphericBuffDeckController.selectedIndices?.size ?? 0) +
-            (dungeonDeckController.selectedIndices?.size ?? 0);
+            (dungeonDeckController.selectedIndices?.size ?? 0) +
+            (otherQuestDeckController.selectedIndices?.size ?? 0) +
+            (otherQuestDeckController.selectedIndicesExtraCredit?.size ?? 0);
         addSelectedBtn.textContent = n > 0 ? `Add selected (${n})` : 'Add selected';
         addSelectedBtn.disabled = n === 0;
     }
@@ -329,17 +333,17 @@ export async function initializeCharacterSheet() {
     atmosphericBuffDeckController.initialize();
     genreQuestDeckController.initialize();
     sideQuestDeckController.initialize();
+    otherQuestDeckController.initialize();
     libraryController.initialize();
     campaignsController.initialize();
     externalCurriculumController.initialize();
 
-    // --- COLLAPSIBLE PANELS (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards) ---
+    // --- COLLAPSIBLE PANELS (Add Book, Active Temporary Buffs, Draw Quest Cards) ---
     (function setupCollapsiblePanels() {
         const configs = [
             { buttonSelector: '.rpg-library-add-panel .panel-toggle-btn', storageKey: 'library-add-panel-body' },
             { buttonSelector: '.rpg-campaigns-add-panel .panel-toggle-btn', storageKey: 'campaigns-add-panel-body' },
             { buttonSelector: '.rpg-external-curriculum-add-panel .panel-toggle-btn', storageKey: 'external-curriculum-add-panel-body' },
-            { buttonSelector: '.rpg-add-quest-panel .panel-toggle-btn', storageKey: 'add-quest-panel-body' },
             { buttonSelector: '.rpg-temporary-buffs-panel .panel-toggle-btn', storageKey: 'temporary-buffs-panel-body' },
             { buttonSelector: '.rpg-quest-card-draw-panel .panel-toggle-btn', storageKey: 'quest-card-draw-panel-body' }
         ];
@@ -389,6 +393,8 @@ export async function initializeCharacterSheet() {
             sideQuestDeckController.handleAddQuestFromCard();
             atmosphericBuffDeckController.handleActivateBuff();
             dungeonDeckController.handleAddQuestFromCards();
+            otherQuestDeckController.handleAddExtraCreditFromCard();
+            otherQuestDeckController.handleAddRestorationFromCard();
         });
     }
     if (clearDrawBtn) {
@@ -397,6 +403,7 @@ export async function initializeCharacterSheet() {
             sideQuestDeckController.handleClearDraw();
             atmosphericBuffDeckController.handleClearDraw();
             dungeonDeckController.handleClearDraw();
+            otherQuestDeckController.handleClearDraw();
         });
     }
 

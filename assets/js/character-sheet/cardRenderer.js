@@ -368,6 +368,82 @@ export function renderSideQuestCard(questCardData) {
 }
 
 /**
+ * Render Extra Credit card (single card face, no content overlay)
+ * @param {Object} viewModel - { cardImage }
+ * @returns {HTMLElement} Card element
+ */
+export function renderExtraCreditCard(viewModel) {
+    if (!viewModel || !viewModel.cardImage) return null;
+    const card = createElement('div', { class: 'card quest-card extra-credit-card' });
+    const cardImg = createElement('img', {
+        class: 'card-image',
+        src: viewModel.cardImage,
+        alt: 'Extra Credit'
+    });
+    card.appendChild(cardImg);
+    return card;
+}
+
+/**
+ * Render a restoration project card (for deck selection)
+ * @param {Object} cardData - Project card data from view model { projectId, name, description, cardImage, cost, project, wing }
+ * @returns {HTMLElement} Card element
+ */
+export function renderRestorationProjectCard(cardData) {
+    if (!cardData) return null;
+    const card = createElement('div', { class: 'card quest-card restoration-project-card' });
+    if (cardData.cardImage) {
+        const cardImg = createElement('img', {
+            class: 'card-image',
+            src: cardData.cardImage,
+            alt: escapeHtml(cardData.name || 'Restoration project')
+        });
+        card.appendChild(cardImg);
+    }
+    const content = createElement('div', { class: 'card-content' });
+    const name = createElement('h3', { class: 'card-title' });
+    name.textContent = cardData.name || '';
+    content.appendChild(name);
+    if (cardData.description) {
+        const desc = createElement('p', { class: 'card-description' });
+        desc.textContent = cardData.description;
+        content.appendChild(desc);
+    }
+    if (cardData.cost != null) {
+        const cost = createElement('div', { class: 'card-cost' });
+        cost.textContent = `📜 ${cardData.cost} blueprints`;
+        content.appendChild(cost);
+    }
+    card.appendChild(content);
+    return card;
+}
+
+/**
+ * Render a restoration wing cardback (clickable to select wing)
+ * @param {Object} wingData - { wingId, name, cardbackImage, unlocked }
+ * @returns {HTMLElement} Cardback element
+ */
+export function renderRestorationWingCardback(wingData) {
+    if (!wingData) return null;
+    const el = createElement('div', {
+        class: `restoration-wing-card ${wingData.unlocked ? 'available' : 'locked'}`,
+        'data-wing-id': wingData.wingId
+    });
+    if (wingData.cardbackImage) {
+        const img = createElement('img', {
+            class: 'cardback-image',
+            src: wingData.cardbackImage,
+            alt: escapeHtml(wingData.name || 'Wing')
+        });
+        el.appendChild(img);
+    }
+    const label = createElement('span', { class: 'restoration-wing-label' });
+    label.textContent = wingData.name || '';
+    el.appendChild(label);
+    return el;
+}
+
+/**
  * Render an archived dungeon quest card (card front only, clickable)
  * @param {Object} quest - Quest object
  * @param {number} index - Quest index
