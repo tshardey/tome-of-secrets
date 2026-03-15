@@ -1,33 +1,48 @@
 {
-  "Local Indie Bookstore": {
+  "local-indie-bookstore": {
+    "id": "local-indie-bookstore",
+    "label": "Local Indie Bookstore",
     "description": "Exchange to celebrate an inspiring visit and bring home a new book.",
     "inkDrops": 100,
     "paperScraps": 25,
-    "allowQuantity": false
+    "allowQuantity": false,
+    "type": "book-purchase"
   },
-  "Large Chain Bookstore": {
+  "large-chain-bookstore": {
+    "id": "large-chain-bookstore",
+    "label": "Large Chain Bookstore",
     "description": "Exchange to mark the joy of exploring a vast store and returning with a new find.",
     "inkDrops": 150,
     "paperScraps": 35,
-    "allowQuantity": false
+    "allowQuantity": false,
+    "type": "book-purchase"
   },
-  "Bookish Item": {
+  "bookish-item": {
+    "id": "bookish-item",
+    "label": "Bookish Item",
     "description": "Purchase a bookish item like bookmarks, reading lights, or other reading accessories.",
     "inkDrops": 25,
     "paperScraps": 0,
-    "allowQuantity": false
+    "allowQuantity": false,
+    "type": "item"
   },
-  "One Month of a Book Box Subscription": {
+  "one-month-book-box": {
+    "id": "one-month-book-box",
+    "label": "One Month of a Book Box Subscription",
     "description": "Subscribe to a book box service for one month.",
     "inkDrops": 25,
     "paperScraps": 25,
-    "allowQuantity": true
+    "allowQuantity": true,
+    "type": "subscription-month"
   },
-  "Deluxe or Special Edition": {
+  "deluxe-or-special-edition": {
+    "id": "deluxe-or-special-edition",
+    "label": "Deluxe or Special Edition",
     "description": "Purchase a deluxe or special edition of a book.",
     "inkDrops": 50,
     "paperScraps": 50,
-    "allowQuantity": false
+    "allowQuantity": false,
+    "type": "special-edition"
   }
 }
 

@@ -79,6 +79,42 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData.projectId).toBe('restore-card-catalog');
         });
 
+        test('should validate and default shopping/subscription state (v10)', () => {
+            const state = {
+                [STORAGE_KEYS.SHOPPING_LOG]: [{ optionId: 'opt1', logDate: '2024-01-15', inkDrops: 5 }],
+                [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: { sub1: { id: 'sub1', company: 'Acme', tier: 'Standard', skipsAllowedPerYear: 2 } },
+                [STORAGE_KEYS.BOOK_BOX_HISTORY]: [{ subscriptionId: 'sub1', month: 'January', year: '2024', type: 'purchased' }]
+            };
+            const validated = validateCharacterState(state);
+            expect(Array.isArray(validated[STORAGE_KEYS.SHOPPING_LOG])).toBe(true);
+            expect(validated[STORAGE_KEYS.SHOPPING_LOG].length).toBe(1);
+            expect(validated[STORAGE_KEYS.SHOPPING_LOG][0].optionId).toBe('opt1');
+            expect(validated[STORAGE_KEYS.SHOPPING_LOG][0].inkDrops).toBe(5);
+            expect(typeof validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]).toBe('object');
+            expect(validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS].sub1.company).toBe('Acme');
+            expect(Array.isArray(validated[STORAGE_KEYS.BOOK_BOX_HISTORY])).toBe(true);
+            expect(validated[STORAGE_KEYS.BOOK_BOX_HISTORY].length).toBe(1);
+            expect(validated[STORAGE_KEYS.BOOK_BOX_HISTORY][0].type).toBe('purchased');
+        });
+
+        test('should add shelfCategory to validated books (v10)', () => {
+            const state = {
+                [STORAGE_KEYS.BOOKS]: {
+                    b1: {
+                        id: 'b1',
+                        title: 'T',
+                        author: 'A',
+                        status: 'reading',
+                        dateAdded: '2024-01-01T00:00:00.000Z',
+                        dateCompleted: null,
+                        links: { questIds: [], curriculumPromptIds: [] }
+                    }
+                }
+            };
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.BOOKS].b1.shelfCategory).toBe('general');
+        });
+
         test('should set restorationData to null for non-restoration quests', () => {
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
@@ -370,8 +406,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 9', () => {
-            expect(SCHEMA_VERSION).toBe(9);
+        test('schema version should be 10', () => {
+            expect(SCHEMA_VERSION).toBe(10);
         });
     });
 });
@@ -493,6 +529,37 @@ describe('Data Migration', () => {
             const activeQuest = migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0];
             expect(activeQuest.prompt).toContain(currentGenre);
             expect(activeQuest.prompt).not.toContain(legacyGenre);
+        });
+
+        test('v10: should add shopping/subscription state and book shelfCategory', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '9');
+            const state = {
+                [STORAGE_KEYS.BOOKS]: {
+                    bid1: {
+                        id: 'bid1',
+                        title: 'Old Book',
+                        author: 'Author',
+                        status: 'reading',
+                        dateAdded: '2024-01-01T00:00:00.000Z',
+                        dateCompleted: null,
+                        links: { questIds: [], curriculumPromptIds: [] }
+                    }
+                },
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
+            };
+
+            const migrated = migrateState(state);
+
+            expect(Array.isArray(migrated[STORAGE_KEYS.SHOPPING_LOG])).toBe(true);
+            expect(migrated[STORAGE_KEYS.SHOPPING_LOG]).toHaveLength(0);
+            expect(typeof migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]).toBe('object');
+            expect(Object.keys(migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS])).toHaveLength(0);
+            expect(Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY])).toBe(true);
+            expect(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY]).toHaveLength(0);
+            const book = migrated[STORAGE_KEYS.BOOKS].bid1;
+            expect(book.shelfCategory).toBe('general');
         });
     });
 

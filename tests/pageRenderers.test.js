@@ -7,7 +7,14 @@ import { initializeKeeperPage } from '../assets/js/page-renderers/keeperRenderer
 import { initializeShoppingPage } from '../assets/js/page-renderers/shoppingRenderer.js';
 import { initializeRewardsPage } from '../assets/js/page-renderers/rewardsRenderer.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { resetStateLoadedForTests } from '../assets/js/character-sheet/state.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
+
+jest.mock('../assets/js/services/BookMetadataService.js', () => ({
+  searchBooks: jest.fn(() => Promise.resolve([]))
+}));
+
+const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('Page Renderers Hydration', () => {
   test('sanctum.md renders sanctums from JSON', () => {
@@ -48,7 +55,7 @@ describe('Page Renderers Hydration', () => {
       window.__BASEURL = '';
     });
 
-    test('displays currency information on page load', () => {
+    test('displays currency information on page load', async () => {
       // Set up form elements with currency values (form takes priority)
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -61,7 +68,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       
       const currencyDisplay = document.getElementById('shopping-currency-display');
       expect(currencyDisplay).toBeTruthy();
@@ -75,7 +82,7 @@ describe('Page Renderers Hydration', () => {
       expect(currencyDisplay.textContent).toContain('Character Sheet');
     });
 
-    test('currency display updates when form values exist', () => {
+    test('currency display updates when form values exist', async () => {
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '200';
@@ -87,14 +94,14 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '75'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       
       const currencyDisplay = document.getElementById('shopping-currency-display');
       expect(currencyDisplay.textContent).toContain('200');
       expect(currencyDisplay.textContent).toContain('75');
     });
 
-    test('currency display updates after redemption', () => {
+    test('currency display updates after redemption and logs purchase', async () => {
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '200';
@@ -105,7 +112,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -115,15 +122,26 @@ describe('Page Renderers Hydration', () => {
       
       const redeemButton = bookishItemOption.querySelector('.redeem-button');
       redeemButton.click();
+      await flushPromises();
       
       // Check currency display was updated
       const currencyDisplay = document.getElementById('shopping-currency-display');
       expect(currencyDisplay.textContent).toContain('175'); // 200 - 25
       expect(currencyDisplay.textContent).toContain('50'); // Unchanged
+
+      // Check shopping log entry was persisted
+      const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+      expect(Array.isArray(log)).toBe(true);
+      expect(log.length).toBe(1);
+      const entry = log[0];
+      expect(typeof entry.optionId).toBe('string');
+      expect(entry.inkDrops).toBe(25);
+      expect(entry.paperScraps).toBe(0);
+      expect(typeof entry.logDate).toBe('string');
     });
 
-    test('renders all shopping options from JSON', () => {
-      initializeShoppingPage();
+    test('renders all shopping options from JSON', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       expect(container).toBeTruthy();
       
@@ -139,8 +157,8 @@ describe('Page Renderers Hydration', () => {
       expect(optionTexts).toContain('Deluxe or Special Edition');
     });
 
-    test('displays cost information for each option', () => {
-      initializeShoppingPage();
+    test('displays cost information for each option', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const firstOption = container.querySelector('.shopping-option');
       
@@ -150,8 +168,15 @@ describe('Page Renderers Hydration', () => {
       expect(costEl.textContent).toContain('Cost:');
     });
 
-    test('shows quantity input for book box subscription', () => {
-      initializeShoppingPage();
+    test('shows subscription-month UI for book box option (subscription select and log button)', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
+        await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -160,14 +185,19 @@ describe('Page Renderers Hydration', () => {
       );
       
       expect(bookBoxOption).toBeTruthy();
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      expect(quantityInput).toBeTruthy();
-      expect(quantityInput.value).toBe('1');
-      expect(parseInt(quantityInput.min)).toBe(1);
+      expect(bookBoxOption.classList.contains('shopping-option-subscription-month')).toBe(true);
+      const subSelect = bookBoxOption.querySelector('.shopping-subscription-select');
+      expect(subSelect).toBeTruthy();
+      expect(subSelect.options.length).toBeGreaterThan(0);
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+      expect(logButton).toBeTruthy();
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
-    test('does not show quantity input for options that do not allow it', () => {
-      initializeShoppingPage();
+    test('does not show quantity input for options that do not allow it', async () => {
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -176,11 +206,11 @@ describe('Page Renderers Hydration', () => {
       );
       
       expect(bookishItemOption).toBeTruthy();
-      const quantityInput = bookishItemOption.querySelector('input[type="number"]');
+      const quantityInput = bookishItemOption.querySelector('.shopping-quantity-input');
       expect(quantityInput).toBeNull();
     });
 
-    test('successfully redeems option with sufficient resources', () => {
+    test('successfully redeems option with sufficient resources', async () => {
       // Set up resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -193,7 +223,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -207,6 +237,7 @@ describe('Page Renderers Hydration', () => {
       
       // Click redeem
       redeemButton.click();
+      await flushPromises();
       
       // Check resources were deducted
       expect(parseInt(inkDropsEl.value)).toBe(175); // 200 - 25
@@ -223,7 +254,7 @@ describe('Page Renderers Hydration', () => {
       expect(successMsg.textContent).toContain('Redeemed successfully');
     });
 
-    test('shows error when insufficient ink drops', () => {
+    test('shows error when insufficient ink drops', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -235,7 +266,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '0'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -262,7 +293,7 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(inkDropsEl.value)).toBe(10);
     });
 
-    test('shows error when insufficient paper scraps', () => {
+    test('shows error when insufficient paper scraps', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
@@ -274,7 +305,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '20'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -299,85 +330,74 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(paperScrapsEl.value)).toBe(20);
     });
 
-    test('handles quantity multiplier for book box subscription', () => {
-      // Set up resources for 3 months
+    test('logging subscription purchase deducts ink and paper', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
-      inkDropsEl.value = '100'; // 25 * 3 = 75 needed
-      paperScrapsEl.value = '100'; // 25 * 3 = 75 needed
-      
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
-        inkDrops: '100',
-        paperScraps: '100'
-      });
+      inkDropsEl.value = '100';
+      paperScrapsEl.value = '100';
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '100', paperScraps: '100' });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookBoxOption = options.find(opt => 
+      const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      const redeemButton = bookBoxOption.querySelector('.redeem-button');
-      
-      // Set quantity to 3
-      quantityInput.value = '3';
-      
-      // Click redeem
-      redeemButton.click();
-      
-      // Check resources were deducted (25 * 3 = 75 for each)
-      expect(parseInt(inkDropsEl.value)).toBe(25); // 100 - 75
-      expect(parseInt(paperScrapsEl.value)).toBe(25); // 100 - 75
-      
-      // Check success message shows quantity
-      const successMsg = bookBoxOption.querySelector('.success-message');
-      expect(successMsg).toBeTruthy();
-      expect(successMsg.textContent).toContain('(3x)');
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+      expect(logButton).toBeTruthy();
+      // Purchase is selected by default; cost is 25 ink + 25 paper
+      logButton.click();
+      await flushPromises();
+
+      expect(parseInt(inkDropsEl.value)).toBe(75); // 100 - 25
+      expect(parseInt(paperScrapsEl.value)).toBe(75); // 100 - 25
+      expect(logButton.textContent).toContain('Logged');
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
-    test('shows error when insufficient resources for quantity > 1', () => {
-      // Set up resources for only 1 month
+    test('shows error when insufficient resources for subscription purchase', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
-      inkDropsEl.value = '30'; // Enough for 1 (25), not for 2 (50)
-      paperScrapsEl.value = '30';
-      
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
-        inkDrops: '30',
-        paperScraps: '30'
-      });
+      inkDropsEl.value = '10'; // Not enough for 25 ink + 25 paper
+      paperScrapsEl.value = '10';
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '10', paperScraps: '10' });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookBoxOption = options.find(opt => 
+      const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      const redeemButton = bookBoxOption.querySelector('.redeem-button');
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
       const errorContainer = bookBoxOption.querySelector('.error-message');
-      
-      // Set quantity to 2
-      quantityInput.value = '2';
-      
-      // Click redeem
-      redeemButton.click();
-      
-      // Error should be shown (need 50, have 30)
+      logButton.click();
+
       expect(errorContainer.style.display).toBe('block');
       expect(errorContainer.textContent).toContain('Insufficient');
-      
-      // Resources should not be deducted
-      expect(parseInt(inkDropsEl.value)).toBe(30);
-      expect(parseInt(paperScrapsEl.value)).toBe(30);
+      expect(parseInt(inkDropsEl.value)).toBe(10);
+      expect(parseInt(paperScrapsEl.value)).toBe(10);
+      } finally {
+        global.indexedDB = originalIdb;
+      }
     });
 
-    test('works when form elements do not exist (fallback to localStorage)', () => {
+    test('works when form elements do not exist (fallback to localStorage)', async () => {
       // Remove form elements
       document.getElementById('inkDrops')?.remove();
       document.getElementById('paperScraps')?.remove();
@@ -388,7 +408,7 @@ describe('Page Renderers Hydration', () => {
         paperScraps: '50'
       });
 
-      initializeShoppingPage();
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
       
@@ -400,6 +420,7 @@ describe('Page Renderers Hydration', () => {
       
       // Click redeem
       redeemButton.click();
+      await flushPromises();
       
       // Check localStorage was updated
       const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
@@ -407,42 +428,186 @@ describe('Page Renderers Hydration', () => {
       expect(parseInt(formData.paperScraps)).toBe(50);
     });
 
-    test('handles minimum quantity of 1 for quantity input', () => {
-      // Set up resources in both form and localStorage
+    test('logging subscription skip does not deduct resources', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '100';
       paperScrapsEl.value = '100';
-      
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
-        inkDrops: '100',
-        paperScraps: '100'
-      });
-      
-      initializeShoppingPage();
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '100', paperScraps: '100' });
+
+      await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookBoxOption = options.find(opt => 
+      const bookBoxOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
       );
-      
-      const quantityInput = bookBoxOption.querySelector('input[type="number"]');
-      const redeemButton = bookBoxOption.querySelector('.redeem-button');
-      
-      // Set invalid quantity (0 or negative)
-      quantityInput.value = '0';
-      
-      // Click redeem - should use minimum of 1 due to Math.max(1, ...)
+      const typeCheckbox = bookBoxOption.querySelector('.shopping-sub-type-toggle-wrap input[type="checkbox"]');
+      expect(typeCheckbox).toBeTruthy();
+      typeCheckbox.checked = true;
+      typeCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+      const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+      logButton.click();
+      await flushPromises();
+
+      // Resources unchanged when skipping
+      expect(parseInt(inkDropsEl.value)).toBe(100);
+      expect(parseInt(paperScrapsEl.value)).toBe(100);
+      } finally {
+        global.indexedDB = originalIdb;
+      }
+    });
+
+    test('shopping summary shows monthly totals including ink, paper, and money spent from persisted log', async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, [
+        { id: '1', optionId: 'bookish-item', logDate: today, inkDrops: 25, paperScraps: 0, actualMoneySpent: 12.99, linkedBookIds: [], storeName: null },
+        { id: '2', optionId: 'local-indie-bookstore', logDate: today, inkDrops: 100, paperScraps: 25, actualMoneySpent: 45.5, linkedBookIds: [], storeName: 'Indie Co' }
+      ]);
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '0', paperScraps: '0' });
+
+      await initializeShoppingPage();
+
+      const summary = document.getElementById('shopping-log-summary');
+      expect(summary).toBeTruthy();
+      const totalsEl = summary.querySelector('.shopping-log-totals');
+      expect(totalsEl).toBeTruthy();
+      expect(totalsEl.textContent).toContain('125');
+      expect(totalsEl.textContent).toContain('25');
+      expect(totalsEl.textContent).toContain('58.49');
+      const mainList = summary.querySelector('.shopping-log-list:not(.shopping-log-bookbox-list)');
+      expect(mainList).toBeTruthy();
+      const mainRows = mainList.querySelectorAll('.shopping-log-row');
+      expect(mainRows.length).toBe(2);
+    });
+
+    test('shopping summary shows month selector when multiple months exist', async () => {
+      resetStateLoadedForTests();
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, [
+        { id: '1', optionId: 'bookish-item', logDate: '2025-01-15', inkDrops: 25, paperScraps: 0, actualMoneySpent: null, linkedBookIds: [], storeName: null },
+        { id: '2', optionId: 'bookish-item', logDate: '2025-02-10', inkDrops: 25, paperScraps: 0, actualMoneySpent: 10, linkedBookIds: [], storeName: null }
+      ]);
+      safeSetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '0', paperScraps: '0' });
+      document.getElementById('shopping-log-summary')?.removeAttribute('data-selected-month-key');
+
+      await initializeShoppingPage();
+
+      const summary = document.getElementById('shopping-log-summary');
+      const monthSelect = summary.querySelector('.shopping-log-month-select');
+      expect(monthSelect).toBeTruthy();
+      expect(monthSelect.options.length).toBeGreaterThanOrEqual(2);
+      expect(monthSelect.value).toBe('2025-02');
+      const totalsEl = summary.querySelector('.shopping-log-totals');
+      expect(totalsEl.textContent).toContain('25');
+      expect(totalsEl.textContent).toContain('10.00');
+
+      monthSelect.value = '2025-01';
+      monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const totalsAfter = summary.querySelector('.shopping-log-totals');
+      expect(totalsAfter.textContent).toContain('25');
+      const mainList = summary.querySelector('.shopping-log-list:not(.shopping-log-bookbox-list)');
+      expect(mainList.querySelectorAll('.shopping-log-row').length).toBe(1);
+    });
+
+    test('shopping summary monthly totals match persisted log entries', async () => {
+      resetStateLoadedForTests();
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, [
+        { id: 'a', optionId: 'bookish-item', logDate: '2025-03-01', inkDrops: 25, paperScraps: 0, actualMoneySpent: 5.5, linkedBookIds: [], storeName: null },
+        { id: 'b', optionId: 'bookish-item', logDate: '2025-03-02', inkDrops: 25, paperScraps: 0, actualMoneySpent: 4.5, linkedBookIds: [], storeName: null }
+      ]);
+      safeSetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '0', paperScraps: '0' });
+      document.getElementById('shopping-log-summary')?.removeAttribute('data-selected-month-key');
+
+      await initializeShoppingPage();
+
+      const summary = document.getElementById('shopping-log-summary');
+      expect(summary.querySelector('h2')?.textContent).toContain('2025-03');
+      const totalsEl = summary.querySelector('.shopping-log-totals');
+      expect(totalsEl.textContent).toContain('50');
+      expect(totalsEl.textContent).toContain('0');
+      expect(totalsEl.textContent).toContain('10.00');
+      const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+      const marchTotalInk = log.filter(e => (e.logDate || '').startsWith('2025-03')).reduce((s, e) => s + (e.inkDrops || 0), 0);
+      const marchTotalMoney = log.filter(e => (e.logDate || '').startsWith('2025-03')).reduce((s, e) => s + (e.actualMoneySpent || 0), 0);
+      expect(marchTotalInk).toBe(50);
+      expect(marchTotalMoney).toBeCloseTo(10, 2);
+    });
+
+    test('renders shopping log entries as text even with HTML-like store names', async () => {
+      const inkDropsEl = document.getElementById('inkDrops');
+      const paperScrapsEl = document.getElementById('paperScraps');
+      inkDropsEl.value = '200';
+      paperScrapsEl.value = '50';
+
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
+        inkDrops: '200',
+        paperScraps: '50'
+      });
+
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+      const bookishItemOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'Bookish Item'
+      );
+
+      const storeInput = bookishItemOption.querySelector('.shopping-store-input');
+      storeInput.value = '<img src=x onerror="window.__shoppingXss = true">';
+
+      const redeemButton = bookishItemOption.querySelector('.redeem-button');
       redeemButton.click();
-      
-      // Should deduct for quantity 1 (25 each) because Math.max(1, 0) = 1
-      expect(parseInt(inkDropsEl.value)).toBe(75); // 100 - 25
-      expect(parseInt(paperScrapsEl.value)).toBe(75); // 100 - 25
-      
-      const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
-      expect(parseInt(formData.inkDrops)).toBe(75); // 100 - 25
-      expect(parseInt(formData.paperScraps)).toBe(75); // 100 - 25
+      await flushPromises();
+
+      const summary = document.getElementById('shopping-log-summary');
+      expect(summary.querySelector('img')).toBeNull();
+      expect(summary.querySelector('script')).toBeNull();
+      expect(summary.textContent).toContain('@ <img src=x onerror="window.__shoppingXss = true">');
+      expect(window.__shoppingXss).toBeUndefined();
+    });
+
+    test('renders book search results without injecting HTML from result metadata', async () => {
+      const { searchBooks } = require('../assets/js/services/BookMetadataService.js');
+      searchBooks.mockResolvedValueOnce([
+        {
+          id: 'malicious-book',
+          title: '<img src=x onerror="window.__searchTitleXss = true">',
+          authors: ['<script>window.__searchAuthorXss = true</script>'],
+          coverUrl: 'x" onerror="window.__searchCoverXss = true',
+          pageCount: 321
+        }
+      ]);
+
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+      const indieBookstoreOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'Local Indie Bookstore'
+      );
+
+      const quickAddSearch = indieBookstoreOption.querySelector('.shopping-quick-add-search');
+      const quickAddButton = indieBookstoreOption.querySelector('.shopping-quick-add-btn');
+      quickAddSearch.value = 'malicious';
+
+      quickAddButton.click();
+      await flushPromises();
+
+      const results = indieBookstoreOption.querySelector('.shopping-book-search-results');
+      expect(results.querySelector('img')).toBeNull();
+      expect(results.querySelector('script')).toBeNull();
+      expect(results.textContent).toContain('<img src=x onerror="window.__searchTitleXss = true">');
+      expect(results.textContent).toContain('<script>window.__searchAuthorXss = true</script>');
+      expect(window.__searchTitleXss).toBeUndefined();
+      expect(window.__searchAuthorXss).toBeUndefined();
+      expect(window.__searchCoverXss).toBeUndefined();
     });
   });
 

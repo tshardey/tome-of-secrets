@@ -7,6 +7,11 @@ import { LARGE_STATE_KEYS, getStateKey, setStateKey } from './persistence.js';
 export const characterState = createEmptyCharacterState();
 export let isStateLoaded = false;
 
+/** For tests: reset so the next loadState() will run again. */
+export function resetStateLoadedForTests() {
+    isStateLoaded = false;
+}
+
 /**
  * Load state from localStorage with validation and migration
  * This ensures data consistency and handles old save formats gracefully

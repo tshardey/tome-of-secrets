@@ -27,7 +27,10 @@ const EVENTS = Object.freeze({
     // The Archive – series tracker
     SERIES_CHANGED: 'seriesChanged',
     CLAIMED_SERIES_REWARDS_CHANGED: 'claimedSeriesRewardsChanged',
-    SERIES_EXPEDITION_PROGRESS_CHANGED: 'seriesExpeditionProgressChanged'
+    SERIES_EXPEDITION_PROGRESS_CHANGED: 'seriesExpeditionProgressChanged',
+    // Book box subscriptions (rewards overhaul)
+    BOOK_BOX_SUBSCRIPTIONS_CHANGED: 'bookBoxSubscriptionsChanged',
+    BOOK_BOX_HISTORY_CHANGED: 'bookBoxHistoryChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -822,6 +825,7 @@ export class StateAdapter {
         const books = { ...this._getBooksRaw() };
         const id = (typeof bookData.id === 'string' && bookData.id.trim()) ? bookData.id.trim() : this._generateId();
         const now = new Date().toISOString();
+        const shelfCategory = (bookData.shelfCategory === 'physical-tbr' || bookData.shelfCategory === 'general') ? bookData.shelfCategory : 'general';
         const book = {
             id,
             title: typeof bookData.title === 'string' ? bookData.title : '',
@@ -829,6 +833,7 @@ export class StateAdapter {
             cover: typeof bookData.cover === 'string' ? bookData.cover : (typeof bookData.coverUrl === 'string' ? bookData.coverUrl : null),
             pageCount: typeof bookData.pageCount === 'number' && !isNaN(bookData.pageCount) ? Math.max(0, Math.floor(bookData.pageCount)) : (typeof bookData.pageCountRaw === 'number' && !isNaN(bookData.pageCountRaw) ? Math.max(0, Math.floor(bookData.pageCountRaw)) : null),
             status: ['reading', 'completed', 'other'].includes(bookData.status) ? bookData.status : 'reading',
+            shelfCategory,
             dateAdded: typeof bookData.dateAdded === 'string' ? bookData.dateAdded : now,
             dateCompleted: typeof bookData.dateCompleted === 'string' ? bookData.dateCompleted : null,
             links: bookData.links && typeof bookData.links === 'object'
@@ -854,6 +859,7 @@ export class StateAdapter {
             if (updates.cover !== undefined) book.cover = typeof updates.cover === 'string' ? updates.cover : null;
             if (typeof updates.pageCount === 'number' && !isNaN(updates.pageCount)) book.pageCount = Math.max(0, Math.floor(updates.pageCount));
             if (['reading', 'completed', 'other'].includes(updates.status)) book.status = updates.status;
+            if (updates.shelfCategory === 'general' || updates.shelfCategory === 'physical-tbr') book.shelfCategory = updates.shelfCategory;
             if (typeof updates.dateAdded === 'string') book.dateAdded = updates.dateAdded;
             if (updates.dateCompleted !== undefined) book.dateCompleted = typeof updates.dateCompleted === 'string' ? updates.dateCompleted : null;
             if (updates.links && typeof updates.links === 'object') {
@@ -885,7 +891,8 @@ export class StateAdapter {
         const book = books[bookId];
         if (!book) return null;
         const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
-        return { ...book, links: { ...links } };
+        const shelfCategory = (book.shelfCategory === 'physical-tbr' || book.shelfCategory === 'general') ? book.shelfCategory : 'general';
+        return { ...book, shelfCategory, links: { ...links } };
     }
 
     getBooks() {
@@ -893,7 +900,8 @@ export class StateAdapter {
         return Object.keys(books).map(id => {
             const book = books[id];
             const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
-            return { ...book, links: { ...links } };
+            const shelfCategory = (book.shelfCategory === 'physical-tbr' || book.shelfCategory === 'general') ? book.shelfCategory : 'general';
+            return { ...book, shelfCategory, links: { ...links } };
         });
     }
 
@@ -1184,6 +1192,167 @@ export class StateAdapter {
     /** Whether this series has already advanced the expedition (in expedition progress log). */
     hasSeriesAdvancedExpedition(seriesId) {
         return this.getSeriesExpeditionProgress().some(p => p.seriesId === seriesId);
+    }
+
+    // ==========================================
+    // Book Box Subscriptions (Schema v10)
+    // ==========================================
+
+    _getBookBoxSubscriptionsRaw() {
+        const subs = this.state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS];
+        return subs && typeof subs === 'object' && !Array.isArray(subs) ? subs : {};
+    }
+
+    _persistBookBoxSubscriptions(subs) {
+        this.state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = subs;
+        void setStateKey(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, subs);
+        this.emit(EVENTS.BOOK_BOX_SUBSCRIPTIONS_CHANGED, { ...subs });
+    }
+
+    _getBookBoxHistoryRaw() {
+        const list = this.state[STORAGE_KEYS.BOOK_BOX_HISTORY];
+        return Array.isArray(list) ? list : [];
+    }
+
+    _persistBookBoxHistory(list) {
+        this.state[STORAGE_KEYS.BOOK_BOX_HISTORY] = list;
+        void setStateKey(STORAGE_KEYS.BOOK_BOX_HISTORY, list);
+        this.emit(EVENTS.BOOK_BOX_HISTORY_CHANGED, [...list]);
+    }
+
+    /** @param {{ company?: string, tier?: string, defaultMonthlyCost?: number|null, skipsAllowedPerYear?: number }} data */
+    addBookBoxSubscription(data) {
+        if (!data || typeof data !== 'object') return null;
+        const subs = { ...this._getBookBoxSubscriptionsRaw() };
+        const id = (typeof data.id === 'string' && data.id.trim()) ? data.id.trim() : this._generateId();
+        const company = typeof data.company === 'string' ? data.company.trim() : '';
+        const tier = typeof data.tier === 'string' ? data.tier.trim() : '';
+        const defaultMonthlyCost = typeof data.defaultMonthlyCost === 'number' && !isNaN(data.defaultMonthlyCost) && data.defaultMonthlyCost >= 0 ? data.defaultMonthlyCost : null;
+        const skipsAllowedPerYear = typeof data.skipsAllowedPerYear === 'number' && !isNaN(data.skipsAllowedPerYear) && data.skipsAllowedPerYear >= 0 ? Math.floor(data.skipsAllowedPerYear) : 0;
+        subs[id] = { id, company, tier, defaultMonthlyCost, skipsAllowedPerYear };
+        this._persistBookBoxSubscriptions(subs);
+        return subs[id];
+    }
+
+    updateBookBoxSubscription(subscriptionId, updates) {
+        if (!subscriptionId || typeof subscriptionId !== 'string') return null;
+        const subs = { ...this._getBookBoxSubscriptionsRaw() };
+        const s = subs[subscriptionId];
+        if (!s) return null;
+        if (updates && typeof updates === 'object') {
+            if (typeof updates.company === 'string') s.company = updates.company.trim();
+            if (typeof updates.tier === 'string') s.tier = updates.tier.trim();
+            if (typeof updates.defaultMonthlyCost === 'number' && !isNaN(updates.defaultMonthlyCost) && updates.defaultMonthlyCost >= 0) s.defaultMonthlyCost = updates.defaultMonthlyCost;
+            else if (updates.defaultMonthlyCost === null) s.defaultMonthlyCost = null;
+            if (typeof updates.skipsAllowedPerYear === 'number' && !isNaN(updates.skipsAllowedPerYear) && updates.skipsAllowedPerYear >= 0) s.skipsAllowedPerYear = Math.floor(updates.skipsAllowedPerYear);
+        }
+        subs[subscriptionId] = s;
+        this._persistBookBoxSubscriptions(subs);
+        return s;
+    }
+
+    deleteBookBoxSubscription(subscriptionId) {
+        if (!subscriptionId || typeof subscriptionId !== 'string') return false;
+        const subs = { ...this._getBookBoxSubscriptionsRaw() };
+        if (!(subscriptionId in subs)) return false;
+        delete subs[subscriptionId];
+        this._persistBookBoxSubscriptions(subs);
+        return true;
+    }
+
+    getBookBoxSubscription(subscriptionId) {
+        if (!subscriptionId || typeof subscriptionId !== 'string') return null;
+        const s = this._getBookBoxSubscriptionsRaw()[subscriptionId];
+        return s ? { ...s } : null;
+    }
+
+    getBookBoxSubscriptionsList() {
+        const raw = this._getBookBoxSubscriptionsRaw();
+        return Object.keys(raw).map(id => {
+            const s = raw[id];
+            return s ? { ...s } : null;
+        }).filter(Boolean);
+    }
+
+    /**
+     * Add a book box history entry (monthly purchase or skip).
+     * @param {{ subscriptionId: string, month?: string, year?: string, type: 'purchased'|'skipped', actualSpend?: number|null, inkDrops?: number, paperScraps?: number, bookIds?: string[], reaction?: 'thumbsUp'|'thumbsDown'|null }} entry
+     */
+    addBookBoxHistoryEntry(entry) {
+        if (!entry || typeof entry.subscriptionId !== 'string' || !entry.subscriptionId.trim()) return null;
+        const subscriptionId = entry.subscriptionId.trim();
+        const list = [...this._getBookBoxHistoryRaw()];
+        const id = (typeof entry.id === 'string' && entry.id.trim()) ? entry.id.trim() : `${subscriptionId}-${entry.month || ''}-${entry.year || ''}-${this._generateId().slice(0, 8)}`;
+        const type = entry.type === 'purchased' || entry.type === 'skipped' ? entry.type : 'purchased';
+        const month = typeof entry.month === 'string' ? entry.month : (typeof entry.month === 'number' ? String(entry.month) : '');
+        const year = typeof entry.year === 'string' ? entry.year : (typeof entry.year === 'number' ? String(entry.year) : '');
+        const actualSpend = typeof entry.actualSpend === 'number' && !isNaN(entry.actualSpend) ? entry.actualSpend : null;
+        const inkDrops = typeof entry.inkDrops === 'number' && !isNaN(entry.inkDrops) ? Math.max(0, Math.floor(entry.inkDrops)) : 0;
+        const paperScraps = typeof entry.paperScraps === 'number' && !isNaN(entry.paperScraps) ? Math.max(0, Math.floor(entry.paperScraps)) : 0;
+        const bookIds = Array.isArray(entry.bookIds) ? entry.bookIds.filter(x => typeof x === 'string' && x.trim()) : [];
+        const reaction = entry.reaction === 'thumbsUp' || entry.reaction === 'thumbsDown' ? entry.reaction : null;
+        const record = { id, subscriptionId, month, year, type, actualSpend, inkDrops, paperScraps, bookIds, reaction };
+        list.push(record);
+        this._persistBookBoxHistory(list);
+        return record;
+    }
+
+    getBookBoxHistory() {
+        return [...this._getBookBoxHistoryRaw()];
+    }
+
+    /**
+     * Update the reaction of a book box history entry (for editing after the fact).
+     * @param {string} entryId
+     * @param {'thumbsUp'|'thumbsDown'|null} reaction
+     * @returns {Object|null} Updated entry or null
+     */
+    updateBookBoxHistoryEntryReaction(entryId, reaction) {
+        if (!entryId || typeof entryId !== 'string') return null;
+        const list = [...this._getBookBoxHistoryRaw()];
+        const idx = list.findIndex((e) => e.id === entryId);
+        if (idx < 0) return null;
+        const entry = { ...list[idx] };
+        entry.reaction = reaction === 'thumbsUp' || reaction === 'thumbsDown' ? reaction : null;
+        list[idx] = entry;
+        this._persistBookBoxHistory(list);
+        return entry;
+    }
+
+    getBookBoxHistoryForSubscription(subscriptionId) {
+        if (!subscriptionId || typeof subscriptionId !== 'string') return [];
+        return this._getBookBoxHistoryRaw().filter(e => e.subscriptionId === subscriptionId);
+    }
+
+    /**
+     * Skips remaining for a subscription in a given year (default current year).
+     * @param {string} subscriptionId
+     * @param {number} [year] - Defaults to current calendar year
+     */
+    getSubscriptionSkipsRemaining(subscriptionId, year) {
+        const sub = this.getBookBoxSubscription(subscriptionId);
+        if (!sub) return 0;
+        const y = typeof year === 'number' && !isNaN(year) ? year : new Date().getFullYear();
+        const skippedThisYear = this._getBookBoxHistoryRaw().filter(
+            e => e.subscriptionId === subscriptionId && e.type === 'skipped' && String(e.year || '') === String(y)
+        ).length;
+        return Math.max(0, (sub.skipsAllowedPerYear || 0) - skippedThisYear);
+    }
+
+    /**
+     * Thumbs summary for a subscription: { thumbsUp, ratedMonths }. Rated = entries with reaction thumbsUp or thumbsDown.
+     */
+    getSubscriptionThumbsSummary(subscriptionId) {
+        const history = this.getBookBoxHistoryForSubscription(subscriptionId);
+        let thumbsUp = 0;
+        let ratedMonths = 0;
+        history.forEach(e => {
+            if (e.reaction === 'thumbsUp' || e.reaction === 'thumbsDown') {
+                ratedMonths += 1;
+                if (e.reaction === 'thumbsUp') thumbsUp += 1;
+            }
+        });
+        return { thumbsUp, ratedMonths };
     }
 
     /**
