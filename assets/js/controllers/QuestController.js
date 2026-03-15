@@ -79,9 +79,7 @@ export class QuestController extends BaseController {
         const cancelEditQuestButton = document.getElementById('cancel-edit-quest-button');
         const keeperBackgroundSelect = document.getElementById('keeperBackground');
 
-        if (!questTypeSelect || !addQuestButton) return;
-
-        // Store elements for use in methods
+        // Store elements for use in methods (add-quest form may be absent when using card draw only)
         this.questTypeSelect = questTypeSelect;
         this.dungeonRoomSelect = dungeonRoomSelect;
         this.dungeonEncounterSelect = dungeonEncounterSelect;
@@ -95,26 +93,22 @@ export class QuestController extends BaseController {
         this.cancelEditQuestButton = cancelEditQuestButton;
         this.keeperBackgroundSelect = keeperBackgroundSelect;
 
-        // Quest type selection
-        this.addEventListener(questTypeSelect, 'change', () => {
-            this.handleQuestTypeChange();
-        });
-
-        // Dungeon room selection
+        // Add-quest form listeners (only when form exists; otherwise quests are added via card draw)
+        if (questTypeSelect) {
+            this.addEventListener(questTypeSelect, 'change', () => {
+                this.handleQuestTypeChange();
+            });
+        }
         if (dungeonRoomSelect) {
             this.addEventListener(dungeonRoomSelect, 'change', () => {
                 this.handleDungeonRoomChange();
             });
         }
-
-        // Dungeon encounter selection
         if (dungeonEncounterSelect) {
             this.addEventListener(dungeonEncounterSelect, 'change', () => {
                 this.handleDungeonEncounterChange();
             });
         }
-
-        // Dungeon action toggle
         if (dungeonActionToggle) {
             this.addEventListener(dungeonActionToggle, 'change', () => {
                 const label = document.getElementById('dungeon-action-label');
@@ -123,20 +117,16 @@ export class QuestController extends BaseController {
                 }
             });
         }
-
-        // Restoration wing selection
         if (restorationWingSelect) {
             this.addEventListener(restorationWingSelect, 'change', () => {
                 this.handleRestorationWingChange();
             });
         }
-
-        // Add/Update quest button
-        this.addEventListener(addQuestButton, 'click', () => {
-            this.handleAddQuest();
-        });
-
-        // Cancel edit button (still needed for form, but drawer has its own)
+        if (addQuestButton) {
+            this.addEventListener(addQuestButton, 'click', () => {
+                this.handleAddQuest();
+            });
+        }
         if (cancelEditQuestButton) {
             this.addEventListener(cancelEditQuestButton, 'click', () => {
                 this.resetQuestForm();
@@ -203,6 +193,7 @@ export class QuestController extends BaseController {
     }
 
     handleQuestTypeChange() {
+        if (!this.questTypeSelect) return;
         const standardContainer = document.getElementById('standard-prompt-container');
         const dungeonContainer = document.getElementById('dungeon-prompt-container');
         const genreContainer = document.getElementById('genre-prompt-container');
@@ -462,6 +453,7 @@ export class QuestController extends BaseController {
     }
 
     handleAddQuest() {
+        if (!this.questTypeSelect || !this.addQuestButton) return;
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 

@@ -338,13 +338,12 @@ export async function initializeCharacterSheet() {
     campaignsController.initialize();
     externalCurriculumController.initialize();
 
-    // --- COLLAPSIBLE PANELS (Add Book, Add Quest, Active Temporary Buffs, Draw Quest Cards) ---
+    // --- COLLAPSIBLE PANELS (Add Book, Active Temporary Buffs, Draw Quest Cards) ---
     (function setupCollapsiblePanels() {
         const configs = [
             { buttonSelector: '.rpg-library-add-panel .panel-toggle-btn', storageKey: 'library-add-panel-body' },
             { buttonSelector: '.rpg-campaigns-add-panel .panel-toggle-btn', storageKey: 'campaigns-add-panel-body' },
             { buttonSelector: '.rpg-external-curriculum-add-panel .panel-toggle-btn', storageKey: 'external-curriculum-add-panel-body' },
-            { buttonSelector: '.rpg-add-quest-panel .panel-toggle-btn', storageKey: 'add-quest-panel-body' },
             { buttonSelector: '.rpg-temporary-buffs-panel .panel-toggle-btn', storageKey: 'temporary-buffs-panel-body' },
             { buttonSelector: '.rpg-quest-card-draw-panel .panel-toggle-btn', storageKey: 'quest-card-draw-panel-body' }
         ];
