@@ -861,6 +861,13 @@ export class QuestController extends BaseController {
             stateAdapter.linkQuestToBook(completedQuest.bookId, completedQuest.id);
         }
 
+        // Snapshot book cover onto quest so archive "Cover" toggle shows it even if the book is later removed
+        if (completedQuest.bookId && typeof stateAdapter.getBook === 'function') {
+            const book = stateAdapter.getBook(completedQuest.bookId);
+            const cover = book && ((typeof book.cover === 'string' && book.cover.trim()) ? book.cover : ((typeof book.coverUrl === 'string' && book.coverUrl.trim()) ? book.coverUrl : null));
+            if (cover) completedQuest.coverUrl = cover;
+        }
+
         // Add to completed quests (wrap in array for consistency)
         stateAdapter.addCompletedQuests([completedQuest]);
 
@@ -974,6 +981,13 @@ export class QuestController extends BaseController {
                 if (restored) stateAdapter.addActiveQuests(restored);
             }
             return null; // Exit without receipt, currency, or counters so no duplicate rewards
+        }
+
+        // Snapshot book cover so archive "Cover" toggle shows it even if the book is later removed
+        if (completedQuest.bookId && typeof stateAdapter.getBook === 'function') {
+            const book = stateAdapter.getBook(completedQuest.bookId);
+            const cover = book && ((typeof book.cover === 'string' && book.cover.trim()) ? book.cover : ((typeof book.coverUrl === 'string' && book.coverUrl.trim()) ? book.coverUrl : null));
+            if (cover) completedQuest.coverUrl = cover;
         }
 
         const completedList = stateAdapter.getCompletedQuests() || [];
