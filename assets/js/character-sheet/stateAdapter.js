@@ -484,6 +484,45 @@ export class StateAdapter {
         return buildCurseHelperList(this.state, catalogs, options);
     }
 
+    /**
+     * Mark a Worn Page mitigation helper as used (persists to curseHelperState).
+     * @param {string} sourceId - Stable source ID from helper
+     * @returns {boolean} Whether state changed
+     */
+    markCurseHelperUsed(sourceId) {
+        if (!sourceId || typeof sourceId !== 'string') return false;
+        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
+        if (entry.used) return false;
+        const next = { ...prev, [sourceId]: { ...entry, used: true } };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    /**
+     * Clear the "used" flag for a Worn Page mitigation helper (undo).
+     * @param {string} sourceId - Stable source ID from helper
+     * @returns {boolean} Whether state changed
+     */
+    undoCurseHelperUsed(sourceId) {
+        if (!sourceId || typeof sourceId !== 'string') return false;
+        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
+        if (!entry.used) return false;
+        const nextEntry = { ...entry, used: false };
+        const next = { ...prev, [sourceId]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
     // Temporary buffs helpers
     getTemporaryBuffs() {
         return this.state[STORAGE_KEYS.TEMPORARY_BUFFS];

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: curse-tab-ui-section
     content: Add Curse tab helper panel markup and render path in UI/render components.
-    status: pending
+    status: completed
   - id: helper-actions
     content: Handle mark-used/undo actions in CurseController and persist updates.
     status: pending
