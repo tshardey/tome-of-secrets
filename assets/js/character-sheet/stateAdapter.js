@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
+import { buildCurseHelperList, buildSourceId } from './curseHelperDiscovery.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -464,6 +465,193 @@ export class StateAdapter {
             return { changed: true, value: removed };
         });
         return value || null;
+    }
+
+    // Curse tab – Worn Page mitigation helpers
+    getCurseHelperState() {
+        const raw = this.state[STORAGE_KEYS.CURSE_HELPER_STATE];
+        return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    }
+
+    /**
+     * Build current list of Worn Page mitigation helpers from character state and data catalogs.
+     * Assigns stable source IDs per source instance (item slot, buff index, ability, school, expedition stop).
+     * @param {Object} catalogs - { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition }
+     * @param {{ school?: string }} [options] - Optional: current wizard school (from DOM)
+     * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: 'monthly'|'every-2-months'|'one-time' }>}
+     */
+    getCurseHelpers(catalogs, options = {}) {
+        return buildCurseHelperList(this.state, catalogs, options);
+    }
+
+    /**
+     * Mark a Worn Page mitigation helper as used (persists to curseHelperState).
+     * For every-2-months cadence, sets cooldownCyclesRemaining so refreshCurseHelpersAtEndOfMonth can restore after 2 cycles.
+     * @param {string} sourceId - Stable source ID from helper
+     * @param {{ cadence?: 'monthly'|'every-2-months'|'one-time' }} [options] - Optional cadence; if 'every-2-months', sets cooldown to 2 cycles
+     * @returns {boolean} Whether state changed
+     */
+    markCurseHelperUsed(sourceId, options = {}) {
+        if (!sourceId || typeof sourceId !== 'string') return false;
+        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
+        if (entry.used) return false;
+        const nextEntry = { ...entry, used: true };
+        if (options.cadence === 'every-2-months') {
+            nextEntry.cooldownCyclesRemaining = 2;
+        }
+        const next = { ...prev, [sourceId]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    /**
+     * Refresh Worn Page helper usage/cooldown at End of Month: restore monthly helpers each cycle,
+     * and every-2-months helpers every second cycle (decrement cooldown; when 0, clear used).
+     * @param {Array<{ sourceId: string, cadence: 'monthly'|'every-2-months'|'one-time' }>} helpers - Current helper list with sourceId and cadence
+     * @returns {boolean} Whether state changed
+     */
+    refreshCurseHelpersAtEndOfMonth(helpers) {
+        if (!Array.isArray(helpers) || helpers.length === 0) return false;
+        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        let changed = false;
+        const next = { ...prev };
+        for (const { sourceId, cadence } of helpers) {
+            const entry = next[sourceId] && typeof next[sourceId] === 'object' ? { ...next[sourceId] } : {};
+            if (cadence === 'monthly') {
+                if (entry.used) {
+                    next[sourceId] = { ...entry, used: false };
+                    changed = true;
+                }
+            } else if (cadence === 'every-2-months') {
+                const cooldown = entry.cooldownCyclesRemaining != null ? entry.cooldownCyclesRemaining : 0;
+                if (cooldown > 0) {
+                    const newCooldown = cooldown - 1;
+                    next[sourceId] = { ...entry, cooldownCyclesRemaining: newCooldown, used: newCooldown === 0 ? false : entry.used };
+                    changed = true;
+                }
+            }
+            // one-time: no change
+        }
+        if (!changed) return false;
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    /**
+     * At End of Month: remove temporary buffs that are Worn Page one-time helpers and have been marked used.
+     * Cleans CURSE_HELPER_STATE for removed sourceIds. Call after refreshCurseHelpersAtEndOfMonth.
+     * @param {Array<{ sourceId: string, sourceType: string, cadence: 'monthly'|'every-2-months'|'one-time' }>} helpers - Current helper list
+     * @returns {boolean} Whether any buff was removed
+     */
+    removeUsedOneTimeWornPageTempBuffsAtEOM(helpers) {
+        if (!Array.isArray(helpers)) return false;
+        const helperState = this.getCurseHelperState();
+        const toRemove = [];
+        for (const h of helpers) {
+            if (h.sourceType !== 'tempBuff' || h.cadence !== 'one-time') continue;
+            const entry = helperState[h.sourceId];
+            if (!entry || !entry.used) continue;
+            // sourceId format: "tempBuff:index_name" (buildSourceId replaces | and : in identifier with _)
+            const match = h.sourceId.match(/^tempBuff:(.+)$/);
+            if (!match) continue;
+            const identifier = match[1];
+            const underscoreIdx = identifier.indexOf('_');
+            const indexStr = underscoreIdx >= 0 ? identifier.slice(0, underscoreIdx) : identifier;
+            const index = parseInt(indexStr, 10);
+            if (isNaN(index) || index < 0) continue;
+            toRemove.push({ sourceId: h.sourceId, index });
+        }
+        if (toRemove.length === 0) return false;
+        // Remove from highest index first so indices don't shift
+        toRemove.sort((a, b) => b.index - a.index);
+        const removedSourceIds = new Set(toRemove.map(r => r.sourceId));
+        for (const { index } of toRemove) {
+            this.removeTemporaryBuff(index);
+        }
+        // Prune curse helper state for removed sourceIds
+        const curseKey = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prevCurse = this.state[curseKey] && typeof this.state[curseKey] === 'object' && !Array.isArray(this.state[curseKey])
+            ? this.state[curseKey]
+            : {};
+        let nextCurse = { ...prevCurse };
+        for (const id of removedSourceIds) {
+            delete nextCurse[id];
+        }
+        // Remap remaining tempBuff keys to new indices so usage tracking is preserved after array shift
+        nextCurse = this._remapTempBuffCurseHelperKeys(nextCurse);
+        this.state[curseKey] = nextCurse;
+        void setStateKey(curseKey, nextCurse);
+        return true;
+    }
+
+    /**
+     * Remap tempBuff entries in curseHelperState to use current array indices after removals.
+     * Parses keys like "tempBuff:oldIndex_name" and reassigns state to "tempBuff:newIndex_name".
+     * @param {Record<string, { used?: boolean, cooldownCyclesRemaining?: number }>} curseState - Current state after pruning removed ids
+     * @returns {Record<string, { used?: boolean, cooldownCyclesRemaining?: number }>} State with remapped tempBuff keys
+     */
+    _remapTempBuffCurseHelperKeys(curseState) {
+        const tempBuffs = this.state[STORAGE_KEYS.TEMPORARY_BUFFS];
+        if (!Array.isArray(tempBuffs) || tempBuffs.length === 0) {
+            return curseState;
+        }
+        const result = { ...curseState };
+        const tempBuffPrefix = 'tempBuff:';
+        const oldEntries = [];
+        for (const key of Object.keys(result)) {
+            if (!key.startsWith(tempBuffPrefix)) continue;
+            const identifier = key.slice(tempBuffPrefix.length);
+            const firstUnderscore = identifier.indexOf('_');
+            if (firstUnderscore < 0) continue;
+            const oldIndexStr = identifier.slice(0, firstUnderscore);
+            const name = identifier.slice(firstUnderscore + 1);
+            const oldIndex = parseInt(oldIndexStr, 10);
+            if (isNaN(oldIndex) || oldIndex < 0) continue;
+            oldEntries.push({ key, oldIndex, name, entry: result[key] });
+        }
+        if (oldEntries.length === 0) return result;
+        oldEntries.sort((a, b) => a.oldIndex - b.oldIndex);
+        const newEntries = tempBuffs.map((b, i) => ({ newIndex: i, name: b?.name ?? b?.id ?? `Buff ${i}` }));
+        const usedNewIndices = new Set();
+        for (const { key, name, entry } of oldEntries) {
+            const idx = newEntries.findIndex((n, i) => !usedNewIndices.has(i) && n.name === name);
+            if (idx < 0) continue;
+            usedNewIndices.add(idx);
+            const { newIndex } = newEntries[idx];
+            const newKey = buildSourceId('tempBuff', null, `${newIndex}|${name}`);
+            delete result[key];
+            result[newKey] = entry;
+        }
+        return result;
+    }
+
+    /**
+     * Clear the "used" flag for a Worn Page mitigation helper (undo).
+     * @param {string} sourceId - Stable source ID from helper
+     * @returns {boolean} Whether state changed
+     */
+    undoCurseHelperUsed(sourceId) {
+        if (!sourceId || typeof sourceId !== 'string') return false;
+        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
+        if (!entry.used) return false;
+        const nextEntry = { ...entry, used: false };
+        const next = { ...prev, [sourceId]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
     }
 
     // Temporary buffs helpers

@@ -12,9 +12,12 @@ import {
     renderItemCard, 
     renderEmptySlot, 
     renderCurseRow, 
+    renderCurseHelperRow,
+    renderCurseHelpersEmptyRow,
     renderTemporaryBuffRow,
     renderAbilityCard
 } from './renderComponents.js';
+import { buildCurseHelperList } from './curseHelperDiscovery.js';
 import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
 import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
@@ -967,6 +970,48 @@ export function renderCompletedCurses() {
     }
 }
 
+/**
+ * Build catalogs object for curse helper discovery (items, buffs, abilities, school, series).
+ */
+function getCurseHelperCatalogs() {
+    const tempBuffs = { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) };
+    return {
+        allItems: data.allItems || {},
+        temporaryBuffs: tempBuffs,
+        masteryAbilities: data.masteryAbilities || {},
+        schoolBenefits: data.schoolBenefits || {},
+        seriesExpedition: data.seriesCompletionRewards || {}
+    };
+}
+
+export function renderWornPageHelpers() {
+    const tbody = document.getElementById('worn-page-helpers-body');
+    if (!tbody) return;
+
+    clearElement(tbody);
+
+    const catalogs = getCurseHelperCatalogs();
+    const school = document.getElementById('wizardSchool')?.value || '';
+    const helpers = buildCurseHelperList(characterState, catalogs, { school });
+    const helperState = characterState[STORAGE_KEYS.CURSE_HELPER_STATE] && typeof characterState[STORAGE_KEYS.CURSE_HELPER_STATE] === 'object'
+        ? characterState[STORAGE_KEYS.CURSE_HELPER_STATE]
+        : {};
+
+    const summaryEl = document.getElementById('worn-page-helpers-summary');
+    if (summaryEl) {
+        summaryEl.textContent = `📖 Worn Page Mitigation Helpers (${helpers.length})`;
+    }
+
+    if (helpers.length === 0) {
+        tbody.appendChild(renderCurseHelpersEmptyRow());
+        return;
+    }
+
+    helpers.forEach((helper) => {
+        tbody.appendChild(renderCurseHelperRow(helper, helperState));
+    });
+}
+
 export function renderTemporaryBuffs() {
     const tbody = document.getElementById('active-temp-buffs-body');
     if (!tbody) return;
@@ -1283,6 +1328,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderDiscardedQuests();
     renderActiveCurses();
     renderCompletedCurses();
+    renderWornPageHelpers();
 }
 
 /**

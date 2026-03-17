@@ -866,6 +866,106 @@ export function renderQuestCard(quest, index, listType = 'active') {
  * @param {Object} extraAttrs - Extra attributes to set (will be set as data attributes or regular attributes)
  * @returns {HTMLButtonElement} The button element
  */
+/**
+ * Renders a single Worn Page mitigation helper tile for the Curse tab.
+ * @param {Object} helper - { sourceId, sourceType, slotMode?, name, effect, cadence }
+ * @param {Object} helperState - Map of sourceId -> { used: boolean, cooldownCyclesRemaining?: number }
+ * @returns {HTMLDivElement}
+ */
+export function renderCurseHelperRow(helper, helperState = {}) {
+    const tile = createElement('div', { class: 'curse-helper-tile' });
+    tile.setAttribute('role', 'listitem');
+
+    const entry = helperState[helper.sourceId] || {};
+    const used = !!entry.used;
+    const cooldown = entry.cooldownCyclesRemaining != null ? entry.cooldownCyclesRemaining : 0;
+
+    const sourceLabel = formatHelperSourceLabel(helper);
+    const cadenceLabel = formatCadenceLabel(helper.cadence);
+    const statusText = getHelperStatusText(helper.cadence, used, cooldown);
+    const canMarkUsed = !used && (helper.cadence === 'one-time' || helper.cadence === 'monthly' || (helper.cadence === 'every-2-months' && cooldown === 0));
+    const canUndo = used && helper.cadence !== 'one-time';
+
+    const title = createElement('h4', { class: 'curse-helper-tile__title' });
+    title.textContent = (helper.name || '') + (sourceLabel ? ` (${sourceLabel})` : '');
+    tile.appendChild(title);
+
+    const cadenceBadge = createElement('span', { class: 'curse-helper-tile__cadence' });
+    cadenceBadge.textContent = cadenceLabel;
+    tile.appendChild(cadenceBadge);
+
+    const effect = createElement('p', { class: 'curse-helper-tile__effect' });
+    effect.textContent = helper.effect || '';
+    tile.appendChild(effect);
+
+    const status = createElement('p', { class: 'curse-helper-tile__status' });
+    status.textContent = statusText;
+    tile.appendChild(status);
+
+    const actions = createElement('div', { class: 'curse-helper-tile__actions no-print' });
+    if (canMarkUsed) {
+        actions.appendChild(createHelperActionButton('Mark used', 'mark-helper-used-btn', helper.sourceId, helper.cadence));
+    }
+    if (canUndo) {
+        actions.appendChild(createHelperActionButton('Undo', 'undo-helper-used-btn', helper.sourceId));
+    }
+    tile.appendChild(actions);
+
+    return tile;
+}
+
+/**
+ * Renders the empty state for Worn Page mitigation helpers (no tiles).
+ * @returns {HTMLDivElement}
+ */
+export function renderCurseHelpersEmptyRow() {
+    const empty = document.createElement('div');
+    empty.className = 'curse-helper-empty';
+    empty.setAttribute('role', 'status');
+    empty.textContent = 'No Worn Page mitigation helpers available. Equip items, add buffs, or learn abilities that remove or negate Worn Page penalties.';
+    return empty;
+}
+
+function formatHelperSourceLabel(helper) {
+    const { sourceType, slotMode } = helper;
+    if (sourceType === 'item' && slotMode) {
+        const labels = { equipped: 'equipped', inventory: 'inventory', passiveItem: 'passive', passiveFamiliar: 'passive' };
+        return labels[slotMode] || sourceType;
+    }
+    const labels = { item: 'item', tempBuff: 'buff', ability: 'ability', school: 'school', seriesExpedition: 'expedition' };
+    return labels[sourceType] || '';
+}
+
+function formatCadenceLabel(cadence) {
+    if (cadence === 'monthly') return 'Monthly';
+    if (cadence === 'every-2-months') return 'Every 2 months';
+    return 'One-time';
+}
+
+function getHelperStatusText(cadence, used, cooldownCyclesRemaining) {
+    if (used) return 'Used';
+    if (cadence === 'every-2-months' && cooldownCyclesRemaining > 0) {
+        return `Available in ${cooldownCyclesRemaining} cycle${cooldownCyclesRemaining !== 1 ? 's' : ''}`;
+    }
+    return 'Available';
+}
+
+function createCell(text) {
+    const cell = document.createElement('td');
+    cell.textContent = text;
+    return cell;
+}
+
+function createHelperActionButton(text, className, sourceId, cadence) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.dataset.sourceId = sourceId;
+    if (cadence) button.dataset.cadence = cadence;
+    button.textContent = text;
+    return button;
+}
+
 function createActionButton(text, className, index, extraAttrs = {}) {
     const button = document.createElement('button');
     button.type = 'button';

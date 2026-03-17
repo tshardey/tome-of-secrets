@@ -3663,6 +3663,98 @@
     color: #f0c8c8 !important;
 }
 
+/* Worn Page Mitigation Helpers (Curse tab tiles) */
+.worn-page-helpers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    list-style: none;
+    padding: 16px 24px 24px;
+    margin: 0;
+}
+
+.curse-helper-tile {
+    background: linear-gradient(135deg, rgba(42, 35, 29, 0.7) 0%, rgba(30, 26, 20, 0.8) 100%);
+    border: 2px solid #54483b;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.curse-helper-tile:hover {
+    border-color: #8b7355;
+    box-shadow: 0 4px 12px rgba(184, 159, 98, 0.25);
+    transform: translateY(-2px);
+}
+
+.curse-helper-tile__title {
+    margin: 0 0 8px 0;
+    font-family: 'Lora', serif;
+    font-size: 1.1em;
+    color: #b89f62;
+    font-weight: 600;
+}
+
+.curse-helper-tile__cadence {
+    display: inline-block;
+    padding: 4px 10px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.4) 0%, rgba(84, 72, 59, 0.3) 100%);
+    color: #d4c8b0;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.curse-helper-tile__effect {
+    margin: 0 0 10px 0;
+    color: #d4c8b0;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.curse-helper-tile__status {
+    margin: 0 0 12px 0;
+    font-size: 0.85em;
+    color: #8a7a61;
+    font-style: italic;
+}
+
+.curse-helper-tile__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.curse-helper-tile__actions button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    background-color: rgba(74, 62, 62, 0.6);
+    border: 1px solid #8a6262;
+    border-radius: 4px;
+    color: #d4a5a5;
+    font-family: 'Lora', serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.curse-helper-tile__actions button:hover {
+    background-color: rgba(74, 62, 62, 0.8);
+    border-color: #b89f62;
+    color: #f0c8c8;
+}
+
+.curse-helper-empty {
+    text-align: center;
+    color: #8a7a61;
+    font-style: italic;
+    padding: 1.5rem;
+}
+
 /* Permanent Bonuses Panel */
 .rpg-bonuses-panel {
     background: linear-gradient(135deg, rgba(139, 115, 85, 0.1) 0%, rgba(84, 72, 59, 0.05) 100%);

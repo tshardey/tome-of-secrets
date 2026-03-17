@@ -126,6 +126,23 @@ export class CurseController extends BaseController {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
+        const sourceId = target.dataset.sourceId;
+        if (sourceId && typeof sourceId === 'string') {
+            if (target.classList.contains('mark-helper-used-btn')) {
+                const cadence = target.dataset.cadence || undefined;
+                stateAdapter.markCurseHelperUsed(sourceId, cadence ? { cadence } : {});
+                if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
+                this.saveState();
+                return true;
+            }
+            if (target.classList.contains('undo-helper-used-btn')) {
+                stateAdapter.undoCurseHelperUsed(sourceId);
+                if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
+                this.saveState();
+                return true;
+            }
+        }
+
         if (!target.dataset.index) return false;
 
         const index = parseInt(target.dataset.index || '0', 10);

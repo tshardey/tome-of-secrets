@@ -42,7 +42,9 @@ export const STORAGE_KEYS = Object.freeze({
     // Shopping & book box tracking (rewards overhaul)
     SHOPPING_LOG: 'shoppingLog',
     BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
-    BOOK_BOX_HISTORY: 'bookBoxHistory'
+    BOOK_BOX_HISTORY: 'bookBoxHistory',
+    // Curse tab – Worn Page mitigation helpers (usage and cooldown per source)
+    CURSE_HELPER_STATE: 'curseHelperState'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -75,7 +77,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
     STORAGE_KEYS.SHOPPING_LOG,
     STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
-    STORAGE_KEYS.BOOK_BOX_HISTORY
+    STORAGE_KEYS.BOOK_BOX_HISTORY,
+    STORAGE_KEYS.CURSE_HELPER_STATE
 ]);
 
 export function createEmptyCharacterState() {
@@ -109,7 +112,17 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
         [STORAGE_KEYS.SHOPPING_LOG]: [],
         [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
-        [STORAGE_KEYS.BOOK_BOX_HISTORY]: []
+        [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
+        [STORAGE_KEYS.CURSE_HELPER_STATE]: {}
     };
 }
+
+/**
+ * Default shape for curse helper state.
+ * Keys: stable source IDs (assigned at runtime from character + data).
+ * Values: { used: boolean, cooldownCyclesRemaining?: number }
+ * - used: whether the helper has been marked used this period
+ * - cooldownCyclesRemaining: for every-2-months cadence, cycles until next restore (0 = available)
+ */
+export const CURSE_HELPER_STATE_DEFAULT = Object.freeze({});
 

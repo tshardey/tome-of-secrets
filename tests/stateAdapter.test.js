@@ -481,5 +481,229 @@ describe('StateAdapter', () => {
       expect(summary.ratedMonths).toBe(0);
     });
   });
+
+  describe('curse helpers (Worn Page mitigation)', () => {
+    it('getCurseHelperState returns a copy of persisted helper state', () => {
+      state[STORAGE_KEYS.CURSE_HELPER_STATE] = { 'item:equipped:0|Chalice': { used: true } };
+      const result = adapter.getCurseHelperState();
+      expect(result).toEqual({ 'item:equipped:0|Chalice': { used: true } });
+      expect(result).not.toBe(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
+    });
+
+    it('getCurseHelperState returns empty object when not set', () => {
+      state[STORAGE_KEYS.CURSE_HELPER_STATE] = undefined;
+      expect(adapter.getCurseHelperState()).toEqual({});
+    });
+
+    it('getCurseHelpers discovers item in equipped slot with Worn Page mitigation', () => {
+      state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Chalice of Restoration' }];
+      const catalogs = {
+        allItems: {
+          'Chalice of Restoration': {
+            name: 'Chalice of Restoration',
+            bonus: 'Once per month, you may use this item to remove a Worn Page penalty.'
+          }
+        },
+        temporaryBuffs: {},
+        masteryAbilities: {},
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('item');
+      expect(helpers[0].slotMode).toBe('equipped');
+      expect(helpers[0].name).toBe('Chalice of Restoration');
+      expect(helpers[0].cadence).toBe('monthly');
+      expect(helpers[0].sourceId).toMatch(/^item:equipped:/);
+    });
+
+    it('getCurseHelpers discovers learned ability with Worn Page mitigation', () => {
+      state[STORAGE_KEYS.LEARNED_ABILITIES] = ['Ward Against the Shroud'];
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {},
+        masteryAbilities: {
+          'Ward Against the Shroud': {
+            name: 'Ward Against the Shroud',
+            benefit: 'Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it.'
+          }
+        },
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('ability');
+      expect(helpers[0].name).toBe('Ward Against the Shroud');
+      expect(helpers[0].cadence).toBe('monthly');
+      expect(helpers[0].sourceId).toBe('ability:Ward Against the Shroud');
+    });
+
+    it('getCurseHelpers discovers school passive when school option provided', () => {
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {},
+        masteryAbilities: {},
+        schoolBenefits: {
+          Abjuration: {
+            benefit: 'Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.'
+          }
+        },
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, { school: 'Abjuration' });
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('school');
+      expect(helpers[0].name).toBe('Abjuration');
+      expect(helpers[0].cadence).toBe('monthly');
+    });
+
+    it('getCurseHelpers returns empty when no sources and no school', () => {
+      const catalogs = { allItems: {}, temporaryBuffs: {}, masteryAbilities: {}, schoolBenefits: {}, seriesExpedition: { stops: [] } };
+      expect(adapter.getCurseHelpers(catalogs, {})).toEqual([]);
+    });
+
+    it('markCurseHelperUsed sets used and returns true on first use', () => {
+      const sourceId = 'item:equipped:0_Chalice';
+      const result = adapter.markCurseHelperUsed(sourceId, {});
+      expect(result).toBe(true);
+      expect(adapter.getCurseHelperState()[sourceId]).toEqual({ used: true });
+    });
+
+    it('markCurseHelperUsed returns false when already used', () => {
+      const sourceId = 'ability:Ward';
+      adapter.markCurseHelperUsed(sourceId, {});
+      const result = adapter.markCurseHelperUsed(sourceId, {});
+      expect(result).toBe(false);
+    });
+
+    it('markCurseHelperUsed with cadence every-2-months sets cooldownCyclesRemaining to 2', () => {
+      const sourceId = 'item:inventory:0_Spellbook';
+      adapter.markCurseHelperUsed(sourceId, { cadence: 'every-2-months' });
+      expect(adapter.getCurseHelperState()[sourceId]).toEqual({ used: true, cooldownCyclesRemaining: 2 });
+    });
+
+    it('markCurseHelperUsed returns false for invalid sourceId', () => {
+      expect(adapter.markCurseHelperUsed('', {})).toBe(false);
+      expect(adapter.markCurseHelperUsed(null, {})).toBe(false);
+    });
+
+    it('refreshCurseHelpersAtEndOfMonth restores monthly helper (clears used)', () => {
+      const sourceId = 'item:equipped:0_Chalice';
+      adapter.markCurseHelperUsed(sourceId, { cadence: 'monthly' });
+      const helpers = [{ sourceId, cadence: 'monthly' }];
+      const result = adapter.refreshCurseHelpersAtEndOfMonth(helpers);
+      expect(result).toBe(true);
+      expect(adapter.getCurseHelperState()[sourceId].used).toBe(false);
+    });
+
+    it('refreshCurseHelpersAtEndOfMonth decrements every-2-months cooldown and clears used when 0', () => {
+      const sourceId = 'ability:Ward';
+      adapter.markCurseHelperUsed(sourceId, { cadence: 'every-2-months' });
+      const helpers = [{ sourceId, cadence: 'every-2-months' }];
+      adapter.refreshCurseHelpersAtEndOfMonth(helpers);
+      expect(adapter.getCurseHelperState()[sourceId].cooldownCyclesRemaining).toBe(1);
+      expect(adapter.getCurseHelperState()[sourceId].used).toBe(true);
+      adapter.refreshCurseHelpersAtEndOfMonth(helpers);
+      expect(adapter.getCurseHelperState()[sourceId].cooldownCyclesRemaining).toBe(0);
+      expect(adapter.getCurseHelperState()[sourceId].used).toBe(false);
+    });
+
+    it('refreshCurseHelpersAtEndOfMonth returns false for empty helpers', () => {
+      expect(adapter.refreshCurseHelpersAtEndOfMonth([])).toBe(false);
+    });
+
+    it('separate-per-source: marking one helper used does not affect another', () => {
+      state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Chalice' }];
+      state[STORAGE_KEYS.INVENTORY_ITEMS] = [{ name: 'Chalice' }];
+      const catalogs = {
+        allItems: {
+          Chalice: { name: 'Chalice', bonus: 'Once per month, remove a Worn Page penalty.' }
+        },
+        temporaryBuffs: {},
+        masteryAbilities: {},
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(2);
+      const [equippedHelper, invHelper] = helpers;
+      adapter.markCurseHelperUsed(equippedHelper.sourceId, { cadence: 'monthly' });
+      const stateAfter = adapter.getCurseHelperState();
+      expect(stateAfter[equippedHelper.sourceId].used).toBe(true);
+      expect(stateAfter[invHelper.sourceId]).toBeUndefined();
+    });
+
+    it('removeUsedOneTimeWornPageTempBuffsAtEOM removes used one-time temp buff and prunes state', () => {
+      state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
+        { name: 'OneTimeBlessing', description: 'remove one Worn Page penalty.' }
+      ];
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {
+          OneTimeBlessing: { name: 'OneTimeBlessing', description: 'remove one Worn Page penalty.' }
+        },
+        masteryAbilities: {},
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].cadence).toBe('one-time');
+      adapter.markCurseHelperUsed(helpers[0].sourceId, {});
+      const removed = adapter.removeUsedOneTimeWornPageTempBuffsAtEOM(helpers);
+      expect(removed).toBe(true);
+      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS]).toHaveLength(0);
+      expect(adapter.getCurseHelperState()[helpers[0].sourceId]).toBeUndefined();
+    });
+
+    it('removeUsedOneTimeWornPageTempBuffsAtEOM remaps remaining temp buff state to new indices so usage is preserved', () => {
+      state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
+        { name: 'OneTimeA', description: 'remove one Worn Page penalty.' },
+        { name: 'MonthlyB', description: 'Once per month, remove a Worn Page penalty.' },
+        { name: 'OneTimeC', description: 'remove one Worn Page penalty.' }
+      ];
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {
+          OneTimeA: { name: 'OneTimeA', description: 'remove one Worn Page penalty.' },
+          MonthlyB: { name: 'MonthlyB', description: 'Once per month, remove a Worn Page penalty.' },
+          OneTimeC: { name: 'OneTimeC', description: 'remove one Worn Page penalty.' }
+        },
+        masteryAbilities: {},
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      let helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(3);
+      adapter.markCurseHelperUsed(helpers[0].sourceId, {}); // OneTimeA at index 0 - will be removed
+      adapter.markCurseHelperUsed(helpers[1].sourceId, { cadence: 'monthly' }); // MonthlyB at index 1 - keep, mark used
+      adapter.removeUsedOneTimeWornPageTempBuffsAtEOM(helpers);
+      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS]).toHaveLength(2);
+      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS].map(b => b.name)).toEqual(['MonthlyB', 'OneTimeC']);
+      helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(2);
+      const helperState = adapter.getCurseHelperState();
+      const monthlyBNewKey = helpers[0].sourceId;
+      expect(monthlyBNewKey).toMatch(/^tempBuff:0_MonthlyB$/);
+      expect(helperState[monthlyBNewKey]).toEqual({ used: true });
+      const oneTimeCNewKey = helpers[1].sourceId;
+      expect(oneTimeCNewKey).toMatch(/^tempBuff:1_OneTimeC$/);
+      expect(helperState[oneTimeCNewKey]).toBeUndefined();
+    });
+
+    it('undoCurseHelperUsed clears used flag', () => {
+      const sourceId = 'item:equipped:0_Chalice';
+      adapter.markCurseHelperUsed(sourceId, {});
+      const result = adapter.undoCurseHelperUsed(sourceId);
+      expect(result).toBe(true);
+      expect(adapter.getCurseHelperState()[sourceId].used).toBe(false);
+    });
+
+    it('undoCurseHelperUsed returns false when not used', () => {
+      expect(adapter.undoCurseHelperUsed('item:equipped:0_Chalice')).toBe(false);
+    });
+  });
 });
 
