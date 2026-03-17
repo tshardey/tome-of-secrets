@@ -76,7 +76,8 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
             [STORAGE_KEYS.SHOPPING_LOG]: [],
             [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
-            [STORAGE_KEYS.BOOK_BOX_HISTORY]: []
+            [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
+            [STORAGE_KEYS.CURSE_HELPER_STATE]: {}
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {

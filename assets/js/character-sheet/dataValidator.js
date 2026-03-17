@@ -22,8 +22,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
  * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
  * Version 10: Shopping/subscription state (shoppingLog, bookBoxSubscriptions, bookBoxHistory) and book shelfCategory
+ * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState: usage/cooldown per source)
  */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 /**
  * Schema version key in localStorage

@@ -439,7 +439,7 @@ describe('Data Validation', () => {
         });
 
         test('schema version should be 10', () => {
-            expect(SCHEMA_VERSION).toBe(10);
+            expect(SCHEMA_VERSION).toBe(11);
         });
     });
 });
