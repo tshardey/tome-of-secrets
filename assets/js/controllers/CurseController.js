@@ -129,7 +129,8 @@ export class CurseController extends BaseController {
         const sourceId = target.dataset.sourceId;
         if (sourceId && typeof sourceId === 'string') {
             if (target.classList.contains('mark-helper-used-btn')) {
-                stateAdapter.markCurseHelperUsed(sourceId);
+                const cadence = target.dataset.cadence || undefined;
+                stateAdapter.markCurseHelperUsed(sourceId, cadence ? { cadence } : {});
                 if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
                 this.saveState();
                 return true;

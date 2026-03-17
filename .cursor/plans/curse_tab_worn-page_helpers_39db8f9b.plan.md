@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: end-month-refresh
     content: Apply monthly and every-2-month refresh rules in EndOfMonthController and re-render Curse tab.
-    status: pending
+    status: completed
   - id: tests
     content: Add/adjust tests for helper discovery, usage tracking, and cadence refresh behavior.
     status: pending

@@ -98,7 +98,24 @@ export class EndOfMonthController extends BaseController {
             const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
             const familiarSlotsInput = document.getElementById('familiar-slots');
             uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
-            
+
+            // Refresh Worn Page mitigation helpers: monthly → restore each cycle; every-2-months → restore every second cycle
+            const curseHelperCatalogs = {
+                allItems: data.allItems || {},
+                temporaryBuffs: { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) },
+                masteryAbilities: data.masteryAbilities || {},
+                schoolBenefits: data.schoolBenefits || {},
+                seriesExpedition: data.seriesCompletionRewards || {}
+            };
+            const school = document.getElementById('wizardSchool')?.value || '';
+            const curseHelpers = stateAdapter.getCurseHelpers(curseHelperCatalogs, { school });
+            stateAdapter.refreshCurseHelpersAtEndOfMonth(curseHelpers);
+            // Remove one-time Worn Page temp buffs that were marked used (they expire after this EOM)
+            if (stateAdapter.removeUsedOneTimeWornPageTempBuffsAtEOM(curseHelpers)) {
+                uiModule.renderTemporaryBuffs();
+            }
+            if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
+
             this.saveState();
 
             // Show success notification

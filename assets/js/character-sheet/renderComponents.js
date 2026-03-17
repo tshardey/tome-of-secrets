@@ -904,7 +904,7 @@ export function renderCurseHelperRow(helper, helperState = {}) {
 
     const actions = createElement('div', { class: 'curse-helper-tile__actions no-print' });
     if (canMarkUsed) {
-        actions.appendChild(createHelperActionButton('Mark used', 'mark-helper-used-btn', helper.sourceId));
+        actions.appendChild(createHelperActionButton('Mark used', 'mark-helper-used-btn', helper.sourceId, helper.cadence));
     }
     if (canUndo) {
         actions.appendChild(createHelperActionButton('Undo', 'undo-helper-used-btn', helper.sourceId));
@@ -956,11 +956,12 @@ function createCell(text) {
     return cell;
 }
 
-function createHelperActionButton(text, className, sourceId) {
+function createHelperActionButton(text, className, sourceId, cadence) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = className;
     button.dataset.sourceId = sourceId;
+    if (cadence) button.dataset.cadence = cadence;
     button.textContent = text;
     return button;
 }
