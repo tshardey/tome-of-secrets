@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: tests
     content: Add/adjust tests for helper discovery, usage tracking, and cadence refresh behavior.
-    status: pending
+    status: completed
 isProject: false
 ---
 

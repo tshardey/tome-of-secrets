@@ -1,7 +1,7 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
-import { buildCurseHelperList } from './curseHelperDiscovery.js';
+import { buildCurseHelperList, buildSourceId } from './curseHelperDiscovery.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -582,15 +582,56 @@ export class StateAdapter {
         const prevCurse = this.state[curseKey] && typeof this.state[curseKey] === 'object' && !Array.isArray(this.state[curseKey])
             ? this.state[curseKey]
             : {};
-        const nextCurse = { ...prevCurse };
+        let nextCurse = { ...prevCurse };
         for (const id of removedSourceIds) {
             delete nextCurse[id];
         }
-        if (Object.keys(nextCurse).length !== Object.keys(prevCurse).length) {
-            this.state[curseKey] = nextCurse;
-            void setStateKey(curseKey, nextCurse);
-        }
+        // Remap remaining tempBuff keys to new indices so usage tracking is preserved after array shift
+        nextCurse = this._remapTempBuffCurseHelperKeys(nextCurse);
+        this.state[curseKey] = nextCurse;
+        void setStateKey(curseKey, nextCurse);
         return true;
+    }
+
+    /**
+     * Remap tempBuff entries in curseHelperState to use current array indices after removals.
+     * Parses keys like "tempBuff:oldIndex_name" and reassigns state to "tempBuff:newIndex_name".
+     * @param {Record<string, { used?: boolean, cooldownCyclesRemaining?: number }>} curseState - Current state after pruning removed ids
+     * @returns {Record<string, { used?: boolean, cooldownCyclesRemaining?: number }>} State with remapped tempBuff keys
+     */
+    _remapTempBuffCurseHelperKeys(curseState) {
+        const tempBuffs = this.state[STORAGE_KEYS.TEMPORARY_BUFFS];
+        if (!Array.isArray(tempBuffs) || tempBuffs.length === 0) {
+            return curseState;
+        }
+        const result = { ...curseState };
+        const tempBuffPrefix = 'tempBuff:';
+        const oldEntries = [];
+        for (const key of Object.keys(result)) {
+            if (!key.startsWith(tempBuffPrefix)) continue;
+            const identifier = key.slice(tempBuffPrefix.length);
+            const firstUnderscore = identifier.indexOf('_');
+            if (firstUnderscore < 0) continue;
+            const oldIndexStr = identifier.slice(0, firstUnderscore);
+            const name = identifier.slice(firstUnderscore + 1);
+            const oldIndex = parseInt(oldIndexStr, 10);
+            if (isNaN(oldIndex) || oldIndex < 0) continue;
+            oldEntries.push({ key, oldIndex, name, entry: result[key] });
+        }
+        if (oldEntries.length === 0) return result;
+        oldEntries.sort((a, b) => a.oldIndex - b.oldIndex);
+        const newEntries = tempBuffs.map((b, i) => ({ newIndex: i, name: b?.name ?? b?.id ?? `Buff ${i}` }));
+        const usedNewIndices = new Set();
+        for (const { key, name, entry } of oldEntries) {
+            const idx = newEntries.findIndex((n, i) => !usedNewIndices.has(i) && n.name === name);
+            if (idx < 0) continue;
+            usedNewIndices.add(idx);
+            const { newIndex } = newEntries[idx];
+            const newKey = buildSourceId('tempBuff', null, `${newIndex}|${name}`);
+            delete result[key];
+            result[newKey] = entry;
+        }
+        return result;
     }
 
     /**

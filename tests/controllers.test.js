@@ -89,6 +89,7 @@ describe('Controllers', () => {
                 renderAtmosphericBuffs: jest.fn(),
                 renderActiveCurses: jest.fn(),
                 renderTemporaryBuffs: jest.fn(),
+                renderWornPageHelpers: jest.fn(),
                 getSlotLimits: jest.fn(() => ({ wearable: 5, nonWearable: 5, familiar: 5 })),
                 populateBackgroundDropdown: jest.fn(),
                 renderAll: jest.fn()
@@ -453,6 +454,45 @@ describe('Controllers', () => {
             const addButton = document.getElementById('add-curse-button');
             expect(curseSelect).toBeTruthy();
             expect(addButton).toBeTruthy();
+        });
+
+        it('handleClick with mark-helper-used-btn calls markCurseHelperUsed and renderWornPageHelpers', () => {
+            stateAdapter.markCurseHelperUsed = jest.fn(() => true);
+            const controller = new CurseController(stateAdapter, form, dependencies);
+            controller.initialize();
+
+            const button = document.createElement('button');
+            button.className = 'mark-helper-used-btn';
+            button.dataset.sourceId = 'item:equipped:0_Chalice';
+            button.dataset.cadence = 'monthly';
+            document.body.appendChild(button);
+
+            const handled = controller.handleClick(button);
+
+            expect(handled).toBe(true);
+            expect(stateAdapter.markCurseHelperUsed).toHaveBeenCalledWith('item:equipped:0_Chalice', { cadence: 'monthly' });
+            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
+            expect(dependencies.saveState).toHaveBeenCalled();
+            document.body.removeChild(button);
+        });
+
+        it('handleClick with undo-helper-used-btn calls undoCurseHelperUsed and renderWornPageHelpers', () => {
+            stateAdapter.undoCurseHelperUsed = jest.fn(() => true);
+            const controller = new CurseController(stateAdapter, form, dependencies);
+            controller.initialize();
+
+            const button = document.createElement('button');
+            button.className = 'undo-helper-used-btn';
+            button.dataset.sourceId = 'ability:Ward';
+            document.body.appendChild(button);
+
+            const handled = controller.handleClick(button);
+
+            expect(handled).toBe(true);
+            expect(stateAdapter.undoCurseHelperUsed).toHaveBeenCalledWith('ability:Ward');
+            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
+            expect(dependencies.saveState).toHaveBeenCalled();
+            document.body.removeChild(button);
         });
     });
 
@@ -1285,6 +1325,32 @@ describe('Controllers', () => {
 
             const buttons = document.querySelectorAll('.end-of-month-button');
             expect(buttons.length).toBeGreaterThan(0);
+        });
+
+        it('end of month flow calls getCurseHelpers, refreshCurseHelpersAtEndOfMonth, and renderWornPageHelpers', () => {
+            const getCurseHelpersSpy = jest.spyOn(stateAdapter, 'getCurseHelpers').mockReturnValue([
+                { sourceId: 'item:equipped:0_Chalice', cadence: 'monthly' }
+            ]);
+            const refreshSpy = jest.spyOn(stateAdapter, 'refreshCurseHelpersAtEndOfMonth').mockReturnValue(true);
+
+            const controller = new EndOfMonthController(stateAdapter, form, dependencies);
+            const completedBooksSet = new Set();
+            const saveCompletedBooksSet = jest.fn();
+            const updateCurrency = jest.fn();
+            controller.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
+
+            const eomButton = document.querySelector('.end-of-month-button');
+            expect(eomButton).toBeTruthy();
+            eomButton.click();
+
+            expect(getCurseHelpersSpy).toHaveBeenCalled();
+            expect(refreshSpy).toHaveBeenCalledWith([
+                { sourceId: 'item:equipped:0_Chalice', cadence: 'monthly' }
+            ]);
+            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
+
+            getCurseHelpersSpy.mockRestore();
+            refreshSpy.mockRestore();
         });
     });
 
