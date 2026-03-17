@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: helper-actions
     content: Handle mark-used/undo actions in CurseController and persist updates.
-    status: pending
+    status: completed
   - id: end-month-refresh
     content: Apply monthly and every-2-month refresh rules in EndOfMonthController and re-render Curse tab.
     status: pending

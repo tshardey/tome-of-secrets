@@ -661,11 +661,13 @@ export async function initializeCharacterSheet() {
             }
         }
         
-        // Allow buttons without index if they're special buttons (delete-ability-btn, remove-passive-item-btn, equip-from-passive-btn)
+        // Allow buttons without index if they're special buttons (delete-ability-btn, remove-passive-item-btn, equip-from-passive-btn, curse helper actions)
         if (!target.dataset.index && 
             !target.classList.contains('delete-ability-btn') && 
             !target.classList.contains('remove-passive-item-btn') &&
-            !target.classList.contains('equip-from-passive-btn')) {
+            !target.classList.contains('equip-from-passive-btn') &&
+            !target.classList.contains('mark-helper-used-btn') &&
+            !target.classList.contains('undo-helper-used-btn')) {
             return;
         }
 
