@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: build-helper-discovery
     content: Implement helper discovery and stable source-ID generation across all selected source types.
-    status: pending
+    status: completed
   - id: curse-tab-ui-section
     content: Add Curse tab helper panel markup and render path in UI/render components.
     status: pending

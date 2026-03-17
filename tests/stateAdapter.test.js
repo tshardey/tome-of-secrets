@@ -481,5 +481,88 @@ describe('StateAdapter', () => {
       expect(summary.ratedMonths).toBe(0);
     });
   });
+
+  describe('curse helpers (Worn Page mitigation)', () => {
+    it('getCurseHelperState returns a copy of persisted helper state', () => {
+      state[STORAGE_KEYS.CURSE_HELPER_STATE] = { 'item:equipped:0|Chalice': { used: true } };
+      const result = adapter.getCurseHelperState();
+      expect(result).toEqual({ 'item:equipped:0|Chalice': { used: true } });
+      expect(result).not.toBe(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
+    });
+
+    it('getCurseHelperState returns empty object when not set', () => {
+      state[STORAGE_KEYS.CURSE_HELPER_STATE] = undefined;
+      expect(adapter.getCurseHelperState()).toEqual({});
+    });
+
+    it('getCurseHelpers discovers item in equipped slot with Worn Page mitigation', () => {
+      state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Chalice of Restoration' }];
+      const catalogs = {
+        allItems: {
+          'Chalice of Restoration': {
+            name: 'Chalice of Restoration',
+            bonus: 'Once per month, you may use this item to remove a Worn Page penalty.'
+          }
+        },
+        temporaryBuffs: {},
+        masteryAbilities: {},
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('item');
+      expect(helpers[0].slotMode).toBe('equipped');
+      expect(helpers[0].name).toBe('Chalice of Restoration');
+      expect(helpers[0].cadence).toBe('monthly');
+      expect(helpers[0].sourceId).toMatch(/^item:equipped:/);
+    });
+
+    it('getCurseHelpers discovers learned ability with Worn Page mitigation', () => {
+      state[STORAGE_KEYS.LEARNED_ABILITIES] = ['Ward Against the Shroud'];
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {},
+        masteryAbilities: {
+          'Ward Against the Shroud': {
+            name: 'Ward Against the Shroud',
+            benefit: 'Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it.'
+          }
+        },
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, {});
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('ability');
+      expect(helpers[0].name).toBe('Ward Against the Shroud');
+      expect(helpers[0].cadence).toBe('monthly');
+      expect(helpers[0].sourceId).toBe('ability:Ward Against the Shroud');
+    });
+
+    it('getCurseHelpers discovers school passive when school option provided', () => {
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {},
+        masteryAbilities: {},
+        schoolBenefits: {
+          Abjuration: {
+            benefit: 'Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.'
+          }
+        },
+        seriesExpedition: { stops: [] }
+      };
+      const helpers = adapter.getCurseHelpers(catalogs, { school: 'Abjuration' });
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('school');
+      expect(helpers[0].name).toBe('Abjuration');
+      expect(helpers[0].cadence).toBe('monthly');
+    });
+
+    it('getCurseHelpers returns empty when no sources and no school', () => {
+      const catalogs = { allItems: {}, temporaryBuffs: {}, masteryAbilities: {}, schoolBenefits: {}, seriesExpedition: { stops: [] } };
+      expect(adapter.getCurseHelpers(catalogs, {})).toEqual([]);
+    });
+  });
 });
 

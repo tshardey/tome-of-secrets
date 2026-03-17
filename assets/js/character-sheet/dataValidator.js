@@ -830,6 +830,32 @@ function validateBookBoxHistory(history, context = STORAGE_KEYS.BOOK_BOX_HISTORY
 }
 
 /**
+ * Validate curse helper state (Schema v11).
+ * Shape: { [sourceId: string]: { used: boolean, cooldownCyclesRemaining?: number } }
+ */
+function validateCurseHelperState(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return {};
+    }
+    const validated = {};
+    for (const key of Object.keys(raw)) {
+        const sourceId = typeof key === 'string' && key.trim() ? key.trim() : null;
+        if (!sourceId) continue;
+        const entry = raw[key];
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+        const used = typeof entry.used === 'boolean' ? entry.used : false;
+        const cooldownCyclesRemaining = typeof entry.cooldownCyclesRemaining === 'number' && !isNaN(entry.cooldownCyclesRemaining) && entry.cooldownCyclesRemaining >= 0
+            ? Math.floor(entry.cooldownCyclesRemaining)
+            : undefined;
+        validated[sourceId] = { used };
+        if (cooldownCyclesRemaining !== undefined) {
+            validated[sourceId].cooldownCyclesRemaining = cooldownCyclesRemaining;
+        }
+    }
+    return validated;
+}
+
+/**
  * Validate and fix character form data
  * @param {*} formData - Form data object
  * @returns {Object} - Validated form data object
@@ -968,6 +994,7 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.SHOPPING_LOG] = validateShoppingLog(state[STORAGE_KEYS.SHOPPING_LOG], STORAGE_KEYS.SHOPPING_LOG);
     validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
     validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
+    validated[STORAGE_KEYS.CURSE_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
 
     return validated;
 }

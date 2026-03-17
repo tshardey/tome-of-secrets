@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
+import { buildCurseHelperList } from './curseHelperDiscovery.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -464,6 +465,23 @@ export class StateAdapter {
             return { changed: true, value: removed };
         });
         return value || null;
+    }
+
+    // Curse tab – Worn Page mitigation helpers
+    getCurseHelperState() {
+        const raw = this.state[STORAGE_KEYS.CURSE_HELPER_STATE];
+        return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    }
+
+    /**
+     * Build current list of Worn Page mitigation helpers from character state and data catalogs.
+     * Assigns stable source IDs per source instance (item slot, buff index, ability, school, expedition stop).
+     * @param {Object} catalogs - { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition }
+     * @param {{ school?: string }} [options] - Optional: current wizard school (from DOM)
+     * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: 'monthly'|'every-2-months'|'one-time' }>}
+     */
+    getCurseHelpers(catalogs, options = {}) {
+        return buildCurseHelperList(this.state, catalogs, options);
     }
 
     // Temporary buffs helpers
