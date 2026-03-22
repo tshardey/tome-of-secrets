@@ -953,6 +953,35 @@ export class QuestController extends BaseController {
     completeMovedQuestFromBook(quest) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
+        const getQuestSignature = (candidate) => {
+            if (!candidate || typeof candidate !== 'object') return '';
+            const normalize = (value) => (value == null ? '' : String(value));
+            return [
+                normalize(candidate.type),
+                normalize(candidate.prompt),
+                normalize(candidate.bookId),
+                normalize(candidate.book),
+                normalize(candidate.month),
+                normalize(candidate.year),
+                normalize(candidate.dateCompleted),
+                normalize(candidate.restorationData?.projectId)
+            ].join('|');
+        };
+        const findCompletedQuestIndex = (candidate) => {
+            const completedList = stateAdapter.getCompletedQuests() || [];
+            const byReference = completedList.findIndex(q => q === candidate);
+            if (byReference >= 0) return byReference;
+
+            const candidateId = candidate && candidate.id != null ? String(candidate.id).trim() : '';
+            if (candidateId) {
+                const byId = completedList.findIndex(q => q && q.id != null && String(q.id).trim() === candidateId);
+                if (byId >= 0) return byId;
+            }
+
+            const signature = getQuestSignature(candidate);
+            if (!signature) return -1;
+            return completedList.findIndex(q => getQuestSignature(q) === signature);
+        };
 
         // Propagate book page count to quest so page-count-aware buffs apply correctly
         BaseQuestHandler.enrichQuestWithBookPageCount(quest, (id) => stateAdapter.getBook(id));
@@ -969,13 +998,15 @@ export class QuestController extends BaseController {
         const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
         completedQuest.month = assignedQuest.month;
         completedQuest.year = assignedQuest.year;
+        if (!completedQuest.id) {
+            completedQuest.id = generateQuestId();
+        }
 
         applyBlueprintRewardToQuest(completedQuest);
 
         const restorationSuccess = this.handleRestorationProjectCompletion(completedQuest);
         if (!restorationSuccess) {
-            const completedList = stateAdapter.getCompletedQuests() || [];
-            const idx = completedList.findIndex(q => q && (String(q.id) === String(quest.id)));
+            const idx = findCompletedQuestIndex(quest);
             if (idx >= 0) {
                 const restored = stateAdapter.removeQuest(STORAGE_KEYS.COMPLETED_QUESTS, idx);
                 if (restored) stateAdapter.addActiveQuests(restored);
@@ -990,8 +1021,7 @@ export class QuestController extends BaseController {
             if (cover) completedQuest.coverUrl = cover;
         }
 
-        const completedList = stateAdapter.getCompletedQuests() || [];
-        const idx = completedList.findIndex(q => q && (String(q.id) === String(quest.id)));
+        const idx = findCompletedQuestIndex(quest);
         if (idx >= 0) {
             stateAdapter.updateQuest(STORAGE_KEYS.COMPLETED_QUESTS, idx, completedQuest);
         }

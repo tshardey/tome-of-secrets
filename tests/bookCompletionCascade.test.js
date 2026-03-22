@@ -152,4 +152,22 @@ describe('Book completion cascade', () => {
     expect(ids).toContain('q-second');
     expect(adapter.getActiveAssignments()).toHaveLength(0);
   });
+
+  it('assigns a generated id when moving a linked active quest without id', () => {
+    const book = adapter.addBook({ title: 'IDless Book', status: 'reading' });
+    adapter.addActiveQuests({
+      type: '♣ Side Quest',
+      prompt: 'No id quest',
+      bookId: book.id
+    });
+
+    const result = adapter.markBookComplete(book.id);
+
+    expect(result).not.toBeNull();
+    expect(result.movedQuests).toHaveLength(1);
+    expect(typeof result.movedQuests[0].id).toBe('string');
+    expect(result.movedQuests[0].id.length).toBeGreaterThan(0);
+    expect(adapter.getCompletedQuests()).toHaveLength(1);
+    expect(typeof adapter.getCompletedQuests()[0].id).toBe('string');
+  });
 });

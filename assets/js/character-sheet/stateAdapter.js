@@ -1620,7 +1620,11 @@ export class StateAdapter {
                 STORAGE_KEYS.ACTIVE_ASSIGNMENTS,
                 idx,
                 STORAGE_KEYS.COMPLETED_QUESTS,
-                q => ({ ...q, dateCompleted: now })
+                q => {
+                    const rawId = q && q.id != null ? String(q.id).trim() : '';
+                    const id = rawId || this._generateId();
+                    return { ...q, id, dateCompleted: now };
+                }
             );
             if (moved) {
                 movedQuests.push(moved);

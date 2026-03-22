@@ -1312,6 +1312,58 @@ describe('Controllers', () => {
                 })
             );
         });
+
+        it('should finalize the correct moved completed quest when multiple entries have null ids', () => {
+            const state = createEmptyCharacterState();
+            const first = {
+                id: null,
+                type: '♣ Side Quest',
+                prompt: 'First idless quest',
+                month: 'March',
+                year: '2026',
+                dateCompleted: '2026-03-10T00:00:00.000Z',
+                book: 'Book A',
+                rewards: { xp: 0, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+            const second = {
+                id: null,
+                type: '♣ Side Quest',
+                prompt: 'Second idless quest',
+                month: 'March',
+                year: '2026',
+                dateCompleted: '2026-03-11T00:00:00.000Z',
+                book: 'Book B',
+                rewards: { xp: 0, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            };
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [first, second];
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            controller.completeMovedQuestFromBook(second);
+
+            const completed = realStateAdapter.getCompletedQuests();
+            expect(completed).toHaveLength(2);
+            expect(completed[0].prompt).toBe('First idless quest');
+            expect(completed[1].prompt).toBe('Second idless quest');
+            expect(typeof completed[1].id).toBe('string');
+            expect(completed[1].id.length).toBeGreaterThan(0);
+        });
     });
 
     describe('EndOfMonthController', () => {
