@@ -148,7 +148,7 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS].length).toBe(2);
         });
 
-        test('should dedupe completed quests by id', () => {
+        test('should dedupe completed quests when id and signature both match', () => {
             const duplicateId = 'quest-dup-1';
             const state = {
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [
@@ -160,6 +160,37 @@ describe('Data Validation', () => {
             const validated = validateCharacterState(state);
             expect(validated[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
             expect(validated[STORAGE_KEYS.COMPLETED_QUESTS][0].id).toBe(duplicateId);
+        });
+
+        test('should keep distinct completed quests when only id collides', () => {
+            const duplicateId = 'quest-dup-1';
+            const state = {
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [
+                    {
+                        id: duplicateId,
+                        type: '🔨 Restoration Project',
+                        prompt: 'Repair Front Desk: Complete this project',
+                        book: 'Book A',
+                        month: 'March',
+                        year: '2026',
+                        restorationData: { projectId: 'repair-front-desk' },
+                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                    },
+                    {
+                        id: duplicateId,
+                        type: '🔨 Restoration Project',
+                        prompt: 'Restore Grand Entrance: Complete this project',
+                        book: 'Book A',
+                        month: 'March',
+                        year: '2026',
+                        restorationData: { projectId: 'restore-grand-entrance' },
+                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                    }
+                ]
+            };
+
+            const validated = validateCharacterState(state);
+            expect(validated[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(2);
         });
 
         test('should dedupe id-less completed quests with identical signature', () => {

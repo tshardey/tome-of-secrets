@@ -282,10 +282,8 @@ function validateQuestArray(quests, context = 'quests') {
 function dedupeCompletedQuests(quests) {
     if (!Array.isArray(quests) || quests.length <= 1) return Array.isArray(quests) ? quests : [];
 
-    function getDedupKey(quest) {
-        if (!quest || typeof quest !== 'object') return null;
-        const id = typeof quest.id === 'string' && quest.id.trim() ? quest.id.trim() : null;
-        if (id) return `id:${id}`;
+    function getSignature(quest) {
+        if (!quest || typeof quest !== 'object') return 'sig:';
         const type = typeof quest.type === 'string' ? quest.type : '';
         const prompt = typeof quest.prompt === 'string' ? quest.prompt : '';
         const bookId = typeof quest.bookId === 'string' ? quest.bookId : '';
@@ -293,7 +291,17 @@ function dedupeCompletedQuests(quests) {
         const month = typeof quest.month === 'string' ? quest.month : '';
         const year = typeof quest.year === 'string' ? quest.year : '';
         const dateCompleted = typeof quest.dateCompleted === 'string' ? quest.dateCompleted : '';
-        return `sig:${type}|${prompt}|${bookId}|${book}|${month}|${year}|${dateCompleted}`;
+        const restorationProjectId = quest.restorationData && typeof quest.restorationData.projectId === 'string'
+            ? quest.restorationData.projectId
+            : '';
+        return `sig:${type}|${prompt}|${bookId}|${book}|${month}|${year}|${dateCompleted}|${restorationProjectId}`;
+    }
+
+    function getDedupKey(quest) {
+        if (!quest || typeof quest !== 'object') return null;
+        const id = typeof quest.id === 'string' && quest.id.trim() ? quest.id.trim() : null;
+        const signature = getSignature(quest);
+        return id ? `id:${id}|${signature}` : signature;
     }
 
     const seen = new Set();

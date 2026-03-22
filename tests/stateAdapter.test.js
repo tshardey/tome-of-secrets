@@ -88,15 +88,39 @@ describe('StateAdapter', () => {
     expect(handlerCompleted).toHaveBeenCalledWith(state[STORAGE_KEYS.COMPLETED_QUESTS]);
   });
 
-  it('addCompletedQuests prevents duplicate quest ids', () => {
+  it('addCompletedQuests prevents exact duplicate completed quest entries', () => {
     const quest = { id: 'restore-front-desk', type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it' };
     adapter.addCompletedQuests(quest);
 
-    const result = adapter.addCompletedQuests({ ...quest, prompt: 'Front Desk: Restore it (duplicate attempt)' });
+    const result = adapter.addCompletedQuests({ ...quest });
 
     expect(result).toEqual([]);
     expect(state[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(1);
     expect(state[STORAGE_KEYS.COMPLETED_QUESTS][0].id).toBe('restore-front-desk');
+  });
+
+  it('addCompletedQuests keeps distinct quests even if ids collide', () => {
+    const sharedId = 'quest-collision';
+    adapter.addCompletedQuests({
+      id: sharedId,
+      type: '🔨 Restoration Project',
+      prompt: 'Repair Front Desk: Complete this project',
+      month: 'March',
+      year: '2026',
+      restorationData: { projectId: 'repair-front-desk' }
+    });
+
+    const result = adapter.addCompletedQuests({
+      id: sharedId,
+      type: '🔨 Restoration Project',
+      prompt: 'Restore Grand Entrance: Complete this project',
+      month: 'March',
+      year: '2026',
+      restorationData: { projectId: 'restore-grand-entrance' }
+    });
+
+    expect(result).toHaveLength(1);
+    expect(state[STORAGE_KEYS.COMPLETED_QUESTS]).toHaveLength(2);
   });
 
   it('addCompletedQuests prevents duplicates for id-less quests with same signature', () => {

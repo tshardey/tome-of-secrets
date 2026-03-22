@@ -235,18 +235,24 @@ export class StateAdapter {
             if (questList.length === 0) {
                 return { changed: false };
             }
+            const normalizeSignaturePart = (value) => (value == null ? '' : String(value));
+            const getQuestSignature = (quest) => {
+                if (!quest || typeof quest !== 'object') return '';
+                const type = normalizeSignaturePart(quest.type);
+                const prompt = normalizeSignaturePart(quest.prompt);
+                const bookId = normalizeSignaturePart(quest.bookId);
+                const book = normalizeSignaturePart(quest.book);
+                const month = normalizeSignaturePart(quest.month);
+                const year = normalizeSignaturePart(quest.year);
+                const dateCompleted = normalizeSignaturePart(quest.dateCompleted);
+                const restorationProjectId = normalizeSignaturePart(quest.restorationData?.projectId);
+                return `sig:${type}|${prompt}|${bookId}|${book}|${month}|${year}|${dateCompleted}|${restorationProjectId}`;
+            };
             const getQuestDedupKey = (quest) => {
                 if (!quest || typeof quest !== 'object') return null;
-                const questId = quest.id != null ? String(quest.id) : '';
-                if (questId) return `id:${questId}`;
-                const type = quest.type != null ? String(quest.type) : '';
-                const prompt = quest.prompt != null ? String(quest.prompt) : '';
-                const bookId = quest.bookId != null ? String(quest.bookId) : '';
-                const book = quest.book != null ? String(quest.book) : '';
-                const month = quest.month != null ? String(quest.month) : '';
-                const year = quest.year != null ? String(quest.year) : '';
-                const dateCompleted = quest.dateCompleted != null ? String(quest.dateCompleted) : '';
-                return `sig:${type}|${prompt}|${bookId}|${book}|${month}|${year}|${dateCompleted}`;
+                const questId = normalizeSignaturePart(quest.id).trim();
+                const signature = getQuestSignature(quest);
+                return questId ? `id:${questId}|${signature}` : signature;
             };
 
             const existingIds = new Set(
