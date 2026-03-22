@@ -20,6 +20,8 @@ export class AutoSyncScheduler {
         this.debounceMs = debounceMs;
         this.debounceTimer = null;
         this.inFlight = false;
+        /** If true, run one more sync after the current one finishes (coalesce skipped triggers). */
+        this.pendingCoalesce = false;
     }
     
     /**
@@ -47,15 +49,20 @@ export class AutoSyncScheduler {
      */
     async executeSync(reason) {
         if (this.inFlight) {
-            console.log(`[AutoSyncScheduler] Sync skipped (already in flight). Reason: ${reason}`);
+            this.pendingCoalesce = true;
+            console.debug(`[AutoSyncScheduler] Sync skipped (already in flight). Reason: ${reason}`);
             return;
         }
-        
+
         this.inFlight = true;
         try {
             await this.syncFn();
         } finally {
             this.inFlight = false;
+            if (this.pendingCoalesce) {
+                this.pendingCoalesce = false;
+                await this.executeSync('coalesced');
+            }
         }
     }
     

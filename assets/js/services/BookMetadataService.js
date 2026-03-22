@@ -6,7 +6,9 @@
  *
  * Rate limits:
  * - Google Books API: default ~100 queries per minute per user; 429 = quota exceeded.
- *   Use a minimum query length (e.g. 3 chars) and debounce (e.g. 600ms) to reduce requests.
+ *   We only call Google when OpenLibrary returns no results, so typing in the library search
+ *   does not hammer Google on every debounced keystroke (OL hits often lack pageCount, which
+ *   previously triggered a Google call every time).
  * - OpenLibrary: no strict published limit; very short queries may return 422.
  *
  * Google Books: https://www.googleapis.com/books/v1/volumes?q=...
@@ -154,10 +156,10 @@ export async function searchBooks(query, author, signal) {
         if (e.name === 'AbortError') throw e;
     }
 
-    // Google Books as supplement — only call if OpenLibrary had gaps or no results
-    const needsBackfill = results.length === 0 ||
-        results.some(r => !r.pageCount || !r.coverUrl);
-    if (needsBackfill) {
+    // Google Books only when OpenLibrary found nothing. Calling Google for every "missing
+    // pageCount or cover" caused a Google request on nearly every debounced search → 429s.
+    const needsGoogleSearch = results.length === 0;
+    if (needsGoogleSearch) {
         try {
             const google = await searchGoogleBooks(query, author, signal);
             for (const book of google) {

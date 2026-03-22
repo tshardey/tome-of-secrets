@@ -67,35 +67,37 @@ describe('AutoSyncScheduler', () => {
             expect(syncFn).toHaveBeenCalledTimes(1);
         });
 
-        it('should prevent concurrent syncs', async () => {
-            // Start a sync that takes time
+        it('should coalesce a second sync requested while the first is in flight', async () => {
+            const dbg = jest.spyOn(console, 'debug').mockImplementation(() => {});
             let resolveSlowSync;
-            const slowSync = jest.fn().mockImplementation(() => {
-                return new Promise(resolve => {
-                    resolveSlowSync = resolve;
-                });
-            });
-            scheduler.syncFn = slowSync;
+            try {
+                const slowSync = jest
+                    .fn()
+                    .mockImplementationOnce(
+                        () =>
+                            new Promise((resolve) => {
+                                resolveSlowSync = resolve;
+                            })
+                    )
+                    .mockImplementationOnce(() => Promise.resolve());
+                scheduler.syncFn = slowSync;
 
-            // Start first sync
-            const promise1 = scheduler.executeSync('sync1');
-            
-            // Verify first sync is in flight
-            expect(scheduler.isInFlight()).toBe(true);
-            
-            // Try to start second sync while first is in flight
-            const promise2 = scheduler.executeSync('sync2');
+                const promise1 = scheduler.executeSync('sync1');
 
-            // Second sync should be skipped (already in flight)
-            expect(slowSync).toHaveBeenCalledTimes(1);
+                expect(scheduler.isInFlight()).toBe(true);
 
-            // Resolve the first sync
-            resolveSlowSync();
-            await promise1;
-            await promise2;
+                const promise2 = scheduler.executeSync('sync2');
 
-            // Should only have called syncFn once (second call was skipped)
-            expect(slowSync).toHaveBeenCalledTimes(1);
+                expect(slowSync).toHaveBeenCalledTimes(1);
+
+                resolveSlowSync();
+                await promise1;
+                await promise2;
+
+                expect(slowSync).toHaveBeenCalledTimes(2);
+            } finally {
+                dbg.mockRestore();
+            }
         });
 
         it('should reset inFlight flag after sync completes', async () => {
