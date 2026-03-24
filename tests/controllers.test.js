@@ -90,6 +90,7 @@ describe('Controllers', () => {
                 renderActiveCurses: jest.fn(),
                 renderTemporaryBuffs: jest.fn(),
                 renderWornPageHelpers: jest.fn(),
+                renderQuestDrawHelpers: jest.fn(),
                 getSlotLimits: jest.fn(() => ({ wearable: 5, nonWearable: 5, familiar: 5 })),
                 populateBackgroundDropdown: jest.fn(),
                 renderAll: jest.fn()
@@ -784,6 +785,47 @@ describe('Controllers', () => {
             controller.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, updateGenreQuestDropdown);
 
             expect(controller.completedBooksSet).toBe(completedBooksSet);
+        });
+
+        it('handleClick with mark-quest-draw-helper-used-btn calls markQuestDrawHelperUsed and renderQuestDrawHelpers', () => {
+            stateAdapter.markQuestDrawHelperUsed = jest.fn(() => true);
+            const controller = new QuestController(stateAdapter, form, dependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            const button = document.createElement('button');
+            button.className = 'mark-quest-draw-helper-used-btn';
+            button.dataset.sourceId = 'school:Divination';
+            button.dataset.cadence = 'monthly';
+            document.body.appendChild(button);
+
+            const handled = controller.handleClick(button);
+
+            expect(handled).toBe(true);
+            expect(stateAdapter.markQuestDrawHelperUsed).toHaveBeenCalledWith('school:Divination', {
+                cadence: 'monthly'
+            });
+            expect(dependencies.ui.renderQuestDrawHelpers).toHaveBeenCalled();
+            expect(dependencies.saveState).toHaveBeenCalled();
+            document.body.removeChild(button);
+        });
+
+        it('handleClick with undo-quest-draw-helper-used-btn calls undoQuestDrawHelperUsed and renderQuestDrawHelpers', () => {
+            stateAdapter.undoQuestDrawHelperUsed = jest.fn(() => true);
+            const controller = new QuestController(stateAdapter, form, dependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            const button = document.createElement('button');
+            button.className = 'undo-quest-draw-helper-used-btn';
+            button.dataset.sourceId = 'item:equipped:0_Lantern';
+            document.body.appendChild(button);
+
+            const handled = controller.handleClick(button);
+
+            expect(handled).toBe(true);
+            expect(stateAdapter.undoQuestDrawHelperUsed).toHaveBeenCalledWith('item:equipped:0_Lantern');
+            expect(dependencies.ui.renderQuestDrawHelpers).toHaveBeenCalled();
+            expect(dependencies.saveState).toHaveBeenCalled();
+            document.body.removeChild(button);
         });
 
         it('should award correct blueprint reward for Speculative Fiction (avoid Fiction substring match)', () => {
