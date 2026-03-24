@@ -469,8 +469,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 10', () => {
-            expect(SCHEMA_VERSION).toBe(11);
+        test('schema version should be 12', () => {
+            expect(SCHEMA_VERSION).toBe(12);
         });
     });
 });
@@ -512,6 +512,17 @@ describe('Data Migration', () => {
 
             const migrated = migrateState(state);
             expect(migrated).toBe(state); // Same object when at current version and no books repair needed
+        });
+
+        test('should initialize curseHelperState (v11) and questDrawHelperState (v12) when upgrading from v10', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '10');
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: []
+            };
+            const migrated = migrateState(state);
+            expect(migrated[STORAGE_KEYS.CURSE_HELPER_STATE]).toEqual({});
+            expect(migrated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]).toEqual({});
+            expect(getStoredSchemaVersion()).toBe(SCHEMA_VERSION);
         });
 
         test('should add missing state keys with defaults', () => {

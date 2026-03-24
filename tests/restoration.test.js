@@ -37,7 +37,7 @@ describe('Library Restoration - Storage Keys', () => {
 
 describe('Library Restoration - Data Validation', () => {
         test('schema version should be 9', () => {
-            expect(SCHEMA_VERSION).toBe(11);
+            expect(SCHEMA_VERSION).toBe(12);
     });
 
     test('should validate dustyBlueprints as number', () => {

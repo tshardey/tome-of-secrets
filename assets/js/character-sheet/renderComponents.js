@@ -18,7 +18,7 @@ import {
     getExtraCreditCardbackImage,
     getRestorationProjectCardFaceImage
 } from '../utils/questCardImage.js';
-import { toCdnImageUrlIfConfigured } from '../utils/imageCdn.js';
+import { toCdnImageUrlIfConfigured, toLocalOrCdnUrl } from '../utils/imageCdn.js';
 
 /**
  * Extract name from a quest prompt (e.g., "The Archivist's Riddle: Read..." -> "The Archivist's Riddle")
@@ -868,13 +868,29 @@ export function renderQuestCard(quest, index, listType = 'active') {
  */
 /**
  * Renders a single Worn Page mitigation helper tile for the Curse tab.
- * @param {Object} helper - { sourceId, sourceType, slotMode?, name, effect, cadence }
+ * @param {Object} helper - { sourceId, sourceType, slotMode?, name, effect, cadence, img? }
  * @param {Object} helperState - Map of sourceId -> { used: boolean, cooldownCyclesRemaining?: number }
+ * @param {{ markUsedButtonClass?: string, undoButtonClass?: string }} [options]
  * @returns {HTMLDivElement}
  */
-export function renderCurseHelperRow(helper, helperState = {}) {
+export function renderCurseHelperRow(helper, helperState = {}, options = {}) {
+    const markUsedClass = options.markUsedButtonClass || 'mark-helper-used-btn';
+    const undoClass = options.undoButtonClass || 'undo-helper-used-btn';
+
     const tile = createElement('div', { class: 'curse-helper-tile' });
     tile.setAttribute('role', 'listitem');
+
+    if (helper.img && typeof helper.img === 'string' && helper.img.trim()) {
+        const media = createElement('div', { class: 'curse-helper-tile__media' });
+        const imgEl = createElement('img', {
+            class: 'curse-helper-tile__image',
+            alt: helper.name ? String(helper.name) : 'Resource'
+        });
+        const baseurl = typeof window !== 'undefined' ? (window.__BASEURL || '') : '';
+        imgEl.src = toLocalOrCdnUrl(helper.img.trim(), baseurl);
+        media.appendChild(imgEl);
+        tile.appendChild(media);
+    }
 
     const entry = helperState[helper.sourceId] || {};
     const used = !!entry.used;
@@ -883,7 +899,8 @@ export function renderCurseHelperRow(helper, helperState = {}) {
     const sourceLabel = formatHelperSourceLabel(helper);
     const cadenceLabel = formatCadenceLabel(helper.cadence);
     const statusText = getHelperStatusText(helper.cadence, used, cooldown);
-    const canMarkUsed = !used && (helper.cadence === 'one-time' || helper.cadence === 'monthly' || (helper.cadence === 'every-2-months' && cooldown === 0));
+    const canMarkUsed = helper.cadence !== 'always' && !used &&
+        (helper.cadence === 'one-time' || helper.cadence === 'monthly' || (helper.cadence === 'every-2-months' && cooldown === 0));
     const canUndo = used && helper.cadence !== 'one-time';
 
     const title = createElement('h4', { class: 'curse-helper-tile__title' });
@@ -904,10 +921,10 @@ export function renderCurseHelperRow(helper, helperState = {}) {
 
     const actions = createElement('div', { class: 'curse-helper-tile__actions no-print' });
     if (canMarkUsed) {
-        actions.appendChild(createHelperActionButton('Mark used', 'mark-helper-used-btn', helper.sourceId, helper.cadence));
+        actions.appendChild(createHelperActionButton('Mark used', markUsedClass, helper.sourceId, helper.cadence));
     }
     if (canUndo) {
-        actions.appendChild(createHelperActionButton('Undo', 'undo-helper-used-btn', helper.sourceId));
+        actions.appendChild(createHelperActionButton('Undo', undoClass, helper.sourceId));
     }
     tile.appendChild(actions);
 
@@ -926,23 +943,44 @@ export function renderCurseHelpersEmptyRow() {
     return empty;
 }
 
+/**
+ * Empty state for Quest tab monthly draw / dice helpers.
+ * @returns {HTMLDivElement}
+ */
+export function renderQuestDrawHelpersEmptyRow() {
+    const empty = document.createElement('div');
+    empty.className = 'curse-helper-empty';
+    empty.setAttribute('role', 'status');
+    empty.textContent = 'No monthly draw or dice helpers detected. Level bonuses, school (e.g. Divination), equipped or passively displayed items and familiars, abilities, and some buffs appear here when they affect the quest pool or rolls. Items sitting only in inventory are not listed.';
+    return empty;
+}
+
 function formatHelperSourceLabel(helper) {
     const { sourceType, slotMode } = helper;
     if (sourceType === 'item' && slotMode) {
         const labels = { equipped: 'equipped', inventory: 'inventory', passiveItem: 'passive', passiveFamiliar: 'passive' };
         return labels[slotMode] || sourceType;
     }
-    const labels = { item: 'item', tempBuff: 'buff', ability: 'ability', school: 'school', seriesExpedition: 'expedition' };
+    const labels = {
+        item: 'item',
+        tempBuff: 'buff',
+        ability: 'ability',
+        school: 'school',
+        seriesExpedition: 'expedition',
+        permanentBonus: 'level bonus'
+    };
     return labels[sourceType] || '';
 }
 
 function formatCadenceLabel(cadence) {
     if (cadence === 'monthly') return 'Monthly';
     if (cadence === 'every-2-months') return 'Every 2 months';
+    if (cadence === 'always') return 'Always applies';
     return 'One-time';
 }
 
 function getHelperStatusText(cadence, used, cooldownCyclesRemaining) {
+    if (cadence === 'always') return 'Always applies when relevant';
     if (used) return 'Used';
     if (cadence === 'every-2-months' && cooldownCyclesRemaining > 0) {
         return `Available in ${cooldownCyclesRemaining} cycle${cooldownCyclesRemaining !== 1 ? 's' : ''}`;

@@ -732,6 +732,23 @@ export class QuestController extends BaseController {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
+        const sourceId = target.dataset.sourceId;
+        if (sourceId && typeof sourceId === 'string') {
+            if (target.classList.contains('mark-quest-draw-helper-used-btn')) {
+                const cadence = target.dataset.cadence || undefined;
+                stateAdapter.markQuestDrawHelperUsed(sourceId, cadence ? { cadence } : {});
+                if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
+                this.saveState();
+                return true;
+            }
+            if (target.classList.contains('undo-quest-draw-helper-used-btn')) {
+                stateAdapter.undoQuestDrawHelperUsed(sourceId);
+                if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
+                this.saveState();
+                return true;
+            }
+        }
+
         if (!target.dataset.index) return false;
 
         const index = parseInt(target.dataset.index || '0', 10);

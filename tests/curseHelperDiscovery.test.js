@@ -109,7 +109,8 @@ describe('curseHelperDiscovery', () => {
                 allItems: {
                     'Chalice of Restoration': {
                         name: 'Chalice of Restoration',
-                        bonus: 'Once per month, you may use this item to remove a Worn Page penalty.'
+                        bonus: 'Once per month, you may use this item to remove a Worn Page penalty.',
+                        img: 'assets/images/rewards/chalice.png'
                     }
                 }
             };
@@ -120,6 +121,7 @@ describe('curseHelperDiscovery', () => {
             expect(helpers[0].name).toBe('Chalice of Restoration');
             expect(helpers[0].cadence).toBe('monthly');
             expect(helpers[0].sourceId).toMatch(/^item:equipped:/);
+            expect(helpers[0].img).toBe('assets/images/rewards/chalice.png');
         });
 
         it('discovers inventory item with Worn Page mitigation', () => {
@@ -163,7 +165,8 @@ describe('curseHelperDiscovery', () => {
                 allItems: {
                     Talisman: {
                         name: 'Talisman',
-                        passiveBonus: 'Once per month, remove a Worn Page penalty.'
+                        passiveBonus: 'Once per month, remove a Worn Page penalty.',
+                        img: 'assets/images/rewards/talisman.png'
                     }
                 }
             };
@@ -173,6 +176,7 @@ describe('curseHelperDiscovery', () => {
             expect(helpers[0].slotMode).toBe('passiveItem');
             expect(helpers[0].name).toBe('Talisman');
             expect(helpers[0].sourceId).toMatch(/^item:passiveItem:/);
+            expect(helpers[0].img).toBe('assets/images/rewards/talisman.png');
         });
 
         it('discovers passive familiar slot with passiveBonus mitigation', () => {

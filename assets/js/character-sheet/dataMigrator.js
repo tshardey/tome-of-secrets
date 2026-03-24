@@ -280,6 +280,32 @@ function migrateToVersion10(state) {
 }
 
 /**
+ * Migration from schema version 10 to version 11
+ * - Adds curseHelperState ({}) for Worn Page mitigation helper usage / cooldown tracking
+ */
+function migrateToVersion11(state) {
+    const migrated = { ...state };
+    const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
+        migrated[key] = {};
+    }
+    return migrated;
+}
+
+/**
+ * Migration from schema version 11 to version 12
+ * - Adds questDrawHelperState ({}) for monthly draw / dice helper usage
+ */
+function migrateToVersion12(state) {
+    const migrated = { ...state };
+    const key = STORAGE_KEYS.QUEST_DRAW_HELPER_STATE;
+    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
+        migrated[key] = {};
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -555,6 +581,12 @@ export function migrateState(state) {
                 break;
             case 10:
                 migratedState = migrateToVersion10(migratedState);
+                break;
+            case 11:
+                migratedState = migrateToVersion11(migratedState);
+                break;
+            case 12:
+                migratedState = migrateToVersion12(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

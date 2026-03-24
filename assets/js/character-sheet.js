@@ -345,7 +345,8 @@ export async function initializeCharacterSheet() {
             { buttonSelector: '.rpg-campaigns-add-panel .panel-toggle-btn', storageKey: 'campaigns-add-panel-body' },
             { buttonSelector: '.rpg-external-curriculum-add-panel .panel-toggle-btn', storageKey: 'external-curriculum-add-panel-body' },
             { buttonSelector: '.rpg-temporary-buffs-panel .panel-toggle-btn', storageKey: 'temporary-buffs-panel-body' },
-            { buttonSelector: '.rpg-quest-card-draw-panel .panel-toggle-btn', storageKey: 'quest-card-draw-panel-body' }
+            { buttonSelector: '.rpg-quest-card-draw-panel .panel-toggle-btn', storageKey: 'quest-card-draw-panel-body' },
+            { buttonSelector: '.rpg-quest-draw-helpers-panel .panel-toggle-btn', storageKey: 'quest-draw-helpers-panel-body' }
         ];
 
         const stored = safeGetJSON(STORAGE_KEYS.COLLAPSED_PANELS, {});
@@ -667,7 +668,9 @@ export async function initializeCharacterSheet() {
             !target.classList.contains('remove-passive-item-btn') &&
             !target.classList.contains('equip-from-passive-btn') &&
             !target.classList.contains('mark-helper-used-btn') &&
-            !target.classList.contains('undo-helper-used-btn')) {
+            !target.classList.contains('undo-helper-used-btn') &&
+            !target.classList.contains('mark-quest-draw-helper-used-btn') &&
+            !target.classList.contains('undo-quest-draw-helper-used-btn')) {
             return;
         }
 

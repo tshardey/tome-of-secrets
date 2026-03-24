@@ -729,5 +729,135 @@ describe('StateAdapter', () => {
       expect(adapter.undoCurseHelperUsed('item:equipped:0_Chalice')).toBe(false);
     });
   });
+
+  describe('quest draw helpers (monthly pool / dice)', () => {
+    it('getQuestDrawHelperState returns a copy of persisted helper state', () => {
+      state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = { 'school:Divination': { used: true } };
+      const result = adapter.getQuestDrawHelperState();
+      expect(result).toEqual({ 'school:Divination': { used: true } });
+      expect(result).not.toBe(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
+    });
+
+    it('getQuestDrawHelperState returns empty object when not set', () => {
+      state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = undefined;
+      expect(adapter.getQuestDrawHelperState()).toEqual({});
+    });
+
+    it('getQuestDrawHelpers discovers Divination school benefit', () => {
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {},
+        masteryAbilities: {},
+        schoolBenefits: {
+          Divination: {
+            benefit:
+              'Once per month, you may roll 2 dice instead of 1 for a Monthly Quest, and choose which result you want to use.'
+          }
+        },
+        seriesExpedition: { stops: [] },
+        permanentBonuses: {}
+      };
+      const helpers = adapter.getQuestDrawHelpers(catalogs, { school: 'Divination' });
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].sourceType).toBe('school');
+      expect(helpers[0].cadence).toBe('monthly');
+    });
+
+    it('markQuestDrawHelperUsed sets used and returns true on first use', () => {
+      const sourceId = 'school:Divination';
+      const result = adapter.markQuestDrawHelperUsed(sourceId, { cadence: 'monthly' });
+      expect(result).toBe(true);
+      expect(adapter.getQuestDrawHelperState()[sourceId]).toEqual({ used: true });
+    });
+
+    it('markQuestDrawHelperUsed returns false for cadence always', () => {
+      const sourceId = 'ability:Flicker of Prophecy';
+      expect(adapter.markQuestDrawHelperUsed(sourceId, { cadence: 'always' })).toBe(false);
+      expect(adapter.getQuestDrawHelperState()[sourceId]).toBeUndefined();
+    });
+
+    it('markQuestDrawHelperUsed returns false when already used', () => {
+      const sourceId = 'item:equipped:0_Lantern';
+      adapter.markQuestDrawHelperUsed(sourceId, {});
+      expect(adapter.markQuestDrawHelperUsed(sourceId, {})).toBe(false);
+    });
+
+    it('markQuestDrawHelperUsed with cadence every-2-months sets cooldownCyclesRemaining to 2', () => {
+      const sourceId = 'item:inventory:0_Spellbook';
+      adapter.markQuestDrawHelperUsed(sourceId, { cadence: 'every-2-months' });
+      expect(adapter.getQuestDrawHelperState()[sourceId]).toEqual({
+        used: true,
+        cooldownCyclesRemaining: 2
+      });
+    });
+
+    it('refreshQuestDrawHelpersAtEndOfMonth restores monthly helper', () => {
+      const sourceId = 'school:Divination';
+      adapter.markQuestDrawHelperUsed(sourceId, { cadence: 'monthly' });
+      const helpers = [{ sourceId, cadence: 'monthly' }];
+      expect(adapter.refreshQuestDrawHelpersAtEndOfMonth(helpers)).toBe(true);
+      expect(adapter.getQuestDrawHelperState()[sourceId].used).toBe(false);
+    });
+
+    it('refreshQuestDrawHelpersAtEndOfMonth decrements every-2-months cooldown', () => {
+      const sourceId = 'ability:Test';
+      adapter.markQuestDrawHelperUsed(sourceId, { cadence: 'every-2-months' });
+      const helpers = [{ sourceId, cadence: 'every-2-months' }];
+      adapter.refreshQuestDrawHelpersAtEndOfMonth(helpers);
+      expect(adapter.getQuestDrawHelperState()[sourceId].cooldownCyclesRemaining).toBe(1);
+      adapter.refreshQuestDrawHelpersAtEndOfMonth(helpers);
+      expect(adapter.getQuestDrawHelperState()[sourceId].cooldownCyclesRemaining).toBe(0);
+      expect(adapter.getQuestDrawHelperState()[sourceId].used).toBe(false);
+    });
+
+    it('quest draw helper state is independent from curse helper state', () => {
+      const qid = 'item:equipped:0_Shared';
+      adapter.markQuestDrawHelperUsed(qid, { cadence: 'monthly' });
+      adapter.markCurseHelperUsed(qid, { cadence: 'monthly' });
+      expect(adapter.getQuestDrawHelperState()[qid].used).toBe(true);
+      expect(adapter.getCurseHelperState()[qid].used).toBe(true);
+      adapter.undoQuestDrawHelperUsed(qid);
+      expect(adapter.getQuestDrawHelperState()[qid].used).toBe(false);
+      expect(adapter.getCurseHelperState()[qid].used).toBe(true);
+    });
+
+    it('removeUsedOneTimeQuestDrawTempBuffsAtEOM removes used one-time matching buff', () => {
+      state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
+        { name: 'ArchivistFavorTest', description: 'Choose one: reroll a prompt, or gain +100 XP.' }
+      ];
+      const catalogs = {
+        allItems: {},
+        temporaryBuffs: {
+          ArchivistFavorTest: {
+            name: 'ArchivistFavorTest',
+            description: 'Choose one: reroll a prompt, or gain +100 XP.'
+          }
+        },
+        masteryAbilities: {},
+        schoolBenefits: {},
+        seriesExpedition: { stops: [] },
+        permanentBonuses: {}
+      };
+      const helpers = adapter.getQuestDrawHelpers(catalogs, {});
+      expect(helpers).toHaveLength(1);
+      expect(helpers[0].cadence).toBe('one-time');
+      adapter.markQuestDrawHelperUsed(helpers[0].sourceId, {});
+      const removed = adapter.removeUsedOneTimeQuestDrawTempBuffsAtEOM(helpers);
+      expect(removed).toBe(true);
+      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS]).toHaveLength(0);
+      expect(adapter.getQuestDrawHelperState()[helpers[0].sourceId]).toBeUndefined();
+    });
+
+    it('undoQuestDrawHelperUsed clears used flag', () => {
+      const sourceId = 'school:Divination';
+      adapter.markQuestDrawHelperUsed(sourceId, { cadence: 'monthly' });
+      expect(adapter.undoQuestDrawHelperUsed(sourceId)).toBe(true);
+      expect(adapter.getQuestDrawHelperState()[sourceId].used).toBe(false);
+    });
+
+    it('undoQuestDrawHelperUsed returns false when not used', () => {
+      expect(adapter.undoQuestDrawHelperUsed('school:Divination')).toBe(false);
+    });
+  });
 });
 
