@@ -717,10 +717,21 @@ permalink: /character-sheet.html
             </button>
         </div>
         <div class="rpg-panel-body" id="quest-card-draw-panel-body">
-            <div id="quest-draw-helpers-container" class="rpg-panel rpg-quest-draw-helpers-panel" style="margin-bottom: 1rem;">
-                <h3 id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
-                <p class="deck-hint">Sources that affect establishing your monthly quest pool or related dice rolls. Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
-                <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
+            <div class="rpg-panel rpg-quest-draw-helpers-panel" style="margin-bottom: 1rem;">
+                <div class="rpg-panel-header">
+                    <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                    <button type="button"
+                            class="panel-toggle-btn"
+                            data-panel-target="quest-draw-helpers-panel-body"
+                            aria-expanded="true"
+                            aria-controls="quest-draw-helpers-panel-body">
+                        Hide
+                    </button>
+                </div>
+                <div class="rpg-panel-body" id="quest-draw-helpers-panel-body">
+                    <p class="deck-hint">Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                    <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
+                </div>
             </div>
             <div class="quest-deck-interface">
                 <div class="deck-section">

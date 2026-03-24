@@ -89,12 +89,25 @@ function getExpeditionStops(raw) {
 }
 
 /**
+ * @param {Object} base - Helper row without img
+ * @param {{ img?: string } | null | undefined} source - Catalog object that may carry `img`
+ * @returns {Object}
+ */
+function withOptionalImg(base, source) {
+    const img = source?.img;
+    if (img && typeof img === 'string' && img.trim()) {
+        return { ...base, img: img.trim() };
+    }
+    return base;
+}
+
+/**
  * Build the current list of Worn Page mitigation helpers from character state and data catalogs.
- * Each helper has: sourceId, sourceType, slotMode (optional), name, effect, cadence.
+ * Each helper has: sourceId, sourceType, slotMode (optional), name, effect, cadence, and optional img for items/buffs.
  * @param {Object} state - Character state (from StateAdapter)
  * @param {Object} catalogs - Data: { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition }
  * @param {{ school?: string }} [options] - Optional: current wizard school (from DOM)
- * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: 'monthly'|'every-2-months'|'one-time' }>}
+ * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: 'monthly'|'every-2-months'|'one-time', img?: string }>}
  */
 export function buildCurseHelperList(state, catalogs, options = {}) {
     const out = [];
@@ -110,14 +123,14 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             if (!item) return;
             const bonus = item.bonus;
             if (bonus && isWornPageMitigation(bonus)) {
-                out.push({
+                out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'equipped', `${index}|${item.name ?? name}`),
                     sourceType: 'item',
                     slotMode: 'equipped',
                     name: item.name ?? name,
                     effect: bonus,
                     cadence: getCadenceFromText(bonus)
-                });
+                }, item));
             }
         });
     }
@@ -131,14 +144,14 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             if (!item) return;
             const bonus = item.bonus;
             if (bonus && isWornPageMitigation(bonus)) {
-                out.push({
+                out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'inventory', `${index}|${item.name ?? name}`),
                     sourceType: 'item',
                     slotMode: 'inventory',
                     name: item.name ?? name,
                     effect: bonus,
                     cadence: getCadenceFromText(bonus)
-                });
+                }, item));
             }
         });
     }
@@ -154,14 +167,14 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const passiveBonus = item.passiveBonus;
             if (passiveBonus && isWornPageMitigation(passiveBonus)) {
                 const slotId = slot?.slotId ?? 'unknown';
-                out.push({
+                out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'passiveItem', `${slotId}|${item.name ?? itemName}`),
                     sourceType: 'item',
                     slotMode: 'passiveItem',
                     name: item.name ?? itemName,
                     effect: passiveBonus,
                     cadence: getCadenceFromText(passiveBonus)
-                });
+                }, item));
             }
         });
     }
@@ -177,14 +190,14 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const passiveBonus = item.passiveBonus;
             if (passiveBonus && isWornPageMitigation(passiveBonus)) {
                 const slotId = slot?.slotId ?? 'unknown';
-                out.push({
+                out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'passiveFamiliar', `${slotId}|${item.name ?? itemName}`),
                     sourceType: 'item',
                     slotMode: 'passiveFamiliar',
                     name: item.name ?? itemName,
                     effect: passiveBonus,
                     cadence: getCadenceFromText(passiveBonus)
-                });
+                }, item));
             }
         });
     }
@@ -197,13 +210,13 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const catalogBuff = temporaryBuffs[name] ?? Object.values(temporaryBuffs).find(b => b?.name === name || b?.id === name);
             const description = catalogBuff?.description ?? entry?.description;
             if (description && isWornPageMitigation(description)) {
-                out.push({
+                out.push(withOptionalImg({
                     sourceId: buildSourceId('tempBuff', null, `${index}|${name}`),
                     sourceType: 'tempBuff',
                     name: catalogBuff?.name ?? name,
                     effect: description,
                     cadence: getCadenceFromText(description)
-                });
+                }, catalogBuff));
             }
         });
     }

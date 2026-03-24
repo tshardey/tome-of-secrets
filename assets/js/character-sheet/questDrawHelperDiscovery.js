@@ -114,21 +114,25 @@ function getExpeditionStops(raw) {
 function pushHelper(out, fields) {
     const plainEffect = fields.effectPlain ?? fields.effect;
     const cadence = classifyQuestDrawCadence(plainEffect, { sourceType: fields.sourceType });
-    out.push({
+    const row = {
         sourceId: fields.sourceId,
         sourceType: fields.sourceType,
         slotMode: fields.slotMode,
         name: fields.name,
         effect: fields.effectDisplay ?? plainEffect,
         cadence
-    });
+    };
+    if (fields.img && typeof fields.img === 'string' && fields.img.trim()) {
+        row.img = fields.img.trim();
+    }
+    out.push(row);
 }
 
 /**
  * @param {Object} state
  * @param {Object} catalogs - { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition, permanentBonuses }
  * @param {{ school?: string, level?: number }} [options]
- * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: string }>}
+ * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: string, img?: string }>}
  */
 export function buildQuestDrawHelperList(state, catalogs, options = {}) {
     const out = [];
@@ -157,31 +161,14 @@ export function buildQuestDrawHelperList(state, catalogs, options = {}) {
                     slotMode: 'equipped',
                     name: item.name ?? name,
                     effect: bonus,
-                    effectPlain: bonus
+                    effectPlain: bonus,
+                    img: item.img
                 });
             }
         });
     }
 
-    const inventory = state[STORAGE_KEYS.INVENTORY_ITEMS];
-    if (Array.isArray(inventory)) {
-        inventory.forEach((entry, index) => {
-            const name = entry?.name ?? entry;
-            const item = typeof name === 'string' ? (allItems[name] ?? Object.values(allItems).find(i => i?.name === name)) : null;
-            if (!item) return;
-            const bonus = item.bonus;
-            if (bonus && isQuestDrawHelperText(bonus)) {
-                pushHelper(out, {
-                    sourceId: buildSourceId('item', 'inventory', `${index}|${item.name ?? name}`),
-                    sourceType: 'item',
-                    slotMode: 'inventory',
-                    name: item.name ?? name,
-                    effect: bonus,
-                    effectPlain: bonus
-                });
-            }
-        });
-    }
+    // Inventory-only items are omitted: helpers reflect equipped, passive display, and passive familiar slots only.
 
     const passiveItemSlots = state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS];
     if (Array.isArray(passiveItemSlots)) {
@@ -199,7 +186,8 @@ export function buildQuestDrawHelperList(state, catalogs, options = {}) {
                     slotMode: 'passiveItem',
                     name: item.name ?? itemName,
                     effect: passiveBonus,
-                    effectPlain: passiveBonus
+                    effectPlain: passiveBonus,
+                    img: item.img
                 });
             }
         });
@@ -221,7 +209,8 @@ export function buildQuestDrawHelperList(state, catalogs, options = {}) {
                     slotMode: 'passiveFamiliar',
                     name: item.name ?? itemName,
                     effect: passiveBonus,
-                    effectPlain: passiveBonus
+                    effectPlain: passiveBonus,
+                    img: item.img
                 });
             }
         });
@@ -239,7 +228,8 @@ export function buildQuestDrawHelperList(state, catalogs, options = {}) {
                     sourceType: 'tempBuff',
                     name: catalogBuff?.name ?? name,
                     effect: description,
-                    effectPlain: description
+                    effectPlain: description,
+                    img: catalogBuff?.img
                 });
             }
         });

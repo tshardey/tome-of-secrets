@@ -185,7 +185,8 @@ describe('questDrawHelperDiscovery', () => {
                 allItems: {
                     'Test Lantern': {
                         name: 'Test Lantern',
-                        bonus: 'Once per month, re-roll a prompt or a die roll when drawing quests.'
+                        bonus: 'Once per month, re-roll a prompt or a die roll when drawing quests.',
+                        img: 'assets/images/rewards/test-lantern.png'
                     }
                 }
             };
@@ -194,6 +195,26 @@ describe('questDrawHelperDiscovery', () => {
             expect(helpers[0].sourceType).toBe('item');
             expect(helpers[0].slotMode).toBe('equipped');
             expect(helpers[0].cadence).toBe('monthly');
+            expect(helpers[0].img).toBe('assets/images/rewards/test-lantern.png');
+        });
+
+        it('does not list inventory-only items', () => {
+            const state = {
+                ...emptyState,
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                [STORAGE_KEYS.INVENTORY_ITEMS]: [{ name: 'Inventory Only Lantern' }]
+            };
+            const catalogs = {
+                ...baseCatalogs,
+                allItems: {
+                    'Inventory Only Lantern': {
+                        name: 'Inventory Only Lantern',
+                        bonus: 'Once per month, re-roll a prompt or a die roll when drawing quests.',
+                        img: 'assets/images/rewards/foo.png'
+                    }
+                }
+            };
+            expect(buildQuestDrawHelperList(state, catalogs, {})).toHaveLength(0);
         });
     });
 });
