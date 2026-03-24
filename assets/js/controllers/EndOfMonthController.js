@@ -100,21 +100,31 @@ export class EndOfMonthController extends BaseController {
             uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
 
             // Refresh Worn Page mitigation helpers: monthly → restore each cycle; every-2-months → restore every second cycle
-            const curseHelperCatalogs = {
+            const helperCatalogs = {
                 allItems: data.allItems || {},
                 temporaryBuffs: { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) },
                 masteryAbilities: data.masteryAbilities || {},
                 schoolBenefits: data.schoolBenefits || {},
-                seriesExpedition: data.seriesCompletionRewards || {}
+                seriesExpedition: data.seriesCompletionRewards || {},
+                permanentBonuses: data.permanentBonuses || {}
             };
             const school = document.getElementById('wizardSchool')?.value || '';
-            const curseHelpers = stateAdapter.getCurseHelpers(curseHelperCatalogs, { school });
+            const curseHelpers = stateAdapter.getCurseHelpers(helperCatalogs, { school });
             stateAdapter.refreshCurseHelpersAtEndOfMonth(curseHelpers);
             // Remove one-time Worn Page temp buffs that were marked used (they expire after this EOM)
             if (stateAdapter.removeUsedOneTimeWornPageTempBuffsAtEOM(curseHelpers)) {
                 uiModule.renderTemporaryBuffs();
             }
             if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
+
+            const levelRaw = document.getElementById('level')?.value;
+            const level = Math.max(1, parseInt(levelRaw, 10) || 1);
+            const questDrawHelpers = stateAdapter.getQuestDrawHelpers(helperCatalogs, { school, level });
+            stateAdapter.refreshQuestDrawHelpersAtEndOfMonth(questDrawHelpers);
+            if (stateAdapter.removeUsedOneTimeQuestDrawTempBuffsAtEOM(questDrawHelpers)) {
+                uiModule.renderTemporaryBuffs();
+            }
+            if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
 
             this.saveState();
 

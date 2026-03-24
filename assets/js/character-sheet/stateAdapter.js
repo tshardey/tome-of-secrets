@@ -2,6 +2,7 @@ import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
 import { buildCurseHelperList, buildSourceId } from './curseHelperDiscovery.js';
+import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -648,6 +649,157 @@ export class StateAdapter {
     undoCurseHelperUsed(sourceId) {
         if (!sourceId || typeof sourceId !== 'string') return false;
         const key = STORAGE_KEYS.CURSE_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
+        if (!entry.used) return false;
+        const nextEntry = { ...entry, used: false };
+        const next = { ...prev, [sourceId]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    // Quest tab – monthly draw / dice helpers
+    getQuestDrawHelperState() {
+        const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE];
+        return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    }
+
+    /**
+     * @param {Object} catalogs - { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition, permanentBonuses }
+     * @param {{ school?: string, level?: number }} [options]
+     */
+    getQuestDrawHelpers(catalogs, options = {}) {
+        return buildQuestDrawHelperList(this.state, catalogs, options);
+    }
+
+    markQuestDrawHelperUsed(sourceId, options = {}) {
+        if (!sourceId || typeof sourceId !== 'string') return false;
+        if (options.cadence === 'always') return false;
+        const key = STORAGE_KEYS.QUEST_DRAW_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
+        if (entry.used) return false;
+        const nextEntry = { ...entry, used: true };
+        if (options.cadence === 'every-2-months') {
+            nextEntry.cooldownCyclesRemaining = 2;
+        }
+        const next = { ...prev, [sourceId]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    refreshQuestDrawHelpersAtEndOfMonth(helpers) {
+        if (!Array.isArray(helpers) || helpers.length === 0) return false;
+        const key = STORAGE_KEYS.QUEST_DRAW_HELPER_STATE;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        let changed = false;
+        const next = { ...prev };
+        for (const { sourceId, cadence } of helpers) {
+            if (cadence === 'one-time' || cadence === 'always') continue;
+            const entry = next[sourceId] && typeof next[sourceId] === 'object' ? { ...next[sourceId] } : {};
+            if (cadence === 'monthly') {
+                if (entry.used) {
+                    next[sourceId] = { ...entry, used: false };
+                    changed = true;
+                }
+            } else if (cadence === 'every-2-months') {
+                const cooldown = entry.cooldownCyclesRemaining != null ? entry.cooldownCyclesRemaining : 0;
+                if (cooldown > 0) {
+                    const newCooldown = cooldown - 1;
+                    next[sourceId] = { ...entry, cooldownCyclesRemaining: newCooldown, used: newCooldown === 0 ? false : entry.used };
+                    changed = true;
+                }
+            }
+        }
+        if (!changed) return false;
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    removeUsedOneTimeQuestDrawTempBuffsAtEOM(helpers) {
+        if (!Array.isArray(helpers)) return false;
+        const helperState = this.getQuestDrawHelperState();
+        const toRemove = [];
+        for (const h of helpers) {
+            if (h.sourceType !== 'tempBuff' || h.cadence !== 'one-time') continue;
+            const entry = helperState[h.sourceId];
+            if (!entry || !entry.used) continue;
+            const match = h.sourceId.match(/^tempBuff:(.+)$/);
+            if (!match) continue;
+            const identifier = match[1];
+            const underscoreIdx = identifier.indexOf('_');
+            const indexStr = underscoreIdx >= 0 ? identifier.slice(0, underscoreIdx) : identifier;
+            const index = parseInt(indexStr, 10);
+            if (isNaN(index) || index < 0) continue;
+            toRemove.push({ sourceId: h.sourceId, index });
+        }
+        if (toRemove.length === 0) return false;
+        toRemove.sort((a, b) => b.index - a.index);
+        const removedSourceIds = new Set(toRemove.map(r => r.sourceId));
+        for (const { index } of toRemove) {
+            this.removeTemporaryBuff(index);
+        }
+        const qKey = STORAGE_KEYS.QUEST_DRAW_HELPER_STATE;
+        const prevQ = this.state[qKey] && typeof this.state[qKey] === 'object' && !Array.isArray(this.state[qKey])
+            ? this.state[qKey]
+            : {};
+        let nextQ = { ...prevQ };
+        for (const id of removedSourceIds) {
+            delete nextQ[id];
+        }
+        nextQ = this._remapTempBuffQuestDrawHelperKeys(nextQ);
+        this.state[qKey] = nextQ;
+        void setStateKey(qKey, nextQ);
+        return true;
+    }
+
+    _remapTempBuffQuestDrawHelperKeys(questState) {
+        const tempBuffs = this.state[STORAGE_KEYS.TEMPORARY_BUFFS];
+        if (!Array.isArray(tempBuffs) || tempBuffs.length === 0) {
+            return questState;
+        }
+        const result = { ...questState };
+        const tempBuffPrefix = 'tempBuff:';
+        const oldEntries = [];
+        for (const key of Object.keys(result)) {
+            if (!key.startsWith(tempBuffPrefix)) continue;
+            const identifier = key.slice(tempBuffPrefix.length);
+            const firstUnderscore = identifier.indexOf('_');
+            if (firstUnderscore < 0) continue;
+            const oldIndexStr = identifier.slice(0, firstUnderscore);
+            const name = identifier.slice(firstUnderscore + 1);
+            const oldIndex = parseInt(oldIndexStr, 10);
+            if (isNaN(oldIndex) || oldIndex < 0) continue;
+            oldEntries.push({ key, oldIndex, name, entry: result[key] });
+        }
+        if (oldEntries.length === 0) return result;
+        oldEntries.sort((a, b) => a.oldIndex - b.oldIndex);
+        const newEntries = tempBuffs.map((b, i) => ({ newIndex: i, name: b?.name ?? b?.id ?? `Buff ${i}` }));
+        const usedNewIndices = new Set();
+        for (const { key, name, entry } of oldEntries) {
+            const idx = newEntries.findIndex((n, i) => !usedNewIndices.has(i) && n.name === name);
+            if (idx < 0) continue;
+            usedNewIndices.add(idx);
+            const { newIndex } = newEntries[idx];
+            const newKey = buildSourceId('tempBuff', null, `${newIndex}|${name}`);
+            delete result[key];
+            result[newKey] = entry;
+        }
+        return result;
+    }
+
+    undoQuestDrawHelperUsed(sourceId) {
+        if (!sourceId || typeof sourceId !== 'string') return false;
+        const key = STORAGE_KEYS.QUEST_DRAW_HELPER_STATE;
         const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
             ? this.state[key]
             : {};

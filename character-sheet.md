@@ -717,6 +717,11 @@ permalink: /character-sheet.html
             </button>
         </div>
         <div class="rpg-panel-body" id="quest-card-draw-panel-body">
+            <div id="quest-draw-helpers-container" class="rpg-panel rpg-quest-draw-helpers-panel" style="margin-bottom: 1rem;">
+                <h3 id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                <p class="deck-hint">Sources that affect establishing your monthly quest pool or related dice rolls. Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
+            </div>
             <div class="quest-deck-interface">
                 <div class="deck-section">
                     <div class="deck-group">

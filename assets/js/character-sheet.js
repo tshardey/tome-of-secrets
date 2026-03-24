@@ -667,7 +667,9 @@ export async function initializeCharacterSheet() {
             !target.classList.contains('remove-passive-item-btn') &&
             !target.classList.contains('equip-from-passive-btn') &&
             !target.classList.contains('mark-helper-used-btn') &&
-            !target.classList.contains('undo-helper-used-btn')) {
+            !target.classList.contains('undo-helper-used-btn') &&
+            !target.classList.contains('mark-quest-draw-helper-used-btn') &&
+            !target.classList.contains('undo-quest-draw-helper-used-btn')) {
             return;
         }
 

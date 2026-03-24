@@ -23,8 +23,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
  * Version 10: Shopping/subscription state (shoppingLog, bookBoxSubscriptions, bookBoxHistory) and book shelfCategory
  * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState: usage/cooldown per source)
+ * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: same shape as curse helpers)
  */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 /**
  * Schema version key in localStorage
@@ -1003,6 +1004,7 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
     validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
     validated[STORAGE_KEYS.CURSE_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
+    validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
 
     return validated;
 }

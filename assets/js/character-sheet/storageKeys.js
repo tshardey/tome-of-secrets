@@ -44,7 +44,9 @@ export const STORAGE_KEYS = Object.freeze({
     BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
     BOOK_BOX_HISTORY: 'bookBoxHistory',
     // Curse tab – Worn Page mitigation helpers (usage and cooldown per source)
-    CURSE_HELPER_STATE: 'curseHelperState'
+    CURSE_HELPER_STATE: 'curseHelperState',
+    // Quest tab – monthly draw / dice helpers (usage and cooldown per source)
+    QUEST_DRAW_HELPER_STATE: 'questDrawHelperState'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -78,7 +80,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.SHOPPING_LOG,
     STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
     STORAGE_KEYS.BOOK_BOX_HISTORY,
-    STORAGE_KEYS.CURSE_HELPER_STATE
+    STORAGE_KEYS.CURSE_HELPER_STATE,
+    STORAGE_KEYS.QUEST_DRAW_HELPER_STATE
 ]);
 
 export function createEmptyCharacterState() {
@@ -113,7 +116,8 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.SHOPPING_LOG]: [],
         [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
         [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
-        [STORAGE_KEYS.CURSE_HELPER_STATE]: {}
+        [STORAGE_KEYS.CURSE_HELPER_STATE]: {},
+        [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {}
     };
 }
 

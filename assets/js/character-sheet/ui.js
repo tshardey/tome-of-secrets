@@ -14,10 +14,12 @@ import {
     renderCurseRow, 
     renderCurseHelperRow,
     renderCurseHelpersEmptyRow,
+    renderQuestDrawHelpersEmptyRow,
     renderTemporaryBuffRow,
     renderAbilityCard
 } from './renderComponents.js';
 import { buildCurseHelperList } from './curseHelperDiscovery.js';
+import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
 import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
@@ -984,6 +986,18 @@ function getCurseHelperCatalogs() {
     };
 }
 
+function getQuestDrawHelperCatalogs() {
+    const tempBuffs = { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) };
+    return {
+        allItems: data.allItems || {},
+        temporaryBuffs: tempBuffs,
+        masteryAbilities: data.masteryAbilities || {},
+        schoolBenefits: data.schoolBenefits || {},
+        seriesExpedition: data.seriesCompletionRewards || {},
+        permanentBonuses: data.permanentBonuses || {}
+    };
+}
+
 export function renderWornPageHelpers() {
     const tbody = document.getElementById('worn-page-helpers-body');
     if (!tbody) return;
@@ -1009,6 +1023,40 @@ export function renderWornPageHelpers() {
 
     helpers.forEach((helper) => {
         tbody.appendChild(renderCurseHelperRow(helper, helperState));
+    });
+}
+
+export function renderQuestDrawHelpers() {
+    const container = document.getElementById('quest-draw-helpers-body');
+    if (!container) return;
+
+    clearElement(container);
+
+    const catalogs = getQuestDrawHelperCatalogs();
+    const school = document.getElementById('wizardSchool')?.value || '';
+    const levelInput = document.getElementById('level');
+    const level = parseIntOr(levelInput?.value ?? levelInput, 1);
+    const helpers = buildQuestDrawHelperList(characterState, catalogs, { school, level });
+    const helperState = characterState[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] && typeof characterState[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] === 'object'
+        ? characterState[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]
+        : {};
+
+    const summaryEl = document.getElementById('quest-draw-helpers-summary');
+    if (summaryEl) {
+        summaryEl.textContent = `Monthly draw and dice helpers (${helpers.length})`;
+    }
+
+    if (helpers.length === 0) {
+        container.appendChild(renderQuestDrawHelpersEmptyRow());
+        return;
+    }
+
+    const buttonOpts = {
+        markUsedButtonClass: 'mark-quest-draw-helper-used-btn',
+        undoButtonClass: 'undo-quest-draw-helper-used-btn'
+    };
+    helpers.forEach((helper) => {
+        container.appendChild(renderCurseHelperRow(helper, helperState, buttonOpts));
     });
 }
 
@@ -1329,6 +1377,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderActiveCurses();
     renderCompletedCurses();
     renderWornPageHelpers();
+    renderQuestDrawHelpers();
 }
 
 /**
