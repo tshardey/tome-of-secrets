@@ -867,7 +867,7 @@ export function renderQuestCard(quest, index, listType = 'active') {
  * @returns {HTMLButtonElement} The button element
  */
 /**
- * Renders a single Worn Page mitigation helper tile for the Curse tab.
+ * Renders a single curse mitigation helper tile for the Curse tab (Worn Page, Shroud, Spoon).
  * @param {Object} helper - { sourceId, sourceType, slotMode?, name, effect, cadence, img? }
  * @param {Object} helperState - Map of sourceId -> { used: boolean, cooldownCyclesRemaining?: number }
  * @param {{ markUsedButtonClass?: string, undoButtonClass?: string }} [options]
@@ -939,7 +939,7 @@ export function renderCurseHelpersEmptyRow() {
     const empty = document.createElement('div');
     empty.className = 'curse-helper-empty';
     empty.setAttribute('role', 'status');
-    empty.textContent = 'No Worn Page mitigation helpers available. Equip items, add buffs, or learn abilities that remove or negate Worn Page penalties.';
+    empty.textContent = 'No curse mitigation helpers available. Equip items, add buffs, learn abilities, or earn expedition passives that negate Worn Page penalties or ignore a monthly Shroud penalty or Spoon loss.';
     return empty;
 }
 

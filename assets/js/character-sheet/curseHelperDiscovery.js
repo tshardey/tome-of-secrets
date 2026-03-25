@@ -1,5 +1,5 @@
 /**
- * Worn Page mitigation helper discovery: allowlist matching and cadence detection.
+ * Curse tab mitigation helper discovery (Worn Page, monthly Shroud/Spoon ignores): allowlist matching and cadence detection.
  * Centralizes logic for identifying mitigation text and stable source-ID generation.
  */
 
@@ -26,6 +26,22 @@ export function isWornPageMitigation(text) {
     const t = text.trim();
     if (!t.includes('Worn Page')) return false;
     return WORN_PAGE_MITIGATION_PHRASES.some(phrase => t.includes(phrase));
+}
+
+/**
+ * Text eligible for the Curse tab mitigation helper list: Worn Page effects plus
+ * monthly Shroud / Spoon ignores (e.g. series expedition passive) that do not use "Worn Page" wording.
+ * @param {string} text
+ * @returns {boolean}
+ */
+export function isCurseMitigationHelperText(text) {
+    if (isWornPageMitigation(text)) return true;
+    if (!text || typeof text !== 'string') return false;
+    const t = text.trim().toLowerCase();
+    if (!t.includes('once per month')) return false;
+    if (t.includes('ignore any single shroud penalty')) return true;
+    if (t.includes('shroud penalty') && t.includes('spoon loss')) return true;
+    return false;
 }
 
 /**
@@ -102,7 +118,7 @@ function withOptionalImg(base, source) {
 }
 
 /**
- * Build the current list of Worn Page mitigation helpers from character state and data catalogs.
+ * Build the current list of curse mitigation helpers (Worn Page, Shroud, Spoon) from character state and data catalogs.
  * Each helper has: sourceId, sourceType, slotMode (optional), name, effect, cadence, and optional img for items/buffs.
  * @param {Object} state - Character state (from StateAdapter)
  * @param {Object} catalogs - Data: { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition }
@@ -122,7 +138,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const item = typeof name === 'string' ? (allItems[name] ?? Object.values(allItems).find(i => i?.name === name)) : null;
             if (!item) return;
             const bonus = item.bonus;
-            if (bonus && isWornPageMitigation(bonus)) {
+            if (bonus && isCurseMitigationHelperText(bonus)) {
                 out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'equipped', `${index}|${item.name ?? name}`),
                     sourceType: 'item',
@@ -143,7 +159,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const item = typeof name === 'string' ? (allItems[name] ?? Object.values(allItems).find(i => i?.name === name)) : null;
             if (!item) return;
             const bonus = item.bonus;
-            if (bonus && isWornPageMitigation(bonus)) {
+            if (bonus && isCurseMitigationHelperText(bonus)) {
                 out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'inventory', `${index}|${item.name ?? name}`),
                     sourceType: 'item',
@@ -165,7 +181,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const item = allItems[itemName] ?? Object.values(allItems).find(i => i?.name === itemName);
             if (!item) return;
             const passiveBonus = item.passiveBonus;
-            if (passiveBonus && isWornPageMitigation(passiveBonus)) {
+            if (passiveBonus && isCurseMitigationHelperText(passiveBonus)) {
                 const slotId = slot?.slotId ?? 'unknown';
                 out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'passiveItem', `${slotId}|${item.name ?? itemName}`),
@@ -188,7 +204,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const item = allItems[itemName] ?? Object.values(allItems).find(i => i?.name === itemName);
             if (!item) return;
             const passiveBonus = item.passiveBonus;
-            if (passiveBonus && isWornPageMitigation(passiveBonus)) {
+            if (passiveBonus && isCurseMitigationHelperText(passiveBonus)) {
                 const slotId = slot?.slotId ?? 'unknown';
                 out.push(withOptionalImg({
                     sourceId: buildSourceId('item', 'passiveFamiliar', `${slotId}|${item.name ?? itemName}`),
@@ -209,7 +225,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const name = entry?.name ?? entry?.id ?? `Buff ${index}`;
             const catalogBuff = temporaryBuffs[name] ?? Object.values(temporaryBuffs).find(b => b?.name === name || b?.id === name);
             const description = catalogBuff?.description ?? entry?.description;
-            if (description && isWornPageMitigation(description)) {
+            if (description && isCurseMitigationHelperText(description)) {
                 out.push(withOptionalImg({
                     sourceId: buildSourceId('tempBuff', null, `${index}|${name}`),
                     sourceType: 'tempBuff',
@@ -228,7 +244,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
             const ability = masteryAbilities[abilityName] ?? Object.values(masteryAbilities).find(a => a?.name === abilityName);
             if (!ability) return;
             const benefit = ability.benefit;
-            if (benefit && isWornPageMitigation(benefit)) {
+            if (benefit && isCurseMitigationHelperText(benefit)) {
                 out.push({
                     sourceId: buildSourceId('ability', null, ability.name ?? abilityName),
                     sourceType: 'ability',
@@ -243,7 +259,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
     // ---- School passive ----
     if (school && schoolBenefits[school]) {
         const benefit = schoolBenefits[school].benefit;
-        if (benefit && isWornPageMitigation(benefit)) {
+        if (benefit && isCurseMitigationHelperText(benefit)) {
             out.push({
                 sourceId: buildSourceId('school', null, school),
                 sourceType: 'school',
@@ -262,7 +278,7 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
         const reward = stop.reward;
         if (reward?.type !== 'passive-rule-modifier') return;
         const text = reward?.text ?? '';
-        if (text && isWornPageMitigation(text)) {
+        if (text && isCurseMitigationHelperText(text)) {
             out.push({
                 sourceId: buildSourceId('seriesExpedition', null, `${stop.id}|${stop.name}`),
                 sourceType: 'seriesExpedition',

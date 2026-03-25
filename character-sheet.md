@@ -917,7 +917,7 @@ permalink: /character-sheet.html
         <p class="description">When you fail to complete your monthly quest pool, the Shroud advances and you receive a Worn Page penalty for each book you missed. For each Worn Page you have, roll on the Curse Table at the start of your next month's quest.</p>
 
         <div id="worn-page-helpers-container" class="rpg-panel rpg-worn-page-helpers-panel">
-            <h3 id="worn-page-helpers-summary">📖 Worn Page Mitigation Helpers</h3>
+            <h3 id="worn-page-helpers-summary">📖 Curse mitigation helpers — Worn Page, Shroud, and Spoon</h3>
             <p class="description">Sources that can remove or negate Worn Page penalties. Mark when you use them; monthly and every-2-months uses refresh at End of Month.</p>
             <div id="worn-page-helpers-body" class="worn-page-helpers-grid" role="list">
             </div>

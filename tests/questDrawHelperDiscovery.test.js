@@ -144,7 +144,7 @@ describe('questDrawHelperDiscovery', () => {
             const helpers = buildQuestDrawHelperList(emptyState, catalogs, { level: 10 });
             const byLevel = Object.fromEntries(helpers.map(h => [h.name, h]));
             expect(byLevel['Level 3 bonus'].cadence).toBe('monthly');
-            expect(byLevel['Level 9 bonus'].cadence).toBe('always');
+            expect(byLevel['Level 9 bonus'].cadence).toBe('monthly');
             expect(byLevel['Level 3 bonus'].sourceId).toMatch(/permanentBonus.*level-3/);
         });
 

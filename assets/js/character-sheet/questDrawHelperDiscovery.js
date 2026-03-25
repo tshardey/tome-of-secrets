@@ -59,7 +59,11 @@ export function classifyQuestDrawCadence(plainText, meta = {}) {
 
     if (lower.includes('rolling a d6 for a genre quest')) return 'always';
 
-    if (lower.includes('draw one extra quest card') && lower.includes('monthly quest pool')) {
+    if (
+        lower.includes('draw one extra quest card') &&
+        lower.includes('monthly quest pool') &&
+        !lower.includes('insightful draw')
+    ) {
         return 'always';
     }
 
@@ -73,7 +77,8 @@ export function classifyQuestDrawCadence(plainText, meta = {}) {
         ) {
             return 'monthly';
         }
-        if (lower.includes('insightful draw')) return 'always';
+        // Applies each time you establish the monthly pool (once per month in play).
+        if (lower.includes('insightful draw')) return 'monthly';
     }
 
     return fromText;

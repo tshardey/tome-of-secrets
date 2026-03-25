@@ -1013,7 +1013,7 @@ export function renderWornPageHelpers() {
 
     const summaryEl = document.getElementById('worn-page-helpers-summary');
     if (summaryEl) {
-        summaryEl.textContent = `📖 Worn Page Mitigation Helpers (${helpers.length})`;
+        summaryEl.textContent = `📖 Curse mitigation helpers — Worn Page, Shroud, and Spoon (${helpers.length})`;
     }
 
     if (helpers.length === 0) {

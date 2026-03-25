@@ -4,6 +4,7 @@
 
 import {
     isWornPageMitigation,
+    isCurseMitigationHelperText,
     getCadenceFromText,
     buildSourceId,
     buildCurseHelperList
@@ -41,6 +42,24 @@ describe('curseHelperDiscovery', () => {
 
         it('returns false for non-string input', () => {
             expect(isWornPageMitigation(123)).toBe(false);
+        });
+    });
+
+    describe('isCurseMitigationHelperText', () => {
+        it('includes all Worn Page mitigation strings', () => {
+            expect(isCurseMitigationHelperText('Once per month, remove a Worn Page penalty.')).toBe(true);
+        });
+
+        it('matches series expedition Shroud/Spoon passive without Worn Page wording', () => {
+            expect(
+                isCurseMitigationHelperText(
+                    'Permanent Passive: Once per month, ignore any single Shroud penalty or Spoon loss.'
+                )
+            ).toBe(true);
+        });
+
+        it('does not match unrelated Shroud mentions without monthly ignore semantics', () => {
+            expect(isCurseMitigationHelperText('You suffer a Shroud penalty.')).toBe(false);
         });
     });
 
@@ -290,6 +309,37 @@ describe('curseHelperDiscovery', () => {
             };
             const helpers = buildCurseHelperList({}, catalogs, {});
             expect(helpers).toHaveLength(0);
+        });
+
+        it('discovers series expedition stop with Shroud/Spoon passive (no Worn Page in text)', () => {
+            const state = {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                [STORAGE_KEYS.INVENTORY_ITEMS]: [],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [{ seriesId: 's1', stopId: 'stop-8', claimedAt: '2025-01' }]
+            };
+            const catalogs = {
+                ...baseCatalogs,
+                seriesExpedition: {
+                    stops: [
+                        {
+                            id: 'stop-8',
+                            name: 'Expedition reward',
+                            reward: {
+                                type: 'passive-rule-modifier',
+                                text: 'Permanent Passive: Once per month, ignore any single Shroud penalty or Spoon loss.'
+                            }
+                        }
+                    ]
+                }
+            };
+            const helpers = buildCurseHelperList(state, catalogs, {});
+            expect(helpers).toHaveLength(1);
+            expect(helpers[0].sourceType).toBe('seriesExpedition');
+            expect(helpers[0].cadence).toBe('monthly');
         });
 
         it('discovers series expedition stop with passive-rule-modifier and mitigation text', () => {

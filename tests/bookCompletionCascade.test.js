@@ -100,6 +100,25 @@ describe('Book completion cascade', () => {
     expect(r2.synergyRewards.inkDrops).toBe(15);
   });
 
+  it('series book ink uses only that series expedition progress (another series at stop-7 does not apply)', () => {
+    const bookA = adapter.addBook({ title: 'Series A Book', status: 'reading' });
+    const bookB = adapter.addBook({ title: 'Series B Book', status: 'reading' });
+    adapter.addSeries({ id: 'series-a', name: 'Campaign A', bookIds: [bookA.id] });
+    adapter.addSeries({ id: 'series-b', name: 'Campaign B', bookIds: [bookB.id] });
+
+    state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = Array.from({ length: 7 }, (_, i) => ({
+      seriesId: 'series-a',
+      stopId: `stop-${i + 1}`,
+      claimedAt: ''
+    }));
+
+    const rB = adapter.markBookComplete(bookB.id);
+    expect(rB.synergyRewards.inkDrops).toBe(10);
+
+    const rA = adapter.markBookComplete(bookA.id);
+    expect(rA.synergyRewards.inkDrops).toBe(15);
+  });
+
   it('both quest and curriculum: quest moves, prompts complete, +5 Paper Scraps and +10 Ink Drops synergy', () => {
     const questId = 'q-both';
     adapter.addActiveQuests({ id: questId, type: 'Genre', prompt: 'Read it', book: 'Both Book' });
