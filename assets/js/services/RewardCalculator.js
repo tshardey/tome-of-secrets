@@ -7,6 +7,8 @@ import * as data from '../character-sheet/data.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { characterState } from '../character-sheet/state.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { resolvePermanentEffectCapabilities } from './PermanentEffectCapabilities.js';
+import { getItemsInPassiveSlots } from './InventoryService.js';
 
 /**
  * Represents a reward package with XP, currency, and items
@@ -526,6 +528,151 @@ export class RewardCalculator {
     }
 
     /**
+     * Resolve permanent-effect capabilities from explicit options, or DOM + character state in the browser.
+     * @param {Object} [calcOptions]
+     * @param {import('./PermanentEffectCapabilities.js').PermanentEffectCapabilityInput} [calcOptions.permanentEffectInput]
+     * @param {ReturnType<typeof resolvePermanentEffectCapabilities>} [calcOptions.permanentCapabilities]
+     */
+    static _resolvePermanentCaps(calcOptions = {}) {
+        if (calcOptions.permanentCapabilities) {
+            return calcOptions.permanentCapabilities;
+        }
+        if (calcOptions.permanentEffectInput) {
+            return resolvePermanentEffectCapabilities(calcOptions.permanentEffectInput);
+        }
+        const learned = characterState?.[STORAGE_KEYS.LEARNED_ABILITIES] || [];
+        const progress = characterState?.[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] || [];
+        let level = 1;
+        let school = null;
+        if (typeof document !== 'undefined') {
+            const levEl = document.getElementById('level');
+            if (levEl && levEl.value !== undefined && levEl.value !== '') {
+                const n = parseInt(levEl.value, 10);
+                if (Number.isFinite(n)) level = Math.max(1, n);
+            }
+            const schEl = document.getElementById('wizardSchool');
+            if (schEl && typeof schEl.value === 'string' && schEl.value.trim()) {
+                school = schEl.value.trim();
+            }
+        }
+        return resolvePermanentEffectCapabilities({
+            level,
+            school,
+            learnedAbilities: learned,
+            seriesExpeditionProgress: progress
+        });
+    }
+
+    /**
+     * Equipped familiar (not also treated as passive-display-only for modifier purposes).
+     * @returns {{ name: string, rewardModifier: object }|null}
+     */
+    static _getEquippedFamiliarContext() {
+        const equipped = characterState?.[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
+        const passiveItemSlots = characterState?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+        const passiveFamiliarSlots = characterState?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+        const inPassive = getItemsInPassiveSlots(passiveItemSlots, passiveFamiliarSlots);
+        for (const entry of equipped) {
+            const name = entry && entry.name;
+            if (!name || inPassive.has(name)) continue;
+            const item = data.allItems[name];
+            if (item && item.type === 'Familiar') {
+                return { name, rewardModifier: item.rewardModifier && typeof item.rewardModifier === 'object' ? item.rewardModifier : {} };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param {string[]|undefined} appliedBuffs
+     * @param {string|null|undefined} familiarName
+     */
+    static _buffsListIncludesItem(appliedBuffs, familiarName) {
+        if (!familiarName || !Array.isArray(appliedBuffs) || appliedBuffs.length === 0) return false;
+        for (const buffName of appliedBuffs) {
+            if (typeof buffName !== 'string') continue;
+            const clean = buffName.replace(/^\[(Buff|Item|Background)\] /, '');
+            if (clean === familiarName) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Always-on permanent quest rewards (level passives, school, mastery) — not optional card picks.
+     * @param {Reward} rewards
+     * @param {Object} quest
+     * @param {Object} [calcOptions]
+     * @param {string[]} [calcOptions.appliedBuffs] - Selected quest buffs (for Empowered Bond when the equipped familiar is active on the quest)
+     */
+    static applyPermanentQuestBonuses(rewards, quest, calcOptions = {}) {
+        const caps = this._resolvePermanentCaps(calcOptions);
+        const rm = caps.rewardModifiers;
+        const modified = rewards.clone();
+        const questType = quest && quest.type;
+        const appliedBuffs = calcOptions.appliedBuffs;
+
+        const famCtx = this._getEquippedFamiliarContext();
+        const familiarEquipped = famCtx != null;
+
+        if (rm.questCompletionFamiliarEquippedInkBonus > 0 && familiarEquipped) {
+            modified.inkDrops += rm.questCompletionFamiliarEquippedInkBonus;
+            modified.modifiedBy.push('School of Conjuration');
+            modified.receipt.modifiers.push({
+                source: 'School of Conjuration',
+                type: 'permanent',
+                value: rm.questCompletionFamiliarEquippedInkBonus,
+                description: `+${rm.questCompletionFamiliarEquippedInkBonus} Ink Drops (Familiar slot equipped)`,
+                currency: 'inkDrops'
+            });
+        }
+
+        if (questType === '♣ Side Quest' && rm.sideQuestPaperScrapsBonus > 0) {
+            modified.paperScraps += rm.sideQuestPaperScrapsBonus;
+            modified.modifiedBy.push('Silver Tongue');
+            modified.receipt.modifiers.push({
+                source: 'Silver Tongue',
+                type: 'permanent',
+                value: rm.sideQuestPaperScrapsBonus,
+                description: `+${rm.sideQuestPaperScrapsBonus} Paper Scraps`,
+                currency: 'paperScraps'
+            });
+        }
+
+        if (rm.familiarRewardFlatBonus > 0 && famCtx && this._buffsListIncludesItem(appliedBuffs, famCtx.name)) {
+            const m = famCtx.rewardModifier;
+            const add = rm.familiarRewardFlatBonus;
+            if (typeof m.inkDrops === 'number' && m.inkDrops > 0) {
+                modified.inkDrops += add;
+                modified.modifiedBy.push('Empowered Bond');
+                modified.receipt.modifiers.push({
+                    source: 'Empowered Bond',
+                    type: 'permanent',
+                    value: add,
+                    description: `+${add} Ink Drops (familiar bonus)`,
+                    currency: 'inkDrops'
+                });
+            }
+            if (typeof m.paperScraps === 'number' && m.paperScraps > 0) {
+                modified.paperScraps += add;
+                if (!modified.modifiedBy.includes('Empowered Bond')) modified.modifiedBy.push('Empowered Bond');
+                modified.receipt.modifiers.push({
+                    source: 'Empowered Bond',
+                    type: 'permanent',
+                    value: add,
+                    description: `+${add} Paper Scraps (familiar bonus)`,
+                    currency: 'paperScraps'
+                });
+            }
+        }
+
+        modified.receipt.final.xp = modified.xp;
+        modified.receipt.final.inkDrops = modified.inkDrops;
+        modified.receipt.final.paperScraps = modified.paperScraps;
+        modified.receipt.final.blueprints = modified.blueprints;
+        return modified;
+    }
+
+    /**
      * Calculate final rewards for a quest with all modifiers
      * @param {string} type - Quest type
      * @param {string} prompt - Quest prompt
@@ -562,6 +709,12 @@ export class RewardCalculator {
             rewards = this.applySchoolBonuses(rewards, quest, wizardSchool);
         }
 
+        rewards = this.applyPermanentQuestBonuses(rewards, quest, {
+            appliedBuffs,
+            permanentEffectInput: options.permanentEffectInput,
+            permanentCapabilities: options.permanentCapabilities
+        });
+
         // Ensure final values in receipt are up to date
         rewards.receipt.final.xp = rewards.xp;
         rewards.receipt.final.inkDrops = rewards.inkDrops;
@@ -576,20 +729,52 @@ export class RewardCalculator {
      * Formula: booksCompleted × GAME_CONFIG.endOfMonth.bookCompletionXP
      * 
      * @param {number} booksCompleted - Number of unique books completed this month
+     * @param {Object} [options]
+     * @param {number|null|undefined} [options.bookPageCount] - Page count for this batch (Library marks one book at a time)
+     * @param {import('./PermanentEffectCapabilities.js').PermanentEffectCapabilityInput} [options.permanentEffectInput]
+     * @param {ReturnType<typeof resolvePermanentEffectCapabilities>} [options.permanentCapabilities]
      * @returns {Reward} Reward with XP only
      */
-    static calculateBookCompletionRewards(booksCompleted) {
-        const xp = Math.max(0, booksCompleted) * GAME_CONFIG.endOfMonth.bookCompletionXP;
+    static calculateBookCompletionRewards(booksCompleted, options = {}) {
+        const n = Math.max(0, Math.floor(Number(booksCompleted) || 0));
+        const baseXpPerBook = GAME_CONFIG.endOfMonth.bookCompletionXP;
+        let xp = n * baseXpPerBook;
+        const caps = options.permanentCapabilities
+            ? options.permanentCapabilities
+            : options.permanentEffectInput
+                ? resolvePermanentEffectCapabilities(options.permanentEffectInput)
+                : this._resolvePermanentCaps(options);
+        const longBonusPerBook = caps.rewardModifiers.longBookCompletionBonusXp || 0;
+        let longBonusXp = 0;
+        if (longBonusPerBook > 0 && n > 0 && options.bookPageCount != null) {
+            const pc = Number(options.bookPageCount);
+            if (Number.isFinite(pc) && pc >= 300) {
+                longBonusXp = n * longBonusPerBook;
+                xp += longBonusXp;
+            }
+        }
+
+        const baseXpOnly = n * baseXpPerBook;
         const reward = new Reward({ xp, inkDrops: 0, paperScraps: 0, items: [] });
-        reward.receipt.base.xp = xp;
+        reward.receipt.base.xp = baseXpOnly;
         reward.receipt.final.xp = xp;
         reward.receipt.modifiers.push({
             source: 'End of Month - Book Completion',
             type: 'system',
-            value: xp,
-            description: `${booksCompleted} books × ${GAME_CONFIG.endOfMonth.bookCompletionXP} XP`,
+            value: baseXpOnly,
+            description: `${n} books × ${baseXpPerBook} XP`,
             currency: 'xp'
         });
+        if (longBonusXp > 0) {
+            reward.modifiedBy.push("Novice's Focus");
+            reward.receipt.modifiers.push({
+                source: "Novice's Focus",
+                type: 'permanent',
+                value: longBonusXp,
+                description: `+${longBonusXp} XP (${n} book(s) with 300+ pages)`,
+                currency: 'xp'
+            });
+        }
         return reward;
     }
 
@@ -657,9 +842,12 @@ export class RewardCalculator {
      * 
      * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
+     * @param {Object} [calcOptions] - Optional permanent-effect resolution (Focused Atmosphere: +1 ink per day on positive rates)
+     * @param {import('./PermanentEffectCapabilities.js').PermanentEffectCapabilityInput} [calcOptions.permanentEffectInput]
+     * @param {ReturnType<typeof resolvePermanentEffectCapabilities>} [calcOptions.permanentCapabilities]
      * @returns {Reward} Reward with ink drops only
      */
-    static calculateAtmosphericBuffRewards(atmosphericBuffs = {}, associatedBuffs = []) {
+    static calculateAtmosphericBuffRewards(atmosphericBuffs = {}, associatedBuffs = [], calcOptions = {}) {
         let totalInkDrops = 0;
         const processedBuffs = [];
         const reward = new Reward({ 
@@ -670,6 +858,13 @@ export class RewardCalculator {
             modifiedBy: [] 
         });
 
+        const caps = calcOptions.permanentCapabilities
+            ? calcOptions.permanentCapabilities
+            : calcOptions.permanentEffectInput
+                ? resolvePermanentEffectCapabilities(calcOptions.permanentEffectInput)
+                : this._resolvePermanentCaps(calcOptions);
+        const focusedAdd = caps.rewardModifiers.atmosphericPositiveInkDropBonusAdd || 0;
+
         for (const buffName in atmosphericBuffs) {
             const buff = atmosphericBuffs[buffName];
             
@@ -677,16 +872,18 @@ export class RewardCalculator {
             if (buff.isActive && buff.daysUsed > 0) {
                 const isAssociated = associatedBuffs.includes(buffName);
                 const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
-                const buffTotal = buff.daysUsed * dailyValue;
+                const dailyEffective = dailyValue > 0 && focusedAdd > 0 ? dailyValue + focusedAdd : dailyValue;
+                const buffTotal = buff.daysUsed * dailyEffective;
                 totalInkDrops += buffTotal;
                 
                 if (buffTotal > 0) {
                     processedBuffs.push(buffName);
+                    const focusNote = dailyValue > 0 && focusedAdd > 0 ? ' + Focused Atmosphere' : '';
                     reward.receipt.modifiers.push({
                         source: buffName,
                         type: 'atmospheric',
                         value: buffTotal,
-                        description: `${buff.daysUsed} days × ${dailyValue} Ink Drops${isAssociated ? ' (Sanctum bonus)' : ''}`,
+                        description: `${buff.daysUsed} days × ${dailyEffective} Ink Drops${isAssociated ? ' (Sanctum bonus)' : ''}${focusNote}`,
                         currency: 'inkDrops'
                     });
                 }

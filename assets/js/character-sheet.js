@@ -308,7 +308,10 @@ export async function initializeCharacterSheet() {
                 const current = parseIntOr(booksCompletedInput.value, 0);
                 if (current < 10) {
                     booksCompletedInput.value = current + 1;
-                    updateCurrency(RewardCalculator.calculateBookCompletionRewards(1));
+                    const pageForBonus = result.book?.pageCount != null
+                        ? result.book.pageCount
+                        : (result.book?.pageCountRaw != null ? result.book.pageCountRaw : null);
+                    updateCurrency(RewardCalculator.calculateBookCompletionRewards(1, { bookPageCount: pageForBonus }));
                     const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
                     if (shelfColors.length < 10) {
                         const newColors = [...shelfColors, ui.getRandomShelfColor()];

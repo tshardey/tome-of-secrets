@@ -639,6 +639,87 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.modifiedBy).toContain('Active Buff');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
         });
+
+        test('Focused Atmosphere adds +1 ink per day to positive atmospheric rates', () => {
+            const atmosphericBuffs = {
+                'Test Buff': { daysUsed: 4, isActive: true }
+            };
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, [], {
+                permanentEffectInput: {
+                    level: 7,
+                    learnedAbilities: [],
+                    seriesExpeditionProgress: []
+                }
+            });
+            // base 1 + 1 = 2 per day × 4
+            expect(rewards.inkDrops).toBe(8);
+        });
+    });
+});
+
+describe('RewardCalculator - Permanent quest effects (osm.2)', () => {
+    afterEach(() => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    });
+
+    test('Silver Tongue adds +5 Paper Scraps on Side Quest completion', () => {
+        const prompt = 'Read a book with an unreliable narrator.';
+        const r = RewardCalculator.calculateFinalRewards('♣ Side Quest', prompt, {
+            quest: { type: '♣ Side Quest' },
+            permanentEffectInput: {
+                level: 10,
+                learnedAbilities: ['Silver Tongue'],
+                seriesExpeditionProgress: []
+            }
+        });
+        expect(r.paperScraps).toBe(10); // 5 base + 5
+        expect(r.modifiedBy).toContain('Silver Tongue');
+    });
+
+    test('School of Conjuration adds +5 Ink when a Familiar is equipped', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Pocket Dragon' }];
+        const r = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            quest: { type: '♥ Organize the Stacks' },
+            permanentEffectInput: {
+                level: 5,
+                school: 'Conjuration',
+                learnedAbilities: [],
+                seriesExpeditionProgress: []
+            }
+        });
+        expect(r.inkDrops).toBe(15); // 10 base + 5
+        expect(r.modifiedBy).toContain('School of Conjuration');
+    });
+
+    test('Empowered Bond adds +5 Ink when equipped familiar is on the quest and grants flat Ink', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Pocket Dragon' }];
+        const r = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            appliedBuffs: ['[Item] Pocket Dragon'],
+            quest: { type: '♥ Organize the Stacks' },
+            permanentEffectInput: {
+                level: 10,
+                school: 'Evocation',
+                learnedAbilities: ['Empowered Bond'],
+                seriesExpeditionProgress: []
+            }
+        });
+        expect(r.inkDrops).toBe(35); // 10 + 20 familiar + 5 bond
+        expect(r.modifiedBy).toContain('Empowered Bond');
+    });
+
+    test("Novice's Focus adds +5 XP when marking a 300+ page book complete", () => {
+        const r = RewardCalculator.calculateBookCompletionRewards(1, {
+            bookPageCount: 400,
+            permanentEffectInput: {
+                level: 6,
+                learnedAbilities: [],
+                seriesExpeditionProgress: []
+            }
+        });
+        expect(r.xp).toBe(20); // 15 + 5
+        expect(r.receipt.base.xp).toBe(15);
+        expect(r.receipt.final.xp).toBe(20);
+        expect(r.modifiedBy).toContain("Novice's Focus");
     });
 });
 

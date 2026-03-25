@@ -132,6 +132,10 @@ export class BaseQuestHandler {
             finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
         }
 
+        finalRewards = RewardCalculator.applyPermanentQuestBonuses(finalRewards, quest, {
+            appliedBuffs: selectedBuffs
+        });
+
         return finalRewards;
     }
 
@@ -272,6 +276,10 @@ export class BaseQuestHandler {
         if (wizardSchool) {
             finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
         }
+
+        finalRewards = RewardCalculator.applyPermanentQuestBonuses(finalRewards, quest, {
+            appliedBuffs: quest.buffs || []
+        });
         
         // Get receipt before converting to JSON
         const receipt = finalRewards.getReceipt();

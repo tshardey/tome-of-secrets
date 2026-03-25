@@ -6,6 +6,7 @@
  */
 
 import * as data from '../character-sheet/data.js';
+import { resolvePermanentEffectCapabilities } from '../services/PermanentEffectCapabilities.js';
 import { 
     getSlotLimits, 
     calculateExpectedTotalSlots, 
@@ -63,9 +64,21 @@ export function createInventoryViewModel(state, formData, wearableSlotsInput, no
     const hasAvailableItemSlots = passiveItemSlots.some(slot => !slot.itemName);
     const hasAvailableFamiliarSlots = passiveFamiliarSlots.some(slot => !slot.itemName);
     
-    // Calculate expected and unallocated slots
+    // Calculate expected and unallocated slots (Echo Chamber: +1 familiar slot toward allocation budget)
     const currentLevel = parseIntOr(formData?.level, 1);
-    const expectedTotalSlots = calculateExpectedTotalSlots(currentLevel);
+    const learnedAbilities = state[STORAGE_KEYS.LEARNED_ABILITIES] || [];
+    const expeditionProgress = state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] || [];
+    const school = typeof formData?.school === 'string' && formData.school.trim()
+        ? formData.school.trim()
+        : null;
+    const perm = resolvePermanentEffectCapabilities({
+        level: currentLevel,
+        school,
+        learnedAbilities,
+        seriesExpeditionProgress: expeditionProgress
+    });
+    const echoExtra = perm.slotModifiers.extraFamiliarSlotsFromEchoChamber || 0;
+    const expectedTotalSlots = calculateExpectedTotalSlots(currentLevel) + echoExtra;
     const unallocatedSlots = calculateUnallocatedSlots(slotLimits.total, expectedTotalSlots);
     
     return {
