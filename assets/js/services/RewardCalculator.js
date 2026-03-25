@@ -827,14 +827,13 @@ export class RewardCalculator {
                 : this._resolvePermanentCaps(options);
 
         const defaultBase = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
-        let basePerEntry = defaultBase;
         const expeditionJournal = caps.rewardModifiers.adventureJournalPaperScraps;
-        if (expeditionJournal != null) {
-            basePerEntry = expeditionJournal;
-        }
+        const perEntryBeforeScribe = expeditionJournal != null ? expeditionJournal : defaultBase;
 
-        let papersPerEntry = basePerEntry;
-        const baseTotal = j * basePerEntry;
+        let papersPerEntry = perEntryBeforeScribe;
+        const trueBaseTotal = j * defaultBase;
+        const expeditionDeltaPerEntry = expeditionJournal != null ? expeditionJournal - defaultBase : 0;
+        const expeditionBonusTotal = j * expeditionDeltaPerEntry;
 
         let bonusTotal = 0;
         if (background === 'scribe') {
@@ -843,7 +842,9 @@ export class RewardCalculator {
         }
 
         const paperScraps = j * papersPerEntry;
-        const modifiedBy = (background === 'scribe' && paperScraps > 0) ? ['Scribe\'s Acolyte'] : [];
+        const modifiedBy = [];
+        if (expeditionBonusTotal > 0) modifiedBy.push('Expedition: The Midnight Waystation');
+        if (background === 'scribe' && paperScraps > 0) modifiedBy.push('Scribe\'s Acolyte');
 
         const reward = new Reward({
             xp: 0,
@@ -853,15 +854,25 @@ export class RewardCalculator {
             modifiedBy
         });
 
-        reward.receipt.base.paperScraps = baseTotal;
+        reward.receipt.base.paperScraps = trueBaseTotal;
         reward.receipt.final.paperScraps = paperScraps;
 
-        if (baseTotal > 0) {
+        if (trueBaseTotal > 0) {
             reward.receipt.modifiers.push({
                 source: 'End of Month - Journal Entry',
                 type: 'system',
-                value: baseTotal,
-                description: `${j} entries × ${basePerEntry} Paper Scraps`,
+                value: trueBaseTotal,
+                description: `${j} entries × ${defaultBase} Paper Scraps`,
+                currency: 'paperScraps'
+            });
+        }
+
+        if (expeditionBonusTotal > 0) {
+            reward.receipt.modifiers.push({
+                source: 'Expedition: The Midnight Waystation',
+                type: 'permanent',
+                value: expeditionBonusTotal,
+                description: `+${expeditionBonusTotal} Paper Scraps (${j} entries × +${expeditionDeltaPerEntry}; Adventure Journal track)`,
                 currency: 'paperScraps'
             });
         }

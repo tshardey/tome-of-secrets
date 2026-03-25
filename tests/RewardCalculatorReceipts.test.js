@@ -262,10 +262,28 @@ describe('RewardCalculator Receipt System', () => {
             expect(receipt.base.paperScraps).toBe(15); // 3 × 5 base
             expect(receipt.final.paperScraps).toBe(24); // 3 × (5 + 3) with Scribe bonus
             expect(receipt.modifiers.length).toBeGreaterThanOrEqual(1);
-            
+
             const scribeModifier = receipt.modifiers.find(m => m.source === "Scribe's Acolyte");
             expect(scribeModifier).toBeDefined();
             expect(scribeModifier.value).toBe(9); // 3 × 3 bonus
+        });
+
+        test('journal receipt keeps config base and lists expedition journal as separate modifier', () => {
+            const progress5 = Array.from({ length: 5 }, () => ({ seriesId: 's1', stopId: 'x', claimedAt: '' }));
+            const reward = RewardCalculator.calculateJournalEntryRewards(4, '', {
+                permanentEffectInput: { seriesExpeditionProgress: progress5 }
+            });
+            const receipt = reward.getReceipt();
+
+            expect(receipt.base.paperScraps).toBe(20); // 4 × 5 true base
+            expect(receipt.final.paperScraps).toBe(40); // 4 × 10
+            const journalMod = receipt.modifiers.find(m => m.source === 'End of Month - Journal Entry');
+            const expMod = receipt.modifiers.find(m => m.source === 'Expedition: The Midnight Waystation');
+            expect(journalMod.value).toBe(20);
+            expect(journalMod.description).toContain('× 5');
+            expect(expMod).toBeDefined();
+            expect(expMod.value).toBe(20); // 4 × +5
+            expect(expMod.type).toBe('permanent');
         });
 
         test('should track atmospheric buff rewards in receipt', () => {
