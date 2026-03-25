@@ -3,6 +3,7 @@ import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
 import { buildCurseHelperList, buildSourceId } from './curseHelperDiscovery.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
+import { resolvePermanentEffectCapabilities } from '../services/PermanentEffectCapabilities.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -1797,7 +1798,18 @@ export class StateAdapter {
         const hasQuestLinks = questIds.length > 0;
         const hasCurriculumLinks = curriculumPromptIds.length > 0;
         const paperScraps = hasCurriculumLinks ? 5 : 0;
-        const inkDrops = hasQuestLinks && hasCurriculumLinks ? 10 : 0;
+        let inkDrops = hasQuestLinks && hasCurriculumLinks ? 10 : 0;
+
+        const seriesForBook = this.getSeriesForBook(bookId);
+        if (seriesForBook) {
+            const progress = this.getSeriesExpeditionProgress();
+            const caps = resolvePermanentEffectCapabilities({
+                seriesExpeditionProgress: progress
+            });
+            const seriesInk = caps.rewardModifiers.seriesBookInkDropsPerBook ?? 10;
+            inkDrops += seriesInk;
+        }
+
         const synergyRewards = { xp: 0, inkDrops, paperScraps, items: [] };
 
         return { book, movedQuests, synergyRewards };

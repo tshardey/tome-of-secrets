@@ -723,3 +723,43 @@ describe('RewardCalculator - Permanent quest effects (osm.2)', () => {
     });
 });
 
+describe('RewardCalculator - Expedition passives (osm.3)', () => {
+    const prog = (n) => Array.from({ length: n }, () => ({ seriesId: 's1', stopId: 'x', claimedAt: '' }));
+
+    test('Organize the Stacks base XP becomes 20 after expedition stop 2', () => {
+        const r = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            quest: { type: '♥ Organize the Stacks' },
+            permanentEffectInput: {
+                seriesExpeditionProgress: prog(2)
+            }
+        });
+        expect(r.xp).toBe(20);
+        expect(r.modifiedBy.some((x) => String(x).includes('Ashen Crossroads'))).toBe(true);
+    });
+
+    test('Adventure Journal scraps use 10 per entry after expedition stop 5', () => {
+        const r = RewardCalculator.calculateJournalEntryRewards(4, '', {
+            permanentEffectInput: { seriesExpeditionProgress: prog(5) }
+        });
+        expect(r.paperScraps).toBe(40);
+    });
+
+    test('Dungeon room XP gains +10 after expedition stop 10', () => {
+        const r = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+            isEncounter: true,
+            roomNumber: '1',
+            encounterName: 'Will-o-wisps',
+            quest: {
+                type: '♠ Dungeon Crawl',
+                isEncounter: true,
+                roomNumber: '1',
+                encounterName: 'Will-o-wisps',
+                isBefriend: true
+            },
+            permanentEffectInput: { seriesExpeditionProgress: prog(10) }
+        });
+        expect(r.xp).toBe(40);
+        expect(r.modifiedBy.some((x) => String(x).includes('Reawakened Sanctum'))).toBe(true);
+    });
+});
+

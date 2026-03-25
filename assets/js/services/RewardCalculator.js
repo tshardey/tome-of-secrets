@@ -638,6 +638,35 @@ export class RewardCalculator {
             });
         }
 
+        if (questType === '♥ Organize the Stacks' && rm.organizeTheStacksBaseXp != null) {
+            const targetXp = rm.organizeTheStacksBaseXp;
+            const delta = targetXp - modified.xp;
+            if (delta !== 0) {
+                modified.xp += delta;
+                modified.modifiedBy.push('Expedition: The Ashen Crossroads');
+                modified.receipt.modifiers.push({
+                    source: 'Expedition: The Ashen Crossroads',
+                    type: 'permanent',
+                    value: delta,
+                    description: `${delta > 0 ? '+' : ''}${delta} XP (Organize the Stacks track)`,
+                    currency: 'xp'
+                });
+            }
+        }
+
+        if (questType === '♠ Dungeon Crawl' && rm.dungeonRoomXpPerRoomAdd > 0 && modified.xp > 0) {
+            const add = rm.dungeonRoomXpPerRoomAdd;
+            modified.xp += add;
+            modified.modifiedBy.push('Expedition: The Reawakened Sanctum');
+            modified.receipt.modifiers.push({
+                source: 'Expedition: The Reawakened Sanctum',
+                type: 'permanent',
+                value: add,
+                description: `+${add} XP (Dungeon room track bonus)`,
+                currency: 'xp'
+            });
+        }
+
         if (rm.familiarRewardFlatBonus > 0 && famCtx && this._buffsListIncludesItem(appliedBuffs, famCtx.name)) {
             const m = famCtx.rewardModifier;
             const add = rm.familiarRewardFlatBonus;
@@ -784,53 +813,69 @@ export class RewardCalculator {
      * 
      * @param {number} journalEntries - Number of journal entries completed
      * @param {string} background - Keeper background key (e.g., 'scribe')
+     * @param {Object} [options]
+     * @param {import('./PermanentEffectCapabilities.js').PermanentEffectCapabilityInput} [options.permanentEffectInput]
+     * @param {ReturnType<typeof resolvePermanentEffectCapabilities>} [options.permanentCapabilities]
      * @returns {Reward} Reward with paper scraps only
      */
-    static calculateJournalEntryRewards(journalEntries, background = '') {
-        let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
-        const baseTotal = Math.max(0, journalEntries) * papersPerEntry;
-        
-        // Apply Scribe's Acolyte bonus
+    static calculateJournalEntryRewards(journalEntries, background = '', options = {}) {
+        const j = Math.max(0, Math.floor(Number(journalEntries) || 0));
+        const caps = options.permanentCapabilities
+            ? options.permanentCapabilities
+            : options.permanentEffectInput
+                ? resolvePermanentEffectCapabilities(options.permanentEffectInput)
+                : this._resolvePermanentCaps(options);
+
+        const defaultBase = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
+        let basePerEntry = defaultBase;
+        const expeditionJournal = caps.rewardModifiers.adventureJournalPaperScraps;
+        if (expeditionJournal != null) {
+            basePerEntry = expeditionJournal;
+        }
+
+        let papersPerEntry = basePerEntry;
+        const baseTotal = j * basePerEntry;
+
         let bonusTotal = 0;
         if (background === 'scribe') {
             papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-            bonusTotal = Math.max(0, journalEntries) * GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
+            bonusTotal = j * GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
         }
-        
-        const paperScraps = Math.max(0, journalEntries) * papersPerEntry;
+
+        const paperScraps = j * papersPerEntry;
         const modifiedBy = (background === 'scribe' && paperScraps > 0) ? ['Scribe\'s Acolyte'] : [];
-        
-        const reward = new Reward({ 
-            xp: 0, 
-            inkDrops: 0, 
-            paperScraps, 
+
+        const reward = new Reward({
+            xp: 0,
+            inkDrops: 0,
+            paperScraps,
             items: [],
-            modifiedBy 
+            modifiedBy
         });
-        
+
         reward.receipt.base.paperScraps = baseTotal;
         reward.receipt.final.paperScraps = paperScraps;
-        
+
         if (baseTotal > 0) {
             reward.receipt.modifiers.push({
                 source: 'End of Month - Journal Entry',
                 type: 'system',
                 value: baseTotal,
-                description: `${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps} Paper Scraps`,
+                description: `${j} entries × ${basePerEntry} Paper Scraps`,
                 currency: 'paperScraps'
             });
         }
-        
+
         if (bonusTotal > 0) {
             reward.receipt.modifiers.push({
                 source: 'Scribe\'s Acolyte',
                 type: 'background',
                 value: bonusTotal,
-                description: `+${bonusTotal} Paper Scraps (${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.scribeBonus} bonus)`,
+                description: `+${bonusTotal} Paper Scraps (${j} entries × ${GAME_CONFIG.endOfMonth.journalEntry.scribeBonus} bonus)`,
                 currency: 'paperScraps'
             });
         }
-        
+
         return reward;
     }
 
