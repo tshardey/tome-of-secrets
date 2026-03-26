@@ -3,7 +3,7 @@ import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
 import { buildCurseHelperList, buildSourceId } from './curseHelperDiscovery.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
-import { resolvePermanentEffectCapabilities } from '../services/PermanentEffectCapabilities.js';
+import { hasSeriesBookInkBonusForSeriesId } from '../services/PermanentEffectCapabilities.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -1803,10 +1803,7 @@ export class StateAdapter {
         const seriesForBook = this.getSeriesForBook(bookId);
         if (seriesForBook) {
             const progress = this.getSeriesExpeditionProgress();
-            const caps = resolvePermanentEffectCapabilities({
-                seriesExpeditionProgress: progress
-            });
-            const seriesInk = caps.rewardModifiers.seriesBookInkDropsPerBook ?? 10;
+            const seriesInk = hasSeriesBookInkBonusForSeriesId(progress, seriesForBook.id) ? 15 : 10;
             inkDrops += seriesInk;
         }
 

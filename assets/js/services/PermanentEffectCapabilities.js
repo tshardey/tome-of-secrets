@@ -69,6 +69,33 @@ export function getReachedExpeditionStops(progress) {
 }
 
 /**
+ * Whether the expedition passive "series books grant +15 Ink (was +10)" applies when completing
+ * a book in the given series. Uses per-series progress entries plus global stop-7 unlock:
+ * - A series that claimed stop-7 ({ stopId: 'stop-7' }) qualifies.
+ * - If that series has enough expedition advances that the sliced stop list includes stop-7, qualifies.
+ * - If the global track has reached stop-7 and this series has at least one advance, qualifies
+ *   (so all participating series benefit once the passive is unlocked on the map).
+ *
+ * @param {{ seriesId?: string, stopId?: string, claimedAt?: string }[]} expeditionProgress
+ * @param {string} seriesId - Archive series id (e.g. from getSeriesForBook(bookId).id)
+ * @returns {boolean}
+ */
+export function hasSeriesBookInkBonusForSeriesId(expeditionProgress, seriesId) {
+    if (!seriesId || typeof seriesId !== 'string' || !Array.isArray(expeditionProgress)) return false;
+
+    const globalReached = getReachedExpeditionStops(expeditionProgress);
+    const globalHasStop7 = globalReached.some(s => s && s.id === 'stop-7');
+
+    const forSeries = expeditionProgress.filter(p => p && p.seriesId === seriesId);
+    if (forSeries.some(p => p.stopId === 'stop-7')) return true;
+
+    const reachedFromSeriesLength = getReachedExpeditionStops(forSeries);
+    if (reachedFromSeriesLength.some(s => s && s.id === 'stop-7')) return true;
+
+    return globalHasStop7 && forSeries.length > 0;
+}
+
+/**
  * @param {string[]} learnedAbilityNames - As stored in state (object keys in masteryAbilities)
  * @returns {Set<string>} ability ids
  */
