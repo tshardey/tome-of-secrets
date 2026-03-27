@@ -741,59 +741,51 @@ export class RewardCalculator {
     }
 
     /**
-     * Calculate journal entry paper scrap rewards for end of month
-     * Formula: journalEntries × (basePaperScraps + scribeBonus if Scribe background)
-     * 
+     * Calculate journal entry paper scrap rewards for end of month.
+     * Base: journalEntries × GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps.
+     * ON_JOURNAL_ENTRY effects (scribe background, Librarian's Quill, Golden Pen, etc.) apply via ModifierPipeline.
+     *
      * @param {number} journalEntries - Number of journal entries completed
-     * @param {string} background - Keeper background key (e.g., 'scribe')
+     * @param {Object} [context]
+     * @param {object} [context.stateAdapter] - For EffectRegistry (state + optional formData: keeperBackground, wizardSchool)
+     * @param {object} [context.dataModule] - Data catalogs (keeperBackgrounds, allItems, …)
      * @returns {Reward} Reward with paper scraps only
      */
-    static calculateJournalEntryRewards(journalEntries, background = '') {
-        let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
-        const baseTotal = Math.max(0, journalEntries) * papersPerEntry;
-        
-        // Apply Scribe's Acolyte bonus
-        let bonusTotal = 0;
-        if (background === 'scribe') {
-            papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-            bonusTotal = Math.max(0, journalEntries) * GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-        }
-        
-        const paperScraps = Math.max(0, journalEntries) * papersPerEntry;
-        const modifiedBy = (background === 'scribe' && paperScraps > 0) ? ['Scribe\'s Acolyte'] : [];
-        
-        const reward = new Reward({ 
-            xp: 0, 
-            inkDrops: 0, 
-            paperScraps, 
-            items: [],
-            modifiedBy 
+    static calculateJournalEntryRewards(journalEntries, context = {}) {
+        const ctx = typeof context === 'string' ? {} : context || {};
+        const { stateAdapter = null, dataModule = null } = ctx;
+
+        const n = Math.max(0, journalEntries);
+        const basePer = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
+        const baseTotal = n * basePer;
+
+        const reward = new Reward({
+            xp: 0,
+            inkDrops: 0,
+            paperScraps: baseTotal,
+            items: []
         });
-        
+
         reward.receipt.base.paperScraps = baseTotal;
-        reward.receipt.final.paperScraps = paperScraps;
-        
+        reward.receipt.final.paperScraps = baseTotal;
+
         if (baseTotal > 0) {
             reward.receipt.modifiers.push({
                 source: 'End of Month - Journal Entry',
                 type: 'system',
                 value: baseTotal,
-                description: `${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps} Paper Scraps`,
+                description: `${n} entries × ${basePer} Paper Scraps`,
                 currency: 'paperScraps'
             });
         }
-        
-        if (bonusTotal > 0) {
-            reward.receipt.modifiers.push({
-                source: 'Scribe\'s Acolyte',
-                type: 'background',
-                value: bonusTotal,
-                description: `+${bonusTotal} Paper Scraps (${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.scribeBonus} bonus)`,
-                currency: 'paperScraps'
-            });
+
+        if (!stateAdapter || !dataModule || n === 0) {
+            return reward;
         }
-        
-        return reward;
+
+        const payload = TriggerPayload.journalEntry({ entryCount: n });
+        const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_JOURNAL_ENTRY, stateAdapter, dataModule);
+        return ModifierPipeline.resolve(TRIGGERS.ON_JOURNAL_ENTRY, payload, effects, reward);
     }
 
     /**

@@ -24,8 +24,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 10: Shopping/subscription state (shoppingLog, bookBoxSubscriptions, bookBoxHistory) and book shelfCategory
  * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState: usage/cooldown per source)
  * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: same shape as curse helpers)
+ * Version 13: Modifier pipeline effect cooldowns (effectCooldowns: last-used month/year per effect source key)
  */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 /**
  * Schema version key in localStorage
@@ -842,6 +843,28 @@ function validateBookBoxHistory(history, context = STORAGE_KEYS.BOOK_BOX_HISTORY
  * Validate curse helper state (Schema v11).
  * Shape: { [sourceId: string]: { used: boolean, cooldownCyclesRemaining?: number } }
  */
+/**
+ * Validate effect cooldown state (Schema v13).
+ * Shape: { [sourceKey: string]: { month: string, year: string } }
+ */
+function validateEffectCooldownState(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return {};
+    }
+    const validated = {};
+    for (const key of Object.keys(raw)) {
+        const sourceKey = typeof key === 'string' && key.trim() ? key.trim() : null;
+        if (!sourceKey) continue;
+        const entry = raw[key];
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+        const month = typeof entry.month === 'string' ? entry.month.trim() : '';
+        const year = typeof entry.year === 'string' ? entry.year.trim() : '';
+        if (!month || !year) continue;
+        validated[sourceKey] = { month, year };
+    }
+    return validated;
+}
+
 function validateCurseHelperState(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
         return {};
@@ -1005,6 +1028,7 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
     validated[STORAGE_KEYS.CURSE_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
     validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
+    validated[STORAGE_KEYS.EFFECT_COOLDOWNS] = validateEffectCooldownState(state[STORAGE_KEYS.EFFECT_COOLDOWNS]);
 
     return validated;
 }

@@ -46,7 +46,9 @@ export const STORAGE_KEYS = Object.freeze({
     // Curse tab – Worn Page mitigation helpers (usage and cooldown per source)
     CURSE_HELPER_STATE: 'curseHelperState',
     // Quest tab – monthly draw / dice helpers (usage and cooldown per source)
-    QUEST_DRAW_HELPER_STATE: 'questDrawHelperState'
+    QUEST_DRAW_HELPER_STATE: 'questDrawHelperState',
+    /** Last-used calendar period for TCG effect cooldowns (e.g. monthly PREVENT worn_page). */
+    EFFECT_COOLDOWNS: 'effectCooldowns'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([
@@ -81,7 +83,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
     STORAGE_KEYS.BOOK_BOX_HISTORY,
     STORAGE_KEYS.CURSE_HELPER_STATE,
-    STORAGE_KEYS.QUEST_DRAW_HELPER_STATE
+    STORAGE_KEYS.QUEST_DRAW_HELPER_STATE,
+    STORAGE_KEYS.EFFECT_COOLDOWNS
 ]);
 
 export function createEmptyCharacterState() {
@@ -117,7 +120,8 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
         [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
         [STORAGE_KEYS.CURSE_HELPER_STATE]: {},
-        [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {}
+        [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
+        [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
     };
 }
 

@@ -661,6 +661,46 @@ export class StateAdapter {
         return true;
     }
 
+    /**
+     * Whether a pipeline effect may be used for this calendar month/year (one automatic prevention per key per month).
+     * @param {string} cooldownKey - e.g. "school:Abjuration"
+     * @param {string} [_cadence] - reserved for future cadence types (e.g. bi-monthly passive items)
+     */
+    isEffectCooldownAvailable(cooldownKey, _cadence = 'monthly', { month, year } = {}) {
+        void _cadence;
+        if (!cooldownKey || typeof cooldownKey !== 'string') return false;
+        const m = typeof month === 'string' ? month.trim() : '';
+        const y = typeof year === 'string' ? year.trim() : '';
+        if (!m || !y) return false;
+
+        const prev = this.state[STORAGE_KEYS.EFFECT_COOLDOWNS];
+        const entry =
+            prev && typeof prev === 'object' && !Array.isArray(prev) ? prev[cooldownKey] : null;
+        if (!entry || typeof entry !== 'object') {
+            return true;
+        }
+        return entry.month !== m || entry.year !== y;
+    }
+
+    /** Record that an effect consumed its use for this calendar month/year. */
+    consumeEffectCooldown(cooldownKey, _cadence = 'monthly', { month, year } = {}) {
+        void _cadence;
+        if (!cooldownKey || typeof cooldownKey !== 'string') return false;
+        const m = typeof month === 'string' ? month.trim() : '';
+        const y = typeof year === 'string' ? year.trim() : '';
+        if (!m || !y) return false;
+
+        const key = STORAGE_KEYS.EFFECT_COOLDOWNS;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        const nextEntry = { month: m, year: y };
+        const next = { ...prev, [cooldownKey]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
     // Quest tab – monthly draw / dice helpers
     getQuestDrawHelperState() {
         const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE];

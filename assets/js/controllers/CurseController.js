@@ -12,6 +12,8 @@ import { BaseController } from './BaseController.js';
 import { Validator, required } from '../services/Validator.js';
 import { clearFormError, clearFieldError, showFieldError } from '../utils/formErrors.js';
 import * as data from '../character-sheet/data.js';
+import { tryPreventWornPage } from '../services/WornPagePrevention.js';
+import { toast } from '../ui/toast.js';
 
 export class CurseController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -62,6 +64,8 @@ export class CurseController extends BaseController {
 
         if (cursePenaltySelect) cursePenaltySelect.value = '';
         if (curseBookTitle) curseBookTitle.value = '';
+        const wornPageCheckbox = document.getElementById('curse-from-worn-page');
+        if (wornPageCheckbox) wornPageCheckbox.checked = false;
         this.editingCurseInfo = null;
         if (addCurseButton) addCurseButton.textContent = 'Add Curse';
     }
@@ -95,6 +99,28 @@ export class CurseController extends BaseController {
 
         const curseData = data.curseTable[curseName];
         if (!curseData) return;
+
+        const fromWornPage = document.getElementById('curse-from-worn-page')?.checked === true;
+        if (fromWornPage && this.editingCurseInfo === null) {
+            const month = document.getElementById('quest-month')?.value?.trim() || '';
+            const year = document.getElementById('quest-year')?.value?.trim() || '';
+            if (!month || !year) {
+                toast.warning('Set Month and Year on the Quests tab so worn-page prevention can track cooldowns.');
+                return;
+            }
+            const prevented = tryPreventWornPage({
+                stateAdapter,
+                dataModule: data,
+                month,
+                year
+            });
+            if (prevented.prevented) {
+                toast.success(`Worn Page penalty prevented (${prevented.sourceLabel}).`);
+                this.resetForm();
+                return;
+            }
+            toast.info('No automatic worn-page prevention available (or already used this month for that source). Adding curse as usual.');
+        }
 
         if (this.editingCurseInfo !== null) {
             // Editing existing curse

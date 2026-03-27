@@ -925,6 +925,10 @@ permalink: /character-sheet.html
 
         <div class="add-curse-form">
             <h3>Add Curse Penalty</h3>
+            <p class="description">If this curse comes from a <strong>Worn Page</strong> (rolled after missing monthly quests), check the box so Abjuration, Ward Against the Shroud, Raven Familiar, or Chalice can automatically prevent it when their monthly use is available. Uses Month/Year from the Quests tab for cooldowns.</p>
+            <div class="form-row">
+                <label class="checkbox-label"><input type="checkbox" id="curse-from-worn-page"> From Worn Page penalty (try auto-prevent)</label>
+            </div>
             <div class="form-row">
                 <select id="curse-penalty-select">
                     <option value="">-- Select Curse Penalty --</option>

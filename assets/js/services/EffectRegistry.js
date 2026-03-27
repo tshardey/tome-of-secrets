@@ -48,7 +48,7 @@ export class EffectRegistry {
         allEffects.push(...this._collectBackgroundEffects(trigger, stateAdapter, formData, dataModule));
         allEffects.push(...this._collectSchoolEffects(trigger, stateAdapter, formData, dataModule));
         allEffects.push(...this._collectAbilityEffects(trigger, state, dataModule));
-        allEffects.push(...this._collectItemEffects(trigger, state, dataModule));
+        allEffects.push(...this._collectEquippedAndPassiveItemEffects(trigger, state, dataModule));
         allEffects.push(...this._collectTemporaryBuffEffects(trigger, state, dataModule));
 
         return allEffects;
@@ -109,21 +109,44 @@ export class EffectRegistry {
         return effects;
     }
 
-    static _collectItemEffects(trigger, state, dataModule) {
-        const equipped = state[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
+    static _collectEquippedAndPassiveItemEffects(trigger, state, dataModule) {
         const catalog = dataModule.allItems || {};
         const effects = [];
+        const seenItemKeys = new Set();
 
+        const pushForItemName = rawName => {
+            if (!rawName || typeof rawName !== 'string') {
+                return;
+            }
+            const item = findByIdOrName(catalog, rawName);
+            const id = item?.id || rawName;
+            const dedupeKey = `item:${id}`;
+            if (seenItemKeys.has(dedupeKey)) {
+                return;
+            }
+            seenItemKeys.add(dedupeKey);
+            const source = {
+                sourceType: 'item',
+                id,
+                name: item?.name || rawName
+            };
+            effects.push(...collectEffects(item?.effects, trigger, source));
+        };
+
+        const equipped = state[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
         for (const equippedItem of equipped) {
             const name = typeof equippedItem === 'string' ? equippedItem : equippedItem?.name;
-            const item = findByIdOrName(catalog, name);
-            effects.push(
-                ...collectEffects(item?.effects, trigger, {
-                    sourceType: 'item',
-                    id: item?.id || name,
-                    name: item?.name || name
-                })
-            );
+            pushForItemName(name);
+        }
+
+        const passiveItems = state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+        for (const slot of passiveItems) {
+            pushForItemName(slot?.itemName);
+        }
+
+        const passiveFamiliars = state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+        for (const slot of passiveFamiliars) {
+            pushForItemName(slot?.itemName);
         }
 
         return effects;

@@ -306,6 +306,19 @@ function migrateToVersion12(state) {
 }
 
 /**
+ * Migration from schema version 12 to version 13
+ * - Adds effectCooldowns ({}) for TCG pipeline effect cooldown tracking
+ */
+function migrateToVersion13(state) {
+    const migrated = { ...state };
+    const key = STORAGE_KEYS.EFFECT_COOLDOWNS;
+    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
+        migrated[key] = {};
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -587,6 +600,9 @@ export function migrateState(state) {
                 break;
             case 12:
                 migratedState = migrateToVersion12(migratedState);
+                break;
+            case 13:
+                migratedState = migrateToVersion13(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

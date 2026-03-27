@@ -128,7 +128,17 @@
         "passiveRewardModifier": {
             "paperScraps": 1
         },
-        "excludeFromQuestBonuses": true
+        "excludeFromQuestBonuses": true,
+        "effects": [
+            {
+                "trigger": "ON_JOURNAL_ENTRY",
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "paperScraps",
+                    "value": 2
+                }
+            }
+        ]
     },
     "Chalice of Restoration": {
         "id": "chalice-of-restoration",
@@ -139,7 +149,17 @@
         "passiveBonus": "Once every 2 months, you may use this item to remove a Worn Page penalty (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
-        "excludeFromQuestBonuses": true
+        "excludeFromQuestBonuses": true,
+        "effects": [
+            {
+                "trigger": "ON_MONTH_END",
+                "modifier": {
+                    "type": "PREVENT",
+                    "target": "worn_page"
+                },
+                "cooldown": "monthly"
+            }
+        ]
     },
     "Lantern of Foresight": {
         "id": "lantern-of-foresight",
@@ -503,7 +523,17 @@
         },
         "passiveRewardModifier": {
             "paperScraps": 5
-        }
+        },
+        "effects": [
+            {
+                "trigger": "ON_JOURNAL_ENTRY",
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "paperScraps",
+                    "value": 10
+                }
+            }
+        ]
     },
     "Detective's Magnifying Glass": {
         "id": "detectives-magnifying-glass",
@@ -528,6 +558,16 @@
         "passiveBonus": "Once every 2 months, remove one Worn Page penalty (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
-        "excludeFromQuestBonuses": true
+        "excludeFromQuestBonuses": true,
+        "effects": [
+            {
+                "trigger": "ON_MONTH_END",
+                "modifier": {
+                    "type": "PREVENT",
+                    "target": "worn_page"
+                },
+                "cooldown": "monthly"
+            }
+        ]
     }
 }

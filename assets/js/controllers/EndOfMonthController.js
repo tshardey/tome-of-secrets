@@ -9,7 +9,6 @@
 
 import { BaseController } from './BaseController.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { GAME_CONFIG } from '../config/gameConfig.js';
 import { parseIntOr } from '../utils/helpers.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { safeSetJSON } from '../utils/storage.js';
@@ -64,16 +63,26 @@ export class EndOfMonthController extends BaseController {
             const journalEntriesInput = document.getElementById('journal-entries-completed');
             if (journalEntriesInput) {
                 const journalEntries = parseIntOr(journalEntriesInput.value, 0);
-                const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, background);
+                const wizardSchool = document.getElementById('wizardSchool')?.value || '';
+                const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, {
+                    stateAdapter: {
+                        state: stateAdapter.state,
+                        formData: {
+                            keeperBackground: background,
+                            wizardSchool
+                        }
+                    },
+                    dataModule: data
+                });
 
                 if (journalRewards.paperScraps > 0) {
                     updateCurrency(journalRewards);
-
-                    // Show notification of bonus if applicable
-                    if (background === 'scribe') {
-                        const papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps +
-                                              GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
+                    if (journalEntries > 0) {
+                        const extras =
+                            journalRewards.modifiedBy && journalRewards.modifiedBy.length
+                                ? ` — ${journalRewards.modifiedBy.join(', ')}`
+                                : '';
+                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps${extras}`);
                     }
                 }
 

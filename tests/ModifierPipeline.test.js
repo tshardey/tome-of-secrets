@@ -3,6 +3,7 @@ import { ModifierPipeline } from '../assets/js/services/ModifierPipeline.js';
 import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
 import { TRIGGERS, MODIFIER_TYPES, validateEffect } from '../assets/js/services/effectSchema.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { tryPreventWornPage } from '../assets/js/services/WornPagePrevention.js';
 
 describe('effectSchema', () => {
     test('validateEffect accepts valid effect', () => {
@@ -205,6 +206,106 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.receipt.modifiers[0].source).toBe('Source One');
         expect(result.receipt.final.xp).toBe(12);
     });
+
+    test('scales ON_JOURNAL_ENTRY ADD_FLAT by entryCount', () => {
+        const base = new Reward({ paperScraps: 25 });
+        base.receipt.base.paperScraps = 25;
+        base.receipt.modifiers.push({
+            source: 'End of Month - Journal Entry',
+            type: 'system',
+            value: 25,
+            description: '5 entries × 5 Paper Scraps',
+            currency: 'paperScraps'
+        });
+        const effects = [
+            {
+                source: { name: "The Scribe's Acolyte" },
+                effect: {
+                    trigger: TRIGGERS.ON_JOURNAL_ENTRY,
+                    modifier: {
+                        type: MODIFIER_TYPES.ADD_FLAT,
+                        resource: 'paperScraps',
+                        value: 3
+                    }
+                }
+            }
+        ];
+        const result = ModifierPipeline.resolve(
+            TRIGGERS.ON_JOURNAL_ENTRY,
+            { entryCount: 5 },
+            effects,
+            base
+        );
+        expect(result.paperScraps).toBe(40);
+        const scribeMod = result.receipt.modifiers.find(m => m.type === 'effect:add_flat');
+        expect(scribeMod.value).toBe(15);
+        expect(scribeMod.description).toContain('5 × 3');
+    });
+});
+
+describe('WornPagePrevention.tryPreventWornPage', () => {
+    test('consumes school effect cooldown and prevents', () => {
+        const state = {
+            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {},
+            [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+            [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+            [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+            [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+        };
+        const stateAdapter = {
+            state,
+            formData: { keeperBackground: '', wizardSchool: 'Abjuration' },
+            isEffectCooldownAvailable(key, cadence, period) {
+                const e = state[STORAGE_KEYS.EFFECT_COOLDOWNS][key];
+                if (!e) return true;
+                return e.month !== period.month || e.year !== period.year;
+            },
+            consumeEffectCooldown(key, cadence, period) {
+                state[STORAGE_KEYS.EFFECT_COOLDOWNS][key] = {
+                    month: period.month,
+                    year: period.year
+                };
+            }
+        };
+        const dataModule = {
+            schoolBenefits: {
+                Abjuration: {
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_MONTH_END,
+                            modifier: { type: MODIFIER_TYPES.PREVENT, target: 'worn_page' },
+                            cooldown: 'monthly'
+                        }
+                    ]
+                }
+            },
+            keeperBackgrounds: {},
+            masteryAbilities: {},
+            allItems: {}
+        };
+        const first = tryPreventWornPage({
+            stateAdapter,
+            dataModule,
+            month: 'March',
+            year: '2026'
+        });
+        expect(first.prevented).toBe(true);
+        const second = tryPreventWornPage({
+            stateAdapter,
+            dataModule,
+            month: 'March',
+            year: '2026'
+        });
+        expect(second.prevented).toBe(false);
+        const third = tryPreventWornPage({
+            stateAdapter,
+            dataModule,
+            month: 'April',
+            year: '2026'
+        });
+        expect(third.prevented).toBe(true);
+    });
 });
 
 describe('EffectRegistry.getActiveEffects', () => {
@@ -308,5 +409,49 @@ describe('EffectRegistry.getActiveEffects', () => {
         expect(sourceTypes).toContain('ability');
         expect(sourceTypes).toContain('item');
         expect(sourceTypes).toContain('temporary_buff');
+    });
+
+    test('includes effects from passive item slots without duplicating equipped item', () => {
+        const mockStateAdapter = {
+            state: {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: "Librarian's Compass" }],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [{ slotId: 'p1', itemName: "Librarian's Quill" }],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+            },
+            formData: {}
+        };
+        const mockDataModule = {
+            allItems: {
+                "Librarian's Compass": {
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
+                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 1 }
+                        }
+                    ]
+                },
+                "Librarian's Quill": {
+                    id: 'librarians-quill',
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
+                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 2 }
+                        }
+                    ]
+                }
+            },
+            keeperBackgrounds: {},
+            schoolBenefits: {},
+            masteryAbilities: {},
+            temporaryBuffs: {}
+        };
+        const activeEffects = EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_JOURNAL_ENTRY,
+            mockStateAdapter,
+            mockDataModule
+        );
+        expect(activeEffects.length).toBe(2);
     });
 });
