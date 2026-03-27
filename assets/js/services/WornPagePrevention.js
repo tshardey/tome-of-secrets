@@ -51,7 +51,7 @@ export function tryPreventWornPage({ stateAdapter, dataModule, month, year } = {
         }
         stateAdapter.consumeEffectCooldown(cooldownKey, cadence, { month: m, year: y });
         const sourceLabel = source?.name || cooldownKey;
-        return { prevented: true, sourceLabel, cooldownKey };
+        return { prevented: true, sourceLabel, cooldownKey, source };
     }
 
     return { prevented: false };

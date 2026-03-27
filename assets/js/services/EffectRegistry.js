@@ -8,8 +8,9 @@ function normalizeStateAdapter(stateAdapter) {
     return stateAdapter.state || stateAdapter;
 }
 
-function normalizeFormData(stateAdapter = {}) {
-    return stateAdapter.formData || {};
+function normalizeFormData(stateAdapter = {}, normalizedState = {}) {
+    // Support both wrapper ({ state, formData }) and plain-state callers.
+    return stateAdapter.formData || normalizedState.formData || {};
 }
 
 function findByIdOrName(collection = {}, idOrName) {
@@ -41,12 +42,12 @@ function collectEffects(effects, trigger, source) {
 export class EffectRegistry {
     static getActiveEffects(trigger, stateAdapter, dataModule = {}) {
         const state = normalizeStateAdapter(stateAdapter);
-        const formData = normalizeFormData(stateAdapter);
+        const formData = normalizeFormData(stateAdapter, state);
 
         const allEffects = [];
 
-        allEffects.push(...this._collectBackgroundEffects(trigger, stateAdapter, formData, dataModule));
-        allEffects.push(...this._collectSchoolEffects(trigger, stateAdapter, formData, dataModule));
+        allEffects.push(...this._collectBackgroundEffects(trigger, state, stateAdapter, formData, dataModule));
+        allEffects.push(...this._collectSchoolEffects(trigger, state, stateAdapter, formData, dataModule));
         allEffects.push(...this._collectAbilityEffects(trigger, state, dataModule));
         allEffects.push(...this._collectEquippedAndPassiveItemEffects(trigger, state, dataModule));
         allEffects.push(...this._collectTemporaryBuffEffects(trigger, state, dataModule));
@@ -54,8 +55,10 @@ export class EffectRegistry {
         return allEffects;
     }
 
-    static _collectBackgroundEffects(trigger, stateAdapter, formData, dataModule) {
+    static _collectBackgroundEffects(trigger, state, stateAdapter, formData, dataModule) {
         const background =
+            state?.background ||
+            state?.keeperBackground ||
             stateAdapter?.background ||
             formData.keeperBackground ||
             stateAdapter?.keeperBackground ||
@@ -72,8 +75,10 @@ export class EffectRegistry {
         });
     }
 
-    static _collectSchoolEffects(trigger, stateAdapter, formData, dataModule) {
+    static _collectSchoolEffects(trigger, state, stateAdapter, formData, dataModule) {
         const school =
+            state?.wizardSchool ||
+            state?.school ||
             stateAdapter?.wizardSchool ||
             formData.wizardSchool ||
             stateAdapter?.school ||

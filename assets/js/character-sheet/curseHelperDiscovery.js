@@ -275,3 +275,64 @@ export function buildCurseHelperList(state, catalogs, options = {}) {
 
     return out;
 }
+
+/**
+ * Find the Worn Page helper row that corresponds to a pipeline effect source
+ * (EffectRegistry: school / ability / item). Used after automatic PREVENT so the Curses tab
+ * shows "used" like manual "Mark used".
+ *
+ * @param {Object} state - Character state
+ * @param {Object} catalogs - Same catalogs as buildCurseHelperList
+ * @param {{ school?: string }} options - Current wizard school (from DOM)
+ * @param {{ sourceType: string, id?: string, name?: string }} pipelineSource - Effect source from Modifier pipeline
+ * @returns {{ sourceId: string, cadence: string, name: string, sourceType: string, [key: string]: unknown } | null}
+ */
+export function findHelperForPipelineSource(state, catalogs, options, pipelineSource) {
+    if (!pipelineSource || typeof pipelineSource !== 'object') {
+        return null;
+    }
+    const helpers = buildCurseHelperList(state, catalogs, options);
+    const st = pipelineSource.sourceType;
+    const pid = pipelineSource.id != null ? String(pipelineSource.id) : '';
+    const pname = pipelineSource.name != null ? String(pipelineSource.name) : '';
+
+    if (st === 'school') {
+        const schoolKey = pid || pname.replace(/^School of\s+/i, '').trim();
+        for (const h of helpers) {
+            if (h.sourceType === 'school' && h.name === schoolKey) {
+                return h;
+            }
+        }
+        return null;
+    }
+
+    if (st === 'ability') {
+        for (const h of helpers) {
+            if (h.sourceType !== 'ability') continue;
+            if (h.name === pname || h.name === pid) {
+                return h;
+            }
+        }
+        return null;
+    }
+
+    if (st === 'item') {
+        for (const h of helpers) {
+            if (h.sourceType !== 'item') continue;
+            if (h.name === pname || h.name === pid) {
+                return h;
+            }
+        }
+        return null;
+    }
+
+    return null;
+}
+
+/**
+ * @returns {string|null}
+ */
+export function findHelperSourceIdForPipelineSource(state, catalogs, options, pipelineSource) {
+    const h = findHelperForPipelineSource(state, catalogs, options, pipelineSource);
+    return h ? h.sourceId : null;
+}

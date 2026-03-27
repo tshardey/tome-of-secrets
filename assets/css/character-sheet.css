@@ -3663,6 +3663,12 @@
     color: #f0c8c8 !important;
 }
 
+/* Add Curse: Worn Page auto-prevent toggle (matches encounter Befriend/Defeat switch from card-draw.css) */
+.add-curse-form .curse-worn-page-toggle-wrap {
+    margin-top: 0.35rem;
+    margin-bottom: 0.85rem;
+}
+
 /* Worn Page Mitigation Helpers (Curse tab tiles) */
 .worn-page-helpers-grid {
     display: grid;

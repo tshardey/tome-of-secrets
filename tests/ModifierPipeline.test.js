@@ -156,6 +156,40 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.paperScraps).toBe(10);
     });
 
+    test('encounterType:any requires encounter context', () => {
+        const base = new Reward({ xp: 10 });
+        const effects = [
+            {
+                source: { name: 'Any Encounter Bonus' },
+                effect: {
+                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                    condition: { encounterType: 'any' },
+                    modifier: {
+                        type: MODIFIER_TYPES.ADD_FLAT,
+                        resource: 'xp',
+                        value: 5
+                    }
+                }
+            }
+        ];
+
+        const noEncounter = ModifierPipeline.resolve(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            {},
+            effects,
+            base
+        );
+        expect(noEncounter.xp).toBe(10);
+
+        const withEncounter = ModifierPipeline.resolve(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            { encounterType: 'Monster' },
+            effects,
+            base
+        );
+        expect(withEncounter.xp).toBe(15);
+    });
+
     test('matches condition keys including genre and pageCount', () => {
         const base = new Reward({ inkDrops: 0 });
         const effects = [
@@ -409,6 +443,62 @@ describe('EffectRegistry.getActiveEffects', () => {
         expect(sourceTypes).toContain('ability');
         expect(sourceTypes).toContain('item');
         expect(sourceTypes).toContain('temporary_buff');
+    });
+
+    test('resolves background and school from normalized state when formData is missing', () => {
+        const mockStateAdapter = {
+            state: {
+                keeperBackground: 'biblioslinker',
+                wizardSchool: 'Enchantment',
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+            }
+        };
+
+        const mockDataModule = {
+            keeperBackgrounds: {
+                biblioslinker: {
+                    name: 'The Biblioslinker',
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                            modifier: {
+                                type: MODIFIER_TYPES.ADD_FLAT,
+                                resource: 'paperScraps',
+                                value: 10
+                            }
+                        }
+                    ]
+                }
+            },
+            schoolBenefits: {
+                Enchantment: {
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                            modifier: {
+                                type: MODIFIER_TYPES.MULTIPLY,
+                                resource: 'xp',
+                                value: 1.5
+                            }
+                        }
+                    ]
+                }
+            },
+            masteryAbilities: {},
+            allItems: {},
+            temporaryBuffs: {}
+        };
+
+        const activeEffects = EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            mockStateAdapter,
+            mockDataModule
+        );
+        const sourceTypes = activeEffects.map(entry => entry.source.sourceType);
+        expect(sourceTypes).toContain('background');
+        expect(sourceTypes).toContain('school');
     });
 
     test('includes effects from passive item slots without duplicating equipped item', () => {

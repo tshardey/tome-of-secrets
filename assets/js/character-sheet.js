@@ -100,6 +100,23 @@ export async function initializeCharacterSheet() {
     // --- INITIAL LOAD (may be async due to IndexedDB-backed storage) ---
     await loadState(form);
 
+    (function defaultQuestMonthYearIfEmpty() {
+        const monthSel = document.getElementById('quest-month');
+        const yearSel = document.getElementById('quest-year');
+        if (!monthSel || !yearSel) return;
+        const now = new Date();
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        if (!monthSel.value) {
+            monthSel.value = monthNames[now.getMonth()];
+        }
+        if (!yearSel.value) {
+            yearSel.value = String(now.getFullYear());
+        }
+    })();
+
     // Initialize form persistence (auto-save on input/change)
     initializeFormPersistence(form);
 

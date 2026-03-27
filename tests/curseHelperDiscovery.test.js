@@ -6,7 +6,9 @@ import {
     isWornPageMitigation,
     getCadenceFromText,
     buildSourceId,
-    buildCurseHelperList
+    buildCurseHelperList,
+    findHelperForPipelineSource,
+    findHelperSourceIdForPipelineSource
 } from '../assets/js/character-sheet/curseHelperDiscovery.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
@@ -361,6 +363,94 @@ describe('curseHelperDiscovery', () => {
             };
             const helpers = buildCurseHelperList(state, catalogs, {});
             expect(helpers).toEqual([]);
+        });
+    });
+
+    describe('findHelperForPipelineSource', () => {
+        const baseCatalogs = {
+            allItems: {},
+            temporaryBuffs: {},
+            masteryAbilities: {},
+            schoolBenefits: {
+                Abjuration: {
+                    benefit:
+                        'Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.'
+                }
+            },
+            seriesExpedition: {}
+        };
+
+        it('matches school pipeline source (School of X name) to school helper', () => {
+            const state = {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                [STORAGE_KEYS.INVENTORY_ITEMS]: [],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
+            };
+            const h = findHelperForPipelineSource(
+                state,
+                baseCatalogs,
+                { school: 'Abjuration' },
+                { sourceType: 'school', id: 'Abjuration', name: 'School of Abjuration' }
+            );
+            expect(h).not.toBeNull();
+            expect(h.sourceId).toBe(buildSourceId('school', null, 'Abjuration'));
+            expect(h.sourceType).toBe('school');
+        });
+
+        it('matches equipped item pipeline source to item helper', () => {
+            const state = {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Chalice of Restoration' }],
+                [STORAGE_KEYS.INVENTORY_ITEMS]: [],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
+            };
+            const catalogs = {
+                ...baseCatalogs,
+                allItems: {
+                    'Chalice of Restoration': {
+                        name: 'Chalice of Restoration',
+                        bonus: 'Once per month, you may use this item to remove a Worn Page penalty.'
+                    }
+                }
+            };
+            const h = findHelperForPipelineSource(
+                state,
+                catalogs,
+                {},
+                {
+                    sourceType: 'item',
+                    id: 'chalice-of-restoration',
+                    name: 'Chalice of Restoration'
+                }
+            );
+            expect(h).not.toBeNull();
+            expect(h.sourceId).toBe(buildSourceId('item', 'equipped', '0|Chalice of Restoration'));
+        });
+
+        it('findHelperSourceIdForPipelineSource returns only sourceId string', () => {
+            const state = {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                [STORAGE_KEYS.INVENTORY_ITEMS]: [],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
+            };
+            const id = findHelperSourceIdForPipelineSource(
+                state,
+                baseCatalogs,
+                { school: 'Abjuration' },
+                { sourceType: 'school', id: 'Abjuration', name: 'School of Abjuration' }
+            );
+            expect(id).toBe(buildSourceId('school', null, 'Abjuration'));
         });
     });
 });

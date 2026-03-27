@@ -12,6 +12,7 @@ import { BaseController } from './BaseController.js';
 import { Validator, required } from '../services/Validator.js';
 import { clearFormError, clearFieldError, showFieldError } from '../utils/formErrors.js';
 import * as data from '../character-sheet/data.js';
+import { findHelperForPipelineSource } from '../character-sheet/curseHelperDiscovery.js';
 import { tryPreventWornPage } from '../services/WornPagePrevention.js';
 import { toast } from '../ui/toast.js';
 
@@ -64,8 +65,6 @@ export class CurseController extends BaseController {
 
         if (cursePenaltySelect) cursePenaltySelect.value = '';
         if (curseBookTitle) curseBookTitle.value = '';
-        const wornPageCheckbox = document.getElementById('curse-from-worn-page');
-        if (wornPageCheckbox) wornPageCheckbox.checked = false;
         this.editingCurseInfo = null;
         if (addCurseButton) addCurseButton.textContent = 'Add Curse';
     }
@@ -102,10 +101,22 @@ export class CurseController extends BaseController {
 
         const fromWornPage = document.getElementById('curse-from-worn-page')?.checked === true;
         if (fromWornPage && this.editingCurseInfo === null) {
-            const month = document.getElementById('quest-month')?.value?.trim() || '';
-            const year = document.getElementById('quest-year')?.value?.trim() || '';
+            // Use a matched month/year pair from one source to avoid mixed periods.
+            const questMonth = document.getElementById('quest-month')?.value?.trim() || '';
+            const questYear = document.getElementById('quest-year')?.value?.trim() || '';
+            const editMonth = document.getElementById('edit-quest-month')?.value?.trim() || '';
+            const editYear = document.getElementById('edit-quest-year')?.value?.trim() || '';
+            let month = '';
+            let year = '';
+            if (questMonth && questYear) {
+                month = questMonth;
+                year = questYear;
+            } else if (editMonth && editYear) {
+                month = editMonth;
+                year = editYear;
+            }
             if (!month || !year) {
-                toast.warning('Set Month and Year on the Quests tab so worn-page prevention can track cooldowns.');
+                toast.warning('Set Month and Year in the Monthly Tracker (Quests tab), or open Edit Quest so Month/Year are filled.');
                 return;
             }
             const prevented = tryPreventWornPage({
@@ -115,6 +126,29 @@ export class CurseController extends BaseController {
                 year
             });
             if (prevented.prevented) {
+                const school = document.getElementById('wizardSchool')?.value || '';
+                const helperCatalogs = {
+                    allItems: data.allItems || {},
+                    temporaryBuffs: { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) },
+                    masteryAbilities: data.masteryAbilities || {},
+                    schoolBenefits: data.schoolBenefits || {},
+                    seriesExpedition: data.seriesCompletionRewards || {},
+                    permanentBonuses: data.permanentBonuses || {}
+                };
+                const helperRow = findHelperForPipelineSource(
+                    stateAdapter.state,
+                    helperCatalogs,
+                    { school },
+                    prevented.source
+                );
+                if (helperRow) {
+                    const cadence =
+                        helperRow.cadence === 'every-2-months' ? 'every-2-months' : 'monthly';
+                    stateAdapter.markCurseHelperUsed(helperRow.sourceId, { cadence });
+                }
+                if (uiModule.renderWornPageHelpers) {
+                    uiModule.renderWornPageHelpers();
+                }
                 toast.success(`Worn Page penalty prevented (${prevented.sourceLabel}).`);
                 this.resetForm();
                 return;

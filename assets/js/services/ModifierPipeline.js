@@ -52,6 +52,10 @@ export class ModifierPipeline {
                 continue;
             }
             if (key === 'encounterType' && expectedValue === 'any') {
+                // "any encounter type" still requires that we are in an encounter context.
+                if (!payload.encounterType) {
+                    return false;
+                }
                 continue;
             }
             if (key === 'hasFamiliarEquipped' && expectedValue === true) {
