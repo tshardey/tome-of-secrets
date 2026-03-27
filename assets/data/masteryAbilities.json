@@ -109,13 +109,10 @@
         "name": "Silver Tongue",
         "school": "Enchantment",
         "cost": 1,
-        "benefit": "When you complete a Side Quest, you gain an additional +5 Paper Scraps, representing your knack for getting a little extra out of every interaction..",
+        "benefit": "When you complete any quest, you gain an additional +5 Paper Scraps, representing your knack for getting a little extra out of every interaction.",
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
-                "condition": {
-                    "questType": "side_quest"
-                },
                 "modifier": {
                     "type": "ADD_FLAT",
                     "resource": "paperScraps",

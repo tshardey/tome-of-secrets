@@ -323,13 +323,19 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             expect(final.modifiedBy).toContain('School of Enchantment');
         });
 
-        test('Silver Tongue adds paper scraps on side quests when learned', () => {
+        test('Silver Tongue adds paper scraps on any quest type when learned', () => {
             characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
-            const final = RewardCalculator.calculateFinalRewards('♣ Side Quest', 'The Arcane Grimoire', {
+            const genre = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+                quest: { type: '♥ Organize the Stacks' }
+            });
+            expect(genre.paperScraps).toBe(5);
+            expect(genre.modifiedBy).toContain('Silver Tongue');
+
+            const side = RewardCalculator.calculateFinalRewards('♣ Side Quest', 'The Arcane Grimoire', {
                 quest: { type: '♣ Side Quest' }
             });
-            expect(final.paperScraps).toBeGreaterThanOrEqual(5);
-            expect(final.modifiedBy).toContain('Silver Tongue');
+            expect(side.paperScraps).toBeGreaterThanOrEqual(5);
+            expect(side.modifiedBy).toContain('Silver Tongue');
         });
 
         test('Alchemic Focus adds XP on extra credit when learned', () => {

@@ -473,7 +473,12 @@ export class RewardCalculator {
 
     static _effectEntryIsResolvable(effectEntry) {
         const t = effectEntry?.effect?.modifier?.type;
-        return t === MODIFIER_TYPES.ADD_FLAT || t === MODIFIER_TYPES.MULTIPLY || t === MODIFIER_TYPES.PREVENT;
+        return (
+            t === MODIFIER_TYPES.ADD_FLAT ||
+            t === MODIFIER_TYPES.GRANT_RESOURCE ||
+            t === MODIFIER_TYPES.MULTIPLY ||
+            t === MODIFIER_TYPES.PREVENT
+        );
     }
 
     static _mergePipelineEffectOrder(registryEffects, buffEffects) {
@@ -482,6 +487,8 @@ export class RewardCalculator {
         return [
             ...bucket(buffEffects, MODIFIER_TYPES.ADD_FLAT),
             ...bucket(registryEffects, MODIFIER_TYPES.ADD_FLAT),
+            ...bucket(buffEffects, MODIFIER_TYPES.GRANT_RESOURCE),
+            ...bucket(registryEffects, MODIFIER_TYPES.GRANT_RESOURCE),
             ...bucket(buffEffects, MODIFIER_TYPES.MULTIPLY),
             ...bucket(registryEffects, MODIFIER_TYPES.MULTIPLY),
             ...bucket(buffEffects, MODIFIER_TYPES.PREVENT),

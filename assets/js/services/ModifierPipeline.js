@@ -93,6 +93,9 @@ export class ModifierPipeline {
         for (const entry of byType[MODIFIER_TYPES.ADD_FLAT] || []) {
             this._applyAddFlat(resolved, entry);
         }
+        for (const entry of byType[MODIFIER_TYPES.GRANT_RESOURCE] || []) {
+            this._applyGrantResource(resolved, entry);
+        }
         for (const entry of byType[MODIFIER_TYPES.MULTIPLY] || []) {
             this._applyMultiply(resolved, entry);
         }
@@ -127,6 +130,26 @@ export class ModifierPipeline {
             type: 'effect:add_flat',
             value,
             description: `+${value} ${resource}`,
+            currency: resource
+        });
+    }
+
+    /** Immediate resource grant (e.g. ON_QUEST_DRAFTED); same applied math as ADD_FLAT on Reward fields. */
+    static _applyGrantResource(reward, entry) {
+        const { resource, value } = entry.effect.modifier;
+        if (!resource || typeof value !== 'number') {
+            return;
+        }
+        if (typeof reward[resource] !== 'number') {
+            return;
+        }
+        reward[resource] += value;
+        reward.modifiedBy.push(this._sourceName(entry));
+        reward.receipt.modifiers.push({
+            source: this._sourceName(entry),
+            type: 'effect:grant_resource',
+            value,
+            description: `Granted +${value} ${resource}`,
             currency: resource
         });
     }

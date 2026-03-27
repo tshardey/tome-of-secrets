@@ -70,6 +70,34 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.xp).toBe(15);
     });
 
+    test('applies GRANT_RESOURCE like an additive currency grant', () => {
+        const base = new Reward({ inkDrops: 3 });
+        const effects = [
+            {
+                source: { name: 'Cartographer' },
+                effect: {
+                    trigger: TRIGGERS.ON_QUEST_DRAFTED,
+                    condition: { questType: 'dungeon_crawl' },
+                    modifier: {
+                        type: MODIFIER_TYPES.GRANT_RESOURCE,
+                        resource: 'inkDrops',
+                        value: 15
+                    }
+                }
+            }
+        ];
+
+        const result = ModifierPipeline.resolve(
+            TRIGGERS.ON_QUEST_DRAFTED,
+            { questType: 'dungeon_crawl' },
+            effects,
+            base
+        );
+        expect(result.inkDrops).toBe(18);
+        expect(result.receipt.modifiers[0].type).toBe('effect:grant_resource');
+        expect(result.modifiedBy).toContain('Cartographer');
+    });
+
     test('applies flat before multiplier', () => {
         const base = new Reward({ xp: 10 });
         const effects = [
