@@ -7,6 +7,7 @@
 
 import { RewardCalculator, Reward } from '../services/RewardCalculator.js';
 import { Validator, required, selected, conditional } from '../services/Validator.js';
+import { characterState } from '../character-sheet/state.js';
 
 export class BaseQuestHandler {
     /**
@@ -117,22 +118,31 @@ export class BaseQuestHandler {
      * @returns {Reward} Final rewards with all modifiers applied
      */
     calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null) {
-        let finalRewards = baseRewards;
-
-        // Apply buff modifiers if any buffs are selected (pass quest for page-count-aware items)
-        if (selectedBuffs && selectedBuffs.length > 0) {
-            finalRewards = RewardCalculator.applyModifiers(baseRewards, selectedBuffs, { quest });
-        }
-
-        // Always apply background bonuses (independent of buffs)
-        finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, quest, background);
-
-        // Apply school bonuses
-        if (wizardSchool) {
-            finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
-        }
-
-        return finalRewards;
+        const stateAdapter = this.data?.rewardStateAdapter || null;
+        const getBook =
+            stateAdapter && typeof stateAdapter.getBook === 'function'
+                ? id => stateAdapter.getBook(id)
+                : null;
+        const adapter = stateAdapter || {
+            state: characterState,
+            formData: {
+                keeperBackground: background ?? '',
+                wizardSchool: wizardSchool ?? ''
+            }
+        };
+        return RewardCalculator.calculateFinalRewards(quest.type, quest.prompt || '', {
+            baseRewardOverride: baseRewards,
+            appliedBuffs: selectedBuffs || [],
+            background,
+            wizardSchool,
+            quest,
+            isEncounter: quest.isEncounter || false,
+            roomNumber: quest.roomNumber || null,
+            encounterName: quest.encounterName || null,
+            isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
+            stateAdapter: adapter,
+            getBook
+        });
     }
 
     /**
@@ -200,7 +210,7 @@ export class BaseQuestHandler {
      * @param {string} wizardSchool - Wizard school key
      * @returns {Object} Quest with finalized rewards
      */
-    static completeActiveQuest(quest, background, wizardSchool = null) {
+    static completeActiveQuest(quest, background, wizardSchool = null, stateAdapter = null) {
         // Recalculate base rewards from scratch to ensure receipt base values are correct
         // This is important because stored rewards are plain JSON objects that don't have receipt info
         let baseRewards = RewardCalculator.getBaseRewards(
@@ -253,24 +263,35 @@ export class BaseQuestHandler {
             baseRewards.items = [...new Set(baseRewards.items)];
         }
         
-        let finalRewards = baseRewards;
-        
-        // Apply buff modifiers if any buffs are selected (pass quest for page-count-aware items)
-        if (quest.buffs && quest.buffs.length > 0) {
-            finalRewards = RewardCalculator.applyModifiers(baseRewards, quest.buffs, { quest });
-            // Preserve items after applying modifiers
-            if (quest.rewards?.items && Array.isArray(quest.rewards.items)) {
-                finalRewards.items = [...finalRewards.items, ...quest.rewards.items];
-                finalRewards.items = [...new Set(finalRewards.items)];
+        const adapter = stateAdapter || {
+            state: characterState,
+            formData: {
+                keeperBackground: background || '',
+                wizardSchool: wizardSchool || ''
             }
-        }
-        
-        // Always apply background bonuses (independent of buffs)
-        finalRewards = RewardCalculator.applyBackgroundBonuses(finalRewards, quest, background);
-        
-        // Apply school bonuses
-        if (wizardSchool) {
-            finalRewards = RewardCalculator.applySchoolBonuses(finalRewards, quest, wizardSchool);
+        };
+        const getBook =
+            stateAdapter && typeof stateAdapter.getBook === 'function'
+                ? id => stateAdapter.getBook(id)
+                : null;
+
+        let finalRewards = RewardCalculator.calculateFinalRewards(quest.type, quest.prompt || '', {
+            baseRewardOverride: baseRewards,
+            appliedBuffs: quest.buffs || [],
+            background,
+            wizardSchool,
+            quest,
+            isEncounter: quest.isEncounter || false,
+            roomNumber: quest.roomNumber || null,
+            encounterName: quest.encounterName || null,
+            isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
+            stateAdapter: adapter,
+            getBook
+        });
+
+        if (quest.rewards?.items && Array.isArray(quest.rewards.items)) {
+            finalRewards.items = [...finalRewards.items, ...quest.rewards.items];
+            finalRewards.items = [...new Set(finalRewards.items)];
         }
         
         // Get receipt before converting to JSON

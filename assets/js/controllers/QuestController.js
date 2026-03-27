@@ -598,7 +598,11 @@ export class QuestController extends BaseController {
             };
 
             // Get handler for quest type (pass getBook so handlers can propagate book page count to quests)
-            const dataWithGetBook = { ...data, getBook: (bookId) => stateAdapter.getBook(bookId) };
+            const dataWithGetBook = {
+                ...data,
+                getBook: (bookId) => stateAdapter.getBook(bookId),
+                rewardStateAdapter: stateAdapter
+            };
             const handler = QuestHandlerFactory.getHandler(type, formElements, dataWithGetBook);
 
             // Clear any previous errors
@@ -839,7 +843,7 @@ export class QuestController extends BaseController {
         const background = this.keeperBackgroundSelect?.value || '';
         const wizardSchoolSelect = document.getElementById('wizardSchool');
         const wizardSchool = wizardSchoolSelect?.value || '';
-        const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool);
+        const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool, stateAdapter);
         
         // Set dateCompleted (Schema v3)
         completedQuest.dateCompleted = new Date().toISOString();
@@ -1006,7 +1010,7 @@ export class QuestController extends BaseController {
         const background = this.keeperBackgroundSelect?.value || '';
         const wizardSchoolSelect = document.getElementById('wizardSchool');
         const wizardSchool = wizardSchoolSelect?.value || '';
-        const completedQuest = BaseQuestHandler.completeActiveQuest(quest, background, wizardSchool);
+        const completedQuest = BaseQuestHandler.completeActiveQuest(quest, background, wizardSchool, stateAdapter);
 
         completedQuest.dateCompleted = quest.dateCompleted || new Date().toISOString();
         if (!completedQuest.dateAdded) {

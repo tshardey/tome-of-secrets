@@ -203,33 +203,39 @@ describe('RewardCalculator - Apply Modifiers', () => {
     });
 });
 
-describe('RewardCalculator - Background Bonuses', () => {
+describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
     test('should apply Biblioslinker bonus to dungeon crawls', () => {
         const base = new Reward({ paperScraps: 5 });
-        const quest = { type: '♠ Dungeon Crawl' };
-        
-        const modified = RewardCalculator.applyBackgroundBonuses(base, quest, 'biblioslinker');
-        
-        expect(modified.paperScraps).toBe(15); // 5 + 10
-        expect(modified.modifiedBy).toContain('Biblioslinker');
+        const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+            baseRewardOverride: base,
+            background: 'biblioslinker',
+            quest: { type: '♠ Dungeon Crawl' }
+        });
+
+        expect(modified.paperScraps).toBe(15);
+        expect(modified.modifiedBy).toContain('The Biblioslinker');
     });
 
     test('should not apply Biblioslinker bonus to non-dungeon quests', () => {
         const base = new Reward({ paperScraps: 5 });
-        const quest = { type: '♥ Organize the Stacks' };
-        
-        const modified = RewardCalculator.applyBackgroundBonuses(base, quest, 'biblioslinker');
-        
+        const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            baseRewardOverride: base,
+            background: 'biblioslinker',
+            quest: { type: '♥ Organize the Stacks' }
+        });
+
         expect(modified.paperScraps).toBe(5);
         expect(modified.modifiedBy).toEqual([]);
     });
 
-    test('should not apply bonuses when no background selected', () => {
+    test('should not apply background effects when no background selected', () => {
         const base = new Reward({ paperScraps: 5 });
-        const quest = { type: '♠ Dungeon Crawl' };
-        
-        const modified = RewardCalculator.applyBackgroundBonuses(base, quest, '');
-        
+        const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+            baseRewardOverride: base,
+            background: '',
+            quest: { type: '♠ Dungeon Crawl' }
+        });
+
         expect(modified.paperScraps).toBe(5);
     });
 });
@@ -265,7 +271,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         );
         
         expect(final.paperScraps).toBe(15); // 5 from room + 10 from biblioslinker
-        expect(final.modifiedBy).toContain('Biblioslinker');
+        expect(final.modifiedBy).toContain('The Biblioslinker');
     });
 
     test('should handle complex reward calculation', () => {
@@ -288,6 +294,63 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         expect(final.xp).toBe(30); // Monster base XP
         expect(final.inkDrops).toBe(35); // 0 + 20 + 15
         expect(final.modifiedBy.length).toBeGreaterThan(0);
+    });
+
+    describe('ON_QUEST_COMPLETED auto-apply (EffectRegistry)', () => {
+        const prevLearned = [];
+
+        beforeEach(() => {
+            prevLearned.splice(0, prevLearned.length, ...(characterState[STORAGE_KEYS.LEARNED_ABILITIES] || []));
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = [];
+        });
+
+        afterEach(() => {
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = [...prevLearned];
+        });
+
+        test('School of Enchantment multiplies XP on monster dungeon encounters without buff cards', () => {
+            const final = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+                appliedBuffs: [],
+                wizardSchool: 'Enchantment',
+                quest: { type: '♠ Dungeon Crawl', isEncounter: true, isBefriend: false },
+                isEncounter: true,
+                roomNumber: '1',
+                encounterName: 'Will-o-wisps',
+                isBefriend: false
+            });
+
+            expect(final.xp).toBe(45);
+            expect(final.modifiedBy).toContain('School of Enchantment');
+        });
+
+        test('Silver Tongue adds paper scraps on side quests when learned', () => {
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
+            const final = RewardCalculator.calculateFinalRewards('♣ Side Quest', 'The Arcane Grimoire', {
+                quest: { type: '♣ Side Quest' }
+            });
+            expect(final.paperScraps).toBeGreaterThanOrEqual(5);
+            expect(final.modifiedBy).toContain('Silver Tongue');
+        });
+
+        test('Alchemic Focus adds XP on extra credit when learned', () => {
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Alchemic Focus'];
+            const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+                quest: { type: '⭐ Extra Credit' }
+            });
+            expect(final.xp).toBe(5);
+            expect(final.modifiedBy).toContain('Alchemic Focus');
+        });
+
+        test('Conjuration adds ink when a familiar is equipped', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
+            const final = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+                wizardSchool: 'Conjuration',
+                quest: { type: '♥ Organize the Stacks' }
+            });
+            expect(final.inkDrops).toBe(15);
+            expect(final.modifiedBy).toContain('School of Conjuration');
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
     });
 
     test('should check both temporaryBuffs and temporaryBuffsFromRewards', () => {

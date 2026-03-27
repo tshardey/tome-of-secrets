@@ -51,6 +51,15 @@ export class ModifierPipeline {
             if (key === 'pageCount' || key === 'hasTag') {
                 continue;
             }
+            if (key === 'encounterType' && expectedValue === 'any') {
+                continue;
+            }
+            if (key === 'hasFamiliarEquipped' && expectedValue === true) {
+                if (!payload.hasFamiliarEquipped) {
+                    return false;
+                }
+                continue;
+            }
             if (!matchesConditionValue(payload[key], expectedValue)) {
                 return false;
             }

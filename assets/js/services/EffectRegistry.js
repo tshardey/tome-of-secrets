@@ -86,7 +86,7 @@ export class EffectRegistry {
         return collectEffects(sourceData?.effects, trigger, {
             sourceType: 'school',
             id: school,
-            name: school
+            name: `School of ${school}`
         });
     }
 

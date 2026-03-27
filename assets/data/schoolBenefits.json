@@ -64,6 +64,17 @@
         "benefit": "When you complete a quest while your Familiar slot is equipped, you gain an additional +5 Ink Drops for each quest.",
         "effects": [
             {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": {
+                    "hasFamiliarEquipped": true
+                },
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "inkDrops",
+                    "value": 5
+                }
+            },
+            {
                 "trigger": "ON_STATE_LOAD",
                 "modifier": {
                     "type": "UNLOCK_SLOT",
