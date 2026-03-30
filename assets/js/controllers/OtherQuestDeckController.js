@@ -50,6 +50,7 @@ import {
 } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
+import { computeQuestDeckDrawCount, QUEST_DECK_EXTRA_CREDIT } from '../services/QuestDrawBoost.js';
 
 function generateQuestId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -161,8 +162,20 @@ export class OtherQuestDeckController extends BaseController {
     }
 
     handleExtraCreditDeckClick() {
-        this.drawnExtraCredit.push({ cardImage: getExtraCreditCardImage() });
-        this.selectedIndicesExtraCredit.add(this.drawnExtraCredit.length - 1);
+        const { drawCount, consumedHelper } = computeQuestDeckDrawCount(
+            this.stateAdapter,
+            QUEST_DECK_EXTRA_CREDIT
+        );
+        const count = Math.max(1, drawCount);
+        for (let i = 0; i < count; i++) {
+            this.drawnExtraCredit.push({ cardImage: getExtraCreditCardImage() });
+            this.selectedIndicesExtraCredit.add(this.drawnExtraCredit.length - 1);
+        }
+        if (consumedHelper) {
+            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${count} Extra Credit card${count !== 1 ? 's' : ''})`);
+            this.dependencies.ui?.renderQuestDrawHelpers?.();
+            this.saveState();
+        }
         this.renderExtraCredit();
         this.dependencies.updateDeckActionsLabel?.();
     }

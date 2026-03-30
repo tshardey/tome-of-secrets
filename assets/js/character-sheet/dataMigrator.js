@@ -319,6 +319,19 @@ function migrateToVersion13(state) {
 }
 
 /**
+ * Migration from schema version 13 to version 14
+ * - Adds questDrawHelperSettings ({ autoApplyOnDraw: false })
+ */
+function migrateToVersion14(state) {
+    const migrated = { ...state };
+    const key = STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS;
+    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
+        migrated[key] = { autoApplyOnDraw: false };
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -603,6 +616,9 @@ export function migrateState(state) {
                 break;
             case 13:
                 migratedState = migrateToVersion13(migratedState);
+                break;
+            case 14:
+                migratedState = migrateToVersion14(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

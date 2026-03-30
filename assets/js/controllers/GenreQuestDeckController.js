@@ -10,7 +10,6 @@
 
 import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
-import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
@@ -22,6 +21,7 @@ import { createGenreQuestDeckViewModel } from '../viewModels/questDeckViewModel.
 import { renderCardback, renderGenreQuestCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
+import { computeQuestDeckDrawCount, QUEST_DECK_GENRE } from '../services/QuestDrawBoost.js';
 
 export class GenreQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -130,11 +130,25 @@ export class GenreQuestDeckController extends BaseController {
         const pool = availableQuests.filter((q) => !drawnKeys.has(q.key));
         if (pool.length === 0) return;
 
-        const drawn = drawRandomGenreQuest(pool);
-        if (!drawn) return;
-
-        this.drawnQuests.push(drawn);
-        this.selectedIndices.add(this.drawnQuests.length - 1);
+        const { drawCount, consumedHelper } = computeQuestDeckDrawCount(
+            this.stateAdapter,
+            QUEST_DECK_GENRE
+        );
+        const n = Math.max(1, drawCount);
+        for (let i = 0; i < n; i++) {
+            const remainingPool = availableQuests.filter((q) => !drawnKeys.has(q.key));
+            if (remainingPool.length === 0) break;
+            const drawn = drawRandomGenreQuest(remainingPool);
+            if (!drawn) break;
+            drawnKeys.add(drawn.key);
+            this.drawnQuests.push(drawn);
+            this.selectedIndices.add(this.drawnQuests.length - 1);
+        }
+        if (consumedHelper) {
+            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${n} genre card${n !== 1 ? 's' : ''})`);
+            this.dependencies.ui?.renderQuestDrawHelpers?.();
+            this.saveState();
+        }
         this.renderDeck();
     }
 

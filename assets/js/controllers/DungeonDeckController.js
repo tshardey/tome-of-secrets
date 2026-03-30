@@ -26,6 +26,7 @@ import { createDungeonDeckViewModel } from '../viewModels/dungeonDeckViewModel.j
 import { renderCardback, renderRoomCard, renderEncounterCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
+import { computeQuestDeckDrawCount, QUEST_DECK_DUNGEON_ROOM } from '../services/QuestDrawBoost.js';
 
 export class DungeonDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -160,11 +161,25 @@ export class DungeonDeckController extends BaseController {
             toast.info('You can draw an encounter for the current room first (optional) before drawing another room.');
         }
 
-        const drawnRoomNumber = drawRandomRoom(pool);
-        if (!drawnRoomNumber) return;
-
-        this.drawnSlots.push({ roomNumber: drawnRoomNumber, encounterData: null });
-        this.selectedIndices.add(this.drawnSlots.length - 1);
+        const { drawCount, consumedHelper } = computeQuestDeckDrawCount(
+            this.stateAdapter,
+            QUEST_DECK_DUNGEON_ROOM
+        );
+        const count = Math.max(1, drawCount);
+        for (let i = 0; i < count; i++) {
+            const drawnRoomNumbers = new Set(this.drawnSlots.map((s) => s.roomNumber));
+            const poolLoop = getAvailableRooms(characterState).filter((roomNum) => !drawnRoomNumbers.has(roomNum));
+            if (poolLoop.length === 0) break;
+            const drawnRoomNumber = drawRandomRoom(poolLoop);
+            if (!drawnRoomNumber) break;
+            this.drawnSlots.push({ roomNumber: drawnRoomNumber, encounterData: null });
+            this.selectedIndices.add(this.drawnSlots.length - 1);
+        }
+        if (consumedHelper) {
+            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${count} room${count !== 1 ? 's' : ''})`);
+            this.dependencies.ui?.renderQuestDrawHelpers?.();
+            this.saveState();
+        }
         this.renderDecks();
     }
 

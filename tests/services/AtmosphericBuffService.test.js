@@ -11,12 +11,33 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
         'sanctum2': {
             associatedBuffs: ['Buff3']
         }
-    }
+    },
+    keeperBackgrounds: {
+        groveTender: {
+            id: 'groveTender',
+            effects: [
+                {
+                    trigger: 'ON_MONTH_START',
+                    modifier: {
+                        type: 'ACTIVATE',
+                        action: 'force_atmospheric_buff',
+                        buffName: 'The Soaking in Nature'
+                    }
+                }
+            ]
+        }
+    },
+    schoolBenefits: {},
+    masteryAbilities: {},
+    allItems: {},
+    temporaryBuffs: {},
+    temporaryBuffsFromRewards: {}
 }));
 
 import {
     calculateDailyValue,
     isGroveTenderBuff,
+    isForcedAtmosphericBuff,
     calculateTotalInkDrops,
     getAssociatedBuffs,
     getBuffState,
@@ -57,6 +78,14 @@ describe('AtmosphericBuffService', () => {
         test('should return false for different background', () => {
             const result = isGroveTenderBuff('The Soaking in Nature', 'otherBackground');
             expect(result).toBe(false);
+        });
+    });
+
+    describe('isForcedAtmosphericBuff', () => {
+        test('detects force_atmospheric_buff from keeperBackground via effect data', () => {
+            const ctx = { state: {}, formData: { keeperBackground: 'groveTender', wizardSchool: '' } };
+            expect(isForcedAtmosphericBuff('The Soaking in Nature', ctx)).toBe(true);
+            expect(isForcedAtmosphericBuff('Other Buff', ctx)).toBe(false);
         });
     });
 

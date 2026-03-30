@@ -1026,7 +1026,34 @@ export function renderWornPageHelpers() {
     });
 }
 
+function renderQuestDrawHelperAutoControls() {
+    const el = document.getElementById('quest-draw-helpers-auto-controls');
+    if (!el) return;
+
+    clearElement(el);
+    const raw = characterState[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS];
+    const autoOn =
+        raw && typeof raw === 'object' && !Array.isArray(raw) && raw.autoApplyOnDraw === true;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'quest-draw-helper-auto-row deck-hint';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'quest-draw-helper-auto-apply';
+    cb.checked = autoOn;
+    const label = document.createElement('label');
+    label.htmlFor = 'quest-draw-helper-auto-apply';
+    label.style.marginLeft = '0.35rem';
+    label.style.cursor = 'pointer';
+    label.textContent =
+        'When drawing quest cards below, automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn off to draw one card per click and mark helpers used manually.';
+    wrap.appendChild(cb);
+    wrap.appendChild(label);
+    el.appendChild(wrap);
+}
+
 export function renderQuestDrawHelpers() {
+    renderQuestDrawHelperAutoControls();
     const container = document.getElementById('quest-draw-helpers-body');
     if (!container) return;
 

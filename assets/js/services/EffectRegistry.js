@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
-import { validateEffect } from './effectSchema.js';
+import { validateEffect, MODIFIER_TYPES, TRIGGERS } from './effectSchema.js';
 
 function normalizeStateAdapter(stateAdapter) {
     if (!stateAdapter) {
@@ -181,5 +181,28 @@ export class EffectRegistry {
         }
 
         return effects;
+    }
+
+    /**
+     * Atmospheric buffs that must stay active at month start (e.g. Grove Tender).
+     * @param {Object} stateAdapter
+     * @param {Object} dataModule
+     * @returns {string[]}
+     */
+    static getForcedAtmosphericBuffNames(stateAdapter, dataModule = {}) {
+        const entries = this.getActiveEffects(TRIGGERS.ON_MONTH_START, stateAdapter, dataModule);
+        const names = [];
+        for (const { effect } of entries) {
+            const mod = effect?.modifier;
+            if (
+                mod?.type === MODIFIER_TYPES.ACTIVATE &&
+                mod.action === 'force_atmospheric_buff' &&
+                typeof mod.buffName === 'string' &&
+                mod.buffName.length
+            ) {
+                names.push(mod.buffName);
+            }
+        }
+        return names;
     }
 }

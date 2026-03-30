@@ -763,6 +763,19 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.modifiedBy).toContain('Active Buff');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
         });
+
+        test('should count buffs in forcedActiveBuffNames even when isActive is false', () => {
+            const atmosphericBuffs = {
+                'The Soaking in Nature': { daysUsed: 7, isActive: false }
+            };
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                ['The Soaking in Nature']
+            );
+            expect(rewards.inkDrops).toBe(7);
+            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
+        });
     });
 });
 

@@ -16,6 +16,7 @@ import { getActiveStickers } from '../services/RoomVisualizationService.js';
 import * as RoomVisualization from '../components/RoomVisualization.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { getRoomTheme } from '../character-sheet/data.js';
+import { isForcedAtmosphericBuff } from '../services/AtmosphericBuffService.js';
 
 const DEFAULT_THEME_ID = 'cozy-modern';
 
@@ -136,11 +137,16 @@ export class BuffController extends BaseController {
     handleAtmosphericBuffToggle(checkbox) {
         const { stateAdapter } = this;
         const buffName = checkbox.dataset.buffName;
-        const background = this.keeperBackgroundSelect?.value || '';
+        const ctx = {
+            state: stateAdapter.state,
+            formData: {
+                keeperBackground: this.keeperBackgroundSelect?.value || '',
+                wizardSchool: document.getElementById('wizardSchool')?.value || ''
+            }
+        };
 
-        // Grove Tender's "Soaking in Nature" is always active and can't be toggled
-        if (background === 'groveTender' && buffName === 'The Soaking in Nature') {
-            checkbox.checked = true; // Keep it checked
+        if (isForcedAtmosphericBuff(buffName, ctx, dataModule)) {
+            checkbox.checked = true;
             return;
         }
 

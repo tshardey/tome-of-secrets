@@ -79,6 +79,7 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
             [STORAGE_KEYS.CURSE_HELPER_STATE]: {},
             [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
+            [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
             [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
         };
 

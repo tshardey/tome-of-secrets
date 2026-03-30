@@ -754,6 +754,7 @@ permalink: /character-sheet.html
                 </div>
                 <div class="rpg-panel-body" id="quest-draw-helpers-panel-body">
                     <p class="deck-hint">Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                    <div id="quest-draw-helpers-auto-controls" class="no-print quest-draw-helpers-auto-controls"></div>
                     <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
                 </div>
             </div>

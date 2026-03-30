@@ -25,8 +25,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState: usage/cooldown per source)
  * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: same shape as curse helpers)
  * Version 13: Modifier pipeline effect cooldowns (effectCooldowns: last-used month/year per effect source key)
+ * Version 14: Quest draw helper UI prefs (questDrawHelperSettings: { autoApplyOnDraw })
  */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 /**
  * Schema version key in localStorage
@@ -887,6 +888,13 @@ function validateCurseHelperState(raw) {
     return validated;
 }
 
+function validateQuestDrawHelperSettings(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return { autoApplyOnDraw: false };
+    }
+    return { autoApplyOnDraw: raw.autoApplyOnDraw === true };
+}
+
 /**
  * Validate and fix character form data
  * @param {*} formData - Form data object
@@ -1028,6 +1036,9 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
     validated[STORAGE_KEYS.CURSE_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
     validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
+    validated[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = validateQuestDrawHelperSettings(
+        state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]
+    );
     validated[STORAGE_KEYS.EFFECT_COOLDOWNS] = validateEffectCooldownState(state[STORAGE_KEYS.EFFECT_COOLDOWNS]);
 
     return validated;

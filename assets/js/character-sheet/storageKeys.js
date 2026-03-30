@@ -47,6 +47,8 @@ export const STORAGE_KEYS = Object.freeze({
     CURSE_HELPER_STATE: 'curseHelperState',
     // Quest tab – monthly draw / dice helpers (usage and cooldown per source)
     QUEST_DRAW_HELPER_STATE: 'questDrawHelperState',
+    /** UI preference: auto-consume first eligible helper on deck click (one helper per click). */
+    QUEST_DRAW_HELPER_SETTINGS: 'questDrawHelperSettings',
     /** Last-used calendar period for TCG effect cooldowns (e.g. monthly PREVENT worn_page). */
     EFFECT_COOLDOWNS: 'effectCooldowns'
 });
@@ -84,6 +86,7 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.BOOK_BOX_HISTORY,
     STORAGE_KEYS.CURSE_HELPER_STATE,
     STORAGE_KEYS.QUEST_DRAW_HELPER_STATE,
+    STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS,
     STORAGE_KEYS.EFFECT_COOLDOWNS
 ]);
 
@@ -121,6 +124,7 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
         [STORAGE_KEYS.CURSE_HELPER_STATE]: {},
         [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
+        [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
         [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
     };
 }

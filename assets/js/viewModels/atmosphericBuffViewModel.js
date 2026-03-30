@@ -9,7 +9,7 @@ import * as data from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import {
     calculateDailyValue,
-    isGroveTenderBuff,
+    isForcedAtmosphericBuff,
     calculateTotalInkDrops,
     getAssociatedBuffs,
     getBuffState
@@ -100,7 +100,11 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
     for (const buffName in data.atmosphericBuffs) {
         const buffState = getBuffState(state, buffName);
         const isAssociated = associatedBuffs.includes(buffName);
-        const isGroveBuff = isGroveTenderBuff(buffName, background);
+        const effectCtx = {
+            state,
+            formData: { keeperBackground: background || '', wizardSchool: '' }
+        };
+        const isGroveBuff = isForcedAtmosphericBuff(buffName, effectCtx, data);
 
         // Calculate daily value
         const dailyValue = calculateDailyValue(buffName, associatedBuffs);

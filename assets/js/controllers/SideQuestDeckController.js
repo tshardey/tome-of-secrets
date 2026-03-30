@@ -22,6 +22,7 @@ import { createSideQuestDeckViewModel } from '../viewModels/questDeckViewModel.j
 import { renderCardback, renderSideQuestCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
+import { computeQuestDeckDrawCount, QUEST_DECK_SIDE } from '../services/QuestDrawBoost.js';
 
 export class SideQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -143,11 +144,25 @@ export class SideQuestDeckController extends BaseController {
         const pool = availableQuests.filter((q) => !drawnKeys.has(q.key));
         if (pool.length === 0) return;
 
-        const drawn = drawRandomSideQuest(pool);
-        if (!drawn) return;
-
-        this.drawnQuests.push(drawn);
-        this.selectedIndices.add(this.drawnQuests.length - 1);
+        const { drawCount, consumedHelper } = computeQuestDeckDrawCount(
+            this.stateAdapter,
+            QUEST_DECK_SIDE
+        );
+        const count = Math.max(1, drawCount);
+        for (let i = 0; i < count; i++) {
+            const drawnKeysLoop = new Set(this.drawnQuests.map((q) => q.key));
+            const poolLoop = availableQuests.filter((q) => !drawnKeysLoop.has(q.key));
+            if (poolLoop.length === 0) break;
+            const drawn = drawRandomSideQuest(poolLoop);
+            if (!drawn) break;
+            this.drawnQuests.push(drawn);
+            this.selectedIndices.add(this.drawnQuests.length - 1);
+        }
+        if (consumedHelper) {
+            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${count} side quest card${count !== 1 ? 's' : ''})`);
+            this.dependencies.ui?.renderQuestDrawHelpers?.();
+            this.saveState();
+        }
         this.renderDeck();
         this.dependencies.updateDeckActionsLabel?.();
     }

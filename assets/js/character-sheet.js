@@ -15,6 +15,8 @@ import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { runAllRepairs } from './character-sheet/postLoadRepair.js';
 import { RewardCalculator } from './services/RewardCalculator.js';
+import { applyQuestDraftedEffects } from './services/QuestDraftEffectService.js';
+import { toast } from './ui/toast.js';
 
 // Import controllers
 import { CharacterController } from './controllers/CharacterController.js';
@@ -239,6 +241,15 @@ export async function initializeCharacterSheet() {
             checkRewardTextForBuffs(rewardText);
         }
     }
+
+    stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
+        applyQuestDraftedEffects(this, addedQuests, {
+            updateCurrency,
+            dataModule,
+            toast,
+            form
+        });
+    };
 
     // Genre quest dropdown management
     function updateGenreQuestDropdown() {

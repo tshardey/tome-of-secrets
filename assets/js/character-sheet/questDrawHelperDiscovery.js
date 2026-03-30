@@ -5,6 +5,19 @@
 
 import { STORAGE_KEYS } from './storageKeys.js';
 import { buildSourceId, getCadenceFromText } from './curseHelperDiscovery.js';
+import { TRIGGERS } from '../services/effectSchema.js';
+
+/** Forces monthly cadence for TCG pool-drawing abilities so "Mark used" / auto-draw consumption works. */
+function tcgMonthlyPoolCadenceOverride(ability) {
+    for (const e of ability?.effects || []) {
+        if (e?.trigger !== TRIGGERS.ON_MONTH_START) continue;
+        const action = e?.modifier?.action;
+        if (action === 'pull_extra_genre_quest' || action === 'draw_extra_from_each_category') {
+            return 'monthly';
+        }
+    }
+    return null;
+}
 
 /** Lowercase substrings — avoid bare "monthly quest pool" (e.g. Alchemic Focus "outside of your…"). */
 const QUEST_DRAW_HELPER_PHRASES_LC = Object.freeze([
@@ -113,7 +126,9 @@ function getExpeditionStops(raw) {
 
 function pushHelper(out, fields) {
     const plainEffect = fields.effectPlain ?? fields.effect;
-    const cadence = classifyQuestDrawCadence(plainEffect, { sourceType: fields.sourceType });
+    const cadence =
+        fields.cadenceOverride ??
+        classifyQuestDrawCadence(plainEffect, { sourceType: fields.sourceType });
     const row = {
         sourceId: fields.sourceId,
         sourceType: fields.sourceType,
@@ -242,12 +257,14 @@ export function buildQuestDrawHelperList(state, catalogs, options = {}) {
             if (!ability) return;
             const benefit = ability.benefit;
             if (benefit && isQuestDrawHelperText(benefit)) {
+                const cadenceOverride = tcgMonthlyPoolCadenceOverride(ability);
                 pushHelper(out, {
                     sourceId: buildSourceId('ability', null, ability.name ?? abilityName),
                     sourceType: 'ability',
                     name: ability.name ?? abilityName,
                     effect: benefit,
-                    effectPlain: benefit
+                    effectPlain: benefit,
+                    cadenceOverride: cadenceOverride || undefined
                 });
             }
         });

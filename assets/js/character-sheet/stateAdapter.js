@@ -208,17 +208,18 @@ export class StateAdapter {
         return this.state[STORAGE_KEYS.DISCARDED_QUESTS];
     }
 
-    addActiveQuests(quests) {
+    addActiveQuests(quests, options = {}) {
+        const { skipQuestDraftedEffects = false } = options;
         const questList = Array.isArray(quests) ? quests : [quests];
         if (questList.length === 0) {
             return [];
         }
-        
+
         const { value, changed } = this._mutateList(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, list => {
             questList.forEach(quest => list.push(quest));
             return { changed: true, value: questList };
         });
-        
+
         // Ensure characterState is synced (should already be since this.state is characterState reference)
         // But double-check to be safe
         if (changed && this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) {
@@ -226,7 +227,16 @@ export class StateAdapter {
         } else if (!changed) {
             console.warn('addActiveQuests: No changes made. List:', this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
         }
-        
+
+        if (
+            !skipQuestDraftedEffects &&
+            changed &&
+            typeof this.applyQuestDraftedEffects === 'function' &&
+            questList.length
+        ) {
+            this.applyQuestDraftedEffects(questList);
+        }
+
         return value || [];
     }
 
@@ -705,6 +715,23 @@ export class StateAdapter {
     getQuestDrawHelperState() {
         const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE];
         return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    }
+
+    getQuestDrawHelperSettings() {
+        const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS];
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { autoApplyOnDraw: false };
+        }
+        return { autoApplyOnDraw: raw.autoApplyOnDraw === true };
+    }
+
+    setQuestDrawHelperSettings(updates = {}) {
+        const prev = this.getQuestDrawHelperSettings();
+        const next = { ...prev, ...updates };
+        const payload = { autoApplyOnDraw: !!next.autoApplyOnDraw };
+        this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = payload;
+        void setStateKey(STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS, payload);
+        return this.getQuestDrawHelperSettings();
     }
 
     /**

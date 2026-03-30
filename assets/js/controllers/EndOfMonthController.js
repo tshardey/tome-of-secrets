@@ -15,6 +15,8 @@ import { safeSetJSON } from '../utils/storage.js';
 import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
+import { EffectRegistry } from '../services/EffectRegistry.js';
+import { buildEffectContext } from '../services/effectContext.js';
 
 export class EndOfMonthController extends BaseController {
     initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency) {
@@ -31,19 +33,27 @@ export class EndOfMonthController extends BaseController {
             const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
             const atmosphericBuffs = stateAdapter.getAtmosphericBuffs();
             const background = keeperBackgroundSelect?.value || '';
+            const effectCtx = buildEffectContext(stateAdapter, form);
+            const forcedBuffNames = EffectRegistry.getForcedAtmosphericBuffNames(effectCtx, data);
+            const forcedBuffSet = new Set(forcedBuffNames);
 
             // Calculate atmospheric buff rewards using RewardCalculator
-            const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+            const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                associatedBuffs,
+                forcedBuffNames
+            );
 
-            // Reset atmospheric buffs (keep Grove Tender's "Soaking in Nature" active)
+            // Reset atmospheric buffs (re-activate pipeline-forced buffs after reset)
             for (const buffName in atmosphericBuffs) {
-                const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
-                if (isGroveTenderBuff) {
+                if (forcedBuffSet.has(buffName)) {
                     stateAdapter.setAtmosphericBuffDaysUsed(buffName, 0);
-                    // Keep it active (already set)
                 } else {
                     stateAdapter.updateAtmosphericBuff(buffName, { daysUsed: 0, isActive: false });
                 }
+            }
+            for (const name of forcedBuffNames) {
+                stateAdapter.setAtmosphericBuffActive(name, true);
             }
 
             // Apply atmospheric buff ink drops

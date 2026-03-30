@@ -796,9 +796,14 @@ export class RewardCalculator {
      * 
      * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
+     * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM ink (e.g. Grove Tender pipeline)
      * @returns {Reward} Reward with ink drops only
      */
-    static calculateAtmosphericBuffRewards(atmosphericBuffs = {}, associatedBuffs = []) {
+    static calculateAtmosphericBuffRewards(
+        atmosphericBuffs = {},
+        associatedBuffs = [],
+        forcedActiveBuffNames = []
+    ) {
         let totalInkDrops = 0;
         const processedBuffs = [];
         const reward = new Reward({ 
@@ -808,12 +813,15 @@ export class RewardCalculator {
             items: [],
             modifiedBy: [] 
         });
+        const forcedActive = new Set(
+            Array.isArray(forcedActiveBuffNames) ? forcedActiveBuffNames.filter(Boolean) : []
+        );
 
         for (const buffName in atmosphericBuffs) {
             const buff = atmosphericBuffs[buffName];
-            
-            // Only process buffs that were marked as active
-            if (buff.isActive && buff.daysUsed > 0) {
+            const countsForInk =
+                buff.daysUsed > 0 && (buff.isActive === true || forcedActive.has(buffName));
+            if (countsForInk) {
                 const isAssociated = associatedBuffs.includes(buffName);
                 const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
                 const buffTotal = buff.daysUsed * dailyValue;

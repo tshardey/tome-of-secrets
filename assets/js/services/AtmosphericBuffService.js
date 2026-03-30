@@ -4,6 +4,7 @@
 
 import * as data from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { EffectRegistry } from './EffectRegistry.js';
 
 /**
  * Calculate daily value for an atmospheric buff
@@ -16,13 +17,23 @@ export function calculateDailyValue(buffName, associatedBuffs = []) {
 }
 
 /**
- * Check if a buff is always active due to Grove Tender background
- * @param {string} buffName - Name of the atmospheric buff
- * @param {string} background - Background key
- * @returns {boolean} True if buff is always active
+ * Buff is locked on (month-start forced) per EffectRegistry ON_MONTH_START / force_atmospheric_buff.
+ * @param {string} buffName
+ * @param {{ state?: Object, formData?: { keeperBackground?: string, wizardSchool?: string } }} stateAdapterLike - state + form selections
+ * @param {Object} [dataModule]
+ * @returns {boolean}
+ */
+export function isForcedAtmosphericBuff(buffName, stateAdapterLike, dataModule = data) {
+    if (!buffName || !stateAdapterLike) return false;
+    const names = EffectRegistry.getForcedAtmosphericBuffNames(stateAdapterLike, dataModule);
+    return names.includes(buffName);
+}
+
+/**
+ * @deprecated Use isForcedAtmosphericBuff with { state: {}, formData: { keeperBackground } }.
  */
 export function isGroveTenderBuff(buffName, background) {
-    return background === 'groveTender' && buffName === 'The Soaking in Nature';
+    return isForcedAtmosphericBuff(buffName, { state: {}, formData: { keeperBackground: background || '' } }, data);
 }
 
 /**

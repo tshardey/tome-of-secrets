@@ -93,6 +93,18 @@ export class QuestController extends BaseController {
         this.cancelEditQuestButton = cancelEditQuestButton;
         this.keeperBackgroundSelect = keeperBackgroundSelect;
 
+        const questDrawHelpersPanel = document.getElementById('quest-draw-helpers-panel-body');
+        if (questDrawHelpersPanel) {
+            this.addEventListener(questDrawHelpersPanel, 'change', (e) => {
+                const t = e.target;
+                if (t && t.id === 'quest-draw-helper-auto-apply') {
+                    stateAdapter.setQuestDrawHelperSettings({ autoApplyOnDraw: t.checked === true });
+                    if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
+                    this.saveState();
+                }
+            });
+        }
+
         // Add-quest form listeners (only when form exists; otherwise quests are added via card draw)
         if (questTypeSelect) {
             this.addEventListener(questTypeSelect, 'change', () => {
@@ -826,7 +838,7 @@ export class QuestController extends BaseController {
         );
         if (!bookName) {
             // Restore quest to active assignments
-            stateAdapter.addActiveQuests(questToMove);
+            stateAdapter.addActiveQuests(questToMove, { skipQuestDraftedEffects: true });
             uiModule.renderActiveAssignments();
             this.saveState();
             toast.error('Please link a book to this quest before completing it. Quests without books will not count towards monthly totals.');
@@ -871,7 +883,7 @@ export class QuestController extends BaseController {
         const restorationSuccess = this.handleRestorationProjectCompletion(completedQuest);
         if (!restorationSuccess) {
             // Roll back: restore quest to active queue and exit without adding to completed.
-            stateAdapter.addActiveQuests(questToMove);
+            stateAdapter.addActiveQuests(questToMove, { skipQuestDraftedEffects: true });
             uiModule.renderActiveAssignments();
             this.saveState();
             return;
@@ -1030,7 +1042,7 @@ export class QuestController extends BaseController {
             const idx = findCompletedQuestIndex(quest);
             if (idx >= 0) {
                 const restored = stateAdapter.removeQuest(STORAGE_KEYS.COMPLETED_QUESTS, idx);
-                if (restored) stateAdapter.addActiveQuests(restored);
+                if (restored) stateAdapter.addActiveQuests(restored, { skipQuestDraftedEffects: true });
             }
             return null; // Exit without receipt, currency, or counters so no duplicate rewards
         }
