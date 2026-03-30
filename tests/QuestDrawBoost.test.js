@@ -23,7 +23,7 @@ const emptyCatalogSlice = {
 
 describe('QuestDrawBoost', () => {
     describe('resolveQuestDrawCardBoost', () => {
-        it('maps Divination school reroll_quest_die to all pool decks (die helper, no extra draws)', () => {
+        it('maps Divination school reroll_quest_die to all pool decks (two draws, pick one)', () => {
             const catalogs = {
                 ...emptyCatalogSlice,
                 schoolBenefits: {
@@ -207,7 +207,7 @@ describe('QuestDrawBoost', () => {
             expect(second.drawCount).toBe(3);
         });
 
-        it('consumes Divination on genre, side, dungeon, or extra-credit deck with auto on (1 draw)', () => {
+        it('consumes Divination on genre, side, dungeon, or extra-credit deck with auto on (2 draws)', () => {
             const state = createEmptyCharacterState();
             state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
             const catalogs = {
@@ -228,7 +228,7 @@ describe('QuestDrawBoost', () => {
                 const next = new StateAdapter(createEmptyCharacterState());
                 next.state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
                 const r = computeQuestDeckDrawCount(next, deck, opts);
-                expect(r.drawCount).toBe(1);
+                expect(r.drawCount).toBe(2);
                 expect(r.consumedHelper?.name).toBe('Divination');
             }
         });

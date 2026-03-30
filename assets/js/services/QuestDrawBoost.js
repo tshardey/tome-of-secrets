@@ -1,6 +1,6 @@
 /**
  * Optional auto-apply for monthly quest-draw helpers: one helper consumed per deck click when enabled.
- * Master of Fates: +2 cards (3 draws total). Divination die helper: all pool decks (genre, side, dungeon, extra credit).
+ * Master of Fates: +2 cards (3 draws total). Divination: 2 draws per eligible pool deck click (pick one result), all pool decks.
  */
 
 /** Toast when Divination school die benefit is consumed via auto-apply. */
@@ -162,7 +162,7 @@ export function computeQuestDeckDrawCount(stateAdapter, deckKey, options = {}) {
         candidates.push({ h, boost });
     }
 
-    // Prefer pool-wide helpers first; among same width, Flicker/card boosts before Divination die helper.
+    // Prefer pool-wide helpers first; among same width, Master then Flicker then Divination.
     candidates.sort(compareAutoApplyCandidates);
 
     for (const { h, boost } of candidates) {
@@ -176,7 +176,8 @@ export function computeQuestDeckDrawCount(stateAdapter, deckKey, options = {}) {
             // Benefit: draw two *additional* cards (1 baseline pool draw + 2 extras).
             drawCount = 3;
         } else if (boost.kind === 'divination_pool_die') {
-            drawCount = 1;
+            // Match school benefit: roll two dice / see two results, then choose one.
+            drawCount = 2;
         }
         return { drawCount, consumedHelper: h };
     }
