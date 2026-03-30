@@ -243,11 +243,15 @@ export async function initializeCharacterSheet() {
     }
 
     stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
+        const questMonthEl = document.getElementById('quest-month');
+        const questYearEl = document.getElementById('quest-year');
         applyQuestDraftedEffects(this, addedQuests, {
             updateCurrency,
             dataModule,
             toast,
-            form
+            form,
+            month: questMonthEl?.value?.trim?.() ?? '',
+            year: questYearEl?.value?.trim?.() ?? ''
         });
     };
 

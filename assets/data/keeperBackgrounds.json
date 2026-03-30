@@ -55,7 +55,8 @@
                     "type": "GRANT_RESOURCE",
                     "resource": "inkDrops",
                     "value": 15
-                }
+                },
+                "cooldown": "monthly"
             }
         ]
     },
