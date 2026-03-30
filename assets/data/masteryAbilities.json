@@ -138,6 +138,7 @@
                     "type": "ACTIVATE",
                     "action": "auto_complete_encounter"
                 },
+                "cooldown": "monthly",
                 "description": "Auto-complete any encounter with same book as dungeon room"
             }
         ]

@@ -80,6 +80,13 @@ export class StateAdapter {
         this.listeners = new Map();
     }
 
+    /**
+     * ON_QUEST_DRAFTED pipeline hook; character-sheet.js replaces this with QuestDraftEffectService wiring.
+     * Default no-op so addActiveQuests never depends on initialization order.
+     * @param {Object[]} _quests
+     */
+    applyQuestDraftedEffects(_quests) {}
+
     _mutateList(key, mutator) {
         let list = this.state[key];
         if (!Array.isArray(list)) {
@@ -228,12 +235,7 @@ export class StateAdapter {
             console.warn('addActiveQuests: No changes made. List:', this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
         }
 
-        if (
-            !skipQuestDraftedEffects &&
-            changed &&
-            typeof this.applyQuestDraftedEffects === 'function' &&
-            questList.length
-        ) {
+        if (!skipQuestDraftedEffects && changed && questList.length) {
             this.applyQuestDraftedEffects(questList);
         }
 

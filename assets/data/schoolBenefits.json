@@ -61,7 +61,7 @@
     },
     "Conjuration": {
         "description": "Conjurers summon echoes of beings and places from other times, filling their sanctums with flickering companions and phantom libraries. Their craft ensures no story is ever truly lost.",
-        "benefit": "When you complete a quest while your Familiar slot is equipped, you gain an additional +5 Ink Drops for each quest.",
+        "benefit": "Gain an additional familiar slot.",
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",

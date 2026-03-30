@@ -99,6 +99,7 @@ export class CurseController extends BaseController {
         const curseData = data.curseTable[curseName];
         if (!curseData) return;
 
+        // Checkbox is defined in character-sheet.md (built as /character-sheet.html), not a standalone .html file.
         const fromWornPage = document.getElementById('curse-from-worn-page')?.checked === true;
         if (fromWornPage && this.editingCurseInfo === null) {
             // Use a matched month/year pair from one source to avoid mixed periods.
