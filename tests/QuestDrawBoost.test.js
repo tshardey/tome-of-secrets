@@ -16,7 +16,7 @@ const emptyCatalogSlice = {
 
 describe('QuestDrawBoost', () => {
     describe('resolveQuestDrawCardBoost', () => {
-        it('returns null for Divination die helper (no card boost)', () => {
+        it('maps Divination school reroll_quest_die to genre deck (die helper, no extra draws)', () => {
             const catalogs = {
                 ...emptyCatalogSlice,
                 schoolBenefits: {
@@ -30,10 +30,12 @@ describe('QuestDrawBoost', () => {
             const row = {
                 sourceType: 'school',
                 name: 'Divination',
-                effectPlain: 'Once per month, roll extra.',
-                effect: 'Once per month, roll extra.'
+                effectPlain: 'Once per month, roll 2 dice instead of 1 for a Monthly Quest.',
+                effect: 'Once per month, roll 2 dice instead of 1 for a Monthly Quest.'
             };
-            expect(resolveQuestDrawCardBoost(row, catalogs)).toBeNull();
+            const b = resolveQuestDrawCardBoost(row, catalogs);
+            expect(b.kind).toBe('divination_genre_die');
+            expect(b.decks.has(QUEST_DECK_GENRE)).toBe(true);
         });
 
         it('maps pull_extra_genre_quest on ability to genre flicker boost', () => {
@@ -117,7 +119,7 @@ describe('QuestDrawBoost', () => {
             expect(second.consumedHelper).toBeNull();
         });
 
-        it('adds +1 pool draw for Master of Fates on dungeon deck when auto-apply is on', () => {
+        it('draws 3 cards (2 extra) for Master of Fates on dungeon deck when auto-apply is on', () => {
             const state = createEmptyCharacterState();
             state[STORAGE_KEYS.LEARNED_ABILITIES] = ['Master of Fates'];
             state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
@@ -143,7 +145,7 @@ describe('QuestDrawBoost', () => {
                 level: 1,
                 catalogs
             });
-            expect(r.drawCount).toBe(2);
+            expect(r.drawCount).toBe(3);
             expect(r.consumedHelper?.name).toBe('Master of Fates');
         });
 
@@ -185,7 +187,7 @@ describe('QuestDrawBoost', () => {
                 catalogs
             });
             expect(first.consumedHelper?.name).toBe('Master of Fates');
-            expect(first.drawCount).toBe(2);
+            expect(first.drawCount).toBe(3);
 
             const second = computeQuestDeckDrawCount(adapter, QUEST_DECK_GENRE, {
                 school: '',
@@ -194,6 +196,31 @@ describe('QuestDrawBoost', () => {
             });
             expect(second.consumedHelper?.name).toBe('Flicker of Prophecy');
             expect(second.drawCount).toBe(3);
+        });
+
+        it('consumes Divination on genre deck with auto on (1 card, die helper marked)', () => {
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
+            const catalogs = {
+                ...emptyCatalogSlice,
+                schoolBenefits: {
+                    Divination: {
+                        benefit:
+                            'Once per month, you may roll 2 dice instead of 1 for a Monthly Quest, and choose which result you want to use.',
+                        effects: [
+                            { trigger: TRIGGERS.ON_MONTH_START, modifier: { action: 'reroll_quest_die' } }
+                        ]
+                    }
+                }
+            };
+            const adapter = new StateAdapter(state);
+            const r = computeQuestDeckDrawCount(adapter, QUEST_DECK_GENRE, {
+                school: 'Divination',
+                level: 1,
+                catalogs
+            });
+            expect(r.drawCount).toBe(1);
+            expect(r.consumedHelper?.name).toBe('Divination');
         });
 
         it('treats lowercase ON_MONTH_START trigger as monthly pool draw for Flicker', () => {

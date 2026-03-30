@@ -145,7 +145,13 @@ export class GenreQuestDeckController extends BaseController {
             this.selectedIndices.add(this.drawnQuests.length - 1);
         }
         if (consumedHelper) {
-            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${n} genre card${n !== 1 ? 's' : ''})`);
+            const isDivinationSchool =
+                (consumedHelper.sourceType === 'school' && consumedHelper.name === 'Divination') ||
+                consumedHelper.name === 'Divination';
+            const msg = isDivinationSchool
+                ? 'Monthly helper used: Divination — roll 2 dice for your Monthly Quest genre pick and choose which result to use (see school benefit).'
+                : `Monthly draw helper used: ${consumedHelper.name} (${n} genre card${n !== 1 ? 's' : ''})`;
+            toast.info(msg);
             this.dependencies.ui?.renderQuestDrawHelpers?.();
             this.saveState();
         }

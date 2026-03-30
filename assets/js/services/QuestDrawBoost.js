@@ -1,6 +1,6 @@
 /**
  * Optional auto-apply for monthly quest-draw helpers: one helper consumed per deck click when enabled.
- * Matches TCG effect actions on school/ability data; Divination die helper does not consume on card draws.
+ * Master of Fates: +2 cards (3 draws total). Divination: genre deck only — marks die helper used with no extra cards.
  */
 
 import { buildQuestDrawHelperList } from '../character-sheet/questDrawHelperDiscovery.js';
@@ -39,7 +39,7 @@ function boostFromEffects(effects) {
             return { kind: 'master_plus_one', decks: POOL_DECKS };
         }
         if (action === 'reroll_quest_die') {
-            return { kind: 'divination_die', decks: new Set() };
+            return { kind: 'divination_genre_die', decks: new Set([QUEST_DECK_GENRE]) };
         }
     }
     return null;
@@ -56,18 +56,21 @@ export function resolveQuestDrawCardBoost(helper, catalogs = {}) {
 
     if (helper.sourceType === 'ability') {
         const a = findMasteryByName(helper.name, masteryAbilities);
-        const b = boostFromEffects(a?.effects);
-        if (b?.kind === 'divination_die') return null;
-        return b;
+        return boostFromEffects(a?.effects);
     }
     if (helper.sourceType === 'school') {
         const entry = schoolBenefits[helper.name];
-        const b = boostFromEffects(entry?.effects);
-        if (b?.kind === 'divination_die') return null;
-        return b;
+        const fromFx = boostFromEffects(entry?.effects);
+        if (fromFx) return fromFx;
     }
 
     const t = ((helper.effectPlain ?? helper.effect) || '').toLowerCase();
+    if (
+        (t.includes('roll 2 dice') || t.includes('roll two dice')) &&
+        t.includes('monthly quest')
+    ) {
+        return { kind: 'divination_genre_die', decks: new Set([QUEST_DECK_GENRE]) };
+    }
     if (t.includes('draw two additional cards') && t.includes('monthly quest pool')) {
         return { kind: 'master_plus_one', decks: POOL_DECKS };
     }
@@ -75,6 +78,15 @@ export function resolveQuestDrawCardBoost(helper, catalogs = {}) {
         return { kind: 'flicker_genre', totalDraws: 3, decks: new Set([QUEST_DECK_GENRE]) };
     }
     return null;
+}
+
+/** Sort auto-apply: wider deck coverage first; then card boosts before Divination die on same width. */
+function compareAutoApplyCandidates(a, b) {
+    const wa = a.boost.decks.size;
+    const wb = b.boost.decks.size;
+    if (wb !== wa) return wb - wa;
+    const rank = k => (k === 'divination_genre_die' ? 1 : 0);
+    return rank(a.boost.kind) - rank(b.boost.kind);
 }
 
 function entryAllowsUse(helper, helperState) {
@@ -135,9 +147,8 @@ export function computeQuestDeckDrawCount(stateAdapter, deckKey, options = {}) {
         candidates.push({ h, boost });
     }
 
-    // Prefer pool-wide helpers (all categories) before deck-only helpers so Master / items run before Flicker
-    // even when learned abilities are listed in reverse order.
-    candidates.sort((a, b) => b.boost.decks.size - a.boost.decks.size);
+    // Prefer pool-wide helpers first; among same width, Flicker/card boosts before Divination die helper.
+    candidates.sort(compareAutoApplyCandidates);
 
     for (const { h, boost } of candidates) {
         const ok = stateAdapter.markQuestDrawHelperUsed(h.sourceId, { cadence: h.cadence });
@@ -147,7 +158,10 @@ export function computeQuestDeckDrawCount(stateAdapter, deckKey, options = {}) {
         if (boost.kind === 'flicker_genre') {
             drawCount = Math.max(1, boost.totalDraws || 3);
         } else if (boost.kind === 'master_plus_one') {
-            drawCount = 2;
+            // Benefit: draw two *additional* cards (1 baseline pool draw + 2 extras).
+            drawCount = 3;
+        } else if (boost.kind === 'divination_genre_die') {
+            drawCount = 1;
         }
         return { drawCount, consumedHelper: h };
     }

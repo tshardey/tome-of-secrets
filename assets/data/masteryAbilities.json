@@ -63,7 +63,7 @@
                     "type": "ACTIVATE",
                     "action": "draw_extra_from_each_category"
                 },
-                "description": "Draw 1 extra card from each quest category, pick up to pool number"
+                "description": "Draw 2 extra cards from each quest category per click (3 total including baseline draw), then choose which to keep"
             }
         ]
     },
