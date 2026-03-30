@@ -5,18 +5,24 @@
 
 import { STORAGE_KEYS } from './storageKeys.js';
 import { buildSourceId, getCadenceFromText } from './curseHelperDiscovery.js';
-import { TRIGGERS } from '../services/effectSchema.js';
+import { TRIGGERS, effectTriggerIs } from '../services/effectSchema.js';
+
+/** True when ability has ON_MONTH_START pool-card draw actions (Flicker / Master), regardless of trigger string casing. */
+function abilityHasMonthlyPoolDrawActions(ability) {
+    if (!Array.isArray(ability?.effects)) return false;
+    for (const e of ability.effects) {
+        if (!effectTriggerIs(e?.trigger, TRIGGERS.ON_MONTH_START)) continue;
+        const action = e?.modifier?.action;
+        if (action === 'pull_extra_genre_quest' || action === 'draw_extra_from_each_category') {
+            return true;
+        }
+    }
+    return false;
+}
 
 /** Forces monthly cadence for TCG pool-drawing abilities so "Mark used" / auto-draw consumption works. */
 function tcgMonthlyPoolCadenceOverride(ability) {
-    for (const e of ability?.effects || []) {
-        if (e?.trigger !== TRIGGERS.ON_MONTH_START) continue;
-        const action = e?.modifier?.action;
-        if (action === 'pull_extra_genre_quest' || action === 'draw_extra_from_each_category') {
-            return 'monthly';
-        }
-    }
-    return null;
+    return abilityHasMonthlyPoolDrawActions(ability) ? 'monthly' : null;
 }
 
 /** Lowercase substrings — avoid bare "monthly quest pool" (e.g. Alchemic Focus "outside of your…"). */
@@ -257,14 +263,21 @@ export function buildQuestDrawHelperList(state, catalogs, options = {}) {
             if (!ability) return;
             const benefit = ability.benefit;
             if (benefit && isQuestDrawHelperText(benefit)) {
-                const cadenceOverride = tcgMonthlyPoolCadenceOverride(ability);
+                let cadence = tcgMonthlyPoolCadenceOverride(ability);
+                if (!cadence) {
+                    cadence = classifyQuestDrawCadence(benefit, { sourceType: 'ability' });
+                }
+                // Benefit text can classify d6 nudge as "always" even when TCG data adds pool draws — still monthly for marking.
+                if (cadence === 'always' && abilityHasMonthlyPoolDrawActions(ability)) {
+                    cadence = 'monthly';
+                }
                 pushHelper(out, {
                     sourceId: buildSourceId('ability', null, ability.name ?? abilityName),
                     sourceType: 'ability',
                     name: ability.name ?? abilityName,
                     effect: benefit,
                     effectPlain: benefit,
-                    cadenceOverride: cadenceOverride || undefined
+                    cadenceOverride: cadence
                 });
             }
         });

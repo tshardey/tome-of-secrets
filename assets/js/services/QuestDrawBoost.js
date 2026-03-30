@@ -7,7 +7,7 @@ import { buildQuestDrawHelperList } from '../character-sheet/questDrawHelperDisc
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import * as dataModule from '../character-sheet/data.js';
 import { parseIntOr } from '../utils/helpers.js';
-import { TRIGGERS } from './effectSchema.js';
+import { TRIGGERS, effectTriggerIs } from './effectSchema.js';
 
 export const QUEST_DECK_GENRE = 'genre';
 export const QUEST_DECK_DUNGEON_ROOM = 'dungeon_room';
@@ -30,7 +30,7 @@ function findMasteryByName(name, catalog) {
 function boostFromEffects(effects) {
     if (!Array.isArray(effects)) return null;
     for (const e of effects) {
-        if (e?.trigger !== TRIGGERS.ON_MONTH_START) continue;
+        if (!effectTriggerIs(e?.trigger, TRIGGERS.ON_MONTH_START)) continue;
         const action = e?.modifier?.action;
         if (action === 'pull_extra_genre_quest') {
             return { kind: 'flicker_genre', totalDraws: 3, decks: new Set([QUEST_DECK_GENRE]) };
@@ -127,11 +127,19 @@ export function computeQuestDeckDrawCount(stateAdapter, deckKey, options = {}) {
     const helpers = buildQuestDrawHelperList(stateAdapter.state, catalogs, { school, level });
     const helperState = stateAdapter.getQuestDrawHelperState();
 
+    const candidates = [];
     for (const h of helpers) {
         if (!entryAllowsUse(h, helperState)) continue;
         const boost = resolveQuestDrawCardBoost(h, catalogs);
         if (!boost || !boost.decks?.has(deckKey)) continue;
+        candidates.push({ h, boost });
+    }
 
+    // Prefer pool-wide helpers (all categories) before deck-only helpers so Master / items run before Flicker
+    // even when learned abilities are listed in reverse order.
+    candidates.sort((a, b) => b.boost.decks.size - a.boost.decks.size);
+
+    for (const { h, boost } of candidates) {
         const ok = stateAdapter.markQuestDrawHelperUsed(h.sourceId, { cadence: h.cadence });
         if (!ok) continue;
 

@@ -28,6 +28,19 @@ export const RESOLUTION_ORDER = Object.freeze([
 const VALID_TRIGGER_SET = new Set(Object.values(TRIGGERS));
 const VALID_MODIFIER_SET = new Set(Object.values(MODIFIER_TYPES));
 
+/**
+ * Loose comparison for effect JSON (handles legacy / hand-edited casing).
+ * @param {unknown} triggerValue
+ * @param {string} expected - e.g. TRIGGERS.ON_MONTH_START
+ */
+export function effectTriggerIs(triggerValue, expected) {
+    if (triggerValue === expected) return true;
+    if (typeof triggerValue === 'string' && typeof expected === 'string') {
+        return triggerValue.trim().toUpperCase() === expected.trim().toUpperCase();
+    }
+    return false;
+}
+
 export function validateEffect(effect) {
     if (!effect || typeof effect !== 'object' || Array.isArray(effect)) {
         return { valid: false, error: 'Effect must be an object' };
