@@ -1,7 +1,15 @@
 /**
  * Optional auto-apply for monthly quest-draw helpers: one helper consumed per deck click when enabled.
- * Master of Fates: +2 cards (3 draws total). Divination: genre deck only — marks die helper used with no extra cards.
+ * Master of Fates: +2 cards (3 draws total). Divination die helper: all pool decks (genre, side, dungeon, extra credit).
  */
+
+/** Toast when Divination school die benefit is consumed via auto-apply. */
+export const DIVINATION_DIE_HELPER_TOAST =
+    'Monthly helper used: Divination — roll 2 dice for this Monthly Quest pick and choose which result to use (see school benefit).';
+
+export function consumedHelperIsDivinationSchoolDie(helper) {
+    return Boolean(helper && helper.sourceType === 'school' && helper.name === 'Divination');
+}
 
 import { buildQuestDrawHelperList } from '../character-sheet/questDrawHelperDiscovery.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
@@ -39,7 +47,7 @@ function boostFromEffects(effects) {
             return { kind: 'master_plus_one', decks: POOL_DECKS };
         }
         if (action === 'reroll_quest_die') {
-            return { kind: 'divination_genre_die', decks: new Set([QUEST_DECK_GENRE]) };
+            return { kind: 'divination_pool_die', decks: new Set(POOL_DECKS) };
         }
     }
     return null;
@@ -69,7 +77,7 @@ export function resolveQuestDrawCardBoost(helper, catalogs = {}) {
         (t.includes('roll 2 dice') || t.includes('roll two dice')) &&
         t.includes('monthly quest')
     ) {
-        return { kind: 'divination_genre_die', decks: new Set([QUEST_DECK_GENRE]) };
+        return { kind: 'divination_pool_die', decks: new Set(POOL_DECKS) };
     }
     if (t.includes('draw two additional cards') && t.includes('monthly quest pool')) {
         return { kind: 'master_plus_one', decks: POOL_DECKS };
@@ -80,13 +88,20 @@ export function resolveQuestDrawCardBoost(helper, catalogs = {}) {
     return null;
 }
 
-/** Sort auto-apply: wider deck coverage first; then card boosts before Divination die on same width. */
+/** Sort auto-apply: wider deck coverage first; same width → Master before Divination before Flicker on narrow. */
+const AUTO_APPLY_KIND_PRIORITY = Object.freeze({
+    master_plus_one: 0,
+    flicker_genre: 1,
+    divination_pool_die: 2
+});
+
 function compareAutoApplyCandidates(a, b) {
     const wa = a.boost.decks.size;
     const wb = b.boost.decks.size;
     if (wb !== wa) return wb - wa;
-    const rank = k => (k === 'divination_genre_die' ? 1 : 0);
-    return rank(a.boost.kind) - rank(b.boost.kind);
+    const ra = AUTO_APPLY_KIND_PRIORITY[a.boost.kind] ?? 1;
+    const rb = AUTO_APPLY_KIND_PRIORITY[b.boost.kind] ?? 1;
+    return ra - rb;
 }
 
 function entryAllowsUse(helper, helperState) {
@@ -160,7 +175,7 @@ export function computeQuestDeckDrawCount(stateAdapter, deckKey, options = {}) {
         } else if (boost.kind === 'master_plus_one') {
             // Benefit: draw two *additional* cards (1 baseline pool draw + 2 extras).
             drawCount = 3;
-        } else if (boost.kind === 'divination_genre_die') {
+        } else if (boost.kind === 'divination_pool_die') {
             drawCount = 1;
         }
         return { drawCount, consumedHelper: h };

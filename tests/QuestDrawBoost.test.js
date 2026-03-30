@@ -1,7 +1,14 @@
 /**
  * @jest-environment jsdom
  */
-import { computeQuestDeckDrawCount, resolveQuestDrawCardBoost, QUEST_DECK_GENRE, QUEST_DECK_DUNGEON_ROOM } from '../assets/js/services/QuestDrawBoost.js';
+import {
+    computeQuestDeckDrawCount,
+    resolveQuestDrawCardBoost,
+    QUEST_DECK_GENRE,
+    QUEST_DECK_DUNGEON_ROOM,
+    QUEST_DECK_SIDE,
+    QUEST_DECK_EXTRA_CREDIT
+} from '../assets/js/services/QuestDrawBoost.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { createEmptyCharacterState, STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { TRIGGERS } from '../assets/js/services/effectSchema.js';
@@ -16,7 +23,7 @@ const emptyCatalogSlice = {
 
 describe('QuestDrawBoost', () => {
     describe('resolveQuestDrawCardBoost', () => {
-        it('maps Divination school reroll_quest_die to genre deck (die helper, no extra draws)', () => {
+        it('maps Divination school reroll_quest_die to all pool decks (die helper, no extra draws)', () => {
             const catalogs = {
                 ...emptyCatalogSlice,
                 schoolBenefits: {
@@ -34,8 +41,10 @@ describe('QuestDrawBoost', () => {
                 effect: 'Once per month, roll 2 dice instead of 1 for a Monthly Quest.'
             };
             const b = resolveQuestDrawCardBoost(row, catalogs);
-            expect(b.kind).toBe('divination_genre_die');
+            expect(b.kind).toBe('divination_pool_die');
             expect(b.decks.has(QUEST_DECK_GENRE)).toBe(true);
+            expect(b.decks.has(QUEST_DECK_DUNGEON_ROOM)).toBe(true);
+            expect(b.decks.has(QUEST_DECK_SIDE)).toBe(true);
         });
 
         it('maps pull_extra_genre_quest on ability to genre flicker boost', () => {
@@ -198,7 +207,7 @@ describe('QuestDrawBoost', () => {
             expect(second.drawCount).toBe(3);
         });
 
-        it('consumes Divination on genre deck with auto on (1 card, die helper marked)', () => {
+        it('consumes Divination on genre, side, or dungeon deck with auto on (1 draw, die helper marked)', () => {
             const state = createEmptyCharacterState();
             state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
             const catalogs = {
@@ -214,13 +223,14 @@ describe('QuestDrawBoost', () => {
                 }
             };
             const adapter = new StateAdapter(state);
-            const r = computeQuestDeckDrawCount(adapter, QUEST_DECK_GENRE, {
-                school: 'Divination',
-                level: 1,
-                catalogs
-            });
-            expect(r.drawCount).toBe(1);
-            expect(r.consumedHelper?.name).toBe('Divination');
+            const opts = { school: 'Divination', level: 1, catalogs };
+            for (const deck of [QUEST_DECK_GENRE, QUEST_DECK_SIDE, QUEST_DECK_DUNGEON_ROOM, QUEST_DECK_EXTRA_CREDIT]) {
+                const next = new StateAdapter(createEmptyCharacterState());
+                next.state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
+                const r = computeQuestDeckDrawCount(next, deck, opts);
+                expect(r.drawCount).toBe(1);
+                expect(r.consumedHelper?.name).toBe('Divination');
+            }
         });
 
         it('treats lowercase ON_MONTH_START trigger as monthly pool draw for Flicker', () => {

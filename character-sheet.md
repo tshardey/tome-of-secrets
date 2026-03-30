@@ -769,7 +769,7 @@ permalink: /character-sheet.html
                          hidden>
                         <p>Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
                         <p>When drawing quest cards below, turning on <strong>Auto-use helpers on draw</strong> will automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn it off to draw one card per click and mark helpers used manually.</p>
-                        <p>With <strong>Auto-use helpers on draw</strong>, <strong>Divination</strong> is marked used when you click the ♥ genre deck (roll 2 dice for that pick, no extra cards drawn). You can still mark it manually if auto is off.</p>
+                        <p>With <strong>Auto-use helpers on draw</strong>, <strong>Divination</strong> is marked used when you click any quest pool deck — ♥ genre, ♣ side, ♠ dungeon rooms, or ⭐ Extra Credit (roll 2 dice for that pick; no extra cards drawn). You can still mark it manually if auto is off.</p>
                     </div>
                     <div id="quest-draw-helpers-auto-controls" class="no-print quest-draw-helpers-auto-controls"></div>
                     <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>

@@ -26,7 +26,12 @@ import { createDungeonDeckViewModel } from '../viewModels/dungeonDeckViewModel.j
 import { renderCardback, renderRoomCard, renderEncounterCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
-import { computeQuestDeckDrawCount, QUEST_DECK_DUNGEON_ROOM } from '../services/QuestDrawBoost.js';
+import {
+    computeQuestDeckDrawCount,
+    QUEST_DECK_DUNGEON_ROOM,
+    DIVINATION_DIE_HELPER_TOAST,
+    consumedHelperIsDivinationSchoolDie
+} from '../services/QuestDrawBoost.js';
 
 export class DungeonDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -176,7 +181,10 @@ export class DungeonDeckController extends BaseController {
             this.selectedIndices.add(this.drawnSlots.length - 1);
         }
         if (consumedHelper) {
-            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${count} room${count !== 1 ? 's' : ''})`);
+            const msg = consumedHelperIsDivinationSchoolDie(consumedHelper)
+                ? DIVINATION_DIE_HELPER_TOAST
+                : `Monthly draw helper used: ${consumedHelper.name} (${count} room${count !== 1 ? 's' : ''})`;
+            toast.info(msg);
             this.dependencies.ui?.renderQuestDrawHelpers?.();
             this.saveState();
         }

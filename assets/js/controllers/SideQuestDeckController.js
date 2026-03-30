@@ -22,7 +22,12 @@ import { createSideQuestDeckViewModel } from '../viewModels/questDeckViewModel.j
 import { renderCardback, renderSideQuestCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
-import { computeQuestDeckDrawCount, QUEST_DECK_SIDE } from '../services/QuestDrawBoost.js';
+import {
+    computeQuestDeckDrawCount,
+    QUEST_DECK_SIDE,
+    DIVINATION_DIE_HELPER_TOAST,
+    consumedHelperIsDivinationSchoolDie
+} from '../services/QuestDrawBoost.js';
 
 export class SideQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -159,7 +164,10 @@ export class SideQuestDeckController extends BaseController {
             this.selectedIndices.add(this.drawnQuests.length - 1);
         }
         if (consumedHelper) {
-            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${count} side quest card${count !== 1 ? 's' : ''})`);
+            const msg = consumedHelperIsDivinationSchoolDie(consumedHelper)
+                ? DIVINATION_DIE_HELPER_TOAST
+                : `Monthly draw helper used: ${consumedHelper.name} (${count} side quest card${count !== 1 ? 's' : ''})`;
+            toast.info(msg);
             this.dependencies.ui?.renderQuestDrawHelpers?.();
             this.saveState();
         }

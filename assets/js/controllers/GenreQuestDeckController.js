@@ -21,7 +21,12 @@ import { createGenreQuestDeckViewModel } from '../viewModels/questDeckViewModel.
 import { renderCardback, renderGenreQuestCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
-import { computeQuestDeckDrawCount, QUEST_DECK_GENRE } from '../services/QuestDrawBoost.js';
+import {
+    computeQuestDeckDrawCount,
+    QUEST_DECK_GENRE,
+    DIVINATION_DIE_HELPER_TOAST,
+    consumedHelperIsDivinationSchoolDie
+} from '../services/QuestDrawBoost.js';
 
 export class GenreQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -145,11 +150,8 @@ export class GenreQuestDeckController extends BaseController {
             this.selectedIndices.add(this.drawnQuests.length - 1);
         }
         if (consumedHelper) {
-            const isDivinationSchool =
-                (consumedHelper.sourceType === 'school' && consumedHelper.name === 'Divination') ||
-                consumedHelper.name === 'Divination';
-            const msg = isDivinationSchool
-                ? 'Monthly helper used: Divination — roll 2 dice for your Monthly Quest genre pick and choose which result to use (see school benefit).'
+            const msg = consumedHelperIsDivinationSchoolDie(consumedHelper)
+                ? DIVINATION_DIE_HELPER_TOAST
                 : `Monthly draw helper used: ${consumedHelper.name} (${n} genre card${n !== 1 ? 's' : ''})`;
             toast.info(msg);
             this.dependencies.ui?.renderQuestDrawHelpers?.();

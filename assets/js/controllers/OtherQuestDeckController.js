@@ -50,7 +50,12 @@ import {
 } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
-import { computeQuestDeckDrawCount, QUEST_DECK_EXTRA_CREDIT } from '../services/QuestDrawBoost.js';
+import {
+    computeQuestDeckDrawCount,
+    QUEST_DECK_EXTRA_CREDIT,
+    DIVINATION_DIE_HELPER_TOAST,
+    consumedHelperIsDivinationSchoolDie
+} from '../services/QuestDrawBoost.js';
 
 function generateQuestId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -172,7 +177,10 @@ export class OtherQuestDeckController extends BaseController {
             this.selectedIndicesExtraCredit.add(this.drawnExtraCredit.length - 1);
         }
         if (consumedHelper) {
-            toast.info(`Monthly draw helper used: ${consumedHelper.name} (${count} Extra Credit card${count !== 1 ? 's' : ''})`);
+            const msg = consumedHelperIsDivinationSchoolDie(consumedHelper)
+                ? DIVINATION_DIE_HELPER_TOAST
+                : `Monthly draw helper used: ${consumedHelper.name} (${count} Extra Credit card${count !== 1 ? 's' : ''})`;
+            toast.info(msg);
             this.dependencies.ui?.renderQuestDrawHelpers?.();
             this.saveState();
         }
