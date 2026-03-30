@@ -207,7 +207,7 @@ describe('QuestDrawBoost', () => {
             expect(second.drawCount).toBe(3);
         });
 
-        it('consumes Divination on genre, side, or dungeon deck with auto on (1 draw, die helper marked)', () => {
+        it('consumes Divination on genre, side, dungeon, or extra-credit deck with auto on (1 draw)', () => {
             const state = createEmptyCharacterState();
             state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = { autoApplyOnDraw: true };
             const catalogs = {
