@@ -2499,6 +2499,72 @@
     font-weight: 600;
 }
 
+.rpg-panel-header-lead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.rpg-panel-help-icon-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: 'Lora', serif;
+    color: #d4c9b8;
+    background: rgba(42, 35, 29, 0.55);
+    border: 1px solid rgba(184, 159, 98, 0.45);
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.rpg-panel-help-icon-btn:hover {
+    background: rgba(184, 159, 98, 0.14);
+    color: #f5f0e6;
+}
+
+.rpg-panel-help-icon-btn[aria-expanded="true"] {
+    background: rgba(184, 159, 98, 0.22);
+    border-color: rgba(184, 159, 98, 0.75);
+}
+
+.rpg-panel-help-icon-btn__glyph {
+    font-size: 1rem;
+    font-weight: 600;
+    opacity: 0.95;
+}
+
+.quest-draw-helpers-help-details {
+    margin: 0 0 14px 0;
+    padding: 12px 14px;
+    background: rgba(30, 26, 20, 0.55);
+    border: 1px solid rgba(84, 72, 59, 0.85);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: #d4c9b8;
+}
+
+.quest-draw-helpers-help-details p {
+    margin: 0 0 10px 0;
+}
+
+.quest-draw-helpers-help-details p:last-child {
+    margin-bottom: 0;
+}
+
+/* Quest draw helpers: auto-use switch (same pattern as Worn Page curse toggle) */
+.quest-draw-helpers-auto-toggle-wrap {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
 .panel-toggle-btn {
     margin-left: auto;
     padding: 4px 10px;

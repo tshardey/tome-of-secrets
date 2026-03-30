@@ -1036,19 +1036,31 @@ function renderQuestDrawHelperAutoControls() {
         raw && typeof raw === 'object' && !Array.isArray(raw) && raw.autoApplyOnDraw === true;
 
     const wrap = document.createElement('div');
-    wrap.className = 'quest-draw-helper-auto-row deck-hint';
+    wrap.className = 'form-row encounter-action-toggle-wrap quest-draw-helpers-auto-toggle-wrap';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'encounter-action-label';
+    labelSpan.id = 'quest-draw-helper-auto-apply-label';
+    labelSpan.textContent = 'Auto-use helpers on draw';
+
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+    switchLabel.htmlFor = 'quest-draw-helper-auto-apply';
+
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.id = 'quest-draw-helper-auto-apply';
     cb.checked = autoOn;
-    const label = document.createElement('label');
-    label.htmlFor = 'quest-draw-helper-auto-apply';
-    label.style.marginLeft = '0.35rem';
-    label.style.cursor = 'pointer';
-    label.textContent =
-        'When drawing quest cards below, automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn off to draw one card per click and mark helpers used manually.';
-    wrap.appendChild(cb);
-    wrap.appendChild(label);
+    cb.setAttribute('aria-labelledby', 'quest-draw-helper-auto-apply-label');
+
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    slider.setAttribute('aria-hidden', 'true');
+
+    switchLabel.appendChild(cb);
+    switchLabel.appendChild(slider);
+    wrap.appendChild(labelSpan);
+    wrap.appendChild(switchLabel);
     el.appendChild(wrap);
 }
 

@@ -413,6 +413,24 @@ export async function initializeCharacterSheet() {
         });
     })();
 
+    // Quest draw helpers: toggle long help copy (panel info icon)
+    (function setupQuestDrawHelpersHelpToggle() {
+        const btn = document.getElementById('quest-draw-helpers-help-toggle');
+        const details = document.getElementById('quest-draw-helpers-help-details');
+        if (!btn || !details) return;
+
+        btn.addEventListener('click', () => {
+            const open = details.hasAttribute('hidden');
+            if (open) {
+                details.removeAttribute('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                details.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    })();
+
     // Consolidated deck actions: one "Add selected" and one "Clear draw" for all deck types
     const clearDrawBtn = document.getElementById('clear-drawn-cards-btn');
 

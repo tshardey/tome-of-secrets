@@ -743,7 +743,18 @@ permalink: /character-sheet.html
         <div class="rpg-panel-body" id="quest-card-draw-panel-body">
             <div class="rpg-panel rpg-quest-draw-helpers-panel" style="margin-bottom: 1rem;">
                 <div class="rpg-panel-header">
-                    <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                    <div class="rpg-panel-header-lead">
+                        <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                        <button type="button"
+                                class="rpg-panel-help-icon-btn no-print"
+                                id="quest-draw-helpers-help-toggle"
+                                aria-expanded="false"
+                                aria-controls="quest-draw-helpers-help-details"
+                                aria-label="About monthly draw and dice helpers"
+                                title="About these helpers">
+                            <span class="rpg-panel-help-icon-btn__glyph" aria-hidden="true">ℹ</span>
+                        </button>
+                    </div>
                     <button type="button"
                             class="panel-toggle-btn"
                             data-panel-target="quest-draw-helpers-panel-body"
@@ -753,7 +764,12 @@ permalink: /character-sheet.html
                     </button>
                 </div>
                 <div class="rpg-panel-body" id="quest-draw-helpers-panel-body">
-                    <p class="deck-hint">Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                    <div id="quest-draw-helpers-help-details"
+                         class="quest-draw-helpers-help-details"
+                         hidden>
+                        <p>Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                        <p>When drawing quest cards below, turning on <strong>Auto-use helpers on draw</strong> will automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn it off to draw one card per click and mark helpers used manually.</p>
+                    </div>
                     <div id="quest-draw-helpers-auto-controls" class="no-print quest-draw-helpers-auto-controls"></div>
                     <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
                 </div>
