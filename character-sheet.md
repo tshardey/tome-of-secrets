@@ -775,6 +775,11 @@ permalink: /character-sheet.html
                     <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
                 </div>
             </div>
+            <div id="activated-abilities-container" class="rpg-panel rpg-activated-abilities-panel" style="margin-bottom: 1rem;">
+                <h3 id="activated-abilities-summary">✨ Activated Abilities</h3>
+                <p class="description">Monthly activated effects from your school, learned abilities, and equipped effect-driven items. Click Activate to consume cooldowns for this month/year.</p>
+                <div id="activated-abilities-body" class="worn-page-helpers-grid" role="list"></div>
+            </div>
             <div class="quest-deck-interface">
                 <div class="deck-section">
                     <div class="deck-group">

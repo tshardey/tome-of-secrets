@@ -148,6 +148,9 @@ export class EndOfMonthController extends BaseController {
             if (typeof stateAdapter.resetMonthlyCooldowns === 'function') {
                 stateAdapter.resetMonthlyCooldowns();
             }
+            if (uiModule.renderActivatedAbilities) {
+                uiModule.renderActivatedAbilities();
+            }
 
             this.saveState();
 

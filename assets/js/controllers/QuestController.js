@@ -748,6 +748,11 @@ export class QuestController extends BaseController {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
+        if (target.classList.contains('activate-ability-btn')) {
+            this.handleActivateAbility(target);
+            return true;
+        }
+
         const sourceId = target.dataset.sourceId;
         if (sourceId && typeof sourceId === 'string') {
             if (target.classList.contains('mark-quest-draw-helper-used-btn')) {
@@ -823,6 +828,123 @@ export class QuestController extends BaseController {
         }
 
         return false;
+    }
+
+    getActivationPeriod() {
+        const monthEl = document.getElementById('quest-month');
+        const yearEl = document.getElementById('quest-year');
+        const month = monthEl?.value?.trim?.() || '';
+        const year = yearEl?.value?.trim?.() || '';
+        if (month && year) {
+            return { month, year };
+        }
+        const now = new Date();
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        const fallback = {
+            month: month || monthNames[now.getMonth()],
+            year: year || String(now.getFullYear())
+        };
+        if (monthEl && !monthEl.value) monthEl.value = fallback.month;
+        if (yearEl && !yearEl.value) yearEl.value = fallback.year;
+        return fallback;
+    }
+
+    handleActivateAbility(target) {
+        const { stateAdapter } = this;
+        const { ui: uiModule } = this.dependencies;
+        const action = target.dataset.action || '';
+        const sourceType = target.dataset.sourceType || '';
+        const sourceId = target.dataset.sourceId || '';
+        const cooldown = target.dataset.cooldown || '';
+        const abilityName = target.dataset.abilityName || 'Ability';
+        const cooldownKey = `${sourceType}:${sourceId}`;
+        const period = this.getActivationPeriod();
+
+        if (
+            cooldown === 'monthly' &&
+            typeof stateAdapter.isCooldownAvailable === 'function' &&
+            !stateAdapter.isCooldownAvailable(cooldownKey, period.month, period.year)
+        ) {
+            toast.info(`${abilityName} is already used for ${period.month} ${period.year}.`);
+            return;
+        }
+
+        let success = false;
+        const xpCurrentInput = document.getElementById('xp-current');
+        const inkDropsInput = document.getElementById('inkDrops');
+        const paperScrapsInput = document.getElementById('paperScraps');
+
+        if (action === 'transmute_currency') {
+            const convertInkToPaper = confirm('Transmute currency:\nOK = 3 Ink Drops -> 1 Paper Scrap\nCancel = 1 Paper Scrap -> 3 Ink Drops');
+            if (convertInkToPaper) {
+                const currentInk = parseIntOr(inkDropsInput?.value, 0);
+                if (currentInk < 3) {
+                    toast.error('Not enough Ink Drops (need 3).');
+                    return;
+                }
+                if (inkDropsInput) inkDropsInput.value = String(currentInk - 3);
+                const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
+                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper + 1);
+            } else {
+                const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
+                if (currentPaper < 1) {
+                    toast.error('Not enough Paper Scraps (need 1).');
+                    return;
+                }
+                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper - 1);
+                const currentInk = parseIntOr(inkDropsInput?.value, 0);
+                if (inkDropsInput) inkDropsInput.value = String(currentInk + 3);
+            }
+            toast.success('Currency transmuted.');
+            success = true;
+        } else if (action === 'sacrifice_xp_for_currency') {
+            const currentXp = parseIntOr(xpCurrentInput?.value, 0);
+            if (currentXp < 50) {
+                toast.error('Not enough XP (need 50).');
+                return;
+            }
+            if (xpCurrentInput) xpCurrentInput.value = String(currentXp - 50);
+            if (this.updateCurrency) {
+                this.updateCurrency({ xp: 0, inkDrops: 50, paperScraps: 10, items: [] });
+            } else {
+                if (inkDropsInput) inkDropsInput.value = String(parseIntOr(inkDropsInput.value, 0) + 50);
+                if (paperScrapsInput) paperScrapsInput.value = String(parseIntOr(paperScrapsInput.value, 0) + 10);
+            }
+            if (uiModule.updateXpProgressBar) uiModule.updateXpProgressBar();
+            toast.success("Philosopher's Stone activated: -50 XP, +50 Ink Drops, +10 Paper Scraps.");
+            success = true;
+        } else if (action === 'remove_all_worn_pages') {
+            const activeCount = (stateAdapter.getActiveCurses() || []).length;
+            if (activeCount === 0) {
+                toast.info('No active Worn Page penalties to remove.');
+                return;
+            }
+            for (let i = activeCount - 1; i >= 0; i -= 1) {
+                stateAdapter.moveCurseToCompleted(i);
+            }
+            if (uiModule.renderActiveCurses) uiModule.renderActiveCurses();
+            if (uiModule.renderCompletedCurses) uiModule.renderCompletedCurses();
+            toast.success(`Removed ${activeCount} active Worn Page penalt${activeCount === 1 ? 'y' : 'ies'}.`);
+            success = true;
+        } else {
+            toast.success(`${abilityName} activated. Apply its effect to the relevant quest flow now.`);
+            success = true;
+        }
+
+        if (!success) {
+            return;
+        }
+
+        if (cooldown === 'monthly' && typeof stateAdapter.consumeCooldown === 'function') {
+            stateAdapter.consumeCooldown(cooldownKey, period.month, period.year);
+        }
+        if (uiModule.renderActivatedAbilities) {
+            uiModule.renderActivatedAbilities();
+        }
+        this.saveState();
     }
 
     handleCompleteQuest(index) {

@@ -34,6 +34,8 @@ import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffVie
 import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
 import { getExpeditionPassiveBonuses } from '../services/SeriesCompletionService.js';
 import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffService.js';
+import { EffectRegistry } from '../services/EffectRegistry.js';
+import { TRIGGERS } from '../services/effectSchema.js';
 
 /**
  * Effective cover URL for a quest: from linked library book when quest.bookId is set, else quest.coverUrl.
@@ -351,6 +353,7 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
     const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
     const viewModel = createInventoryViewModel(characterState, formData, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     renderLoadoutPure(viewModel);
+    renderActivatedAbilities();
 }
 
 export function renderAtmosphericBuffs(librarySanctumSelect) {
@@ -1099,6 +1102,160 @@ export function renderQuestDrawHelpers() {
     });
 }
 
+function getCurrentAbilityPeriod() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const month = monthEl?.value?.trim?.() || '';
+    const year = yearEl?.value?.trim?.() || '';
+    if (month && year) {
+        return { month, year };
+    }
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return {
+        month: month || monthNames[now.getMonth()],
+        year: year || String(now.getFullYear())
+    };
+}
+
+function sourceBenefitText(source) {
+    if (!source || typeof source !== 'object') return '';
+    if (source.sourceType === 'school') {
+        const school = data.schoolBenefits?.[source.id] || data.schoolBenefits?.[source.name];
+        return school?.benefit || '';
+    }
+    if (source.sourceType === 'ability') {
+        const ability =
+            data.masteryAbilities?.[source.name] ||
+            Object.values(data.masteryAbilities || {}).find((row) => row?.id === source.id);
+        return ability?.benefit || '';
+    }
+    if (source.sourceType === 'item') {
+        const item = data.allItems?.[source.name] || Object.values(data.allItems || {}).find((row) => row?.id === source.id);
+        return item?.bonus || '';
+    }
+    return '';
+}
+
+function actionDisplayName(action) {
+    const names = {
+        complete_two_quests_one_book: 'Complete two quests with one book',
+        ignore_prompt_read_nonfiction: 'Ignore prompt for non-fiction',
+        transmute_currency: 'Transmute currency',
+        sacrifice_xp_for_currency: "Sacrifice XP for currency",
+        remove_all_worn_pages: 'Remove all Worn Pages',
+        auto_complete_encounter: 'Auto-complete encounter',
+        complete_adjacent_quest: 'Complete adjacent quest',
+        same_book_room_and_encounter: 'Same book for room + encounter'
+    };
+    return names[action] || action || 'Activate ability';
+}
+
+function getActiveActivatedEffects() {
+    const context = {
+        state: characterState,
+        formData: {
+            keeperBackground: document.getElementById('keeperBackground')?.value || '',
+            wizardSchool: document.getElementById('wizardSchool')?.value || ''
+        }
+    };
+    const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_ACTIVATE, context, data);
+    const seen = new Set();
+    const entries = [];
+    effects.forEach(({ effect, source }) => {
+        const action = effect?.modifier?.action || '';
+        const sourceType = source?.sourceType || 'unknown';
+        const sourceId = source?.id != null ? String(source.id) : (source?.name || 'unknown');
+        const dedupe = `${sourceType}:${sourceId}:${action}`;
+        if (seen.has(dedupe)) return;
+        seen.add(dedupe);
+        entries.push({
+            sourceType,
+            sourceId,
+            sourceName: source?.name || sourceId,
+            action,
+            cooldown: effect?.cooldown || null,
+            effectText: sourceBenefitText(source)
+        });
+    });
+    return entries;
+}
+
+export function renderActivatedAbilities() {
+    const container = document.getElementById('activated-abilities-body');
+    if (!container) return;
+    clearElement(container);
+
+    const entries = getActiveActivatedEffects();
+    const summary = document.getElementById('activated-abilities-summary');
+    if (summary) {
+        summary.textContent = `✨ Activated Abilities (${entries.length})`;
+    }
+
+    if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.className = 'curse-helper-empty';
+        empty.textContent =
+            'No activated abilities available. Learn mastery abilities, choose a school, or equip effect-driven items to unlock activations.';
+        container.appendChild(empty);
+        return;
+    }
+
+    const period = getCurrentAbilityPeriod();
+    const usedMap = characterState[STORAGE_KEYS.ABILITY_COOLDOWNS] || {};
+    entries.forEach((entry) => {
+        const tile = document.createElement('div');
+        tile.className = 'curse-helper-tile';
+        tile.setAttribute('role', 'listitem');
+
+        const cooldownKey = `${entry.sourceType}:${entry.sourceId}`;
+        const used = entry.cooldown === 'monthly' &&
+            usedMap[cooldownKey] &&
+            usedMap[cooldownKey].month === period.month &&
+            usedMap[cooldownKey].year === period.year;
+
+        const title = document.createElement('h4');
+        title.className = 'curse-helper-tile__title';
+        title.textContent = `${entry.sourceName} (${entry.sourceType})`;
+        tile.appendChild(title);
+
+        const cadence = document.createElement('span');
+        cadence.className = 'curse-helper-tile__cadence';
+        cadence.textContent = entry.cooldown === 'monthly' ? 'Monthly' : 'No cooldown';
+        tile.appendChild(cadence);
+
+        const effect = document.createElement('p');
+        effect.className = 'curse-helper-tile__effect';
+        effect.textContent = entry.effectText || actionDisplayName(entry.action);
+        tile.appendChild(effect);
+
+        const status = document.createElement('p');
+        status.className = 'curse-helper-tile__status';
+        status.textContent = used ? `Used (${period.month} ${period.year})` : 'Available';
+        tile.appendChild(status);
+
+        const actions = document.createElement('div');
+        actions.className = 'curse-helper-tile__actions no-print';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'activate-ability-btn';
+        btn.dataset.action = entry.action;
+        btn.dataset.sourceType = entry.sourceType;
+        btn.dataset.sourceId = entry.sourceId;
+        btn.dataset.cooldown = entry.cooldown || '';
+        btn.dataset.abilityName = entry.sourceName;
+        btn.textContent = used ? 'On cooldown' : 'Activate';
+        btn.disabled = used;
+        actions.appendChild(btn);
+        tile.appendChild(actions);
+
+        container.appendChild(tile);
+    });
+}
+
 export function renderTemporaryBuffs() {
     const tbody = document.getElementById('active-temp-buffs-body');
     if (!tbody) return;
@@ -1417,6 +1574,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderCompletedCurses();
     renderWornPageHelpers();
     renderQuestDrawHelpers();
+    renderActivatedAbilities();
 }
 
 /**

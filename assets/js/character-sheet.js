@@ -133,7 +133,7 @@ export async function initializeCharacterSheet() {
         };
     }
 
-    const defaultQuestPeriod = defaultQuestMonthYearIfEmpty();
+    defaultQuestMonthYearIfEmpty();
 
     // Initialize form persistence (auto-save on input/change)
     initializeFormPersistence(form);
@@ -261,8 +261,9 @@ export async function initializeCharacterSheet() {
     stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
         const questMonthEl = document.getElementById('quest-month');
         const questYearEl = document.getElementById('quest-year');
-        const month = questMonthEl?.value?.trim?.() || defaultQuestPeriod.month;
-        const year = questYearEl?.value?.trim?.() || defaultQuestPeriod.year;
+        const fallback = (!questMonthEl || !questYearEl) ? getCurrentCalendarPeriod() : null;
+        const month = questMonthEl ? (questMonthEl.value?.trim?.() ?? '') : fallback.month;
+        const year = questYearEl ? (questYearEl.value?.trim?.() ?? '') : fallback.year;
         applyQuestDraftedEffects(this, addedQuests, {
             updateCurrency,
             dataModule,
@@ -738,7 +739,8 @@ export async function initializeCharacterSheet() {
             !target.classList.contains('mark-helper-used-btn') &&
             !target.classList.contains('undo-helper-used-btn') &&
             !target.classList.contains('mark-quest-draw-helper-used-btn') &&
-            !target.classList.contains('undo-quest-draw-helper-used-btn')) {
+            !target.classList.contains('undo-quest-draw-helper-used-btn') &&
+            !target.classList.contains('activate-ability-btn')) {
             return;
         }
 
