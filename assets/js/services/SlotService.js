@@ -4,18 +4,57 @@
 
 import * as data from '../character-sheet/data.js';
 import { parseIntOr } from '../utils/helpers.js';
+import { EffectRegistry } from './EffectRegistry.js';
+import { MODIFIER_TYPES, TRIGGERS } from './effectSchema.js';
+
+function getDefaultFormData(formData = {}) {
+    const wizardSchool =
+        formData.wizardSchool ||
+        (typeof document !== 'undefined' ? document.getElementById('wizardSchool')?.value || '' : '');
+    const keeperBackground =
+        formData.keeperBackground ||
+        (typeof document !== 'undefined' ? document.getElementById('keeperBackground')?.value || '' : '');
+    return { wizardSchool, keeperBackground };
+}
+
+function getStateLoadSlotUnlocks(state = {}, formData = {}) {
+    const effectContext = {
+        state,
+        formData: getDefaultFormData(formData)
+    };
+    const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_STATE_LOAD, effectContext, data);
+    const unlocks = {
+        familiar: 0,
+        transmutationUi: 0
+    };
+    for (const entry of effects) {
+        const modifier = entry?.effect?.modifier;
+        if (!modifier || modifier.type !== MODIFIER_TYPES.UNLOCK_SLOT) {
+            continue;
+        }
+        if (modifier.slotType === 'familiar') {
+            unlocks.familiar += 1;
+        } else if (modifier.slotType === 'transmutation_ui') {
+            unlocks.transmutationUi += 1;
+        }
+    }
+    return unlocks;
+}
 
 /**
  * Calculate slot limits from form input values
  * @param {HTMLInputElement} wearableSlotsInput - Wearable slots input element
  * @param {HTMLInputElement} nonWearableSlotsInput - Non-wearable slots input element
  * @param {HTMLInputElement} familiarSlotsInput - Familiar slots input element
+ * @param {Object} [context] - Optional context: { state, formData }
  * @returns {Object} Slot limits object with Wearable, Non-Wearable, Familiar, and total
  */
-export function getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
+export function getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput, context = {}) {
     const wearable = parseIntOr(wearableSlotsInput?.value, 0);
     const nonWearable = parseIntOr(nonWearableSlotsInput?.value, 0);
-    const familiar = parseIntOr(familiarSlotsInput?.value, 0);
+    const familiarBase = parseIntOr(familiarSlotsInput?.value, 0);
+    const unlocks = getStateLoadSlotUnlocks(context.state || {}, context.formData || {});
+    const familiar = familiarBase + unlocks.familiar;
     return { 
         'Wearable': wearable, 
         'Non-Wearable': nonWearable, 

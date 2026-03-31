@@ -50,7 +50,9 @@ export const STORAGE_KEYS = Object.freeze({
     /** UI preference: auto-consume first eligible helper on deck click (one helper per click). */
     QUEST_DRAW_HELPER_SETTINGS: 'questDrawHelperSettings',
     /** Last-used calendar period for TCG effect cooldowns (e.g. monthly PREVENT worn_page). */
-    EFFECT_COOLDOWNS: 'effectCooldowns'
+    EFFECT_COOLDOWNS: 'effectCooldowns',
+    /** Alias used by Phase 5 ability activations. */
+    ABILITY_COOLDOWNS: 'effectCooldowns'
 });
 
 export const CHARACTER_STATE_KEYS = Object.freeze([

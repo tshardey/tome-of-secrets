@@ -632,10 +632,10 @@ export class RewardCalculator {
                 }
             }
 
-            if (forPassive && item.passiveRewardModifier) {
-                return { modifier: item.passiveRewardModifier };
-            }
-            return { modifier: item.rewardModifier };
+            const baseModifier = forPassive && item.passiveRewardModifier
+                ? item.passiveRewardModifier
+                : item.rewardModifier;
+            return { modifier: this._applyFamiliarStateLoadModifiers(item, baseModifier) };
         }
 
         // Temporary buff modifiers (check both new and legacy sources)
@@ -647,6 +647,77 @@ export class RewardCalculator {
         }
 
         return { modifier: null };
+    }
+
+    static _getStateLoadEffectsForCharacter() {
+        const wizardSchool =
+            typeof document !== 'undefined' ? document.getElementById('wizardSchool')?.value || '' : '';
+        const keeperBackground =
+            typeof document !== 'undefined' ? document.getElementById('keeperBackground')?.value || '' : '';
+        return EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_STATE_LOAD,
+            {
+                state: characterState,
+                formData: {
+                    wizardSchool,
+                    keeperBackground
+                }
+            },
+            data
+        );
+    }
+
+    static _applyFamiliarStateLoadModifiers(item, modifier) {
+        if (!item || item.type !== 'Familiar' || !modifier || typeof modifier !== 'object') {
+            return modifier;
+        }
+
+        const activeStateLoadEffects = this._getStateLoadEffectsForCharacter();
+        let familiarMultiplier = 1;
+        let familiarFlatBonus = 0;
+
+        for (const entry of activeStateLoadEffects) {
+            const effectModifier = entry?.effect?.modifier;
+            if (!effectModifier || typeof effectModifier !== 'object') {
+                continue;
+            }
+            if (
+                effectModifier.type === MODIFIER_TYPES.MULTIPLY &&
+                effectModifier.target === 'familiar_bonuses' &&
+                typeof effectModifier.value === 'number'
+            ) {
+                familiarMultiplier *= effectModifier.value;
+            }
+            if (
+                effectModifier.type === MODIFIER_TYPES.ADD_FLAT &&
+                effectModifier.target === 'familiar_bonus' &&
+                typeof effectModifier.value === 'number'
+            ) {
+                familiarFlatBonus += effectModifier.value;
+            }
+        }
+
+        if (familiarMultiplier === 1 && familiarFlatBonus === 0) {
+            return modifier;
+        }
+
+        const adjusted = { ...modifier };
+        const resourceKeys = ['inkDrops', 'paperScraps', 'xp', 'blueprints'];
+
+        resourceKeys.forEach((key) => {
+            if (typeof adjusted[key] === 'number') {
+                adjusted[key] = Math.floor(adjusted[key] * familiarMultiplier);
+            }
+        });
+
+        if (familiarFlatBonus !== 0) {
+            const primaryResource = resourceKeys.find(key => typeof adjusted[key] === 'number');
+            if (primaryResource) {
+                adjusted[primaryResource] += familiarFlatBonus;
+            }
+        }
+
+        return adjusted;
     }
 
     /**

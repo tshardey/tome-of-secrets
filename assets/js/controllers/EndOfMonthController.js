@@ -145,6 +145,10 @@ export class EndOfMonthController extends BaseController {
             }
             if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
 
+            if (typeof stateAdapter.resetMonthlyCooldowns === 'function') {
+                stateAdapter.resetMonthlyCooldowns();
+            }
+
             this.saveState();
 
             // Show success notification

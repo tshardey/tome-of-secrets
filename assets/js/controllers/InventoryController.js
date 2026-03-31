@@ -143,7 +143,14 @@ export class InventoryController extends BaseController {
                 const slotLimits = getSlotLimits(
                     slotInputs.wearableSlotsInput,
                     slotInputs.nonWearableSlotsInput,
-                    slotInputs.familiarSlotsInput
+                    slotInputs.familiarSlotsInput,
+                    {
+                        state: stateAdapter.state,
+                        formData: {
+                            wizardSchool: document.getElementById('wizardSchool')?.value || '',
+                            keeperBackground: document.getElementById('keeperBackground')?.value || ''
+                        }
+                    }
                 );
             
             // Get items in passive slots to exclude from count (for slot limit checking)
@@ -209,7 +216,14 @@ export class InventoryController extends BaseController {
             const slotLimits = getSlotLimits(
                 slotInputs.wearableSlotsInput,
                 slotInputs.nonWearableSlotsInput,
-                slotInputs.familiarSlotsInput
+                slotInputs.familiarSlotsInput,
+                {
+                    state: stateAdapter.state,
+                    formData: {
+                        wizardSchool: document.getElementById('wizardSchool')?.value || '',
+                        keeperBackground: document.getElementById('keeperBackground')?.value || ''
+                    }
+                }
             );
             const equippedCountForType = stateAdapter.getEquippedItems().filter(item => item.type === itemToEquip.type).length;
             

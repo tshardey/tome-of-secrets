@@ -32,7 +32,10 @@ import { parseIntOr } from '../utils/helpers.js';
  */
 export function createInventoryViewModel(state, formData, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput) {
     // Calculate slot limits from form inputs
-    const slotLimits = getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+    const slotLimits = getSlotLimits(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput, {
+        state,
+        formData
+    });
     
     // Get passive slots
     const passiveItemSlots = state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];

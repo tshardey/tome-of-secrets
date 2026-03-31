@@ -25,6 +25,22 @@ export const RESOLUTION_ORDER = Object.freeze([
     MODIFIER_TYPES.PREVENT
 ]);
 
+/**
+ * Supported condition keys for trigger payload matching.
+ * Note: this list is informational/documentation only; validation remains permissive.
+ */
+export const CONDITION_KEYS = Object.freeze([
+    'questType',
+    'encounterType',
+    'encounterAction',
+    'genre',
+    'pageCount',
+    'hasTag',
+    'isNewAuthor',
+    // Used by Conjuration school quest-complete effect.
+    'hasFamiliarEquipped'
+]);
+
 const VALID_TRIGGER_SET = new Set(Object.values(TRIGGERS));
 const VALID_MODIFIER_SET = new Set(Object.values(MODIFIER_TYPES));
 

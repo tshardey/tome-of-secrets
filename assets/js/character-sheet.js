@@ -102,22 +102,38 @@ export async function initializeCharacterSheet() {
     // --- INITIAL LOAD (may be async due to IndexedDB-backed storage) ---
     await loadState(form);
 
-    (function defaultQuestMonthYearIfEmpty() {
-        const monthSel = document.getElementById('quest-month');
-        const yearSel = document.getElementById('quest-year');
-        if (!monthSel || !yearSel) return;
+    function getCurrentCalendarPeriod() {
         const now = new Date();
         const monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
         ];
+        return {
+            month: monthNames[now.getMonth()],
+            year: String(now.getFullYear())
+        };
+    }
+
+    function defaultQuestMonthYearIfEmpty() {
+        const monthSel = document.getElementById('quest-month');
+        const yearSel = document.getElementById('quest-year');
+        const fallback = getCurrentCalendarPeriod();
+        if (!monthSel || !yearSel) {
+            return fallback;
+        }
         if (!monthSel.value) {
-            monthSel.value = monthNames[now.getMonth()];
+            monthSel.value = fallback.month;
         }
         if (!yearSel.value) {
-            yearSel.value = String(now.getFullYear());
+            yearSel.value = fallback.year;
         }
-    })();
+        return {
+            month: monthSel.value?.trim?.() || fallback.month,
+            year: yearSel.value?.trim?.() || fallback.year
+        };
+    }
+
+    const defaultQuestPeriod = defaultQuestMonthYearIfEmpty();
 
     // Initialize form persistence (auto-save on input/change)
     initializeFormPersistence(form);
@@ -245,13 +261,15 @@ export async function initializeCharacterSheet() {
     stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
         const questMonthEl = document.getElementById('quest-month');
         const questYearEl = document.getElementById('quest-year');
+        const month = questMonthEl?.value?.trim?.() || defaultQuestPeriod.month;
+        const year = questYearEl?.value?.trim?.() || defaultQuestPeriod.year;
         applyQuestDraftedEffects(this, addedQuests, {
             updateCurrency,
             dataModule,
             toast,
             form,
-            month: questMonthEl?.value?.trim?.() ?? '',
-            year: questYearEl?.value?.trim?.() ?? ''
+            month,
+            year
         });
     };
 

@@ -713,6 +713,38 @@ export class StateAdapter {
         return true;
     }
 
+    /**
+     * Phase 5 compatibility wrapper for activated abilities.
+     * @param {string} effectId
+     * @param {string} month
+     * @param {string} year
+     * @returns {boolean}
+     */
+    isCooldownAvailable(effectId, month, year) {
+        return this.isEffectCooldownAvailable(effectId, 'monthly', { month, year });
+    }
+
+    /**
+     * Phase 5 compatibility wrapper for activated abilities.
+     * @param {string} effectId
+     * @param {string} month
+     * @param {string} year
+     * @returns {boolean}
+     */
+    consumeCooldown(effectId, month, year) {
+        return this.consumeEffectCooldown(effectId, 'monthly', { month, year });
+    }
+
+    /**
+     * Reset monthly activated ability cooldown usage at End of Month.
+     * @returns {boolean}
+     */
+    resetMonthlyCooldowns() {
+        this.state[STORAGE_KEYS.ABILITY_COOLDOWNS] = {};
+        void setStateKey(STORAGE_KEYS.ABILITY_COOLDOWNS, {});
+        return true;
+    }
+
     // Quest tab – monthly draw / dice helpers
     getQuestDrawHelperState() {
         const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE];
