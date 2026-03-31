@@ -572,6 +572,11 @@ export class RewardCalculator {
         const pageCountEffective = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
         appliedBuffs.forEach(buffName => {
             const { cleanName, isItem, isBackground } = this._parseBuffName(buffName);
+            // Background effects are now sourced from EffectRegistry using keeperBackgrounds.json.
+            // Skipping legacy background cards here prevents pipeline double-application.
+            if (isBackground) {
+                return;
+            }
             const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective });
             if (result.skipReason || !result.modifier) {
                 return;

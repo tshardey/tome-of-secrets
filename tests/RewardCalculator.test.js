@@ -205,6 +205,35 @@ describe('RewardCalculator - Apply Modifiers', () => {
 });
 
 describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
+    test('should not double-apply Archivist when legacy background card is selected', () => {
+        const base = new Reward({ inkDrops: 10 });
+        const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
+            baseRewardOverride: base,
+            appliedBuffs: ['[Background] Archivist Bonus'],
+            background: 'archivist',
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+        });
+
+        expect(modified.inkDrops).toBe(20);
+        expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
+        expect(modified.modifiedBy).not.toContain('Archivist Bonus');
+    });
+
+    test('should still apply non-background buff cards with pipeline backgrounds', () => {
+        const base = new Reward({ inkDrops: 10 });
+        const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
+            baseRewardOverride: base,
+            appliedBuffs: ['[Background] Archivist Bonus', '[Item] Librarian\'s Compass'],
+            background: 'archivist',
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+        });
+
+        expect(modified.inkDrops).toBe(40);
+        expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
+        expect(modified.modifiedBy).toContain("Librarian's Compass");
+        expect(modified.modifiedBy).not.toContain('Archivist Bonus');
+    });
+
     test('should apply Biblioslinker bonus to dungeon crawls', () => {
         const base = new Reward({ paperScraps: 5 });
         const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
@@ -293,7 +322,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         );
         
         expect(final.xp).toBe(30); // Monster base XP
-        expect(final.inkDrops).toBe(35); // 0 + 20 + 15
+        expect(final.inkDrops).toBe(20); // 0 + 20 (background legacy card intentionally skipped)
         expect(final.modifiedBy.length).toBeGreaterThan(0);
     });
 
