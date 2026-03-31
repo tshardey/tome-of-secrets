@@ -93,6 +93,7 @@ export class ModifierPipeline {
             acc[type] = matching.filter(match => match.effect.modifier.type === type);
             return acc;
         }, {});
+        const unlockSlotEntries = matching.filter(match => match.effect.modifier.type === MODIFIER_TYPES.UNLOCK_SLOT);
 
         for (const entry of byType[MODIFIER_TYPES.ADD_FLAT] || []) {
             this._applyAddFlat(resolved, entry, payload);
@@ -105,6 +106,13 @@ export class ModifierPipeline {
         }
         for (const entry of byType[MODIFIER_TYPES.PREVENT] || []) {
             this._applyPrevent(resolved, entry);
+        }
+        for (const entry of unlockSlotEntries) {
+            this._markDeferredNonNumeric(resolved, entry, 'unlock_slot', 'Handled by SlotService on state load');
+        }
+        const activateEntries = matching.filter(match => match.effect.modifier.type === MODIFIER_TYPES.ACTIVATE);
+        for (const entry of activateEntries) {
+            this._applyActivate(resolved, entry, payload);
         }
 
         resolved.receipt.final.xp = resolved.xp;
@@ -207,6 +215,107 @@ export class ModifierPipeline {
             value: 0,
             description: `Prevented ${target}`,
             currency: null
+        });
+    }
+
+    static _markDeferredNonNumeric(reward, entry, effectType, detail) {
+        reward.receipt.modifiers.push({
+            source: this._sourceName(entry),
+            type: `effect:${effectType}:deferred`,
+            value: 0,
+            description: detail,
+            currency: null
+        });
+    }
+
+    static _cooldownKey(source) {
+        if (!source || typeof source !== 'object') {
+            return '';
+        }
+        const sourceType = source.sourceType != null ? String(source.sourceType) : '';
+        const sourceId = source.id != null ? String(source.id) : '';
+        if (!sourceType || !sourceId) {
+            return '';
+        }
+        return `${sourceType}:${sourceId}`;
+    }
+
+    static _isCooldownAvailable(cooldownKey, cadence, payload = {}) {
+        const stateAdapter = payload?.stateAdapter;
+        if (typeof stateAdapter?.isEffectCooldownAvailable === 'function') {
+            const period = { month: payload?.month, year: payload?.year };
+            return stateAdapter.isEffectCooldownAvailable(cooldownKey, cadence, period);
+        }
+
+        const cooldowns =
+            payload && typeof payload.effectCooldowns === 'object' && !Array.isArray(payload.effectCooldowns)
+                ? payload.effectCooldowns
+                : {};
+        const entry =
+            cooldowns && typeof cooldowns[cooldownKey] === 'object' && !Array.isArray(cooldowns[cooldownKey])
+                ? cooldowns[cooldownKey]
+                : null;
+
+        if (!entry) {
+            return true;
+        }
+
+        if (cadence === 'per-use' || cadence === 'per_use') {
+            return entry.used !== true;
+        }
+
+        const month = typeof payload?.month === 'string' ? payload.month.trim() : '';
+        const year = typeof payload?.year === 'string' ? payload.year.trim() : '';
+        if (!month || !year) {
+            return false;
+        }
+        return entry.month !== month || entry.year !== year;
+    }
+
+    static _applyActivate(reward, entry, payload = {}) {
+        const action = entry?.effect?.modifier?.action || '';
+        const cadenceRaw = entry?.effect?.cooldown || null;
+        const cadence = cadenceRaw === 'per_use' ? 'per-use' : cadenceRaw;
+        const cooldownKey = this._cooldownKey(entry?.source);
+        let eligible = true;
+        let reason = 'Activation available';
+
+        if (cadence === 'monthly') {
+            const month = typeof payload?.month === 'string' ? payload.month.trim() : '';
+            const year = typeof payload?.year === 'string' ? payload.year.trim() : '';
+            if (!month || !year) {
+                eligible = false;
+                reason = 'Set month/year to evaluate monthly cooldown';
+            } else if (!cooldownKey) {
+                eligible = false;
+                reason = 'Missing cooldown key';
+            } else {
+                eligible = this._isCooldownAvailable(cooldownKey, cadence, payload);
+                reason = eligible ? 'Activation available' : `Already used for ${month} ${year}`;
+            }
+        } else if (cadence === 'per-use' || cadence === 'per_use') {
+            if (!cooldownKey) {
+                eligible = false;
+                reason = 'Missing cooldown key';
+            } else {
+                eligible = this._isCooldownAvailable(cooldownKey, cadence, payload);
+                reason = eligible ? 'Activation available' : 'Already consumed';
+            }
+        }
+
+        reward.receipt.modifiers.push({
+            source: this._sourceName(entry),
+            type: 'effect:activate',
+            value: 0,
+            description: `${action || 'activate'}: ${reason}`,
+            currency: null,
+            action,
+            eligible,
+            reason,
+            cooldown: cadence,
+            cooldownKey,
+            sourceType: entry?.source?.sourceType || null,
+            sourceId: entry?.source?.id || null
         });
     }
 }

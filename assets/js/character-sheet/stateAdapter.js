@@ -679,15 +679,23 @@ export class StateAdapter {
      * @param {string} [_cadence] - reserved for future cadence types (e.g. bi-monthly passive items)
      */
     isEffectCooldownAvailable(cooldownKey, _cadence = 'monthly', { month, year } = {}) {
-        void _cadence;
         if (!cooldownKey || typeof cooldownKey !== 'string') return false;
-        const m = typeof month === 'string' ? month.trim() : '';
-        const y = typeof year === 'string' ? year.trim() : '';
-        if (!m || !y) return false;
+        const cadence = _cadence === 'per_use' ? 'per-use' : _cadence;
 
         const prev = this.state[STORAGE_KEYS.EFFECT_COOLDOWNS];
         const entry =
             prev && typeof prev === 'object' && !Array.isArray(prev) ? prev[cooldownKey] : null;
+
+        if (cadence === 'per-use') {
+            if (!entry || typeof entry !== 'object') {
+                return true;
+            }
+            return entry.used !== true;
+        }
+
+        const m = typeof month === 'string' ? month.trim() : '';
+        const y = typeof year === 'string' ? year.trim() : '';
+        if (!m || !y) return false;
         if (!entry || typeof entry !== 'object') {
             return true;
         }
@@ -696,17 +704,22 @@ export class StateAdapter {
 
     /** Record that an effect consumed its use for this calendar month/year. */
     consumeEffectCooldown(cooldownKey, _cadence = 'monthly', { month, year } = {}) {
-        void _cadence;
         if (!cooldownKey || typeof cooldownKey !== 'string') return false;
-        const m = typeof month === 'string' ? month.trim() : '';
-        const y = typeof year === 'string' ? year.trim() : '';
-        if (!m || !y) return false;
+        const cadence = _cadence === 'per_use' ? 'per-use' : _cadence;
 
         const key = STORAGE_KEYS.EFFECT_COOLDOWNS;
         const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
             ? this.state[key]
             : {};
-        const nextEntry = { month: m, year: y };
+        let nextEntry;
+        if (cadence === 'per-use') {
+            nextEntry = { used: true };
+        } else {
+            const m = typeof month === 'string' ? month.trim() : '';
+            const y = typeof year === 'string' ? year.trim() : '';
+            if (!m || !y) return false;
+            nextEntry = { month: m, year: y };
+        }
         const next = { ...prev, [cooldownKey]: nextEntry };
         this.state[key] = next;
         void setStateKey(key, next);

@@ -75,7 +75,7 @@
         "benefit": "Any dungeon room and encounter can be completed by the same book, regardless of prompt",
         "effects": [
             {
-                "trigger": "ON_QUEST_COMPLETED",
+                "trigger": "ON_ACTIVATE",
                 "condition": {
                     "questType": "dungeon_crawl"
                 },
@@ -96,7 +96,7 @@
         "benefit": "When completing a quest you may choose to also complete the quest to the left or right of the quest card with the same book",
         "effects": [
             {
-                "trigger": "ON_QUEST_COMPLETED",
+                "trigger": "ON_ACTIVATE",
                 "modifier": {
                     "type": "ACTIVATE",
                     "action": "complete_adjacent_quest"
@@ -131,7 +131,7 @@
         "benefit": "You can choose to automatically complete any encounter prompt with the same book as the dungeon room, who would dare attack you?",
         "effects": [
             {
-                "trigger": "ON_QUEST_COMPLETED",
+                "trigger": "ON_ACTIVATE",
                 "condition": {
                     "questType": "dungeon_crawl"
                 },

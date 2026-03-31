@@ -241,6 +241,129 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.receipt.final.xp).toBe(12);
     });
 
+    test('records UNLOCK_SLOT as deferred non-numeric effect', () => {
+        const base = new Reward({ xp: 10, inkDrops: 3, paperScraps: 1 });
+        const effects = [
+            {
+                source: { name: 'School of Conjuration' },
+                effect: {
+                    trigger: TRIGGERS.ON_STATE_LOAD,
+                    modifier: {
+                        type: MODIFIER_TYPES.UNLOCK_SLOT,
+                        slotType: 'familiar'
+                    }
+                }
+            }
+        ];
+        const result = ModifierPipeline.resolve(TRIGGERS.ON_STATE_LOAD, {}, effects, base);
+
+        expect(result.xp).toBe(10);
+        expect(result.inkDrops).toBe(3);
+        expect(result.paperScraps).toBe(1);
+        expect(result.modifiedBy).toEqual([]);
+        expect(result.receipt.modifiers).toContainEqual(
+            expect.objectContaining({
+                source: 'School of Conjuration',
+                type: 'effect:unlock_slot:deferred',
+                description: 'Handled by SlotService on state load'
+            })
+        );
+    });
+
+    test('records ACTIVATE eligibility without changing numeric rewards', () => {
+        const base = new Reward({ xp: 12, inkDrops: 4 });
+        const effects = [
+            {
+                source: { sourceType: 'school', id: 'Evocation', name: 'School of Evocation' },
+                effect: {
+                    trigger: TRIGGERS.ON_ACTIVATE,
+                    modifier: {
+                        type: MODIFIER_TYPES.ACTIVATE,
+                        action: 'complete_two_quests_one_book'
+                    },
+                    cooldown: 'monthly'
+                }
+            }
+        ];
+        const result = ModifierPipeline.resolve(
+            TRIGGERS.ON_ACTIVATE,
+            { month: 'March', year: '2026', effectCooldowns: {} },
+            effects,
+            base
+        );
+
+        expect(result.xp).toBe(12);
+        expect(result.inkDrops).toBe(4);
+        expect(result.receipt.modifiers).toContainEqual(
+            expect.objectContaining({
+                type: 'effect:activate',
+                action: 'complete_two_quests_one_book',
+                eligible: true,
+                reason: 'Activation available',
+                cooldownKey: 'school:Evocation'
+            })
+        );
+    });
+
+    test('marks monthly ACTIVATE ineligible when already used this period', () => {
+        const effects = [
+            {
+                source: { sourceType: 'item', id: 'scepter-of-knowledge', name: 'Scepter of Knowledge' },
+                effect: {
+                    trigger: TRIGGERS.ON_ACTIVATE,
+                    modifier: {
+                        type: MODIFIER_TYPES.ACTIVATE,
+                        action: 'ignore_prompt_read_nonfiction'
+                    },
+                    cooldown: 'monthly'
+                }
+            }
+        ];
+        const result = ModifierPipeline.resolve(
+            TRIGGERS.ON_ACTIVATE,
+            {
+                month: 'March',
+                year: '2026',
+                effectCooldowns: {
+                    'item:scepter-of-knowledge': { month: 'March', year: '2026' }
+                }
+            },
+            effects
+        );
+
+        expect(result.receipt.modifiers).toContainEqual(
+            expect.objectContaining({
+                type: 'effect:activate',
+                eligible: false,
+                reason: 'Already used for March 2026'
+            })
+        );
+    });
+
+    test('marks monthly ACTIVATE ineligible when period is missing', () => {
+        const effects = [
+            {
+                source: { sourceType: 'school', id: 'Transmutation', name: 'School of Transmutation' },
+                effect: {
+                    trigger: TRIGGERS.ON_ACTIVATE,
+                    modifier: {
+                        type: MODIFIER_TYPES.ACTIVATE,
+                        action: 'transmute_currency'
+                    },
+                    cooldown: 'monthly'
+                }
+            }
+        ];
+        const result = ModifierPipeline.resolve(TRIGGERS.ON_ACTIVATE, {}, effects);
+        expect(result.receipt.modifiers).toContainEqual(
+            expect.objectContaining({
+                type: 'effect:activate',
+                eligible: false,
+                reason: 'Set month/year to evaluate monthly cooldown'
+            })
+        );
+    });
+
     test('scales ON_JOURNAL_ENTRY ADD_FLAT by entryCount', () => {
         const base = new Reward({ paperScraps: 25 });
         base.receipt.base.paperScraps = 25;
@@ -543,5 +666,68 @@ describe('EffectRegistry.getActiveEffects', () => {
             mockDataModule
         );
         expect(activeEffects.length).toBe(2);
+    });
+
+    test('uses ON_ACTIVATE trigger for Quick Shot, Concussive Blast, and Irresistible Charm', () => {
+        const mockStateAdapter = {
+            state: {
+                [STORAGE_KEYS.LEARNED_ABILITIES]: [
+                    'Quick Shot',
+                    'Concussive Blast',
+                    'Irresistible Charm'
+                ],
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
+                [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+            },
+            formData: {}
+        };
+        const mockDataModule = {
+            keeperBackgrounds: {},
+            schoolBenefits: {},
+            allItems: {},
+            temporaryBuffs: {},
+            masteryAbilities: {
+                'Quick Shot': {
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_ACTIVATE,
+                            modifier: { type: MODIFIER_TYPES.ACTIVATE, action: 'same_book_room_and_encounter' }
+                        }
+                    ]
+                },
+                'Concussive Blast': {
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_ACTIVATE,
+                            modifier: { type: MODIFIER_TYPES.ACTIVATE, action: 'complete_adjacent_quest' }
+                        }
+                    ]
+                },
+                'Irresistible Charm': {
+                    effects: [
+                        {
+                            trigger: TRIGGERS.ON_ACTIVATE,
+                            modifier: { type: MODIFIER_TYPES.ACTIVATE, action: 'auto_complete_encounter' }
+                        }
+                    ]
+                }
+            }
+        };
+
+        const activateEffects = EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_ACTIVATE,
+            mockStateAdapter,
+            mockDataModule
+        );
+        expect(activateEffects).toHaveLength(3);
+
+        const questCompletedEffects = EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            mockStateAdapter,
+            mockDataModule
+        );
+        expect(questCompletedEffects).toHaveLength(0);
     });
 });

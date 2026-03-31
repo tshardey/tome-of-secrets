@@ -35,6 +35,7 @@ import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../vie
 import { getExpeditionPassiveBonuses } from '../services/SeriesCompletionService.js';
 import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffService.js';
 import { EffectRegistry } from '../services/EffectRegistry.js';
+import { ModifierPipeline } from '../services/ModifierPipeline.js';
 import { TRIGGERS } from '../services/effectSchema.js';
 
 /**
@@ -1156,6 +1157,7 @@ function actionDisplayName(action) {
 }
 
 function getActiveActivatedEffects() {
+    const period = getCurrentAbilityPeriod();
     const context = {
         state: characterState,
         formData: {
@@ -1179,10 +1181,44 @@ function getActiveActivatedEffects() {
             sourceName: source?.name || sourceId,
             action,
             cooldown: effect?.cooldown || null,
-            effectText: sourceBenefitText(source)
+            effectText: sourceBenefitText(source),
+            dedupeKey: dedupe
         });
     });
-    return entries;
+
+    const activationProbe = ModifierPipeline.resolve(
+        TRIGGERS.ON_ACTIVATE,
+        {
+            month: period.month,
+            year: period.year,
+            effectCooldowns: characterState[STORAGE_KEYS.ABILITY_COOLDOWNS] || {}
+        },
+        effects
+    );
+
+    const eligibilityByKey = new Map();
+    for (const mod of activationProbe?.receipt?.modifiers || []) {
+        if (mod?.type !== 'effect:activate') continue;
+        const sourceType = mod.sourceType || 'unknown';
+        const sourceId = mod.sourceId != null ? String(mod.sourceId) : '';
+        const key = `${sourceType}:${sourceId}:${mod.action || ''}`;
+        eligibilityByKey.set(key, {
+            eligible: mod.eligible !== false,
+            reason: mod.reason || '',
+            cooldownKey: mod.cooldownKey || '',
+            cooldown: mod.cooldown || null
+        });
+    }
+
+    return entries.map((entry) => {
+        const eligibility = eligibilityByKey.get(entry.dedupeKey);
+        return {
+            ...entry,
+            eligible: eligibility ? eligibility.eligible : true,
+            eligibilityReason: eligibility ? eligibility.reason : '',
+            cooldownKey: eligibility ? eligibility.cooldownKey : `${entry.sourceType}:${entry.sourceId}`
+        };
+    });
 }
 
 export function renderActivatedAbilities() {
@@ -1207,17 +1243,12 @@ export function renderActivatedAbilities() {
 
     const period = getCurrentAbilityPeriod();
     const hasExplicitPeriod = !!(period.month && period.year);
-    const usedMap = characterState[STORAGE_KEYS.ABILITY_COOLDOWNS] || {};
     entries.forEach((entry) => {
         const tile = document.createElement('div');
         tile.className = 'curse-helper-tile';
         tile.setAttribute('role', 'listitem');
-
-        const cooldownKey = `${entry.sourceType}:${entry.sourceId}`;
-        const used = entry.cooldown === 'monthly' &&
-            usedMap[cooldownKey] &&
-            usedMap[cooldownKey].month === period.month &&
-            usedMap[cooldownKey].year === period.year;
+        const cooldownKey = entry.cooldownKey || `${entry.sourceType}:${entry.sourceId}`;
+        const used = entry.cooldown === 'monthly' ? !entry.eligible : !entry.eligible;
 
         const title = document.createElement('h4');
         title.className = 'curse-helper-tile__title';
@@ -1239,7 +1270,9 @@ export function renderActivatedAbilities() {
         if (!hasExplicitPeriod && entry.cooldown === 'monthly') {
             status.textContent = 'Set Month/Year in Quests tracker';
         } else {
-            status.textContent = used ? `Used (${period.month} ${period.year})` : 'Available';
+            status.textContent = used
+                ? (entry.eligibilityReason || `Used (${period.month} ${period.year})`)
+                : 'Available';
         }
         tile.appendChild(status);
 
