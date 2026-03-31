@@ -44,7 +44,7 @@
     "cartographer": {
         "name": "The Cartographer's Guild",
         "description": "You were trained to map the unknown, to chart the stars, and to find paths where none existed. The twisting, shifting halls of the Grand Library feel like a challenge, not a threat.",
-        "benefit": "The first time you begin a Dungeon Crawl (draw a ♠) each month, you automatically gain +15 Ink Drops for mapping the territory.",
+        "benefit": "For each dungeon room card you add to your active quests gain 15 ink drops",
         "effects": [
             {
                 "trigger": "ON_QUEST_DRAFTED",
@@ -55,8 +55,7 @@
                     "type": "GRANT_RESOURCE",
                     "resource": "inkDrops",
                     "value": 15
-                },
-                "cooldown": "monthly"
+                }
             }
         ]
     },

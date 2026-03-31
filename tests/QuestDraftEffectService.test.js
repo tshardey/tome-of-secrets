@@ -94,7 +94,7 @@ describe('QuestDraftEffectService', () => {
         expect(updateCurrency).not.toHaveBeenCalled();
     });
 
-    test('Cartographer grants only once per calendar month when cooldown is tracked', () => {
+    test('Cartographer grants per dungeon draft even when cooldown adapter exists', () => {
         const updateCurrency = jest.fn();
         const state = { effectCooldowns: {} };
         const adapter = {
@@ -143,10 +143,10 @@ describe('QuestDraftEffectService', () => {
         );
 
         applyQuestDraftedEffects(adapter, [quest], opts);
-        expect(updateCurrency).toHaveBeenCalledTimes(1);
+        expect(updateCurrency).toHaveBeenCalledTimes(2);
     });
 
-    test('Cartographer monthly cooldown: only first dungeon in a batch grants ink', () => {
+    test('Cartographer grants for each dungeon in a batch', () => {
         const updateCurrency = jest.fn();
         const state = { effectCooldowns: {} };
         const adapter = {
@@ -188,6 +188,57 @@ describe('QuestDraftEffectService', () => {
             formData: { keeperBackground: 'cartographer', wizardSchool: '' },
             month: 'April',
             year: '2026'
+        });
+
+        expect(updateCurrency).toHaveBeenCalledTimes(2);
+        expect(updateCurrency).toHaveBeenCalledWith(
+            expect.objectContaining({ inkDrops: 15, xp: 0, paperScraps: 0 })
+        );
+    });
+
+    test('uses drafted quest month/year over stale options period for cooldown checks', () => {
+        const updateCurrency = jest.fn();
+        const state = { effectCooldowns: { 'background:cartographer': { month: 'March', year: '2026' } } };
+        const adapter = {
+            state,
+            isEffectCooldownAvailable(key, _cadence, { month, year }) {
+                const prev = state.effectCooldowns[key];
+                if (!prev || typeof prev !== 'object') return true;
+                return prev.month !== month || prev.year !== year;
+            },
+            consumeEffectCooldown(key, _cadence, { month, year }) {
+                state.effectCooldowns[key] = { month, year };
+                return true;
+            }
+        };
+        const dataModule = {
+            keeperBackgrounds: {
+                cartographer: {
+                    name: "The Cartographer's Guild",
+                    effects: [
+                        {
+                            trigger: 'ON_QUEST_DRAFTED',
+                            condition: { questType: 'dungeon_crawl' },
+                            modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 },
+                            cooldown: 'monthly'
+                        }
+                    ]
+                }
+            },
+            schoolBenefits: {},
+            masteryAbilities: {},
+            allItems: {},
+            temporaryBuffs: {},
+            temporaryBuffsFromRewards: {}
+        };
+
+        applyQuestDraftedEffects(adapter, [{ type: '♠ Dungeon Crawl', month: 'April', year: '2026' }], {
+            updateCurrency,
+            dataModule,
+            // Simulate stale DOM period from previous month.
+            month: 'March',
+            year: '2026',
+            formData: { keeperBackground: 'cartographer', wizardSchool: '' }
         });
 
         expect(updateCurrency).toHaveBeenCalledTimes(1);

@@ -348,14 +348,14 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             expect(final.modifiedBy).toContain('Alchemic Focus');
         });
 
-        test('Conjuration adds ink when a familiar is equipped', () => {
+        test('Conjuration does not add quest rewards when a familiar is equipped', () => {
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
             const final = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
                 wizardSchool: 'Conjuration',
                 quest: { type: '♥ Organize the Stacks' }
             });
-            expect(final.inkDrops).toBe(15);
-            expect(final.modifiedBy).toContain('School of Conjuration');
+            expect(final.inkDrops).toBe(10);
+            expect(final.modifiedBy).not.toContain('School of Conjuration');
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
         });
     });

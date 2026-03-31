@@ -259,13 +259,21 @@ export async function initializeCharacterSheet() {
     }
 
     stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
+        const drafted = Array.isArray(addedQuests) ? addedQuests : [];
+        const firstWithPeriod = drafted.find((quest) => {
+            const monthVal = typeof quest?.month === 'string' ? quest.month.trim() : '';
+            const yearVal = typeof quest?.year === 'string' ? quest.year.trim() : '';
+            return !!(monthVal && yearVal);
+        });
         const questMonthEl = document.getElementById('quest-month');
         const questYearEl = document.getElementById('quest-year');
         const fallback = getCurrentCalendarPeriod();
+        const monthFromQuest = typeof firstWithPeriod?.month === 'string' ? firstWithPeriod.month.trim() : '';
+        const yearFromQuest = typeof firstWithPeriod?.year === 'string' ? firstWithPeriod.year.trim() : '';
         const monthRaw = questMonthEl?.value?.trim?.() || '';
         const yearRaw = questYearEl?.value?.trim?.() || '';
-        const month = monthRaw || fallback.month;
-        const year = yearRaw || fallback.year;
+        const month = monthFromQuest || monthRaw || fallback.month;
+        const year = yearFromQuest || yearRaw || fallback.year;
         applyQuestDraftedEffects(this, addedQuests, {
             updateCurrency,
             dataModule,

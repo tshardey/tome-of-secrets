@@ -111,8 +111,10 @@ export function applyQuestDraftedEffects(stateAdapter, quests, options = {}) {
         const roomNumber = quest.roomNumber != null && quest.roomNumber !== '' ? String(quest.roomNumber) : null;
         const payload = TriggerPayload.questDrafted({ questType, roomNumber });
         const active = EffectRegistry.getActiveEffects(TRIGGERS.ON_QUEST_DRAFTED, ctx, dataModule);
-        let monthVal = month;
-        let yearVal = year;
+        const questMonth = typeof quest?.month === 'string' ? quest.month.trim() : '';
+        const questYear = typeof quest?.year === 'string' ? quest.year.trim() : '';
+        let monthVal = questMonth || month;
+        let yearVal = questYear || year;
         if ((monthVal == null || monthVal === '') || (yearVal == null || yearVal === '')) {
             const monthEl =
                 form?.querySelector('#quest-month') ??
