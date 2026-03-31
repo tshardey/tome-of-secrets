@@ -26,6 +26,13 @@ const MONTH_NAMES = [
  * @returns {{ month: string, year: string }}
  */
 function resolveQuestPeriod(assigned) {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const trackerMonth = monthEl?.value?.trim?.() || '';
+    const trackerYear = yearEl?.value?.trim?.() || '';
+    if (trackerMonth && trackerYear) {
+        return { month: trackerMonth, year: trackerYear };
+    }
     if (assigned && assigned.month != null && assigned.year != null) {
         return { month: assigned.month, year: String(assigned.year) };
     }

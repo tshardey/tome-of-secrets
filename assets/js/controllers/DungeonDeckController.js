@@ -14,7 +14,6 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import {
     getAvailableRooms,
     getAvailableEncounters,
@@ -32,6 +31,20 @@ import {
     DIVINATION_DIE_HELPER_TOAST,
     consumedHelperIsDivinationSchoolDie
 } from '../services/QuestDrawBoost.js';
+
+function getQuestTrackerPeriod() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const month = monthEl?.value?.trim?.() || '';
+    const year = yearEl?.value?.trim?.() || '';
+    if (month && year) return { month, year };
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return { month: month || monthNames[now.getMonth()], year: year || String(now.getFullYear()) };
+}
 
 export class DungeonDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -321,15 +334,16 @@ export class DungeonDeckController extends BaseController {
             this.handleClearDraw();
             return;
         }
+        const { month, year } = getQuestTrackerPeriod();
 
         const questsJSON = quests.map((q) => {
-            const questWithDate = {
+            return {
                 ...q,
                 rewards: q.rewards.toJSON ? q.rewards.toJSON() : q.rewards,
-                dateAdded: q.dateAdded || new Date().toISOString()
+                dateAdded: q.dateAdded || new Date().toISOString(),
+                month,
+                year
             };
-            const assigned = assignQuestToPeriod(questWithDate, PERIOD_TYPES.MONTHLY);
-            return { ...questWithDate, month: assigned.month, year: assigned.year };
         });
         this.stateAdapter.addActiveQuests(questsJSON);
         if (this.dependencies.ui) this.dependencies.ui.renderActiveAssignments();

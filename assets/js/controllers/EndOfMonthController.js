@@ -18,6 +18,47 @@ import { toast } from '../ui/toast.js';
 import { EffectRegistry } from '../services/EffectRegistry.js';
 import { buildEffectContext } from '../services/effectContext.js';
 
+const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function ensureYearOption(selectEl, year) {
+    if (!selectEl || !year) return;
+    const exists = Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(year));
+    if (exists) return;
+    const opt = document.createElement('option');
+    opt.value = String(year);
+    opt.textContent = String(year);
+    selectEl.appendChild(opt);
+}
+
+function incrementQuestTrackerMonthYear() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    if (!monthEl || !yearEl) return false;
+
+    const currentMonth = monthEl.value?.trim?.() || '';
+    const currentYearRaw = yearEl.value?.trim?.() || '';
+    const currentMonthIndex = MONTH_NAMES.indexOf(currentMonth);
+    const parsedYear = parseInt(currentYearRaw, 10);
+
+    if (currentMonthIndex < 0 || Number.isNaN(parsedYear)) {
+        return false;
+    }
+
+    const nextMonthIndex = (currentMonthIndex + 1) % 12;
+    const nextYear = nextMonthIndex === 0 ? parsedYear + 1 : parsedYear;
+
+    monthEl.value = MONTH_NAMES[nextMonthIndex];
+    ensureYearOption(yearEl, nextYear);
+    yearEl.value = String(nextYear);
+
+    monthEl.dispatchEvent(new Event('change', { bubbles: true }));
+    yearEl.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+}
+
 export class EndOfMonthController extends BaseController {
     initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency) {
         const { stateAdapter, form } = this;
@@ -153,6 +194,17 @@ export class EndOfMonthController extends BaseController {
             }
 
             this.saveState();
+
+            const shouldAdvance = window.confirm(
+                'Advance the Quest tracker to next month/year now?'
+            );
+            if (shouldAdvance) {
+                if (incrementQuestTrackerMonthYear()) {
+                    toast.success('Quest month/year advanced to next month.');
+                } else {
+                    toast.warning('Could not auto-advance month/year. Please set Quest Month/Year manually.');
+                }
+            }
 
             // Show success notification
             toast.success('End of Month processed! Rewards distributed and counters reset.');

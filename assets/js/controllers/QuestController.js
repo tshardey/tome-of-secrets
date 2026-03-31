@@ -655,12 +655,18 @@ export class QuestController extends BaseController {
                 if (quest && typeof quest === 'object') {
                     if (!quest.id) quest.id = generateQuestId();
                     quest.dateAdded = quest.dateAdded || currentDate;
-                    
-                    // Assign quest to correct period based on dateAdded (Phase 2.2)
-                    const assignedQuest = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
-                    // Update quest with correct month/year from period assignment
-                    quest.month = assignedQuest.month;
-                    quest.year = assignedQuest.year;
+
+                    // Preserve explicit tracker month/year from quest creation when present.
+                    const explicitMonth = typeof quest.month === 'string' ? quest.month.trim() : '';
+                    const explicitYear = typeof quest.year === 'string' ? quest.year.trim() : '';
+                    if (explicitMonth && explicitYear) {
+                        quest.month = explicitMonth;
+                        quest.year = explicitYear;
+                    } else {
+                        const assignedQuest = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
+                        quest.month = assignedQuest.month;
+                        quest.year = assignedQuest.year;
+                    }
                 }
             });
             
@@ -833,23 +839,21 @@ export class QuestController extends BaseController {
     getActivationPeriod() {
         const monthEl = document.getElementById('quest-month');
         const yearEl = document.getElementById('quest-year');
-        const month = monthEl?.value?.trim?.() || '';
-        const year = yearEl?.value?.trim?.() || '';
-        if (month && year) {
-            return { month, year };
+        if (!monthEl || !yearEl) {
+            const now = new Date();
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            return {
+                month: monthNames[now.getMonth()],
+                year: String(now.getFullYear())
+            };
         }
-        const now = new Date();
-        const monthNames = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-        ];
-        const fallback = {
-            month: month || monthNames[now.getMonth()],
-            year: year || String(now.getFullYear())
+        return {
+            month: monthEl.value?.trim?.() || '',
+            year: yearEl.value?.trim?.() || ''
         };
-        if (monthEl && !monthEl.value) monthEl.value = fallback.month;
-        if (yearEl && !yearEl.value) yearEl.value = fallback.year;
-        return fallback;
     }
 
     handleActivateAbility(target) {
@@ -862,6 +866,10 @@ export class QuestController extends BaseController {
         const abilityName = target.dataset.abilityName || 'Ability';
         const cooldownKey = `${sourceType}:${sourceId}`;
         const period = this.getActivationPeriod();
+        if (cooldown === 'monthly' && (!period.month || !period.year)) {
+            toast.warning('Set Month and Year in the Quests monthly tracker before using monthly activated abilities.');
+            return;
+        }
 
         if (
             cooldown === 'monthly' &&
@@ -878,27 +886,45 @@ export class QuestController extends BaseController {
         const paperScrapsInput = document.getElementById('paperScraps');
 
         if (action === 'transmute_currency') {
-            const convertInkToPaper = confirm('Transmute currency:\nOK = 3 Ink Drops -> 1 Paper Scrap\nCancel = 1 Paper Scrap -> 3 Ink Drops');
-            if (convertInkToPaper) {
-                const currentInk = parseIntOr(inkDropsInput?.value, 0);
-                if (currentInk < 3) {
-                    toast.error('Not enough Ink Drops (need 3).');
-                    return;
-                }
-                if (inkDropsInput) inkDropsInput.value = String(currentInk - 3);
-                const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
-                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper + 1);
-            } else {
-                const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
-                if (currentPaper < 1) {
-                    toast.error('Not enough Paper Scraps (need 1).');
-                    return;
-                }
-                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper - 1);
-                const currentInk = parseIntOr(inkDropsInput?.value, 0);
-                if (inkDropsInput) inkDropsInput.value = String(currentInk + 3);
+            const directionRaw = window.prompt(
+                'Transmute direction:\n1 = Ink Drops -> Paper Scraps (3:1)\n2 = Paper Scraps -> Ink Drops (1:3)',
+                '1'
+            );
+            const direction = (directionRaw || '').trim();
+            const currentInk = parseIntOr(inkDropsInput?.value, 0);
+            const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
+            const toPaper = direction === '1';
+            const toInk = direction === '2';
+            if (!toPaper && !toInk) {
+                toast.info('Transmutation cancelled.');
+                return;
             }
-            toast.success('Currency transmuted.');
+
+            const maxUnits = toPaper ? Math.floor(currentInk / 3) : currentPaper;
+            if (maxUnits <= 0) {
+                toast.error(toPaper ? 'Not enough Ink Drops (need at least 3).' : 'Not enough Paper Scraps (need at least 1).');
+                return;
+            }
+
+            const amountRaw = window.prompt(
+                `How many conversion units? (1-${maxUnits})`,
+                '1'
+            );
+            const amount = Number.parseInt((amountRaw || '').trim(), 10);
+            if (!Number.isFinite(amount) || amount < 1 || amount > maxUnits) {
+                toast.error(`Enter a whole number between 1 and ${maxUnits}.`);
+                return;
+            }
+
+            if (toPaper) {
+                if (inkDropsInput) inkDropsInput.value = String(currentInk - amount * 3);
+                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper + amount);
+                toast.success(`Transmuted ${amount * 3} Ink Drops into ${amount} Paper Scrap${amount === 1 ? '' : 's'}.`);
+            } else {
+                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper - amount);
+                if (inkDropsInput) inkDropsInput.value = String(currentInk + amount * 3);
+                toast.success(`Transmuted ${amount} Paper Scrap${amount === 1 ? '' : 's'} into ${amount * 3} Ink Drops.`);
+            }
             success = true;
         } else if (action === 'sacrifice_xp_for_currency') {
             const currentXp = parseIntOr(xpCurrentInput?.value, 0);
@@ -986,11 +1012,17 @@ export class QuestController extends BaseController {
             completedQuest.dateAdded = completedQuest.dateCompleted; // Use completion date as fallback
         }
         
-        // Assign quest to correct period based on dateCompleted (Phase 2.2)
-        const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
-        // Update quest with correct month/year from period assignment
-        completedQuest.month = assignedQuest.month;
-        completedQuest.year = assignedQuest.year;
+        // Preserve the quest's original reading period when already set.
+        const existingMonth = typeof completedQuest.month === 'string' ? completedQuest.month.trim() : '';
+        const existingYear = typeof completedQuest.year === 'string' ? completedQuest.year.trim() : '';
+        if (existingMonth && existingYear) {
+            completedQuest.month = existingMonth;
+            completedQuest.year = existingYear;
+        } else {
+            const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
+            completedQuest.month = assignedQuest.month;
+            completedQuest.year = assignedQuest.year;
+        }
 
         // Ensure quest has an id so book link can be stored (e.g. legacy or addActiveQuests-added quests)
         if (!completedQuest.id) {
@@ -1150,9 +1182,16 @@ export class QuestController extends BaseController {
         if (!completedQuest.dateAdded) {
             completedQuest.dateAdded = completedQuest.dateCompleted;
         }
-        const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
-        completedQuest.month = assignedQuest.month;
-        completedQuest.year = assignedQuest.year;
+        const existingMonth = typeof completedQuest.month === 'string' ? completedQuest.month.trim() : '';
+        const existingYear = typeof completedQuest.year === 'string' ? completedQuest.year.trim() : '';
+        if (existingMonth && existingYear) {
+            completedQuest.month = existingMonth;
+            completedQuest.year = existingYear;
+        } else {
+            const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
+            completedQuest.month = assignedQuest.month;
+            completedQuest.year = assignedQuest.year;
+        }
         if (!completedQuest.id) {
             completedQuest.id = generateQuestId();
         }

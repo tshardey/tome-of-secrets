@@ -1105,19 +1105,20 @@ export function renderQuestDrawHelpers() {
 function getCurrentAbilityPeriod() {
     const monthEl = document.getElementById('quest-month');
     const yearEl = document.getElementById('quest-year');
-    const month = monthEl?.value?.trim?.() || '';
-    const year = yearEl?.value?.trim?.() || '';
-    if (month && year) {
-        return { month, year };
+    if (!monthEl || !yearEl) {
+        const now = new Date();
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        return {
+            month: monthNames[now.getMonth()],
+            year: String(now.getFullYear())
+        };
     }
-    const now = new Date();
-    const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
     return {
-        month: month || monthNames[now.getMonth()],
-        year: year || String(now.getFullYear())
+        month: monthEl.value?.trim?.() || '',
+        year: yearEl.value?.trim?.() || ''
     };
 }
 
@@ -1205,6 +1206,7 @@ export function renderActivatedAbilities() {
     }
 
     const period = getCurrentAbilityPeriod();
+    const hasExplicitPeriod = !!(period.month && period.year);
     const usedMap = characterState[STORAGE_KEYS.ABILITY_COOLDOWNS] || {};
     entries.forEach((entry) => {
         const tile = document.createElement('div');
@@ -1234,7 +1236,11 @@ export function renderActivatedAbilities() {
 
         const status = document.createElement('p');
         status.className = 'curse-helper-tile__status';
-        status.textContent = used ? `Used (${period.month} ${period.year})` : 'Available';
+        if (!hasExplicitPeriod && entry.cooldown === 'monthly') {
+            status.textContent = 'Set Month/Year in Quests tracker';
+        } else {
+            status.textContent = used ? `Used (${period.month} ${period.year})` : 'Available';
+        }
         tile.appendChild(status);
 
         const actions = document.createElement('div');
@@ -1248,7 +1254,7 @@ export function renderActivatedAbilities() {
         btn.dataset.cooldown = entry.cooldown || '';
         btn.dataset.abilityName = entry.sourceName;
         btn.textContent = used ? 'On cooldown' : 'Activate';
-        btn.disabled = used;
+        btn.disabled = used || (entry.cooldown === 'monthly' && !hasExplicitPeriod);
         actions.appendChild(btn);
         tile.appendChild(actions);
 

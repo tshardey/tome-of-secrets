@@ -13,7 +13,6 @@ import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import {
     getAvailableSideQuests,
     drawRandomSideQuest
@@ -28,6 +27,20 @@ import {
     DIVINATION_DIE_HELPER_TOAST,
     consumedHelperIsDivinationSchoolDie
 } from '../services/QuestDrawBoost.js';
+
+function getQuestTrackerPeriod() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const month = monthEl?.value?.trim?.() || '';
+    const year = yearEl?.value?.trim?.() || '';
+    if (month && year) return { month, year };
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return { month: month || monthNames[now.getMonth()], year: year || String(now.getFullYear()) };
+}
 
 export class SideQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -201,6 +214,7 @@ export class SideQuestDeckController extends BaseController {
             .filter((i) => i >= 0 && i < this.drawnQuests.length)
             .map((i) => this.drawnQuests[i]);
         if (toAdd.length === 0) return;
+        const { month, year } = getQuestTrackerPeriod();
 
         const activeQuests = [...(characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] || [])];
         const questJSONs = [];
@@ -213,14 +227,15 @@ export class SideQuestDeckController extends BaseController {
                 prompt,
                 rewards: rewards.toJSON ? rewards.toJSON() : rewards,
                 buffs: [],
-                dateAdded: new Date().toISOString()
+                dateAdded: new Date().toISOString(),
+                month,
+                year
             };
             if (this.isQuestDuplicate(quest, activeQuests)) {
                 toast.warning(`"${questData.name}" is already in your quest log.`);
                 continue;
             }
-            const assigned = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
-            questJSONs.push({ ...quest, month: assigned.month, year: assigned.year });
+            questJSONs.push(quest);
             activeQuests.push(quest); // Track for duplicate check within this batch
         }
 

@@ -261,9 +261,11 @@ export async function initializeCharacterSheet() {
     stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
         const questMonthEl = document.getElementById('quest-month');
         const questYearEl = document.getElementById('quest-year');
-        const fallback = (!questMonthEl || !questYearEl) ? getCurrentCalendarPeriod() : null;
-        const month = questMonthEl ? (questMonthEl.value?.trim?.() ?? '') : fallback.month;
-        const year = questYearEl ? (questYearEl.value?.trim?.() ?? '') : fallback.year;
+        const fallback = getCurrentCalendarPeriod();
+        const monthRaw = questMonthEl?.value?.trim?.() || '';
+        const yearRaw = questYearEl?.value?.trim?.() || '';
+        const month = monthRaw || fallback.month;
+        const year = yearRaw || fallback.year;
         applyQuestDraftedEffects(this, addedQuests, {
             updateCurrency,
             dataModule,

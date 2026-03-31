@@ -12,7 +12,6 @@ import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { characterState } from '../character-sheet/state.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import {
     getAvailableGenreQuests,
     drawRandomGenreQuest
@@ -27,6 +26,22 @@ import {
     DIVINATION_DIE_HELPER_TOAST,
     consumedHelperIsDivinationSchoolDie
 } from '../services/QuestDrawBoost.js';
+
+function getQuestTrackerPeriod() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const month = monthEl?.value?.trim?.() || '';
+    const year = yearEl?.value?.trim?.() || '';
+    if (month && year) {
+        return { month, year };
+    }
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return { month: month || monthNames[now.getMonth()], year: year || String(now.getFullYear()) };
+}
 
 export class GenreQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -168,6 +183,7 @@ export class GenreQuestDeckController extends BaseController {
             .filter((i) => i >= 0 && i < this.drawnQuests.length)
             .map((i) => this.drawnQuests[i]);
         if (toAdd.length === 0) return;
+        const { month, year } = getQuestTrackerPeriod();
 
         const questJSONs = toAdd.map((questData) => {
             const prompt = `${questData.genre}: ${questData.description}`;
@@ -183,10 +199,11 @@ export class GenreQuestDeckController extends BaseController {
                 prompt,
                 rewards: rewards.toJSON ? rewards.toJSON() : rewards,
                 buffs: [],
-                dateAdded: new Date().toISOString()
+                dateAdded: new Date().toISOString(),
+                month,
+                year
             };
-            const assigned = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
-            return { ...quest, month: assigned.month, year: assigned.year };
+            return quest;
         });
 
         this.stateAdapter.addActiveQuests(questJSONs);
