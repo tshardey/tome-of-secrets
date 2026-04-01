@@ -8,6 +8,18 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
         'sanctum1': {
             id: 'sanctum1',
             name: 'sanctum1',
+            effects: [
+                {
+                    trigger: 'ON_MONTH_END',
+                    condition: { hasAtmosphericBuff: 'Buff1' },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                },
+                {
+                    trigger: 'ON_MONTH_END',
+                    condition: { hasAtmosphericBuff: 'Buff2' },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                }
+            ],
             associatedBuffs: ['Buff1', 'Buff2']
         },
         'sanctum2': {
@@ -44,7 +56,22 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
     temporaryBuffsFromRewards: {},
     getSanctumBenefit: (idOrName) => {
         const sanctums = {
-            sanctum1: { id: 'sanctum1', associatedBuffs: ['Buff1', 'Buff2'] },
+            sanctum1: {
+                id: 'sanctum1',
+                effects: [
+                    {
+                        trigger: 'ON_MONTH_END',
+                        condition: { hasAtmosphericBuff: 'Buff1' },
+                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    },
+                    {
+                        trigger: 'ON_MONTH_END',
+                        condition: { hasAtmosphericBuff: 'Buff2' },
+                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    }
+                ],
+                associatedBuffs: ['Buff1', 'Buff2']
+            },
             sanctum2: { id: 'sanctum2', associatedBuffs: ['Buff3'] }
         };
         return sanctums[idOrName] || null;
@@ -127,9 +154,14 @@ describe('AtmosphericBuffService', () => {
     });
 
     describe('getAssociatedBuffs', () => {
-        test('should return associated buffs for valid sanctum', () => {
+        test('should return associated buff ids from sanctum effects for valid sanctum', () => {
             const buffs = getAssociatedBuffs('sanctum1');
             expect(buffs).toEqual(['buff-1', 'buff-2']);
+        });
+
+        test('should fallback to legacy associatedBuffs when effects are absent', () => {
+            const buffs = getAssociatedBuffs('sanctum2');
+            expect(buffs).toEqual(['buff-3']);
         });
 
         test('should return empty array for invalid sanctum', () => {

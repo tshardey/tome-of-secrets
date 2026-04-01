@@ -442,6 +442,14 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expectString(benefit.name);
             expectString(benefit.description);
             expectString(benefit.benefit);
+            expect(Array.isArray(benefit.effects)).toBe(true);
+            expect(benefit.effects.length).toBeGreaterThan(0);
+            benefit.effects.forEach((effect) => {
+                expect(validateEffect(effect).valid).toBe(true);
+                const atmosphericRef = effect?.condition?.hasAtmosphericBuff;
+                expectString(atmosphericRef);
+                expect(atmosphericBuffRefs.has(atmosphericRef)).toBe(true);
+            });
             expect(Array.isArray(benefit.associatedBuffs)).toBe(true);
             benefit.associatedBuffs.forEach((buffName) => {
                 expectString(buffName);

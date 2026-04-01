@@ -56,13 +56,10 @@ export function calculateTotalInkDrops(daysUsed, dailyValue) {
  * @returns {Array<string>} Array of associated buff names
  */
 export function getAssociatedBuffs(sanctumKey) {
-    const sanctum = sanctumKey ? data.getSanctumBenefit(sanctumKey) : null;
-    if (!sanctum) {
+    if (!sanctumKey) {
         return [];
     }
-    return (sanctum.associatedBuffs || [])
-        .map((nameOrId) => data.getAtmosphericBuff(nameOrId)?.id || nameOrId)
-        .filter(Boolean);
+    return EffectRegistry.getSanctumAssociatedBuffIds(sanctumKey, data);
 }
 
 /**

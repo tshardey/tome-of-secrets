@@ -205,4 +205,47 @@ export class EffectRegistry {
         }
         return names;
     }
+
+    /**
+     * Resolve the atmospheric buff IDs/names that receive a sanctum ON_MONTH_END multiplier.
+     * Prefers structured sanctum effects and falls back to legacy associatedBuffs.
+     * @param {string} sanctumIdOrName
+     * @param {Object} dataModule
+     * @returns {string[]}
+     */
+    static getSanctumAssociatedBuffIds(sanctumIdOrName, dataModule = {}) {
+        if (!sanctumIdOrName) {
+            return [];
+        }
+
+        const sanctumCatalog = dataModule.sanctumBenefits || {};
+        const atmosphericCatalog = dataModule.atmosphericBuffs || {};
+        const sanctum = findByIdOrName(sanctumCatalog, sanctumIdOrName);
+        if (!sanctum) {
+            return [];
+        }
+
+        const normalizeBuff = (buffNameOrId) => {
+            const buff = findByIdOrName(atmosphericCatalog, buffNameOrId);
+            return buff?.id || buffNameOrId;
+        };
+
+        const fromEffects = (sanctum.effects || [])
+            .filter((effect) => effect?.trigger === TRIGGERS.ON_MONTH_END)
+            .filter((effect) => effect?.modifier?.type === MODIFIER_TYPES.MULTIPLY)
+            .filter((effect) => effect?.modifier?.resource === 'inkDrops')
+            .filter((effect) => Number(effect?.modifier?.value) > 1)
+            .map((effect) => effect?.condition?.hasAtmosphericBuff)
+            .filter((buffNameOrId) => typeof buffNameOrId === 'string' && buffNameOrId.length)
+            .map(normalizeBuff);
+
+        if (fromEffects.length > 0) {
+            return Array.from(new Set(fromEffects));
+        }
+
+        const legacy = (sanctum.associatedBuffs || [])
+            .map(normalizeBuff)
+            .filter(Boolean);
+        return Array.from(new Set(legacy));
+    }
 }
