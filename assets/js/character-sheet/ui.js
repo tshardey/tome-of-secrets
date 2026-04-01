@@ -980,7 +980,7 @@ export function renderCompletedCurses() {
  * Build catalogs object for curse helper discovery (items, buffs, abilities, school, series).
  */
 function getCurseHelperCatalogs() {
-    const tempBuffs = { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) };
+    const tempBuffs = { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) };
     return {
         allItems: data.allItems || {},
         temporaryBuffs: tempBuffs,
@@ -991,7 +991,7 @@ function getCurseHelperCatalogs() {
 }
 
 function getQuestDrawHelperCatalogs() {
-    const tempBuffs = { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) };
+    const tempBuffs = { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) };
     return {
         allItems: data.allItems || {},
         temporaryBuffs: tempBuffs,

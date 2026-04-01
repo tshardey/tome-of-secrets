@@ -160,8 +160,8 @@ export class EffectRegistry {
     static _collectTemporaryBuffEffects(trigger, state, dataModule) {
         const activeBuffs = state[STORAGE_KEYS.TEMPORARY_BUFFS] || [];
         const catalog = {
-            ...(dataModule.temporaryBuffs || {}),
-            ...(dataModule.temporaryBuffsFromRewards || {})
+            ...(dataModule.temporaryBuffsFromRewards || {}),
+            ...(dataModule.temporaryBuffs || {})
         };
         const effects = [];
 

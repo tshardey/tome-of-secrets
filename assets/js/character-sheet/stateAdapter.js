@@ -931,6 +931,63 @@ export class StateAdapter {
         return this.state[STORAGE_KEYS.TEMPORARY_BUFFS];
     }
 
+    /**
+     * End-of-month lifecycle for duration-based temporary buffs.
+     * - until-end-month: expires immediately at EOM
+     * - two-months: decrement monthsRemaining; remove when it reaches 0
+     * one-time buffs are intentionally untouched here.
+     * @returns {boolean} whether any buff was updated or removed
+     */
+    expireTemporaryBuffsAtEndOfMonth() {
+        const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
+            if (!Array.isArray(list) || list.length === 0) {
+                return { changed: false };
+            }
+
+            let changed = false;
+            const next = [];
+
+            for (const buff of list) {
+                if (!buff || typeof buff !== 'object') {
+                    next.push(buff);
+                    continue;
+                }
+
+                if (buff.duration === 'until-end-month') {
+                    changed = true;
+                    continue;
+                }
+
+                if (buff.duration === 'two-months') {
+                    const current =
+                        typeof buff.monthsRemaining === 'number' && Number.isFinite(buff.monthsRemaining)
+                            ? Math.max(0, Math.floor(buff.monthsRemaining))
+                            : 2;
+                    const remaining = current - 1;
+                    if (remaining <= 0) {
+                        changed = true;
+                        continue;
+                    }
+                    if (remaining !== current) {
+                        changed = true;
+                        next.push({ ...buff, monthsRemaining: remaining });
+                        continue;
+                    }
+                }
+
+                next.push(buff);
+            }
+
+            if (!changed) {
+                return { changed: false };
+            }
+
+            list.splice(0, list.length, ...next);
+            return { changed: true };
+        });
+        return result.changed;
+    }
+
     addTemporaryBuff(buff) {
         const { value } = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, list => {
             if (!buff) return { changed: false };

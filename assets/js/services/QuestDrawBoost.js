@@ -115,7 +115,7 @@ function entryAllowsUse(helper, helperState) {
 }
 
 function buildCatalogsOverride(overrides = {}) {
-    const temp = { ...(dataModule.temporaryBuffs || {}), ...(dataModule.temporaryBuffsFromRewards || {}) };
+    const temp = { ...(dataModule.temporaryBuffsFromRewards || {}), ...(dataModule.temporaryBuffs || {}) };
     return {
         allItems: overrides.allItems ?? dataModule.allItems ?? {},
         temporaryBuffs: overrides.temporaryBuffs ?? temp,

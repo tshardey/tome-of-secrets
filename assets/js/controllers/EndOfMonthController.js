@@ -147,8 +147,11 @@ export class EndOfMonthController extends BaseController {
                 if (saveCompletedBooksSet) saveCompletedBooksSet();
             }
 
-            // Note: Temporary buffs are now self-managed by users
-            // No automatic expiration or cleanup is performed
+            // Apply duration-based temporary buff lifecycle at month boundary.
+            const temporaryBuffsChanged =
+                typeof stateAdapter.expireTemporaryBuffsAtEndOfMonth === 'function'
+                    ? stateAdapter.expireTemporaryBuffsAtEndOfMonth()
+                    : false;
 
             // Re-render the atmospheric buffs table to show 0 days used
             uiModule.renderAtmosphericBuffs(librarySanctumSelect);
@@ -162,7 +165,7 @@ export class EndOfMonthController extends BaseController {
             // Refresh Worn Page mitigation helpers: monthly → restore each cycle; every-2-months → restore every second cycle
             const helperCatalogs = {
                 allItems: data.allItems || {},
-                temporaryBuffs: { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) },
+                temporaryBuffs: { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) },
                 masteryAbilities: data.masteryAbilities || {},
                 schoolBenefits: data.schoolBenefits || {},
                 seriesExpedition: data.seriesCompletionRewards || {},
@@ -182,6 +185,9 @@ export class EndOfMonthController extends BaseController {
             const questDrawHelpers = stateAdapter.getQuestDrawHelpers(helperCatalogs, { school, level });
             stateAdapter.refreshQuestDrawHelpersAtEndOfMonth(questDrawHelpers);
             if (stateAdapter.removeUsedOneTimeQuestDrawTempBuffsAtEOM(questDrawHelpers)) {
+                uiModule.renderTemporaryBuffs();
+            }
+            if (temporaryBuffsChanged) {
                 uiModule.renderTemporaryBuffs();
             }
             if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();

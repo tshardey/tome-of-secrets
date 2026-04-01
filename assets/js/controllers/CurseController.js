@@ -130,7 +130,7 @@ export class CurseController extends BaseController {
                 const school = document.getElementById('wizardSchool')?.value || '';
                 const helperCatalogs = {
                     allItems: data.allItems || {},
-                    temporaryBuffs: { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) },
+                    temporaryBuffs: { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) },
                     masteryAbilities: data.masteryAbilities || {},
                     schoolBenefits: data.schoolBenefits || {},
                     seriesExpedition: data.seriesCompletionRewards || {},
