@@ -885,7 +885,124 @@ export class QuestController extends BaseController {
         const inkDropsInput = document.getElementById('inkDrops');
         const paperScrapsInput = document.getElementById('paperScraps');
 
-        if (action === 'transmute_currency') {
+        if (action === 'complete_two_quests_one_book') {
+            const currentSchool = document.getElementById('wizardSchool')?.value || '';
+            if (sourceType !== 'school' || sourceId !== 'Evocation' || currentSchool !== 'Evocation') {
+                toast.error('Evocation activation is only available when your selected school is Evocation.');
+                return;
+            }
+
+            const completedQuests = stateAdapter.getCompletedQuests?.() || [];
+            const bookOptions = [];
+            const seenBookIds = new Set();
+            const seenLegacyBooks = new Set();
+            completedQuests.forEach((quest) => {
+                if (!quest || typeof quest !== 'object') return;
+                const bookId = typeof quest.bookId === 'string' && quest.bookId.trim() ? quest.bookId.trim() : null;
+                const linkedBook = bookId && typeof stateAdapter.getBook === 'function' ? stateAdapter.getBook(bookId) : null;
+                const title = linkedBook?.title || (typeof quest.book === 'string' ? quest.book.trim() : '');
+                if (!title) return;
+                const author = linkedBook?.author || (typeof quest.bookAuthor === 'string' ? quest.bookAuthor.trim() : '');
+                if (bookId) {
+                    if (seenBookIds.has(bookId)) return;
+                    seenBookIds.add(bookId);
+                } else {
+                    const key = `${title}::${author}`;
+                    if (seenLegacyBooks.has(key)) return;
+                    seenLegacyBooks.add(key);
+                }
+                bookOptions.push({
+                    bookId,
+                    title,
+                    author
+                });
+            });
+
+            if (!bookOptions.length) {
+                toast.error('Complete at least one quest with a book before using Evocation.');
+                return;
+            }
+
+            const activeQuests = stateAdapter.getActiveAssignments?.() || [];
+            if (!activeQuests.length) {
+                toast.error('No active quests available for Evocation to complete.');
+                return;
+            }
+
+            const bookPromptLines = bookOptions.map((bookOption, idx) =>
+                `${idx + 1}. ${bookOption.title}${bookOption.author ? ` — ${bookOption.author}` : ''}`
+            );
+            const selectedBookRaw = window.prompt(
+                `Evocation: choose a completed book\n${bookPromptLines.join('\n')}`,
+                '1'
+            );
+            if (selectedBookRaw == null) {
+                toast.info('Evocation activation cancelled.');
+                return;
+            }
+            const selectedBookIndex = Number.parseInt(String(selectedBookRaw).trim(), 10) - 1;
+            if (
+                !Number.isInteger(selectedBookIndex) ||
+                selectedBookIndex < 0 ||
+                selectedBookIndex >= bookOptions.length
+            ) {
+                toast.error(`Choose a valid book number (1-${bookOptions.length}).`);
+                return;
+            }
+            const selectedBook = bookOptions[selectedBookIndex];
+
+            const questPromptLines = activeQuests.map((quest, idx) => {
+                const type = quest?.type || 'Quest';
+                const prompt = quest?.prompt || '(No prompt)';
+                return `${idx + 1}. ${type} — ${prompt}`;
+            });
+            const selectedQuestRaw = window.prompt(
+                `Evocation: choose an active quest to complete with "${selectedBook.title}"\n${questPromptLines.join('\n')}`,
+                '1'
+            );
+            if (selectedQuestRaw == null) {
+                toast.info('Evocation activation cancelled.');
+                return;
+            }
+            const selectedQuestIndex = Number.parseInt(String(selectedQuestRaw).trim(), 10) - 1;
+            if (
+                !Number.isInteger(selectedQuestIndex) ||
+                selectedQuestIndex < 0 ||
+                selectedQuestIndex >= activeQuests.length
+            ) {
+                toast.error(`Choose a valid quest number (1-${activeQuests.length}).`);
+                return;
+            }
+
+            const selectedQuest = activeQuests[selectedQuestIndex];
+            const beforeCompletedCount = (stateAdapter.getCompletedQuests?.() || []).length;
+
+            const updates = {
+                book: selectedBook.title,
+                bookAuthor: selectedBook.author || ''
+            };
+            if (selectedBook.bookId) {
+                updates.bookId = selectedBook.bookId;
+            }
+            stateAdapter.updateQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, selectedQuestIndex, updates);
+            if (
+                selectedBook.bookId &&
+                selectedQuest?.id &&
+                typeof stateAdapter.linkQuestToBook === 'function'
+            ) {
+                stateAdapter.linkQuestToBook(selectedBook.bookId, selectedQuest.id);
+            }
+
+            this.handleCompleteQuest(selectedQuestIndex);
+            const afterCompletedCount = (stateAdapter.getCompletedQuests?.() || []).length;
+            if (afterCompletedCount <= beforeCompletedCount) {
+                toast.error('Evocation activation failed to complete a quest.');
+                return;
+            }
+
+            toast.success(`Evocation activated: completed 1 additional quest using "${selectedBook.title}".`);
+            success = true;
+        } else if (action === 'transmute_currency') {
             const directionRaw = window.prompt(
                 'Transmute direction:\n1 = Ink Drops -> Paper Scraps (3:1)\n2 = Paper Scraps -> Ink Drops (1:3)',
                 '1'
