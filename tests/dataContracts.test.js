@@ -296,8 +296,18 @@ describe('Data contracts for assets/data JSON catalogs', () => {
                 expect(buff.rewardModifier).toBeDefined();
                 expect(typeof buff.rewardModifier).toBe('object');
                 expect(Array.isArray(buff.rewardModifier)).toBe(false);
+                if (buff.useCount !== undefined) {
+                    expect(typeof buff.useCount).toBe('number');
+                    expect(buff.useCount).toBeGreaterThan(0);
+                }
             });
         });
+    });
+
+    test('Enchanted Focus carries useCount:3 for per-book countdown tracking', () => {
+        const enchanted = temporaryBuffs['Enchanted Focus'];
+        expect(enchanted).toBeDefined();
+        expect(enchanted.useCount).toBe(3);
     });
 
     test('temporary buff catalogs duplicate entries are non-conflicting and use temporaryBuffs precedence', () => {

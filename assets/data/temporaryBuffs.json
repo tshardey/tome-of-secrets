@@ -52,6 +52,7 @@
         "name": "Enchanted Focus",
         "description": "The next three books you complete grant a x1.5 Ink Drop bonus.",
         "duration": "one-time",
+        "useCount": 3,
         "source": "Dungeon Completion Reward",
         "rewardModifier": {
             "inkDropsMultiplier": 1.5

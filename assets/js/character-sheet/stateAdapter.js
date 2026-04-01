@@ -1008,6 +1008,42 @@ export class StateAdapter {
         return value || null;
     }
 
+    /**
+     * Decrement `usesLeft` on all active buffs that carry a use-count, removing any that reach zero.
+     * Call this whenever a book is marked complete.
+     * @returns {{ changed: boolean, expired: string[] }} Names of buffs that were removed
+     */
+    decrementUseCountBuffsOnBookComplete() {
+        const expired = [];
+        const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
+            if (!Array.isArray(list) || list.length === 0) return { changed: false };
+            let changed = false;
+            const next = [];
+            for (const buff of list) {
+                if (!buff || typeof buff !== 'object') {
+                    next.push(buff);
+                    continue;
+                }
+                if (typeof buff.usesLeft === 'number' && buff.usesLeft > 0) {
+                    const remaining = buff.usesLeft - 1;
+                    if (remaining <= 0) {
+                        expired.push(buff.name || '');
+                        changed = true;
+                        continue;
+                    }
+                    next.push({ ...buff, usesLeft: remaining });
+                    changed = true;
+                } else {
+                    next.push(buff);
+                }
+            }
+            if (!changed) return { changed: false };
+            list.splice(0, list.length, ...next);
+            return { changed: true };
+        });
+        return { changed: result.changed, expired };
+    }
+
     updateTemporaryBuff(index, updates) {
         const { value } = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, list => {
             const buff = list[index];

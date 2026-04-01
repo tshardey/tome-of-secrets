@@ -187,10 +187,23 @@ describe('Behavioral regressions - named game entities', () => {
             () => {}
         );
 
-        test.skip(
-            'Enchanted Focus 3-use countdown is not yet tracked as explicit use-count state',
-            () => {}
-        );
+        test('Enchanted Focus usesLeft decrements on book complete and removes after 3 books', () => {
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
+                { name: 'Enchanted Focus', duration: 'one-time', status: 'active', usesLeft: 3 }
+            ];
+            const adapter = new StateAdapter(state);
+
+            adapter.decrementUseCountBuffsOnBookComplete();
+            expect(adapter.getTemporaryBuffs()[0].usesLeft).toBe(2);
+
+            adapter.decrementUseCountBuffsOnBookComplete();
+            expect(adapter.getTemporaryBuffs()[0].usesLeft).toBe(1);
+
+            const { expired } = adapter.decrementUseCountBuffsOnBookComplete();
+            expect(adapter.getTemporaryBuffs()).toHaveLength(0);
+            expect(expired).toContain('Enchanted Focus');
+        });
     });
 
     describe('Permanent bonuses enforcement vs display-only', () => {
