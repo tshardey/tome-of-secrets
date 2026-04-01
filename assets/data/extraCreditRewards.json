@@ -1,5 +1,6 @@
 {
+    "_note": "Display-only catalog. Runtime rewards are sourced from GAME_CONFIG.rewards.extraCredit in assets/js/config/gameConfig.js.",
     "description": "Read a book outside of your monthly quest pool",
-    "rewards": { "xp": 15, "inkDrops": 10, "paperScraps": 10, "items": [] }
+    "rewards": { "xp": 0, "inkDrops": 0, "paperScraps": 10, "items": [] }
 }
 

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODIFIER_TYPES, TRIGGERS, validateEffect } from '../assets/js/services/effectSchema.js';
+import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
 
 function loadJson(filename) {
     const repoRoot = path.resolve(process.cwd(), '..');
@@ -25,6 +26,13 @@ function expectRewardObject(rewards) {
     expectNonNegativeNumber(rewards.inkDrops);
     expectNonNegativeNumber(rewards.paperScraps);
     expect(Array.isArray(rewards.items)).toBe(true);
+}
+
+function parseDisplayRewardValue(displayText, resourceLabel) {
+    const escapedLabel = resourceLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = displayText.match(new RegExp(`^\\+(\\d+)\\s+${escapedLabel}$`));
+    if (!match) return null;
+    return Number(match[1]);
 }
 
 describe('Data contracts for assets/data JSON catalogs', () => {
@@ -314,6 +322,45 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         Object.values(dungeonRewards).forEach((entry) => {
             expectString(entry.reward);
             expectString(entry.penalty);
+        });
+    });
+
+    test('extraCreditRewards.json is marked display-only and aligned to runtime config', () => {
+        expectString(extraCreditRewards._note);
+        expect(extraCreditRewards._note.toLowerCase()).toContain('display');
+        expect(extraCreditRewards.rewards.xp).toBe(0);
+        expect(extraCreditRewards.rewards.inkDrops).toBe(0);
+        expect(extraCreditRewards.rewards.paperScraps).toBe(GAME_CONFIG.rewards.extraCredit.paperScraps);
+        expect(extraCreditRewards.rewards.items).toEqual([]);
+    });
+
+    test('dungeonRewards.json display strings align with runtime-configured reward amounts', () => {
+        expectString(dungeonRewards.bookCompletion._note);
+        expectString(dungeonRewards.monster._note);
+        expectString(dungeonRewards.friendlyCreature._note);
+        expectString(dungeonRewards.familiar._note);
+
+        expect(parseDisplayRewardValue(dungeonRewards.bookCompletion.reward, 'XP')).toBe(
+            GAME_CONFIG.endOfMonth.bookCompletionXP
+        );
+        expect(parseDisplayRewardValue(dungeonRewards.monster.reward, 'XP')).toBe(
+            GAME_CONFIG.rewards.encounter.monster.xp
+        );
+        expect(parseDisplayRewardValue(dungeonRewards.friendlyCreature.reward, 'Ink Drops')).toBe(
+            GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops
+        );
+        expect(parseDisplayRewardValue(dungeonRewards.familiar.reward, 'Paper Scraps')).toBe(
+            GAME_CONFIG.rewards.encounter.familiar.paperScraps
+        );
+    });
+
+    test('genreQuests.json display rewards align with organize-the-stacks runtime config', () => {
+        expectString(genreQuests['1']._note);
+        Object.values(genreQuests).forEach((quest) => {
+            expect(quest.rewards.xp).toBe(GAME_CONFIG.rewards.organizeTheStacks.xp);
+            expect(quest.rewards.inkDrops).toBe(GAME_CONFIG.rewards.organizeTheStacks.inkDrops);
+            expect(quest.rewards.paperScraps).toBe(0);
+            expect(quest.rewards.items).toEqual([]);
         });
     });
 

@@ -1,7 +1,23 @@
 {
-    "bookCompletion": { "reward": "+15 XP", "penalty": "-" },
-    "monster": { "reward": "+30 XP", "penalty": "-5 Ink Drops & -10 XP" },
-    "friendlyCreature": { "reward": "+10 Ink Drops", "penalty": "-" },
-    "familiar": { "reward": "+5 Paper Scraps", "penalty": "-" }
+    "bookCompletion": {
+        "_note": "Display-only strings. Runtime values are sourced from GAME_CONFIG and room/encounter data.",
+        "reward": "+15 XP",
+        "penalty": "-"
+    },
+    "monster": {
+        "_note": "Display-only strings. Runtime values are sourced from GAME_CONFIG and room/encounter data.",
+        "reward": "+30 XP",
+        "penalty": "-5 Ink Drops & -10 XP"
+    },
+    "friendlyCreature": {
+        "_note": "Display-only strings. Runtime values are sourced from GAME_CONFIG and room/encounter data.",
+        "reward": "+10 Ink Drops",
+        "penalty": "-"
+    },
+    "familiar": {
+        "_note": "Display-only strings. Runtime values are sourced from GAME_CONFIG and room/encounter data.",
+        "reward": "+5 Paper Scraps",
+        "penalty": "-"
+    }
 }
 
