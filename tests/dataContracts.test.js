@@ -237,6 +237,10 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     });
 
     test('restorationProjects.json contract', () => {
+        const itemRefs = new Set([
+            ...Object.keys(allItems),
+            ...Object.values(allItems).flatMap((item) => [item.id, item.name]).filter(Boolean)
+        ]);
         const ids = new Set();
         Object.values(restorationProjects).forEach((project) => {
             expectString(project.id);
@@ -250,7 +254,10 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expect(project.reward).toBeDefined();
             expectString(project.reward.type);
             if (Array.isArray(project.reward.suggestedItems)) {
-                project.reward.suggestedItems.forEach((item) => expectString(item));
+                project.reward.suggestedItems.forEach((item) => {
+                    expectString(item);
+                    expect(itemRefs.has(item)).toBe(true);
+                });
             }
         });
     });
@@ -426,13 +433,29 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     });
 
     test('sanctumBenefits.json basic shape validation', () => {
+        const atmosphericBuffRefs = new Set([
+            ...Object.keys(atmosphericBuffs),
+            ...Object.values(atmosphericBuffs).flatMap((buff) => [buff.id, buff.name]).filter(Boolean)
+        ]);
         Object.values(sanctumBenefits).forEach((benefit) => {
             expectString(benefit.id);
             expectString(benefit.name);
             expectString(benefit.description);
             expectString(benefit.benefit);
             expect(Array.isArray(benefit.associatedBuffs)).toBe(true);
-            benefit.associatedBuffs.forEach((buffName) => expectString(buffName));
+            benefit.associatedBuffs.forEach((buffName) => {
+                expectString(buffName);
+                expect(atmosphericBuffRefs.has(buffName)).toBe(true);
+            });
+        });
+    });
+
+    test('atmosphericBuffs.json stickerSlug resolves in cozy-modern room theme', () => {
+        const stickers = roomThemes['cozy-modern']?.stickers || {};
+        const stickerSlugs = new Set(Object.keys(stickers));
+        Object.values(atmosphericBuffs).forEach((buff) => {
+            expectString(buff.stickerSlug);
+            expect(stickerSlugs.has(buff.stickerSlug)).toBe(true);
         });
     });
 });
