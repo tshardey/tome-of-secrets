@@ -76,6 +76,57 @@ describe('Phase 3.1: Content Registry and Stable IDs', () => {
             expect(restorationFiles).toContain('wings.json');
             expect(restorationFiles).toContain('restorationProjects.json');
         });
+
+        test('returns no expansion features when core is disabled in manifest', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/character-sheet/data.js', () => ({
+                    expansions: {
+                        core: { enabled: false, features: ['quests'], dataFiles: [] },
+                        expansions: {
+                            addon: { enabled: true, requires: ['core'], features: ['addonFeature'], dataFiles: [] }
+                        }
+                    }
+                }));
+                const registry = require('../assets/js/config/contentRegistry.js');
+                expect(registry.isExpansionEnabled('core')).toBe(false);
+                expect(registry.isExpansionEnabled('addon')).toBe(false);
+                expect(registry.getEnabledFeatures()).not.toContain('addonFeature');
+            });
+        });
+
+        test('supports transitive requires chains', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/character-sheet/data.js', () => ({
+                    expansions: {
+                        core: { enabled: true, features: ['coreFeature'], dataFiles: [] },
+                        expansions: {
+                            a: { enabled: true, requires: ['core'], features: ['aFeature'], dataFiles: [] },
+                            b: { enabled: true, requires: ['a'], features: ['bFeature'], dataFiles: [] }
+                        }
+                    }
+                }));
+                const registry = require('../assets/js/config/contentRegistry.js');
+                expect(registry.isExpansionEnabled('a')).toBe(true);
+                expect(registry.isExpansionEnabled('b')).toBe(true);
+                expect(registry.getEnabledFeatures()).toEqual(expect.arrayContaining(['aFeature', 'bFeature']));
+            });
+        });
+
+        test('circular dependency currently over-recurses (documented baseline)', () => {
+            jest.isolateModules(() => {
+                jest.doMock('../assets/js/character-sheet/data.js', () => ({
+                    expansions: {
+                        core: { enabled: true, features: ['coreFeature'], dataFiles: [] },
+                        expansions: {
+                            a: { enabled: true, requires: ['b'], features: ['aFeature'], dataFiles: [] },
+                            b: { enabled: true, requires: ['a'], features: ['bFeature'], dataFiles: [] }
+                        }
+                    }
+                }));
+                const registry = require('../assets/js/config/contentRegistry.js');
+                expect(() => registry.isExpansionEnabled('a')).toThrow();
+            });
+        });
     });
 
     describe('Item ID Lookups', () => {

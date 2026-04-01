@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
+import { atmosphericBuffs } from '../assets/js/character-sheet/data.js';
 
 describe('EffectRegistry Phase 4 helpers', () => {
     const dataModule = {
@@ -74,5 +75,20 @@ describe('EffectRegistry Phase 4 helpers', () => {
         expect(EffectRegistry.getSanctumAssociatedBuffIds('legacy-only', dataModule)).toEqual([
             'head-in-the-clouds'
         ]);
+    });
+
+    test('forced atmospheric buff names resolve in atmospheric catalog', () => {
+        const refs = new Set([
+            ...Object.keys(atmosphericBuffs),
+            ...Object.values(atmosphericBuffs).flatMap((buff) => [buff.id, buff.name]).filter(Boolean)
+        ]);
+        const ctx = {
+            state: {},
+            formData: { keeperBackground: 'groveTender', wizardSchool: '' }
+        };
+        const forced = EffectRegistry.getForcedAtmosphericBuffNames(ctx, dataModule);
+        forced.forEach((nameOrId) => {
+            expect(refs.has(nameOrId)).toBe(true);
+        });
     });
 });

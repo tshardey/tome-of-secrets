@@ -1,4 +1,8 @@
-import { getSlotLimits } from '../assets/js/services/SlotService.js';
+import {
+    getSlotLimits,
+    calculateExpectedTotalSlots,
+    calculateUnallocatedSlots
+} from '../assets/js/services/SlotService.js';
 import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
@@ -68,5 +72,34 @@ describe('SlotService', () => {
         });
 
         getActiveEffectsSpy.mockRestore();
+    });
+
+    test('does not add familiar slot when no school selected', () => {
+        const limits = getSlotLimits(
+            { value: '2' },
+            { value: '1' },
+            { value: '1' },
+            {
+                state: {},
+                formData: { wizardSchool: '', keeperBackground: '' }
+            }
+        );
+        expect(limits.Familiar).toBe(1);
+    });
+
+    test('handles level 0 for expected slots (base only)', () => {
+        expect(calculateExpectedTotalSlots(0)).toBe(3);
+    });
+
+    test('calculates expected slots monotonically by level', () => {
+        const level1 = calculateExpectedTotalSlots(1);
+        const level10 = calculateExpectedTotalSlots(10);
+        expect(level1).toBeGreaterThanOrEqual(3);
+        expect(level10).toBeGreaterThanOrEqual(level1);
+    });
+
+    test('calculateUnallocatedSlots never goes negative', () => {
+        expect(calculateUnallocatedSlots(5, 3)).toBe(0);
+        expect(calculateUnallocatedSlots(2, 5)).toBe(3);
     });
 });
