@@ -427,6 +427,8 @@ describe('Data contracts for assets/data JSON catalogs', () => {
 
     test('sanctumBenefits.json basic shape validation', () => {
         Object.values(sanctumBenefits).forEach((benefit) => {
+            expectString(benefit.id);
+            expectString(benefit.name);
             expectString(benefit.description);
             expectString(benefit.benefit);
             expect(Array.isArray(benefit.associatedBuffs)).toBe(true);

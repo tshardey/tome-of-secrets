@@ -13,7 +13,11 @@ import { EffectRegistry } from './EffectRegistry.js';
  * @returns {number} Daily value (1 or 2)
  */
 export function calculateDailyValue(buffName, associatedBuffs = []) {
-    return associatedBuffs.includes(buffName) ? 2 : 1;
+    const buff = data.getAtmosphericBuff(buffName);
+    const key = buff?.id || buffName;
+    return (associatedBuffs.includes(key) || associatedBuffs.includes(buff?.name) || associatedBuffs.includes(buffName))
+        ? 2
+        : 1;
 }
 
 /**
@@ -52,10 +56,13 @@ export function calculateTotalInkDrops(daysUsed, dailyValue) {
  * @returns {Array<string>} Array of associated buff names
  */
 export function getAssociatedBuffs(sanctumKey) {
-    if (!sanctumKey || !data.sanctumBenefits[sanctumKey]) {
+    const sanctum = sanctumKey ? data.getSanctumBenefit(sanctumKey) : null;
+    if (!sanctum) {
         return [];
     }
-    return data.sanctumBenefits[sanctumKey].associatedBuffs || [];
+    return (sanctum.associatedBuffs || [])
+        .map((nameOrId) => data.getAtmosphericBuff(nameOrId)?.id || nameOrId)
+        .filter(Boolean);
 }
 
 /**
@@ -66,7 +73,9 @@ export function getAssociatedBuffs(sanctumKey) {
  */
 export function getBuffState(state, buffName) {
     const atmosphericBuffs = state[STORAGE_KEYS.ATMOSPHERIC_BUFFS] || {};
-    const buffState = atmosphericBuffs[buffName] || {};
+    const buff = data.getAtmosphericBuff(buffName);
+    const buffKey = buff?.id || buffName;
+    const buffState = atmosphericBuffs[buffKey] || atmosphericBuffs[buffName] || {};
     
     return {
         daysUsed: buffState.daysUsed || 0,

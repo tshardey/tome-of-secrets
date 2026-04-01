@@ -93,6 +93,25 @@ export function getGenreQuest(idOrKey) {
     return genreQuestsById.get(idOrKey) || genreQuests[idOrKey] || null;
 }
 
+// Sanctum lookup maps
+export const sanctumBenefitsById = (() => {
+    const map = new Map();
+    for (const [key, sanctum] of Object.entries(sanctumBenefits)) {
+        const fallbackId = key.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const id = sanctum?.id || fallbackId;
+        map.set(id, sanctum);
+        map.set(key, sanctum); // backward compatibility
+        if (sanctum?.name) {
+            map.set(sanctum.name, sanctum);
+        }
+    }
+    return map;
+})();
+
+export function getSanctumBenefit(idOrName) {
+    return sanctumBenefitsById.get(idOrName) || sanctumBenefits[idOrName] || null;
+}
+
 // Side quest lookup maps
 export const sideQuestsById = (() => {
     const map = new Map();

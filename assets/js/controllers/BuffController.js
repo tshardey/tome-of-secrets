@@ -136,7 +136,8 @@ export class BuffController extends BaseController {
 
     handleAtmosphericBuffToggle(checkbox) {
         const { stateAdapter } = this;
-        const buffName = checkbox.dataset.buffName;
+        const buffKey = checkbox.dataset.buffName;
+        const buffName = dataModule.getAtmosphericBuff(buffKey)?.name || buffKey;
         const ctx = {
             state: stateAdapter.state,
             formData: {
@@ -150,7 +151,7 @@ export class BuffController extends BaseController {
             return;
         }
 
-        stateAdapter.setAtmosphericBuffActive(buffName, checkbox.checked);
+        stateAdapter.setAtmosphericBuffActive(buffKey, checkbox.checked);
         // Room visualization updates via ATMOSPHERIC_BUFFS_CHANGED listener
         // No need to save state on every check, it's temporary for the day
     }

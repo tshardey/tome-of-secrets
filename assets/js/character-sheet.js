@@ -68,10 +68,20 @@ export async function initializeCharacterSheet() {
     if (librarySanctumSelect && dataModule.sanctumBenefits) {
         librarySanctumSelect.innerHTML = '<option value="">-- Select a Sanctum --</option>';
         Object.keys(dataModule.sanctumBenefits).forEach(sanctumName => {
+            const sanctum = dataModule.sanctumBenefits[sanctumName];
             const opt = document.createElement('option');
-            opt.value = sanctumName;
-            opt.textContent = sanctumName;
+            opt.value = sanctum?.id || sanctumName;
+            opt.textContent = sanctum?.name || sanctumName;
             librarySanctumSelect.appendChild(opt);
+
+            // Backward compatibility: support legacy saved/form values that used display name as value.
+            if (sanctum?.id && sanctumName !== sanctum.id) {
+                const legacyOpt = document.createElement('option');
+                legacyOpt.value = sanctumName;
+                legacyOpt.textContent = sanctum?.name || sanctumName;
+                legacyOpt.hidden = true;
+                librarySanctumSelect.appendChild(legacyOpt);
+            }
         });
     }
 

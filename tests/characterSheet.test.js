@@ -94,8 +94,9 @@ describe('Character Sheet', () => {
     it('should populate library sanctum select with 3 sanctums from JSON', () => {
       const sanctumSelect = document.getElementById('librarySanctum');
       // 1 default + 3 sanctums
-      expect(sanctumSelect.options.length).toBe(4);
-      const labels = Array.from(sanctumSelect.options).map(o => o.textContent);
+      const visibleOptions = Array.from(sanctumSelect.options).filter((o) => !o.hidden);
+      expect(visibleOptions.length).toBe(4);
+      const labels = visibleOptions.map(o => o.textContent);
       expect(labels).toContain('The Spire of Whispers');
       expect(labels).toContain('The Verdant Athenaeum');
       expect(labels).toContain('The Sunken Archives');

@@ -378,6 +378,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         }
         const isModifierRow = buffVM.isModifierItem;
         const isTrackableRow = buffVM.isTrackableItem;
+        const buffKey = buffVM.key || buffVM.name;
         if (isModifierRow || isTrackableRow) {
             row.classList.add('atmospheric-reward-item-row');
         }
@@ -418,7 +419,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'buff-active-check';
-        checkbox.dataset.buffName = buffVM.name;
+        checkbox.dataset.buffName = buffKey;
         checkbox.checked = buffVM.isActive;
         if (buffVM.isDisabled) {
             checkbox.disabled = true;
@@ -446,8 +447,9 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
             daysInput.className = 'buff-days-input';
             daysInput.value = buffVM.daysUsed;
             daysInput.min = 0;
-            daysInput.dataset.buffName = buffVM.name;
+            daysInput.dataset.buffName = buffKey;
             daysInput.dataset.dailyValue = typeof buffVM.dailyValue === 'number' ? buffVM.dailyValue : 1;
+            daysInput.dataset.totalKey = buffKey;
             daysCell.appendChild(daysInput);
         }
         row.appendChild(daysCell);
@@ -455,7 +457,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         // Total cell (trackable and regular buffs need id for updateBuffTotal; modifier shows text)
         const totalCell = document.createElement('td');
         if (!isModifierRow) {
-            totalCell.id = `total-${buffVM.name.replace(/\s+/g, '')}`;
+            totalCell.id = `total-${buffKey.replace(/\s+/g, '')}`;
         }
         totalCell.textContent = buffVM.total;
         row.appendChild(totalCell);
@@ -463,7 +465,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
 }
 
 export function updateBuffTotal(inputElement) {
-    const buffName = inputElement.dataset.buffName;
+    const buffName = inputElement.dataset.totalKey || inputElement.dataset.buffName;
     const daysUsed = parseIntOr(inputElement.value, 0);
     const dailyValue = parseIntOr(inputElement.dataset.dailyValue, 0);
     document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * dailyValue;

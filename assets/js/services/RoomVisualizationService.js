@@ -35,7 +35,8 @@ export function isAtmosphericBuffActiveForSticker(
     if (!atmosphericBuffsState || typeof atmosphericBuffsState !== 'object') {
         return false;
     }
-    const buff = atmosphericBuffsState[buffName];
+    const buffId = atmosphericBuffs[buffName]?.id || buffName;
+    const buff = atmosphericBuffsState[buffId] || atmosphericBuffsState[buffName];
     return !!(buff && buff.isActive === true);
 }
 

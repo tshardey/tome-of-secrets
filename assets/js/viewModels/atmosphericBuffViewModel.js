@@ -98,8 +98,10 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
     const buffViewModels = [];
 
     for (const buffName in data.atmosphericBuffs) {
-        const buffState = getBuffState(state, buffName);
-        const isAssociated = associatedBuffs.includes(buffName);
+        const buffData = data.atmosphericBuffs[buffName];
+        const buffKey = buffData?.id || buffName;
+        const buffState = getBuffState(state, buffKey);
+        const isAssociated = associatedBuffs.includes(buffKey);
         const effectCtx = {
             state,
             formData: { keeperBackground: background || '', wizardSchool: '' }
@@ -107,7 +109,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         const isGroveBuff = isForcedAtmosphericBuff(buffName, effectCtx, data);
 
         // Calculate daily value
-        const dailyValue = calculateDailyValue(buffName, associatedBuffs);
+        const dailyValue = calculateDailyValue(buffKey, associatedBuffs);
 
         // Determine if buff is active
         let isActive = buffState.isActive;
@@ -125,6 +127,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         const isHighlighted = isAssociated || isGroveBuff;
 
         buffViewModels.push({
+            key: buffKey,
             name: buffName,
             dailyValue,
             daysUsed: buffState.daysUsed,
@@ -151,6 +154,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
                 total = Math.floor(total * atmosphericMultiplier);
             }
             buffViewModels.push({
+                key: name,
                 name,
                 dailyValue,
                 daysUsed,
@@ -167,6 +171,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             // Modifier item (e.g. Tome-Bound Cat): multiplier from getAtmosphericBuffMultiplier, no days tracked
             const multLabel = atmosphericMultiplier !== 1 ? `x${atmosphericMultiplier}` : '—';
             buffViewModels.push({
+                key: name,
                 name,
                 dailyValue: multLabel,
                 daysUsed: 0,

@@ -27,7 +27,7 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 13: Modifier pipeline effect cooldowns (effectCooldowns: last-used month/year per effect source key)
  * Version 14: Quest draw helper UI prefs (questDrawHelperSettings: { autoApplyOnDraw })
  */
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 /**
  * Schema version key in localStorage
@@ -103,7 +103,9 @@ function validateQuest(quest, context = 'quest') {
         pageCountEffective: typeof quest.pageCountEffective === 'number' && !isNaN(quest.pageCountEffective) ? Math.max(0, Math.floor(quest.pageCountEffective)) : null,
         // Book-First (Schema v5)
         id: typeof quest.id === 'string' && quest.id.trim() ? quest.id.trim() : null,
-        bookId: typeof quest.bookId === 'string' && quest.bookId.trim() ? quest.bookId.trim() : null
+        bookId: typeof quest.bookId === 'string' && quest.bookId.trim() ? quest.bookId.trim() : null,
+        // Stable side-quest identifier (Schema v15)
+        sideQuestId: typeof quest.sideQuestId === 'string' && quest.sideQuestId.trim() ? quest.sideQuestId.trim() : null
     };
 
     // Normalize month/year if they're invalid but dates are available (Phase 2.2)

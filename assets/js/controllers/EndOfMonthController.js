@@ -71,12 +71,20 @@ export class EndOfMonthController extends BaseController {
 
         const handleEndOfMonth = () => {
             const selectedSanctum = librarySanctumSelect?.value || '';
-            const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+            const associatedBuffs = selectedSanctum
+                ? (data.getSanctumBenefit(selectedSanctum)?.associatedBuffs || [])
+                    .map((nameOrId) => data.getAtmosphericBuff(nameOrId)?.id || nameOrId)
+                : [];
             const atmosphericBuffs = stateAdapter.getAtmosphericBuffs();
             const background = keeperBackgroundSelect?.value || '';
             const effectCtx = buildEffectContext(stateAdapter, form);
             const forcedBuffNames = EffectRegistry.getForcedAtmosphericBuffNames(effectCtx, data);
-            const forcedBuffSet = new Set(forcedBuffNames);
+            const forcedBuffSet = new Set(
+                forcedBuffNames.flatMap((name) => {
+                    const id = data.getAtmosphericBuff(name)?.id;
+                    return id ? [name, id] : [name];
+                })
+            );
 
             // Calculate atmospheric buff rewards using RewardCalculator
             const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(
@@ -94,7 +102,8 @@ export class EndOfMonthController extends BaseController {
                 }
             }
             for (const name of forcedBuffNames) {
-                stateAdapter.setAtmosphericBuffActive(name, true);
+                const buffKey = data.getAtmosphericBuff(name)?.id || name;
+                stateAdapter.setAtmosphericBuffActive(buffKey, true);
             }
 
             // Apply atmospheric buff ink drops

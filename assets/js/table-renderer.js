@@ -149,6 +149,10 @@ function checkSideQuestCompletion(sideQuestNumber) {
     
     for (const quest of completedQuests) {
         if (quest.type !== '♣ Side Quest') continue;
+
+        if (sideQuest.id && quest.sideQuestId === sideQuest.id) {
+            return true;
+        }
         
         // Primary check: exact prompt match (with name prefix)
         if (quest.prompt === expectedPrompt) {

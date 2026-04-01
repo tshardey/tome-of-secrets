@@ -19,7 +19,8 @@ export function isAtmosphericBuffActive(buffName, atmosphericBuffs) {
         return false;
     }
     
-    const buff = atmosphericBuffs[buffName];
+    const buffId = data.getAtmosphericBuff(buffName)?.id || buffName;
+    const buff = atmosphericBuffs[buffId] || atmosphericBuffs[buffName];
     return buff && buff.isActive === true;
 }
 
@@ -38,11 +39,13 @@ export function getAvailableAtmosphericBuffs(state) {
     // Check each atmospheric buff
     for (const buffName in data.atmosphericBuffs) {
         const buff = data.atmosphericBuffs[buffName];
-        const isActive = isAtmosphericBuffActive(buffName, atmosphericBuffs);
+        const buffKey = buff.id || buffName;
+        const isActive = isAtmosphericBuffActive(buffKey, atmosphericBuffs);
         
         // Buff is available if not currently active
         if (!isActive) {
             availableBuffs.push({
+                key: buffKey,
                 name: buffName,
                 ...buff
             });

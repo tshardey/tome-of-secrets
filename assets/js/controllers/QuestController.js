@@ -244,10 +244,11 @@ export class QuestController extends BaseController {
             if (sideContainer) sideContainer.style.display = 'flex';
             if (this.sideQuestSelect) {
                 this.sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
-                for (const key in data.sideQuests) {
+                for (const key in data.sideQuestsDetailed) {
+                    const sideQuest = data.sideQuestsDetailed[key];
                     const option = document.createElement('option');
-                    option.value = data.sideQuests[key];
-                    option.textContent = `${key}: ${data.sideQuests[key].split(':')[0]}`;
+                    option.value = sideQuest.id || key;
+                    option.textContent = `${key}: ${sideQuest.name}`;
                     this.sideQuestSelect.appendChild(option);
                 }
             }
@@ -528,6 +529,13 @@ export class QuestController extends BaseController {
 
         // Preserve restorationData if it exists (for restoration project quests)
         const updates = { month, year, type, prompt, book, bookAuthor, notes, buffs: selectedBuffs };
+        if (type === '♣ Side Quest') {
+            const selectedSideQuestId = this.sideQuestSelect?.value || null;
+            const sideQuestData = selectedSideQuestId ? data.getSideQuest(selectedSideQuestId) : null;
+            updates.sideQuestId = sideQuestData?.id || selectedSideQuestId || originalQuest.sideQuestId || null;
+        } else {
+            updates.sideQuestId = null;
+        }
         if (selectedBookId !== undefined) updates.bookId = selectedBookId || null;
         if (originalQuest.restorationData) {
             // For restoration quests, also update restorationData from form selections

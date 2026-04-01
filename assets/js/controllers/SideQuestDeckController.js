@@ -197,6 +197,11 @@ export class SideQuestDeckController extends BaseController {
     isQuestDuplicate(quest, activeQuests) {
         for (const existingQuest of activeQuests) {
             if (existingQuest.type !== quest.type) continue;
+
+            // Prefer stable side quest id when available
+            if (quest.sideQuestId && existingQuest.sideQuestId === quest.sideQuestId) {
+                return true;
+            }
             
             // Match by prompt
             if (quest.prompt && existingQuest.prompt && quest.prompt === existingQuest.prompt) {
@@ -221,9 +226,12 @@ export class SideQuestDeckController extends BaseController {
 
         for (const questData of toAdd) {
             const prompt = `${questData.name}: ${questData.prompt}`;
-            const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', prompt);
+            const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', prompt, {
+                sideQuestId: questData.id || null
+            });
             const quest = {
                 type: '♣ Side Quest',
+                sideQuestId: questData.id || null,
                 prompt,
                 rewards: rewards.toJSON ? rewards.toJSON() : rewards,
                 buffs: [],

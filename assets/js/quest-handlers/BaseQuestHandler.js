@@ -356,7 +356,16 @@ export class BaseQuestHandler {
                 break;
 
             case '♣ Side Quest':
-                prompt = sideQuestSelect.value;
+                if (sideQuestSelect.value) {
+                    const sideQuest = data.getSideQuest
+                        ? data.getSideQuest(sideQuestSelect.value)
+                        : null;
+                    if (sideQuest?.name && sideQuest?.prompt) {
+                        prompt = `${sideQuest.name}: ${sideQuest.prompt}`;
+                    } else {
+                        prompt = sideQuestSelect.value;
+                    }
+                }
                 break;
 
             default:

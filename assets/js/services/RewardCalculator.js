@@ -94,7 +94,13 @@ export class RewardCalculator {
      * @returns {Reward}
      */
     static getBaseRewards(type, prompt, options = {}) {
-        const { isEncounter = false, roomNumber = null, encounterName = null, isBefriend = true } = options;
+        const {
+            isEncounter = false,
+            roomNumber = null,
+            encounterName = null,
+            isBefriend = true,
+            sideQuestId = null
+        } = options;
         let reward;
 
         // Extra Credit - only paper scraps
@@ -113,7 +119,7 @@ export class RewardCalculator {
         }
         // Side Quests
         else if (type === '♣ Side Quest') {
-            reward = this._getSideQuestRewards(prompt);
+            reward = this._getSideQuestRewards(prompt, sideQuestId);
         }
         // Dungeon Crawl
         else if (type === '♠ Dungeon Crawl') {
@@ -134,7 +140,18 @@ export class RewardCalculator {
      * Get rewards for a side quest
      * @private
      */
-    static _getSideQuestRewards(prompt) {
+    static _getSideQuestRewards(prompt, sideQuestId = null) {
+        if (sideQuestId && data.sideQuestsById?.has(sideQuestId)) {
+            const sideQuest = data.sideQuestsById.get(sideQuestId);
+            const reward = new Reward(sideQuest.rewards);
+            reward.receipt.base.xp = reward.xp;
+            reward.receipt.base.inkDrops = reward.inkDrops;
+            reward.receipt.base.paperScraps = reward.paperScraps;
+            reward.receipt.base.blueprints = reward.blueprints;
+            reward.receipt.final = { ...reward.receipt.base };
+            return reward;
+        }
+
         for (const key in data.sideQuestsDetailed) {
             const sideQuest = data.sideQuestsDetailed[key];
             if (prompt.includes(sideQuest.prompt) || prompt.includes(sideQuest.name)) {
@@ -889,8 +906,18 @@ export class RewardCalculator {
             items: [],
             modifiedBy: [] 
         });
-        const forcedActive = new Set(
-            Array.isArray(forcedActiveBuffNames) ? forcedActiveBuffNames.filter(Boolean) : []
+        const forcedActive = new Set();
+        if (Array.isArray(forcedActiveBuffNames)) {
+            forcedActiveBuffNames.filter(Boolean).forEach((name) => {
+                const id = data.getAtmosphericBuff(name)?.id;
+                forcedActive.add(name);
+                if (id) forcedActive.add(id);
+            });
+        }
+        const associatedSet = new Set(
+            Array.isArray(associatedBuffs)
+                ? associatedBuffs.map((nameOrId) => data.getAtmosphericBuff(nameOrId)?.id || nameOrId).filter(Boolean)
+                : []
         );
 
         for (const buffName in atmosphericBuffs) {
@@ -898,7 +925,8 @@ export class RewardCalculator {
             const countsForInk =
                 buff.daysUsed > 0 && (buff.isActive === true || forcedActive.has(buffName));
             if (countsForInk) {
-                const isAssociated = associatedBuffs.includes(buffName);
+                const buffId = data.getAtmosphericBuff(buffName)?.id || buffName;
+                const isAssociated = associatedSet.has(buffId);
                 const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
                 const buffTotal = buff.daysUsed * dailyValue;
                 totalInkDrops += buffTotal;
