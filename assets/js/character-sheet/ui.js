@@ -34,6 +34,9 @@ import { createAtmosphericBuffViewModel } from '../viewModels/atmosphericBuffVie
 import { createPermanentBonusesViewModel, createBenefitsViewModel } from '../viewModels/generalInfoViewModel.js';
 import { getExpeditionPassiveBonuses } from '../services/SeriesCompletionService.js';
 import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffService.js';
+import { EffectRegistry } from '../services/EffectRegistry.js';
+import { ModifierPipeline } from '../services/ModifierPipeline.js';
+import { TRIGGERS } from '../services/effectSchema.js';
 
 /**
  * Effective cover URL for a quest: from linked library book when quest.bookId is set, else quest.coverUrl.
@@ -351,6 +354,7 @@ export function renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familia
     const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
     const viewModel = createInventoryViewModel(characterState, formData, wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
     renderLoadoutPure(viewModel);
+    renderActivatedAbilities();
 }
 
 export function renderAtmosphericBuffs(librarySanctumSelect) {
@@ -374,6 +378,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         }
         const isModifierRow = buffVM.isModifierItem;
         const isTrackableRow = buffVM.isTrackableItem;
+        const buffKey = buffVM.key || buffVM.name;
         if (isModifierRow || isTrackableRow) {
             row.classList.add('atmospheric-reward-item-row');
         }
@@ -414,7 +419,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'buff-active-check';
-        checkbox.dataset.buffName = buffVM.name;
+        checkbox.dataset.buffName = buffKey;
         checkbox.checked = buffVM.isActive;
         if (buffVM.isDisabled) {
             checkbox.disabled = true;
@@ -442,8 +447,9 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
             daysInput.className = 'buff-days-input';
             daysInput.value = buffVM.daysUsed;
             daysInput.min = 0;
-            daysInput.dataset.buffName = buffVM.name;
+            daysInput.dataset.buffName = buffKey;
             daysInput.dataset.dailyValue = typeof buffVM.dailyValue === 'number' ? buffVM.dailyValue : 1;
+            daysInput.dataset.totalKey = buffKey;
             daysCell.appendChild(daysInput);
         }
         row.appendChild(daysCell);
@@ -451,7 +457,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         // Total cell (trackable and regular buffs need id for updateBuffTotal; modifier shows text)
         const totalCell = document.createElement('td');
         if (!isModifierRow) {
-            totalCell.id = `total-${buffVM.name.replace(/\s+/g, '')}`;
+            totalCell.id = `total-${buffKey.replace(/\s+/g, '')}`;
         }
         totalCell.textContent = buffVM.total;
         row.appendChild(totalCell);
@@ -459,7 +465,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
 }
 
 export function updateBuffTotal(inputElement) {
-    const buffName = inputElement.dataset.buffName;
+    const buffName = inputElement.dataset.totalKey || inputElement.dataset.buffName;
     const daysUsed = parseIntOr(inputElement.value, 0);
     const dailyValue = parseIntOr(inputElement.dataset.dailyValue, 0);
     document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * dailyValue;
@@ -976,7 +982,7 @@ export function renderCompletedCurses() {
  * Build catalogs object for curse helper discovery (items, buffs, abilities, school, series).
  */
 function getCurseHelperCatalogs() {
-    const tempBuffs = { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) };
+    const tempBuffs = { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) };
     return {
         allItems: data.allItems || {},
         temporaryBuffs: tempBuffs,
@@ -987,7 +993,7 @@ function getCurseHelperCatalogs() {
 }
 
 function getQuestDrawHelperCatalogs() {
-    const tempBuffs = { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) };
+    const tempBuffs = { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) };
     return {
         allItems: data.allItems || {},
         temporaryBuffs: tempBuffs,
@@ -1026,7 +1032,46 @@ export function renderWornPageHelpers() {
     });
 }
 
+function renderQuestDrawHelperAutoControls() {
+    const el = document.getElementById('quest-draw-helpers-auto-controls');
+    if (!el) return;
+
+    clearElement(el);
+    const raw = characterState[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS];
+    const autoOn =
+        raw && typeof raw === 'object' && !Array.isArray(raw) && raw.autoApplyOnDraw === true;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'form-row encounter-action-toggle-wrap quest-draw-helpers-auto-toggle-wrap';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'encounter-action-label';
+    labelSpan.id = 'quest-draw-helper-auto-apply-label';
+    labelSpan.textContent = 'Auto-use helpers on draw';
+
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+    switchLabel.htmlFor = 'quest-draw-helper-auto-apply';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'quest-draw-helper-auto-apply';
+    cb.checked = autoOn;
+    cb.setAttribute('aria-labelledby', 'quest-draw-helper-auto-apply-label');
+
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    slider.setAttribute('aria-hidden', 'true');
+
+    switchLabel.appendChild(cb);
+    switchLabel.appendChild(slider);
+    wrap.appendChild(labelSpan);
+    wrap.appendChild(switchLabel);
+    el.appendChild(wrap);
+}
+
 export function renderQuestDrawHelpers() {
+    renderQuestDrawHelperAutoControls();
     const container = document.getElementById('quest-draw-helpers-body');
     if (!container) return;
 
@@ -1057,6 +1102,199 @@ export function renderQuestDrawHelpers() {
     };
     helpers.forEach((helper) => {
         container.appendChild(renderCurseHelperRow(helper, helperState, buttonOpts));
+    });
+}
+
+function getCurrentAbilityPeriod() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    if (!monthEl || !yearEl) {
+        const now = new Date();
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        return {
+            month: monthNames[now.getMonth()],
+            year: String(now.getFullYear())
+        };
+    }
+    return {
+        month: monthEl.value?.trim?.() || '',
+        year: yearEl.value?.trim?.() || ''
+    };
+}
+
+function sourceBenefitText(source) {
+    if (!source || typeof source !== 'object') return '';
+    if (source.sourceType === 'school') {
+        const school = data.schoolBenefits?.[source.id] || data.schoolBenefits?.[source.name];
+        return school?.benefit || '';
+    }
+    if (source.sourceType === 'ability') {
+        const ability =
+            data.masteryAbilities?.[source.name] ||
+            Object.values(data.masteryAbilities || {}).find((row) => row?.id === source.id);
+        return ability?.benefit || '';
+    }
+    if (source.sourceType === 'item') {
+        const item = data.allItems?.[source.name] || Object.values(data.allItems || {}).find((row) => row?.id === source.id);
+        return item?.bonus || '';
+    }
+    return '';
+}
+
+function actionDisplayName(action) {
+    const names = {
+        complete_two_quests_one_book: 'Complete two quests with one book',
+        ignore_prompt_read_nonfiction: 'Ignore prompt for non-fiction',
+        reroll_prompt_or_die: 'Reroll prompt or die',
+        transmute_currency: 'Transmute currency',
+        sacrifice_xp_for_currency: "Sacrifice XP for currency",
+        remove_all_worn_pages: 'Remove all Worn Pages',
+        auto_complete_encounter: 'Auto-complete encounter',
+        complete_adjacent_quest: 'Complete adjacent quest',
+        same_book_room_and_encounter: 'Same book for room + encounter'
+    };
+    return names[action] || action || 'Activate ability';
+}
+
+function getActiveActivatedEffects() {
+    const period = getCurrentAbilityPeriod();
+    const context = {
+        state: characterState,
+        formData: {
+            keeperBackground: document.getElementById('keeperBackground')?.value || '',
+            wizardSchool: document.getElementById('wizardSchool')?.value || ''
+        }
+    };
+    const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_ACTIVATE, context, data);
+    const seen = new Set();
+    const entries = [];
+    effects.forEach(({ effect, source }) => {
+        const action = effect?.modifier?.action || '';
+        const sourceType = source?.sourceType || 'unknown';
+        const sourceId = source?.id != null ? String(source.id) : (source?.name || 'unknown');
+        const dedupe = `${sourceType}:${sourceId}:${action}`;
+        if (seen.has(dedupe)) return;
+        seen.add(dedupe);
+        entries.push({
+            sourceType,
+            sourceId,
+            sourceName: source?.name || sourceId,
+            action,
+            cooldown: effect?.cooldown || null,
+            effectText: sourceBenefitText(source),
+            dedupeKey: dedupe
+        });
+    });
+
+    const activationProbe = ModifierPipeline.resolve(
+        TRIGGERS.ON_ACTIVATE,
+        {
+            month: period.month,
+            year: period.year,
+            effectCooldowns: characterState[STORAGE_KEYS.ABILITY_COOLDOWNS] || {}
+        },
+        effects
+    );
+
+    const eligibilityByKey = new Map();
+    for (const mod of activationProbe?.receipt?.modifiers || []) {
+        if (mod?.type !== 'effect:activate') continue;
+        const sourceType = mod.sourceType || 'unknown';
+        const sourceId = mod.sourceId != null ? String(mod.sourceId) : '';
+        const key = `${sourceType}:${sourceId}:${mod.action || ''}`;
+        eligibilityByKey.set(key, {
+            eligible: mod.eligible !== false,
+            reason: mod.reason || '',
+            cooldownKey: mod.cooldownKey || '',
+            cooldown: mod.cooldown || null
+        });
+    }
+
+    return entries.map((entry) => {
+        const eligibility = eligibilityByKey.get(entry.dedupeKey);
+        return {
+            ...entry,
+            eligible: eligibility ? eligibility.eligible : true,
+            eligibilityReason: eligibility ? eligibility.reason : '',
+            cooldownKey: eligibility ? eligibility.cooldownKey : `${entry.sourceType}:${entry.sourceId}`
+        };
+    });
+}
+
+export function renderActivatedAbilities() {
+    const container = document.getElementById('activated-abilities-body');
+    if (!container) return;
+    clearElement(container);
+
+    const entries = getActiveActivatedEffects();
+    const summary = document.getElementById('activated-abilities-summary');
+    if (summary) {
+        summary.textContent = `✨ Activated Abilities (${entries.length})`;
+    }
+
+    if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.className = 'curse-helper-empty';
+        empty.textContent =
+            'No activated abilities available. Learn mastery abilities, choose a school, or equip effect-driven items to unlock activations.';
+        container.appendChild(empty);
+        return;
+    }
+
+    const period = getCurrentAbilityPeriod();
+    const hasExplicitPeriod = !!(period.month && period.year);
+    entries.forEach((entry) => {
+        const tile = document.createElement('div');
+        tile.className = 'curse-helper-tile';
+        tile.setAttribute('role', 'listitem');
+        const cooldownKey = entry.cooldownKey || `${entry.sourceType}:${entry.sourceId}`;
+        const used = entry.cooldown === 'monthly' ? !entry.eligible : !entry.eligible;
+
+        const title = document.createElement('h4');
+        title.className = 'curse-helper-tile__title';
+        title.textContent = `${entry.sourceName} (${entry.sourceType})`;
+        tile.appendChild(title);
+
+        const cadence = document.createElement('span');
+        cadence.className = 'curse-helper-tile__cadence';
+        cadence.textContent = entry.cooldown === 'monthly' ? 'Monthly' : 'No cooldown';
+        tile.appendChild(cadence);
+
+        const effect = document.createElement('p');
+        effect.className = 'curse-helper-tile__effect';
+        effect.textContent = entry.effectText || actionDisplayName(entry.action);
+        tile.appendChild(effect);
+
+        const status = document.createElement('p');
+        status.className = 'curse-helper-tile__status';
+        if (!hasExplicitPeriod && entry.cooldown === 'monthly') {
+            status.textContent = 'Set Month/Year in Quests tracker';
+        } else {
+            status.textContent = used
+                ? (entry.eligibilityReason || `Used (${period.month} ${period.year})`)
+                : 'Available';
+        }
+        tile.appendChild(status);
+
+        const actions = document.createElement('div');
+        actions.className = 'curse-helper-tile__actions no-print';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'activate-ability-btn';
+        btn.dataset.action = entry.action;
+        btn.dataset.sourceType = entry.sourceType;
+        btn.dataset.sourceId = entry.sourceId;
+        btn.dataset.cooldown = entry.cooldown || '';
+        btn.dataset.abilityName = entry.sourceName;
+        btn.textContent = used ? 'On cooldown' : 'Activate';
+        btn.disabled = used || (entry.cooldown === 'monthly' && !hasExplicitPeriod);
+        actions.appendChild(btn);
+        tile.appendChild(actions);
+
+        container.appendChild(tile);
     });
 }
 
@@ -1378,6 +1616,7 @@ export function renderAll(levelInput, xpNeededInput, wizardSchoolSelect, library
     renderCompletedCurses();
     renderWornPageHelpers();
     renderQuestDrawHelpers();
+    renderActivatedAbilities();
 }
 
 /**

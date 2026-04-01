@@ -21,6 +21,19 @@ import { escapeHtml } from '../utils/sanitize.js';
 let restorationController = null;
 
 /**
+ * Safe percent for wing progress bars.
+ * Prevents NaN% when a wing has zero rooms.
+ * @param {{ completedCount?: number, totalRooms?: number }} progress
+ * @returns {number}
+ */
+export function calculateWingProgressPercent(progress) {
+    const total = Number(progress?.totalRooms) || 0;
+    const completed = Number(progress?.completedCount) || 0;
+    if (total <= 0) return 0;
+    return Math.max(0, Math.min(100, (completed / total) * 100));
+}
+
+/**
  * Initialize the library page
  */
 export function initializeLibraryPage() {
@@ -107,7 +120,7 @@ function renderLibraryMap() {
                 <p class="wing-genres">${wingData.genres.slice(0, 3).join(' • ')}</p>
                 <div class="wing-progress">
                     <div class="wing-progress-bar">
-                        <div class="wing-progress-fill" style="width: ${(progress.completedCount / progress.totalRooms) * 100}%"></div>
+                        <div class="wing-progress-fill" style="width: ${calculateWingProgressPercent(progress)}%"></div>
                     </div>
                     <span class="wing-progress-text">${roomsText}</span>
                 </div>

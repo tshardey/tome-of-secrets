@@ -26,6 +26,13 @@ const MONTH_NAMES = [
  * @returns {{ month: string, year: string }}
  */
 function resolveQuestPeriod(assigned) {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const trackerMonth = monthEl?.value?.trim?.() || '';
+    const trackerYear = yearEl?.value?.trim?.() || '';
+    if (trackerMonth && trackerYear) {
+        return { month: trackerMonth, year: trackerYear };
+    }
     if (assigned && assigned.month != null && assigned.year != null) {
         return { month: assigned.month, year: String(assigned.year) };
     }
@@ -50,6 +57,12 @@ import {
 } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
+import {
+    computeQuestDeckDrawCount,
+    QUEST_DECK_EXTRA_CREDIT,
+    DIVINATION_DIE_HELPER_TOAST,
+    consumedHelperIsDivinationSchoolDie
+} from '../services/QuestDrawBoost.js';
 
 function generateQuestId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -161,8 +174,23 @@ export class OtherQuestDeckController extends BaseController {
     }
 
     handleExtraCreditDeckClick() {
-        this.drawnExtraCredit.push({ cardImage: getExtraCreditCardImage() });
-        this.selectedIndicesExtraCredit.add(this.drawnExtraCredit.length - 1);
+        const { drawCount, consumedHelper } = computeQuestDeckDrawCount(
+            this.stateAdapter,
+            QUEST_DECK_EXTRA_CREDIT
+        );
+        const count = Math.max(1, drawCount);
+        for (let i = 0; i < count; i++) {
+            this.drawnExtraCredit.push({ cardImage: getExtraCreditCardImage() });
+            this.selectedIndicesExtraCredit.add(this.drawnExtraCredit.length - 1);
+        }
+        if (consumedHelper) {
+            const msg = consumedHelperIsDivinationSchoolDie(consumedHelper)
+                ? DIVINATION_DIE_HELPER_TOAST
+                : `Monthly draw helper used: ${consumedHelper.name} (${count} Extra Credit card${count !== 1 ? 's' : ''})`;
+            toast.info(msg);
+            this.dependencies.ui?.renderQuestDrawHelpers?.();
+            this.saveState();
+        }
         this.renderExtraCredit();
         this.dependencies.updateDeckActionsLabel?.();
     }

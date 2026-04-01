@@ -12,6 +12,9 @@ import { BaseController } from './BaseController.js';
 import { Validator, required } from '../services/Validator.js';
 import { clearFormError, clearFieldError, showFieldError } from '../utils/formErrors.js';
 import * as data from '../character-sheet/data.js';
+import { findHelperForPipelineSource } from '../character-sheet/curseHelperDiscovery.js';
+import { tryPreventWornPage } from '../services/WornPagePrevention.js';
+import { toast } from '../ui/toast.js';
 
 export class CurseController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -95,6 +98,64 @@ export class CurseController extends BaseController {
 
         const curseData = data.curseTable[curseName];
         if (!curseData) return;
+
+        // Checkbox is defined in character-sheet.md (built as /character-sheet.html), not a standalone .html file.
+        const fromWornPage = document.getElementById('curse-from-worn-page')?.checked === true;
+        if (fromWornPage && this.editingCurseInfo === null) {
+            // Use a matched month/year pair from one source to avoid mixed periods.
+            const questMonth = document.getElementById('quest-month')?.value?.trim() || '';
+            const questYear = document.getElementById('quest-year')?.value?.trim() || '';
+            const editMonth = document.getElementById('edit-quest-month')?.value?.trim() || '';
+            const editYear = document.getElementById('edit-quest-year')?.value?.trim() || '';
+            let month = '';
+            let year = '';
+            if (questMonth && questYear) {
+                month = questMonth;
+                year = questYear;
+            } else if (editMonth && editYear) {
+                month = editMonth;
+                year = editYear;
+            }
+            if (!month || !year) {
+                toast.warning('Set Month and Year in the Monthly Tracker (Quests tab), or open Edit Quest so Month/Year are filled.');
+                return;
+            }
+            const prevented = tryPreventWornPage({
+                stateAdapter,
+                dataModule: data,
+                month,
+                year
+            });
+            if (prevented.prevented) {
+                const school = document.getElementById('wizardSchool')?.value || '';
+                const helperCatalogs = {
+                    allItems: data.allItems || {},
+                    temporaryBuffs: { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) },
+                    masteryAbilities: data.masteryAbilities || {},
+                    schoolBenefits: data.schoolBenefits || {},
+                    seriesExpedition: data.seriesCompletionRewards || {},
+                    permanentBonuses: data.permanentBonuses || {}
+                };
+                const helperRow = findHelperForPipelineSource(
+                    stateAdapter.state,
+                    helperCatalogs,
+                    { school },
+                    prevented.source
+                );
+                if (helperRow) {
+                    const cadence =
+                        helperRow.cadence === 'every-2-months' ? 'every-2-months' : 'monthly';
+                    stateAdapter.markCurseHelperUsed(helperRow.sourceId, { cadence });
+                }
+                if (uiModule.renderWornPageHelpers) {
+                    uiModule.renderWornPageHelpers();
+                }
+                toast.success(`Worn Page penalty prevented (${prevented.sourceLabel}).`);
+                this.resetForm();
+                return;
+            }
+            toast.info('No automatic worn-page prevention available (or already used this month for that source). Adding curse as usual.');
+        }
 
         if (this.editingCurseInfo !== null) {
             // Editing existing curse

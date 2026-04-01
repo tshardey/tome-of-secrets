@@ -32,7 +32,8 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
 }));
 
 jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
-    isGroveTenderBuff: (buffName, background) => background === 'groveTender' && buffName === 'The Soaking in Nature'
+    isForcedAtmosphericBuff: (buffName, ctx) =>
+        ctx?.formData?.keeperBackground === 'groveTender' && buffName === 'The Soaking in Nature'
 }));
 
 import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';

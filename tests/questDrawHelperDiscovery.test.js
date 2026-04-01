@@ -9,6 +9,7 @@ import {
     buildQuestDrawHelperList
 } from '../assets/js/character-sheet/questDrawHelperDiscovery.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { TRIGGERS } from '../assets/js/services/effectSchema.js';
 
 describe('questDrawHelperDiscovery', () => {
     describe('stripSimpleHtml', () => {
@@ -159,7 +160,13 @@ describe('questDrawHelperDiscovery', () => {
                     'Flicker of Prophecy': {
                         name: 'Flicker of Prophecy',
                         benefit:
-                            'When rolling a d6 for a Genre Quest, you may choose to treat the result as one number higher or lower.'
+                            'When rolling a d6 for a Genre Quest, you may choose to treat the result as one number higher or lower.',
+                        effects: [
+                            {
+                                trigger: TRIGGERS.ON_MONTH_START,
+                                modifier: { type: 'ACTIVATE', action: 'pull_extra_genre_quest' }
+                            }
+                        ]
                     },
                     'Master of Fates': {
                         name: 'Master of Fates',
@@ -171,7 +178,7 @@ describe('questDrawHelperDiscovery', () => {
             const helpers = buildQuestDrawHelperList(state, catalogs, {});
             const flicker = helpers.find(h => h.name === 'Flicker of Prophecy');
             const master = helpers.find(h => h.name === 'Master of Fates');
-            expect(flicker.cadence).toBe('always');
+            expect(flicker.cadence).toBe('monthly');
             expect(master.cadence).toBe('monthly');
         });
 

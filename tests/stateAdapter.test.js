@@ -69,6 +69,20 @@ describe('StateAdapter', () => {
     expect(handler).toHaveBeenCalledWith(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
   });
 
+  it('addActiveQuests invokes applyQuestDraftedEffects when assigned', () => {
+    const hook = jest.fn();
+    adapter.applyQuestDraftedEffects = hook;
+    adapter.addActiveQuests([{ type: '♠ Dungeon Crawl' }]);
+    expect(hook).toHaveBeenCalledWith(expect.any(Array));
+  });
+
+  it('addActiveQuests skips quest drafted hook when skipQuestDraftedEffects', () => {
+    const hook = jest.fn();
+    adapter.applyQuestDraftedEffects = hook;
+    adapter.addActiveQuests([{ type: '♠ Dungeon Crawl' }], { skipQuestDraftedEffects: true });
+    expect(hook).not.toHaveBeenCalled();
+  });
+
   it('moveQuest transfers quest between lists', () => {
     const quest = { id: 42, type: 'Dungeon' };
     adapter.addActiveQuests(quest);

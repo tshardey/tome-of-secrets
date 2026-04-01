@@ -836,6 +836,285 @@ describe('Controllers', () => {
             expect(blueprintReward).toBe(18);
         });
 
+        it('should complete a second quest with Evocation activation and consume monthly cooldown', () => {
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.BOOKS] = {
+                'book-a': {
+                    id: 'book-a',
+                    title: 'Book A',
+                    author: 'Author A',
+                    cover: null,
+                    pageCount: 320,
+                    status: 'completed',
+                    dateAdded: new Date().toISOString(),
+                    dateCompleted: new Date().toISOString(),
+                    links: { questIds: ['quest-completed'], curriculumPromptIds: [] }
+                }
+            };
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [{
+                id: 'quest-completed',
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                bookId: 'book-a',
+                book: 'Book A',
+                bookAuthor: 'Author A',
+                month: 'March',
+                year: '2026',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            }];
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{
+                id: 'quest-active',
+                type: '♣ Side Quest',
+                prompt: 'Visit a new-to-you bookstore or library',
+                month: 'March',
+                year: '2026',
+                book: '',
+                bookAuthor: '',
+                rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                buffs: []
+            }];
+
+            const monthInput = document.createElement('select');
+            monthInput.id = 'quest-month';
+            monthInput.innerHTML = '<option value="March">March</option><option value="April">April</option>';
+            monthInput.value = 'March';
+            form.appendChild(monthInput);
+
+            const yearInput = document.createElement('select');
+            yearInput.id = 'quest-year';
+            yearInput.innerHTML = '<option value="2026">2026</option>';
+            yearInput.value = '2026';
+            form.appendChild(yearInput);
+
+            const schoolSelect = document.getElementById('wizardSchool');
+            schoolSelect.innerHTML = '<option value="Evocation">Evocation</option>';
+            schoolSelect.value = 'Evocation';
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    renderActivatedAbilities: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            const promptSpy = jest.spyOn(window, 'prompt')
+                .mockReturnValueOnce('1')
+                .mockReturnValueOnce('1');
+
+            const button = document.createElement('button');
+            button.className = 'activate-ability-btn';
+            button.dataset.action = 'complete_two_quests_one_book';
+            button.dataset.sourceType = 'school';
+            button.dataset.sourceId = 'Evocation';
+            button.dataset.cooldown = 'monthly';
+            button.dataset.abilityName = 'School of Evocation';
+
+            controller.handleActivateAbility(button);
+
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            const newest = realStateAdapter.getCompletedQuests()[1];
+            expect(newest.bookId).toBe('book-a');
+            expect(realStateAdapter.isCooldownAvailable('school:Evocation', 'March', '2026')).toBe(false);
+
+            promptSpy.mockRestore();
+        });
+
+        it('should block Evocation activation while on monthly cooldown and allow it next month', () => {
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.BOOKS] = {
+                'book-a': {
+                    id: 'book-a',
+                    title: 'Book A',
+                    author: 'Author A',
+                    cover: null,
+                    pageCount: 280,
+                    status: 'completed',
+                    dateAdded: new Date().toISOString(),
+                    dateCompleted: new Date().toISOString(),
+                    links: { questIds: ['quest-completed'], curriculumPromptIds: [] }
+                }
+            };
+            state[STORAGE_KEYS.COMPLETED_QUESTS] = [{
+                id: 'quest-completed',
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                bookId: 'book-a',
+                book: 'Book A',
+                bookAuthor: 'Author A',
+                month: 'March',
+                year: '2026',
+                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            }];
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [
+                {
+                    id: 'quest-active-1',
+                    type: '♣ Side Quest',
+                    prompt: 'Visit a new-to-you bookstore or library',
+                    month: 'March',
+                    year: '2026',
+                    book: '',
+                    bookAuthor: '',
+                    rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                    buffs: []
+                },
+                {
+                    id: 'quest-active-2',
+                    type: '♣ Side Quest',
+                    prompt: 'Read a book with a map',
+                    month: 'March',
+                    year: '2026',
+                    book: '',
+                    bookAuthor: '',
+                    rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                    buffs: []
+                }
+            ];
+
+            const monthInput = document.createElement('select');
+            monthInput.id = 'quest-month';
+            monthInput.innerHTML = '<option value="March">March</option><option value="April">April</option>';
+            monthInput.value = 'March';
+            form.appendChild(monthInput);
+
+            const yearInput = document.createElement('select');
+            yearInput.id = 'quest-year';
+            yearInput.innerHTML = '<option value="2026">2026</option>';
+            yearInput.value = '2026';
+            form.appendChild(yearInput);
+
+            const schoolSelect = document.getElementById('wizardSchool');
+            schoolSelect.innerHTML = '<option value="Evocation">Evocation</option>';
+            schoolSelect.value = 'Evocation';
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    renderActivatedAbilities: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            const promptSpy = jest.spyOn(window, 'prompt')
+                .mockReturnValueOnce('1')
+                .mockReturnValueOnce('1')
+                .mockReturnValueOnce('1')
+                .mockReturnValueOnce('1');
+
+            const button = document.createElement('button');
+            button.className = 'activate-ability-btn';
+            button.dataset.action = 'complete_two_quests_one_book';
+            button.dataset.sourceType = 'school';
+            button.dataset.sourceId = 'Evocation';
+            button.dataset.cooldown = 'monthly';
+            button.dataset.abilityName = 'School of Evocation';
+
+            // First use in March succeeds
+            controller.handleActivateAbility(button);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+
+            // Second use in March is blocked by cooldown
+            controller.handleActivateAbility(button);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+
+            // New month allows activation again
+            monthInput.value = 'April';
+            controller.handleActivateAbility(button);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
+
+            promptSpy.mockRestore();
+        });
+
+        it('should reject Evocation activation for non-Evocation school', () => {
+            const toastSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+            const state = createEmptyCharacterState();
+            state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{
+                id: 'quest-active',
+                type: '♣ Side Quest',
+                prompt: 'Read a banned book',
+                month: 'March',
+                year: '2026',
+                book: '',
+                rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                buffs: []
+            }];
+
+            const monthInput = document.createElement('select');
+            monthInput.id = 'quest-month';
+            monthInput.innerHTML = '<option value="March">March</option>';
+            monthInput.value = 'March';
+            form.appendChild(monthInput);
+
+            const yearInput = document.createElement('select');
+            yearInput.id = 'quest-year';
+            yearInput.innerHTML = '<option value="2026">2026</option>';
+            yearInput.value = '2026';
+            form.appendChild(yearInput);
+
+            const schoolSelect = document.getElementById('wizardSchool');
+            schoolSelect.innerHTML = '<option value="Enchantment">Enchantment</option>';
+            schoolSelect.value = 'Enchantment';
+
+            const realStateAdapter = new StateAdapter(state);
+            const localDependencies = {
+                ui: {
+                    renderActiveAssignments: jest.fn(),
+                    renderCompletedQuests: jest.fn(),
+                    renderLoadout: jest.fn(),
+                    renderPassiveEquipment: jest.fn(),
+                    renderActivatedAbilities: jest.fn(),
+                    updateQuestBuffsDropdown: jest.fn(),
+                    getRandomShelfColor: jest.fn(() => '#000000'),
+                    renderShelfBooks: jest.fn()
+                },
+                saveState: jest.fn()
+            };
+            const controller = new QuestController(realStateAdapter, form, localDependencies);
+            controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+
+            const button = document.createElement('button');
+            button.className = 'activate-ability-btn';
+            button.dataset.action = 'complete_two_quests_one_book';
+            button.dataset.sourceType = 'school';
+            button.dataset.sourceId = 'Evocation';
+            button.dataset.cooldown = 'monthly';
+            button.dataset.abilityName = 'School of Evocation';
+
+            controller.handleActivateAbility(button);
+
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(0);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(toastSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Evocation activation is only available')
+            );
+
+            toastSpy.mockRestore();
+        });
+
         it('should not move a restoration project quest to completed if blueprint spend fails', () => {
             const toastSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
 

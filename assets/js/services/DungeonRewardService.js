@@ -161,13 +161,17 @@ export function applyDungeonCompletionReward(roll, deps) {
         let monthsRemaining = 0;
         if (buffData.duration === 'two-months') monthsRemaining = 2;
         else if (buffData.duration === 'until-end-month') monthsRemaining = 1;
-        stateAdapter.addTemporaryBuff({
+        const buffEntry = {
             name: buffData.name,
             description: buffData.description,
             duration: buffData.duration,
             monthsRemaining,
             status: 'active'
-        });
+        };
+        if (typeof buffData.useCount === 'number' && buffData.useCount > 0) {
+            buffEntry.usesLeft = buffData.useCount;
+        }
+        stateAdapter.addTemporaryBuff(buffEntry);
         return { applied: true, rewardName: name, rewardText };
     }
 

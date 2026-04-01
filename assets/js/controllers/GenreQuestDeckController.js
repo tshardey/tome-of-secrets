@@ -10,10 +10,8 @@
 
 import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
-import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { characterState } from '../character-sheet/state.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import {
     getAvailableGenreQuests,
     drawRandomGenreQuest
@@ -22,6 +20,28 @@ import { createGenreQuestDeckViewModel } from '../viewModels/questDeckViewModel.
 import { renderCardback, renderGenreQuestCard, wrapCardSelectable } from '../character-sheet/cardRenderer.js';
 import { clearElement } from '../utils/domHelpers.js';
 import { toast } from '../ui/toast.js';
+import {
+    computeQuestDeckDrawCount,
+    QUEST_DECK_GENRE,
+    DIVINATION_DIE_HELPER_TOAST,
+    consumedHelperIsDivinationSchoolDie
+} from '../services/QuestDrawBoost.js';
+
+function getQuestTrackerPeriod() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    const month = monthEl?.value?.trim?.() || '';
+    const year = yearEl?.value?.trim?.() || '';
+    if (month && year) {
+        return { month, year };
+    }
+    const now = new Date();
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return { month: month || monthNames[now.getMonth()], year: year || String(now.getFullYear()) };
+}
 
 export class GenreQuestDeckController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
@@ -130,11 +150,28 @@ export class GenreQuestDeckController extends BaseController {
         const pool = availableQuests.filter((q) => !drawnKeys.has(q.key));
         if (pool.length === 0) return;
 
-        const drawn = drawRandomGenreQuest(pool);
-        if (!drawn) return;
-
-        this.drawnQuests.push(drawn);
-        this.selectedIndices.add(this.drawnQuests.length - 1);
+        const { drawCount, consumedHelper } = computeQuestDeckDrawCount(
+            this.stateAdapter,
+            QUEST_DECK_GENRE
+        );
+        const n = Math.max(1, drawCount);
+        for (let i = 0; i < n; i++) {
+            const remainingPool = availableQuests.filter((q) => !drawnKeys.has(q.key));
+            if (remainingPool.length === 0) break;
+            const drawn = drawRandomGenreQuest(remainingPool);
+            if (!drawn) break;
+            drawnKeys.add(drawn.key);
+            this.drawnQuests.push(drawn);
+            this.selectedIndices.add(this.drawnQuests.length - 1);
+        }
+        if (consumedHelper) {
+            const msg = consumedHelperIsDivinationSchoolDie(consumedHelper)
+                ? DIVINATION_DIE_HELPER_TOAST
+                : `Monthly draw helper used: ${consumedHelper.name} (${n} genre card${n !== 1 ? 's' : ''})`;
+            toast.info(msg);
+            this.dependencies.ui?.renderQuestDrawHelpers?.();
+            this.saveState();
+        }
         this.renderDeck();
     }
 
@@ -146,6 +183,7 @@ export class GenreQuestDeckController extends BaseController {
             .filter((i) => i >= 0 && i < this.drawnQuests.length)
             .map((i) => this.drawnQuests[i]);
         if (toAdd.length === 0) return;
+        const { month, year } = getQuestTrackerPeriod();
 
         const questJSONs = toAdd.map((questData) => {
             const prompt = `${questData.genre}: ${questData.description}`;
@@ -161,10 +199,11 @@ export class GenreQuestDeckController extends BaseController {
                 prompt,
                 rewards: rewards.toJSON ? rewards.toJSON() : rewards,
                 buffs: [],
-                dateAdded: new Date().toISOString()
+                dateAdded: new Date().toISOString(),
+                month,
+                year
             };
-            const assigned = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
-            return { ...quest, month: assigned.month, year: assigned.year };
+            return quest;
         });
 
         this.stateAdapter.addActiveQuests(questJSONs);

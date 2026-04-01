@@ -9,13 +9,55 @@
 
 import { BaseController } from './BaseController.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { GAME_CONFIG } from '../config/gameConfig.js';
 import { parseIntOr } from '../utils/helpers.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { safeSetJSON } from '../utils/storage.js';
 import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
+import { EffectRegistry } from '../services/EffectRegistry.js';
+import { buildEffectContext } from '../services/effectContext.js';
+
+const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function ensureYearOption(selectEl, year) {
+    if (!selectEl || !year) return;
+    const exists = Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(year));
+    if (exists) return;
+    const opt = document.createElement('option');
+    opt.value = String(year);
+    opt.textContent = String(year);
+    selectEl.appendChild(opt);
+}
+
+function incrementQuestTrackerMonthYear() {
+    const monthEl = document.getElementById('quest-month');
+    const yearEl = document.getElementById('quest-year');
+    if (!monthEl || !yearEl) return false;
+
+    const currentMonth = monthEl.value?.trim?.() || '';
+    const currentYearRaw = yearEl.value?.trim?.() || '';
+    const currentMonthIndex = MONTH_NAMES.indexOf(currentMonth);
+    const parsedYear = parseInt(currentYearRaw, 10);
+
+    if (currentMonthIndex < 0 || Number.isNaN(parsedYear)) {
+        return false;
+    }
+
+    const nextMonthIndex = (currentMonthIndex + 1) % 12;
+    const nextYear = nextMonthIndex === 0 ? parsedYear + 1 : parsedYear;
+
+    monthEl.value = MONTH_NAMES[nextMonthIndex];
+    ensureYearOption(yearEl, nextYear);
+    yearEl.value = String(nextYear);
+
+    monthEl.dispatchEvent(new Event('change', { bubbles: true }));
+    yearEl.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+}
 
 export class EndOfMonthController extends BaseController {
     initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency) {
@@ -29,22 +71,39 @@ export class EndOfMonthController extends BaseController {
 
         const handleEndOfMonth = () => {
             const selectedSanctum = librarySanctumSelect?.value || '';
-            const associatedBuffs = (selectedSanctum && data.sanctumBenefits[selectedSanctum]?.associatedBuffs) || [];
+            const associatedBuffs = selectedSanctum
+                ? (data.getSanctumBenefit(selectedSanctum)?.associatedBuffs || [])
+                    .map((nameOrId) => data.getAtmosphericBuff(nameOrId)?.id || nameOrId)
+                : [];
             const atmosphericBuffs = stateAdapter.getAtmosphericBuffs();
             const background = keeperBackgroundSelect?.value || '';
+            const effectCtx = buildEffectContext(stateAdapter, form);
+            const forcedBuffNames = EffectRegistry.getForcedAtmosphericBuffNames(effectCtx, data);
+            const forcedBuffSet = new Set(
+                forcedBuffNames.flatMap((name) => {
+                    const id = data.getAtmosphericBuff(name)?.id;
+                    return id ? [name, id] : [name];
+                })
+            );
 
             // Calculate atmospheric buff rewards using RewardCalculator
-            const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+            const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                associatedBuffs,
+                forcedBuffNames
+            );
 
-            // Reset atmospheric buffs (keep Grove Tender's "Soaking in Nature" active)
+            // Reset atmospheric buffs (re-activate pipeline-forced buffs after reset)
             for (const buffName in atmosphericBuffs) {
-                const isGroveTenderBuff = background === 'groveTender' && buffName === 'The Soaking in Nature';
-                if (isGroveTenderBuff) {
+                if (forcedBuffSet.has(buffName)) {
                     stateAdapter.setAtmosphericBuffDaysUsed(buffName, 0);
-                    // Keep it active (already set)
                 } else {
                     stateAdapter.updateAtmosphericBuff(buffName, { daysUsed: 0, isActive: false });
                 }
+            }
+            for (const name of forcedBuffNames) {
+                const buffKey = data.getAtmosphericBuff(name)?.id || name;
+                stateAdapter.setAtmosphericBuffActive(buffKey, true);
             }
 
             // Apply atmospheric buff ink drops
@@ -64,16 +123,26 @@ export class EndOfMonthController extends BaseController {
             const journalEntriesInput = document.getElementById('journal-entries-completed');
             if (journalEntriesInput) {
                 const journalEntries = parseIntOr(journalEntriesInput.value, 0);
-                const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, background);
+                const wizardSchool = document.getElementById('wizardSchool')?.value || '';
+                const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, {
+                    stateAdapter: {
+                        state: stateAdapter.state,
+                        formData: {
+                            keeperBackground: background,
+                            wizardSchool
+                        }
+                    },
+                    dataModule: data
+                });
 
                 if (journalRewards.paperScraps > 0) {
                     updateCurrency(journalRewards);
-
-                    // Show notification of bonus if applicable
-                    if (background === 'scribe') {
-                        const papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps +
-                                              GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps (${journalEntries} × ${papersPerEntry} with Scribe's Acolyte bonus)`);
+                    if (journalEntries > 0) {
+                        const extras =
+                            journalRewards.modifiedBy && journalRewards.modifiedBy.length
+                                ? ` — ${journalRewards.modifiedBy.join(', ')}`
+                                : '';
+                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps${extras}`);
                     }
                 }
 
@@ -87,8 +156,11 @@ export class EndOfMonthController extends BaseController {
                 if (saveCompletedBooksSet) saveCompletedBooksSet();
             }
 
-            // Note: Temporary buffs are now self-managed by users
-            // No automatic expiration or cleanup is performed
+            // Apply duration-based temporary buff lifecycle at month boundary.
+            const temporaryBuffsChanged =
+                typeof stateAdapter.expireTemporaryBuffsAtEndOfMonth === 'function'
+                    ? stateAdapter.expireTemporaryBuffsAtEndOfMonth()
+                    : false;
 
             // Re-render the atmospheric buffs table to show 0 days used
             uiModule.renderAtmosphericBuffs(librarySanctumSelect);
@@ -102,7 +174,7 @@ export class EndOfMonthController extends BaseController {
             // Refresh Worn Page mitigation helpers: monthly → restore each cycle; every-2-months → restore every second cycle
             const helperCatalogs = {
                 allItems: data.allItems || {},
-                temporaryBuffs: { ...(data.temporaryBuffs || {}), ...(data.temporaryBuffsFromRewards || {}) },
+                temporaryBuffs: { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) },
                 masteryAbilities: data.masteryAbilities || {},
                 schoolBenefits: data.schoolBenefits || {},
                 seriesExpedition: data.seriesCompletionRewards || {},
@@ -124,9 +196,30 @@ export class EndOfMonthController extends BaseController {
             if (stateAdapter.removeUsedOneTimeQuestDrawTempBuffsAtEOM(questDrawHelpers)) {
                 uiModule.renderTemporaryBuffs();
             }
+            if (temporaryBuffsChanged) {
+                uiModule.renderTemporaryBuffs();
+            }
             if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
 
+            if (typeof stateAdapter.resetMonthlyCooldowns === 'function') {
+                stateAdapter.resetMonthlyCooldowns();
+            }
+            if (uiModule.renderActivatedAbilities) {
+                uiModule.renderActivatedAbilities();
+            }
+
             this.saveState();
+
+            const shouldAdvance = window.confirm(
+                'Advance the Quest tracker to next month/year now?'
+            );
+            if (shouldAdvance) {
+                if (incrementQuestTrackerMonthYear()) {
+                    toast.success('Quest month/year advanced to next month.');
+                } else {
+                    toast.warning('Could not auto-advance month/year. Please set Quest Month/Year manually.');
+                }
+            }
 
             // Show success notification
             toast.success('End of Month processed! Rewards distributed and counters reset.');

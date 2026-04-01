@@ -40,6 +40,9 @@ export class AbilityController extends BaseController {
                 smpInput.value = currentSmp - ability.cost;
                 stateAdapter.addLearnedAbility(abilityName);
                 uiModule.renderMasteryAbilities(smpInput);
+                if (uiModule.renderActivatedAbilities) {
+                    uiModule.renderActivatedAbilities();
+                }
                 this.saveState();
             } else {
                 const container = document.querySelector('.mastery-abilities-container');
@@ -72,6 +75,9 @@ export class AbilityController extends BaseController {
                 smpInput.value = currentSmp + ability.cost;
                 stateAdapter.removeLearnedAbility(index);
                 uiModule.renderMasteryAbilities(smpInput);
+                if (uiModule.renderActivatedAbilities) {
+                    uiModule.renderActivatedAbilities();
+                }
                 this.saveState();
             }
         };

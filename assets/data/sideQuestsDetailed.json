@@ -4,7 +4,7 @@
         "name": "The Arcane Grimoire",
         "description": "An ancient spellbook writes a new page.",
         "prompt": "Read the book on your TBR the longest.",
-        "reward": "Temp buff: Long Read Focus (+10 Ink Drops per 100 pages over 300).",
+        "reward": "Temp buff: Long Read Focus (+10 Ink Drops on your next completed book).",
         "rewards": {
             "xp": 0,
             "inkDrops": 0,

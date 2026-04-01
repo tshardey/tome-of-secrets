@@ -7,6 +7,10 @@ import * as data from '../character-sheet/data.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { characterState } from '../character-sheet/state.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { ModifierPipeline } from './ModifierPipeline.js';
+import { EffectRegistry } from './EffectRegistry.js';
+import { TriggerPayload } from './TriggerPayload.js';
+import { TRIGGERS, MODIFIER_TYPES } from './effectSchema.js';
 
 /**
  * Represents a reward package with XP, currency, and items
@@ -90,7 +94,13 @@ export class RewardCalculator {
      * @returns {Reward}
      */
     static getBaseRewards(type, prompt, options = {}) {
-        const { isEncounter = false, roomNumber = null, encounterName = null, isBefriend = true } = options;
+        const {
+            isEncounter = false,
+            roomNumber = null,
+            encounterName = null,
+            isBefriend = true,
+            sideQuestId = null
+        } = options;
         let reward;
 
         // Extra Credit - only paper scraps
@@ -109,7 +119,7 @@ export class RewardCalculator {
         }
         // Side Quests
         else if (type === '♣ Side Quest') {
-            reward = this._getSideQuestRewards(prompt);
+            reward = this._getSideQuestRewards(prompt, sideQuestId);
         }
         // Dungeon Crawl
         else if (type === '♠ Dungeon Crawl') {
@@ -130,7 +140,18 @@ export class RewardCalculator {
      * Get rewards for a side quest
      * @private
      */
-    static _getSideQuestRewards(prompt) {
+    static _getSideQuestRewards(prompt, sideQuestId = null) {
+        if (sideQuestId && data.sideQuestsById?.has(sideQuestId)) {
+            const sideQuest = data.sideQuestsById.get(sideQuestId);
+            const reward = new Reward(sideQuest.rewards);
+            reward.receipt.base.xp = reward.xp;
+            reward.receipt.base.inkDrops = reward.inkDrops;
+            reward.receipt.base.paperScraps = reward.paperScraps;
+            reward.receipt.base.blueprints = reward.blueprints;
+            reward.receipt.final = { ...reward.receipt.base };
+            return reward;
+        }
+
         for (const key in data.sideQuestsDetailed) {
             const sideQuest = data.sideQuestsDetailed[key];
             if (prompt.includes(sideQuest.prompt) || prompt.includes(sideQuest.name)) {
@@ -385,76 +406,201 @@ export class RewardCalculator {
         return modified;
     }
 
-    /**
-     * Apply keeper background bonuses
-     * @param {Reward} rewards - Rewards to modify
-     * @param {Object} quest - Quest object with type, etc.
-     * @param {string} background - Background key
-     * @returns {Reward}
-     */
-    static applyBackgroundBonuses(rewards, quest, background) {
-        if (!background) {
-            return rewards;
+    static _pipelineStateFromAdapter(stateAdapter) {
+        if (!stateAdapter) {
+            return characterState;
         }
-
-        const modified = rewards.clone();
-
-        // Biblioslinker: Bonus Paper Scraps for Dungeon Crawls
-        if (background === 'biblioslinker' && quest.type === '♠ Dungeon Crawl') {
-            const bonus = GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps;
-            modified.paperScraps += bonus;
-            modified.modifiedBy.push('Biblioslinker');
-            modified.receipt.modifiers.push({
-                source: 'Biblioslinker',
-                type: 'background',
-                value: bonus,
-                description: `+${bonus} Paper Scraps`,
-                currency: 'paperScraps'
-            });
-            modified.receipt.final.paperScraps = modified.paperScraps;
-        }
-
-        // Note: Grove Tender's bonus is handled by atmospheric buff system
-        // Note: Cartographer, Archivist, Prophet bonuses are manually applied via buffs dropdown
-
-        return modified;
+        return stateAdapter.state != null ? stateAdapter.state : stateAdapter;
     }
 
-    /**
-     * Apply magical school bonuses
-     * @param {Reward} rewards - Rewards to modify
-     * @param {Object} quest - Quest object with type, isEncounter, isBefriend, etc.
-     * @param {string} wizardSchool - Wizard school key (e.g., 'Enchantment')
-     * @returns {Reward}
-     */
-    static applySchoolBonuses(rewards, quest, wizardSchool) {
-        if (!wizardSchool) {
-            return rewards;
+    static _familiarEquippedFromState(state) {
+        if (!state) {
+            return false;
         }
+        const equipped = state[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
+        return equipped.some(entry => {
+            const row = typeof entry === 'string' ? { name: entry } : entry;
+            return row?.type === 'Familiar';
+        });
+    }
 
-        const modified = rewards.clone();
-
-        // School of Enchantment: 1.5x XP when befriending monsters in dungeons
-        if (wizardSchool === 'Enchantment' && quest.type === '♠ Dungeon Crawl' && quest.isEncounter && quest.isBefriend) {
-            // Only apply if there's base XP to multiply (monster encounters give 30 XP)
-            if (modified.xp > 0) {
-                const originalXP = modified.xp;
-                const newXP = Math.floor(modified.xp * 1.5);
-                const bonusXP = newXP - originalXP;
-                modified.xp = newXP;
-                modified.modifiedBy.push('School of Enchantment');
-                modified.receipt.modifiers.push({
-                    source: 'School of Enchantment',
-                    type: 'school',
-                    value: bonusXP,
-                    description: `×1.5 XP (+${bonusXP} XP)`,
-                    currency: 'xp'
-                });
-                modified.receipt.final.xp = modified.xp;
+    static _genreForQuestPayload(type, prompt, quest, getBook) {
+        if (quest?.genre) {
+            return quest.genre;
+        }
+        if (type === '♥ Organize the Stacks' && prompt) {
+            const idx = prompt.indexOf(':');
+            if (idx > 0) {
+                const g = prompt.slice(0, idx).trim();
+                return g || null;
+            }
+            const trimmed = prompt.trim();
+            return trimmed || null;
+        }
+        if (getBook && typeof getBook === 'function' && quest?.bookId) {
+            const book = getBook(quest.bookId);
+            if (book && typeof book.genre === 'string' && book.genre.trim()) {
+                return book.genre.trim();
             }
         }
+        return null;
+    }
 
-        return modified;
+    static _buildQuestCompletedPayload(type, prompt, quest, ctx) {
+        const {
+            isEncounter,
+            roomNumber,
+            encounterName,
+            isBefriend,
+            getBook,
+            state
+        } = ctx;
+        const questTypeKey = TriggerPayload.canonicalQuestType(type);
+        let encounterType = null;
+        if (isEncounter && roomNumber && encounterName && data.dungeonRooms[roomNumber]) {
+            const room = data.dungeonRooms[roomNumber];
+            const enc = room.encountersDetailed?.find(e => e.name === encounterName);
+            encounterType = enc?.type || null;
+        }
+        const genre = this._genreForQuestPayload(type, prompt, quest, getBook);
+        const pageCount = quest?.pageCountEffective ?? quest?.pageCountRaw ?? null;
+        const bookId = quest?.bookId ?? null;
+        let tags = Array.isArray(quest?.tags) ? [...quest.tags] : [];
+        if (getBook && typeof getBook === 'function' && bookId) {
+            const book = getBook(bookId);
+            if (book && Array.isArray(book.premiseTags)) {
+                tags = [...new Set([...tags, ...book.premiseTags])];
+            }
+        }
+        return TriggerPayload.questCompleted({
+            questType: questTypeKey,
+            prompt: prompt || '',
+            isEncounter: Boolean(isEncounter),
+            encounterName: encounterName || '',
+            encounterType,
+            isBefriend: Boolean(isBefriend),
+            roomNumber: roomNumber ?? null,
+            genre,
+            pageCount,
+            bookId,
+            tags,
+            hasFamiliarEquipped: this._familiarEquippedFromState(state)
+        });
+    }
+
+    static _effectEntryIsResolvable(effectEntry) {
+        const t = effectEntry?.effect?.modifier?.type;
+        return (
+            t === MODIFIER_TYPES.ADD_FLAT ||
+            t === MODIFIER_TYPES.GRANT_RESOURCE ||
+            t === MODIFIER_TYPES.MULTIPLY ||
+            t === MODIFIER_TYPES.PREVENT
+        );
+    }
+
+    static _mergePipelineEffectOrder(registryEffects, buffEffects) {
+        const bucket = (list, modType) => list.filter(e => e.effect?.modifier?.type === modType);
+        const regOther = registryEffects.filter(e => !this._effectEntryIsResolvable(e));
+        return [
+            ...bucket(buffEffects, MODIFIER_TYPES.ADD_FLAT),
+            ...bucket(registryEffects, MODIFIER_TYPES.ADD_FLAT),
+            ...bucket(buffEffects, MODIFIER_TYPES.GRANT_RESOURCE),
+            ...bucket(registryEffects, MODIFIER_TYPES.GRANT_RESOURCE),
+            ...bucket(buffEffects, MODIFIER_TYPES.MULTIPLY),
+            ...bucket(registryEffects, MODIFIER_TYPES.MULTIPLY),
+            ...bucket(buffEffects, MODIFIER_TYPES.PREVENT),
+            ...bucket(registryEffects, MODIFIER_TYPES.PREVENT),
+            ...regOther
+        ];
+    }
+
+    static _modifierToBuffCardEffects(modifier, sourceLabel) {
+        const source = { name: sourceLabel };
+        const out = [];
+        if (modifier.xp) {
+            out.push({
+                effect: {
+                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                    modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'xp', value: modifier.xp }
+                },
+                source
+            });
+        }
+        if (modifier.inkDrops) {
+            out.push({
+                effect: {
+                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                    modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'inkDrops', value: modifier.inkDrops }
+                },
+                source
+            });
+        }
+        if (modifier.paperScraps) {
+            out.push({
+                effect: {
+                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                    modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: modifier.paperScraps }
+                },
+                source
+            });
+        }
+        if (modifier.inkDropsMultiplier) {
+            out.push({
+                effect: {
+                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                    modifier: {
+                        type: MODIFIER_TYPES.MULTIPLY,
+                        resource: 'inkDrops',
+                        value: modifier.inkDropsMultiplier
+                    }
+                },
+                source
+            });
+        }
+        return out;
+    }
+
+    static _appendBuffCardSkips(reward, appliedBuffs = [], quest = {}) {
+        if (!appliedBuffs.length) {
+            return;
+        }
+        const pageCountEffective = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
+        appliedBuffs.forEach(buffName => {
+            const { cleanName, isItem, isBackground } = this._parseBuffName(buffName);
+            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective });
+            if (!result.skipReason) {
+                return;
+            }
+            reward.receipt.modifiers.push({
+                source: cleanName,
+                type: isItem ? 'item' : (isBackground ? 'background' : 'buff'),
+                value: null,
+                description: `${cleanName}: skipped (${result.skipReason})`,
+                currency: null
+            });
+        });
+    }
+
+    static _collectBuffCardPipelineEffects(appliedBuffs = [], quest = {}) {
+        const entries = [];
+        if (!appliedBuffs.length) {
+            return entries;
+        }
+        const pageCountEffective = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
+        appliedBuffs.forEach(buffName => {
+            const { cleanName, isItem, isBackground } = this._parseBuffName(buffName);
+            // Background effects are now sourced from EffectRegistry using keeperBackgrounds.json.
+            // Skipping legacy background cards here prevents pipeline double-application.
+            if (isBackground) {
+                return;
+            }
+            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective });
+            if (result.skipReason || !result.modifier) {
+                return;
+            }
+            entries.push(...this._modifierToBuffCardEffects(result.modifier, cleanName));
+        });
+        return entries;
     }
 
     /**
@@ -508,10 +654,10 @@ export class RewardCalculator {
                 }
             }
 
-            if (forPassive && item.passiveRewardModifier) {
-                return { modifier: item.passiveRewardModifier };
-            }
-            return { modifier: item.rewardModifier };
+            const baseModifier = forPassive && item.passiveRewardModifier
+                ? item.passiveRewardModifier
+                : item.rewardModifier;
+            return { modifier: this._applyFamiliarStateLoadModifiers(item, baseModifier) };
         }
 
         // Temporary buff modifiers (check both new and legacy sources)
@@ -525,15 +671,87 @@ export class RewardCalculator {
         return { modifier: null };
     }
 
+    static _getStateLoadEffectsForCharacter() {
+        const wizardSchool =
+            typeof document !== 'undefined' ? document.getElementById('wizardSchool')?.value || '' : '';
+        const keeperBackground =
+            typeof document !== 'undefined' ? document.getElementById('keeperBackground')?.value || '' : '';
+        return EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_STATE_LOAD,
+            {
+                state: characterState,
+                formData: {
+                    wizardSchool,
+                    keeperBackground
+                }
+            },
+            data
+        );
+    }
+
+    static _applyFamiliarStateLoadModifiers(item, modifier) {
+        if (!item || item.type !== 'Familiar' || !modifier || typeof modifier !== 'object') {
+            return modifier;
+        }
+
+        const activeStateLoadEffects = this._getStateLoadEffectsForCharacter();
+        let familiarMultiplier = 1;
+        let familiarFlatBonus = 0;
+
+        for (const entry of activeStateLoadEffects) {
+            const effectModifier = entry?.effect?.modifier;
+            if (!effectModifier || typeof effectModifier !== 'object') {
+                continue;
+            }
+            if (
+                effectModifier.type === MODIFIER_TYPES.MULTIPLY &&
+                effectModifier.target === 'familiar_bonuses' &&
+                typeof effectModifier.value === 'number'
+            ) {
+                familiarMultiplier *= effectModifier.value;
+            }
+            if (
+                effectModifier.type === MODIFIER_TYPES.ADD_FLAT &&
+                effectModifier.target === 'familiar_bonus' &&
+                typeof effectModifier.value === 'number'
+            ) {
+                familiarFlatBonus += effectModifier.value;
+            }
+        }
+
+        if (familiarMultiplier === 1 && familiarFlatBonus === 0) {
+            return modifier;
+        }
+
+        const adjusted = { ...modifier };
+        const resourceKeys = ['inkDrops', 'paperScraps', 'xp', 'blueprints'];
+
+        resourceKeys.forEach((key) => {
+            if (typeof adjusted[key] === 'number') {
+                adjusted[key] = Math.floor(adjusted[key] * familiarMultiplier);
+            }
+        });
+
+        if (familiarFlatBonus !== 0) {
+            const primaryResource = resourceKeys.find(key => typeof adjusted[key] === 'number');
+            if (primaryResource) {
+                adjusted[primaryResource] += familiarFlatBonus;
+            }
+        }
+
+        return adjusted;
+    }
+
     /**
      * Calculate final rewards for a quest with all modifiers
      * @param {string} type - Quest type
      * @param {string} prompt - Quest prompt
-     * @param {Object} options - Options including appliedBuffs, background, quest, wizardSchool
+     * @param {Object} options - appliedBuffs, background, quest, wizardSchool, stateAdapter, getBook, baseRewardOverride
      * @returns {Reward}
      */
     static calculateFinalRewards(type, prompt, options = {}) {
         const {
+            baseRewardOverride = null,
             appliedBuffs = [],
             background = null,
             wizardSchool = null,
@@ -541,34 +759,56 @@ export class RewardCalculator {
             isEncounter = false,
             roomNumber = null,
             encounterName = null,
-            isBefriend = true
+            isBefriend = true,
+            stateAdapter = null,
+            getBook = null
         } = options;
 
-        // Get base rewards
-        let rewards = this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName, isBefriend });
+        const rewards = baseRewardOverride
+            ? baseRewardOverride.clone()
+            : this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName, isBefriend });
 
-        // Apply buff/item modifiers (pass quest for page-count-aware items)
-        if (appliedBuffs.length > 0) {
-            rewards = this.applyModifiers(rewards, appliedBuffs, { quest });
-        }
+        const adapter = stateAdapter || {
+            state: characterState,
+            formData: {
+                keeperBackground: background ?? '',
+                wizardSchool: wizardSchool ?? ''
+            }
+        };
 
-        // Apply background bonuses
-        if (background) {
-            rewards = this.applyBackgroundBonuses(rewards, quest, background);
-        }
+        this._appendBuffCardSkips(rewards, appliedBuffs, quest);
 
-        // Apply school bonuses
-        if (wizardSchool) {
-            rewards = this.applySchoolBonuses(rewards, quest, wizardSchool);
-        }
+        const pipelineState = this._pipelineStateFromAdapter(adapter);
+        const payload = this._buildQuestCompletedPayload(type, prompt, quest, {
+            isEncounter,
+            roomNumber,
+            encounterName,
+            isBefriend,
+            getBook,
+            state: pipelineState
+        });
 
-        // Ensure final values in receipt are up to date
-        rewards.receipt.final.xp = rewards.xp;
-        rewards.receipt.final.inkDrops = rewards.inkDrops;
-        rewards.receipt.final.paperScraps = rewards.paperScraps;
-        rewards.receipt.final.blueprints = rewards.blueprints;
+        const registryEffects = EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            adapter,
+            data
+        );
+        const buffEffects = this._collectBuffCardPipelineEffects(appliedBuffs, quest);
+        const activeEffects = this._mergePipelineEffectOrder(registryEffects, buffEffects);
 
-        return rewards;
+        const finalReward = ModifierPipeline.resolve(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            payload,
+            activeEffects,
+            rewards
+        );
+
+        finalReward.receipt.final.xp = finalReward.xp;
+        finalReward.receipt.final.inkDrops = finalReward.inkDrops;
+        finalReward.receipt.final.paperScraps = finalReward.paperScraps;
+        finalReward.receipt.final.blueprints = finalReward.blueprints;
+
+        return finalReward;
     }
 
     /**
@@ -594,59 +834,51 @@ export class RewardCalculator {
     }
 
     /**
-     * Calculate journal entry paper scrap rewards for end of month
-     * Formula: journalEntries × (basePaperScraps + scribeBonus if Scribe background)
-     * 
+     * Calculate journal entry paper scrap rewards for end of month.
+     * Base: journalEntries × GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps.
+     * ON_JOURNAL_ENTRY effects (scribe background, Librarian's Quill, Golden Pen, etc.) apply via ModifierPipeline.
+     *
      * @param {number} journalEntries - Number of journal entries completed
-     * @param {string} background - Keeper background key (e.g., 'scribe')
+     * @param {Object} [context]
+     * @param {object} [context.stateAdapter] - For EffectRegistry (state + optional formData: keeperBackground, wizardSchool)
+     * @param {object} [context.dataModule] - Data catalogs (keeperBackgrounds, allItems, …)
      * @returns {Reward} Reward with paper scraps only
      */
-    static calculateJournalEntryRewards(journalEntries, background = '') {
-        let papersPerEntry = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
-        const baseTotal = Math.max(0, journalEntries) * papersPerEntry;
-        
-        // Apply Scribe's Acolyte bonus
-        let bonusTotal = 0;
-        if (background === 'scribe') {
-            papersPerEntry += GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-            bonusTotal = Math.max(0, journalEntries) * GAME_CONFIG.endOfMonth.journalEntry.scribeBonus;
-        }
-        
-        const paperScraps = Math.max(0, journalEntries) * papersPerEntry;
-        const modifiedBy = (background === 'scribe' && paperScraps > 0) ? ['Scribe\'s Acolyte'] : [];
-        
-        const reward = new Reward({ 
-            xp: 0, 
-            inkDrops: 0, 
-            paperScraps, 
-            items: [],
-            modifiedBy 
+    static calculateJournalEntryRewards(journalEntries, context = {}) {
+        const ctx = typeof context === 'string' ? {} : context || {};
+        const { stateAdapter = null, dataModule = null } = ctx;
+
+        const n = Math.max(0, journalEntries);
+        const basePer = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
+        const baseTotal = n * basePer;
+
+        const reward = new Reward({
+            xp: 0,
+            inkDrops: 0,
+            paperScraps: baseTotal,
+            items: []
         });
-        
+
         reward.receipt.base.paperScraps = baseTotal;
-        reward.receipt.final.paperScraps = paperScraps;
-        
+        reward.receipt.final.paperScraps = baseTotal;
+
         if (baseTotal > 0) {
             reward.receipt.modifiers.push({
                 source: 'End of Month - Journal Entry',
                 type: 'system',
                 value: baseTotal,
-                description: `${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps} Paper Scraps`,
+                description: `${n} entries × ${basePer} Paper Scraps`,
                 currency: 'paperScraps'
             });
         }
-        
-        if (bonusTotal > 0) {
-            reward.receipt.modifiers.push({
-                source: 'Scribe\'s Acolyte',
-                type: 'background',
-                value: bonusTotal,
-                description: `+${bonusTotal} Paper Scraps (${journalEntries} entries × ${GAME_CONFIG.endOfMonth.journalEntry.scribeBonus} bonus)`,
-                currency: 'paperScraps'
-            });
+
+        if (!stateAdapter || !dataModule || n === 0) {
+            return reward;
         }
-        
-        return reward;
+
+        const payload = TriggerPayload.journalEntry({ entryCount: n });
+        const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_JOURNAL_ENTRY, stateAdapter, dataModule);
+        return ModifierPipeline.resolve(TRIGGERS.ON_JOURNAL_ENTRY, payload, effects, reward);
     }
 
     /**
@@ -657,9 +889,14 @@ export class RewardCalculator {
      * 
      * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
+     * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM ink (e.g. Grove Tender pipeline)
      * @returns {Reward} Reward with ink drops only
      */
-    static calculateAtmosphericBuffRewards(atmosphericBuffs = {}, associatedBuffs = []) {
+    static calculateAtmosphericBuffRewards(
+        atmosphericBuffs = {},
+        associatedBuffs = [],
+        forcedActiveBuffNames = []
+    ) {
         let totalInkDrops = 0;
         const processedBuffs = [];
         const reward = new Reward({ 
@@ -669,13 +906,27 @@ export class RewardCalculator {
             items: [],
             modifiedBy: [] 
         });
+        const forcedActive = new Set();
+        if (Array.isArray(forcedActiveBuffNames)) {
+            forcedActiveBuffNames.filter(Boolean).forEach((name) => {
+                const id = data.getAtmosphericBuff(name)?.id;
+                forcedActive.add(name);
+                if (id) forcedActive.add(id);
+            });
+        }
+        const associatedSet = new Set(
+            Array.isArray(associatedBuffs)
+                ? associatedBuffs.map((nameOrId) => data.getAtmosphericBuff(nameOrId)?.id || nameOrId).filter(Boolean)
+                : []
+        );
 
         for (const buffName in atmosphericBuffs) {
             const buff = atmosphericBuffs[buffName];
-            
-            // Only process buffs that were marked as active
-            if (buff.isActive && buff.daysUsed > 0) {
-                const isAssociated = associatedBuffs.includes(buffName);
+            const countsForInk =
+                buff.daysUsed > 0 && (buff.isActive === true || forcedActive.has(buffName));
+            if (countsForInk) {
+                const buffId = data.getAtmosphericBuff(buffName)?.id || buffName;
+                const isAssociated = associatedSet.has(buffId);
                 const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
                 const buffTotal = buff.daysUsed * dailyValue;
                 totalInkDrops += buffTotal;

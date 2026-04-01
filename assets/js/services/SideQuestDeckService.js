@@ -23,6 +23,11 @@ export function isSideQuestCompleted(questKey, completedQuests) {
     
     for (const completedQuest of completedQuests) {
         if (completedQuest.type !== '♣ Side Quest') continue;
+
+        // Primary identifier match
+        if (quest.id && completedQuest.sideQuestId === quest.id) {
+            return true;
+        }
         
         // Match by exact prompt
         if (completedQuest.prompt === expectedPrompt) {
@@ -52,6 +57,11 @@ export function isSideQuestActive(questKey, activeQuests) {
     
     for (const activeQuest of activeQuests) {
         if (activeQuest.type !== '♣ Side Quest') continue;
+
+        // Primary identifier match
+        if (quest.id && activeQuest.sideQuestId === quest.id) {
+            return true;
+        }
         
         // Match by exact prompt
         if (activeQuest.prompt === expectedPrompt) {

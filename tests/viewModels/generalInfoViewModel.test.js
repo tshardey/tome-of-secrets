@@ -27,6 +27,15 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
             description: 'Sanctum 1 description',
             benefit: 'Sanctum 1 benefit'
         }
+    },
+    getSanctumBenefit: (idOrName) => {
+        const sanctums = {
+            sanctum1: {
+                description: 'Sanctum 1 description',
+                benefit: 'Sanctum 1 benefit'
+            }
+        };
+        return sanctums[idOrName] || null;
     }
 }));
 

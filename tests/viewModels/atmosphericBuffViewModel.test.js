@@ -8,6 +8,9 @@ import { createAtmosphericBuffViewModel } from '../../assets/js/viewModels/atmos
 jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
     calculateDailyValue: jest.fn((name, associatedBuffs) => associatedBuffs.includes(name) ? 2 : 1),
     isGroveTenderBuff: jest.fn((name, background) => background === 'groveTender' && name === 'The Soaking in Nature'),
+    isForcedAtmosphericBuff: jest.fn(
+        (name, ctx) => ctx?.formData?.keeperBackground === 'groveTender' && name === 'The Soaking in Nature'
+    ),
     calculateTotalInkDrops: jest.fn((daysUsed, dailyValue) => daysUsed * dailyValue),
     getAssociatedBuffs: jest.fn((sanctum) => {
         if (sanctum === 'sanctum1') return ['Buff1'];

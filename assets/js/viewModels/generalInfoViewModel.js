@@ -47,9 +47,7 @@ export function createBenefitsViewModel(selectedBackground, selectedSchool, sele
         ? data.schoolBenefits[selectedSchool] 
         : null;
     
-    const sanctum = selectedSanctum && data.sanctumBenefits[selectedSanctum] 
-        ? data.sanctumBenefits[selectedSanctum] 
-        : null;
+    const sanctum = selectedSanctum ? data.getSanctumBenefit(selectedSanctum) : null;
     
     return {
         background: {

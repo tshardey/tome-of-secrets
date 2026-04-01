@@ -469,8 +469,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 12', () => {
-            expect(SCHEMA_VERSION).toBe(12);
+        test('schema version should be 15', () => {
+            expect(SCHEMA_VERSION).toBe(15);
         });
     });
 });
@@ -536,6 +536,55 @@ describe('Data Migration', () => {
             expect(Array.isArray(migrated[STORAGE_KEYS.INVENTORY_ITEMS])).toBe(true);
             expect(typeof migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS]).toBe('object');
             expect(migrated[STORAGE_KEYS.BUFF_MONTH_COUNTER]).toBe(0);
+        });
+
+        test('v15: should migrate atmospheric buff state keys from names to ids', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '14');
+            const state = {
+                [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {
+                    'The Candlight Study': { daysUsed: 3, isActive: true }
+                },
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
+            };
+
+            const migrated = migrateState(state);
+            expect(migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS]['the-candlight-study']).toEqual({
+                daysUsed: 3,
+                isActive: true
+            });
+            expect(migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS]['The Candlight Study']).toBeUndefined();
+        });
+
+        test('v15: should add sideQuestId on legacy side quests', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '14');
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [{
+                    type: '♣ Side Quest',
+                    prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.',
+                    rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] }
+                }],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
+            };
+
+            const migrated = migrateState(state);
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].sideQuestId).toBe('side-quest-the-arcane-grimoire');
+        });
+
+        test('v15: should migrate characterSheet sanctum value from name to id', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '14');
+            safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { librarySanctum: 'The Spire of Whispers' });
+            const state = {
+                [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [],
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [],
+                [STORAGE_KEYS.DISCARDED_QUESTS]: []
+            };
+
+            migrateState(state);
+            const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            expect(formData.librarySanctum).toBe('the-spire-of-whispers');
         });
 
         test('should repair books from quests when already at current schema version', () => {

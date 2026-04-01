@@ -9,9 +9,7 @@
         "reward": {
             "type": "passiveItemSlot",
             "suggestedItems": [
-                "Ancient Bookmark",
-                "Reading Glasses",
-                "Archive Seal"
+                "Reading Glasses"
             ]
         }
     },
@@ -24,11 +22,7 @@
         "completionPrompt": "Annotate or take notes on the next book you read.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": [
-                "Scholar's Lamp",
-                "Wise Owl",
-                "Academic Mouse"
-            ]
+            "suggestedItems": []
         }
     },
     "polish-globe-collection": {
@@ -40,11 +34,7 @@
         "completionPrompt": "Read a book that contains a map.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Cartographer's Compass",
-                "Historian's Monocle",
-                "Globe of Knowledge"
-            ]
+            "suggestedItems": []
         }
     },
     "restore-stained-glass": {
@@ -57,9 +47,7 @@
         "reward": {
             "type": "passiveItemSlot",
             "suggestedItems": [
-                "Romance Reader's Ribbon",
-                "Butterfly of Change",
-                "Heartbreak Locket"
+                "Romance Reader's Ribbon"
             ]
         }
     },
@@ -73,9 +61,7 @@
         "reward": {
             "type": "passiveFamiliarSlot",
             "suggestedItems": [
-                "Dancing Shoes",
-                "Drama Cat",
-                "Music Box"
+                "Dancing Shoes"
             ]
         }
     },
@@ -88,10 +74,7 @@
         "completionPrompt": "Read a cozy book in a comfortable setting.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": [
-                "Porcelain Teacup",
-                "Tea Spirit"
-            ]
+            "suggestedItems": []
         }
     },
     "calibrate-orrery": {
@@ -104,9 +87,7 @@
         "reward": {
             "type": "passiveItemSlot",
             "suggestedItems": [
-                "Star Navigator's Chart",
-                "Astro Compass",
-                "Theater Ticket"
+                "Star Navigator's Chart"
             ]
         }
     },
@@ -120,7 +101,6 @@
         "reward": {
             "type": "passiveFamiliarSlot",
             "suggestedItems": [
-                "Star Fox",
                 "Temporal Sprite"
             ]
         }
@@ -134,11 +114,7 @@
         "completionPrompt": "Read a new release (published this year).",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Logic Circuit",
-                "Data Crystal",
-                "Engineer's Wrench"
-            ]
+            "suggestedItems": []
         }
     },
     "revitalize-fairy-circle": {
@@ -151,9 +127,7 @@
         "reward": {
             "type": "passiveItemSlot",
             "suggestedItems": [
-                "Fae-Touched Crystal",
-                "Fairy Companion",
-                "Enchanted Feather"
+                "Fae-Touched Crystal"
             ]
         }
     },
@@ -181,11 +155,7 @@
         "completionPrompt": "Read an epic fantasy or high fantasy book.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Crystal Prism",
-                "Dragon Scale",
-                "Magic Ink"
-            ]
+            "suggestedItems": []
         }
     },
     "seal-cursed-vault": {
@@ -199,7 +169,6 @@
             "type": "passiveFamiliarSlot",
             "suggestedItems": [
                 "Warding Candle",
-                "Shadow Hound",
                 "Raven Familiar"
             ]
         }
@@ -214,9 +183,7 @@
         "reward": {
             "type": "passiveItemSlot",
             "suggestedItems": [
-                "Purifying Incense",
-                "Detective's Magnifying Glass",
-                "Blood Moon Charm"
+                "Detective's Magnifying Glass"
             ]
         }
     },
@@ -229,11 +196,7 @@
         "completionPrompt": "Read a book where characters protect themselves or others from danger.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Runic Shield",
-                "Shadow Cloak",
-                "Cursed Coin"
-            ]
+            "suggestedItems": []
         }
     },
     "restore-grand-entrance": {
@@ -245,11 +208,7 @@
         "completionPrompt": "Read the first book in a new-to-you series or by a new-to-you author.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Welcome Mat",
-                "Library Mouse",
-                "Genre-Hopper Chameleon"
-            ]
+            "suggestedItems": []
         }
     },
     "repair-front-desk": {
@@ -261,11 +220,7 @@
         "completionPrompt": "Read a book by a marginalized or BIPOC author.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Astral Passport",
-                "Library Certificate",
-                "Globe of Knowledge"
-            ]
+            "suggestedItems": []
         }
     },
     "create-cozy-nooks": {
@@ -277,10 +232,7 @@
         "completionPrompt": "Read a book in an especially comfortable or cozy location.",
         "reward": {
             "type": "passiveItemSlot",
-            "suggestedItems": [
-                "Cozy Blanket",
-                "Reading Chair"
-            ]
+            "suggestedItems": []
         }
     },
     "restore-main-catalog": {
@@ -293,7 +245,6 @@
         "reward": {
             "type": "passiveItemSlot",
             "suggestedItems": [
-                "Master Catalog",
                 "Literary Medallion"
             ]
         }
@@ -307,10 +258,7 @@
         "completionPrompt": "Read a classic or award-winning book.",
         "reward": {
             "type": "passiveFamiliarSlot",
-            "suggestedItems": [
-                "Library Owl",
-                "Classic Bookmark"
-            ]
+            "suggestedItems": []
         }
     }
 }

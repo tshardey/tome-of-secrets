@@ -73,8 +73,8 @@ export function createSideQuestArchiveCardsViewModel(completedQuests) {
         const questName = extractNameFromPrompt(quest.prompt);
         
         // Find matching side quest data
-        let questData = null;
-        if (questName && data.sideQuestsDetailed) {
+        let questData = quest.sideQuestId ? data.getSideQuest(quest.sideQuestId) : null;
+        if (!questData && questName && data.sideQuestsDetailed) {
             for (const key in data.sideQuestsDetailed) {
                 const sideQuest = data.sideQuestsDetailed[key];
                 if (sideQuest.name === questName) {

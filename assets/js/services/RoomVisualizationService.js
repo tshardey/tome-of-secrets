@@ -3,9 +3,11 @@
  * based on active atmospheric buffs and theme config.
  */
 
-import { getRoomTheme, atmosphericBuffs, allItems } from '../character-sheet/data.js';
+import * as gameData from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
-import { isGroveTenderBuff } from './AtmosphericBuffService.js';
+import { isForcedAtmosphericBuff } from './AtmosphericBuffService.js';
+
+const { getRoomTheme, atmosphericBuffs, allItems } = gameData;
 
 const DEFAULT_THEME_ID = 'cozy-modern';
 
@@ -14,16 +16,27 @@ const DEFAULT_THEME_ID = 'cozy-modern';
  * @param {string} buffName - Atmospheric buff name
  * @param {Object} atmosphericBuffsState - State slice: atmospheric buffs from character state
  * @param {string} [keeperBackground] - Keeper background key (e.g. 'groveTender')
+ * @param {Object|null} [characterState] - Full character state for effect resolution (optional)
  * @returns {boolean}
  */
-export function isAtmosphericBuffActiveForSticker(buffName, atmosphericBuffsState, keeperBackground = '') {
-    if (isGroveTenderBuff(buffName, keeperBackground)) {
+export function isAtmosphericBuffActiveForSticker(
+    buffName,
+    atmosphericBuffsState,
+    keeperBackground = '',
+    characterState = null
+) {
+    const effectCtx = {
+        state: characterState || {},
+        formData: { keeperBackground: keeperBackground || '', wizardSchool: '' }
+    };
+    if (isForcedAtmosphericBuff(buffName, effectCtx, gameData)) {
         return true;
     }
     if (!atmosphericBuffsState || typeof atmosphericBuffsState !== 'object') {
         return false;
     }
-    const buff = atmosphericBuffsState[buffName];
+    const buffId = atmosphericBuffs[buffName]?.id || buffName;
+    const buff = atmosphericBuffsState[buffId] || atmosphericBuffsState[buffName];
     return !!(buff && buff.isActive === true);
 }
 
@@ -88,7 +101,7 @@ export function getActiveStickers(characterState, themeId = DEFAULT_THEME_ID, op
     const result = [];
     if (atmosphericBuffs) {
         for (const buffName of Object.keys(atmosphericBuffs)) {
-            if (!isAtmosphericBuffActiveForSticker(buffName, atmosphericBuffsState, keeperBackground)) {
+            if (!isAtmosphericBuffActiveForSticker(buffName, atmosphericBuffsState, keeperBackground, characterState)) {
                 continue;
             }
             const stickerConfig = getStickerForBuff(buffName, themeId);

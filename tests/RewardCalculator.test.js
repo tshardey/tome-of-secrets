@@ -5,6 +5,7 @@
 import { Reward, RewardCalculator } from '../assets/js/services/RewardCalculator.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { MODIFIER_TYPES, TRIGGERS } from '../assets/js/services/effectSchema.js';
 
 describe('Reward Class', () => {
     test('should create a reward with default values', () => {
@@ -203,33 +204,68 @@ describe('RewardCalculator - Apply Modifiers', () => {
     });
 });
 
-describe('RewardCalculator - Background Bonuses', () => {
+describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
+    test('should not double-apply Archivist when legacy background card is selected', () => {
+        const base = new Reward({ inkDrops: 10 });
+        const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
+            baseRewardOverride: base,
+            appliedBuffs: ['[Background] Archivist Bonus'],
+            background: 'archivist',
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+        });
+
+        expect(modified.inkDrops).toBe(20);
+        expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
+        expect(modified.modifiedBy).not.toContain('Archivist Bonus');
+    });
+
+    test('should still apply non-background buff cards with pipeline backgrounds', () => {
+        const base = new Reward({ inkDrops: 10 });
+        const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
+            baseRewardOverride: base,
+            appliedBuffs: ['[Background] Archivist Bonus', '[Item] Librarian\'s Compass'],
+            background: 'archivist',
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+        });
+
+        expect(modified.inkDrops).toBe(40);
+        expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
+        expect(modified.modifiedBy).toContain("Librarian's Compass");
+        expect(modified.modifiedBy).not.toContain('Archivist Bonus');
+    });
+
     test('should apply Biblioslinker bonus to dungeon crawls', () => {
         const base = new Reward({ paperScraps: 5 });
-        const quest = { type: '♠ Dungeon Crawl' };
-        
-        const modified = RewardCalculator.applyBackgroundBonuses(base, quest, 'biblioslinker');
-        
-        expect(modified.paperScraps).toBe(15); // 5 + 10
-        expect(modified.modifiedBy).toContain('Biblioslinker');
+        const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+            baseRewardOverride: base,
+            background: 'biblioslinker',
+            quest: { type: '♠ Dungeon Crawl' }
+        });
+
+        expect(modified.paperScraps).toBe(15);
+        expect(modified.modifiedBy).toContain('The Biblioslinker');
     });
 
     test('should not apply Biblioslinker bonus to non-dungeon quests', () => {
         const base = new Reward({ paperScraps: 5 });
-        const quest = { type: '♥ Organize the Stacks' };
-        
-        const modified = RewardCalculator.applyBackgroundBonuses(base, quest, 'biblioslinker');
-        
+        const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            baseRewardOverride: base,
+            background: 'biblioslinker',
+            quest: { type: '♥ Organize the Stacks' }
+        });
+
         expect(modified.paperScraps).toBe(5);
         expect(modified.modifiedBy).toEqual([]);
     });
 
-    test('should not apply bonuses when no background selected', () => {
+    test('should not apply background effects when no background selected', () => {
         const base = new Reward({ paperScraps: 5 });
-        const quest = { type: '♠ Dungeon Crawl' };
-        
-        const modified = RewardCalculator.applyBackgroundBonuses(base, quest, '');
-        
+        const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+            baseRewardOverride: base,
+            background: '',
+            quest: { type: '♠ Dungeon Crawl' }
+        });
+
         expect(modified.paperScraps).toBe(5);
     });
 });
@@ -265,7 +301,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         );
         
         expect(final.paperScraps).toBe(15); // 5 from room + 10 from biblioslinker
-        expect(final.modifiedBy).toContain('Biblioslinker');
+        expect(final.modifiedBy).toContain('The Biblioslinker');
     });
 
     test('should handle complex reward calculation', () => {
@@ -286,8 +322,71 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         );
         
         expect(final.xp).toBe(30); // Monster base XP
-        expect(final.inkDrops).toBe(35); // 0 + 20 + 15
+        expect(final.inkDrops).toBe(20); // 0 + 20 (background legacy card intentionally skipped)
         expect(final.modifiedBy.length).toBeGreaterThan(0);
+    });
+
+    describe('ON_QUEST_COMPLETED auto-apply (EffectRegistry)', () => {
+        const prevLearned = [];
+
+        beforeEach(() => {
+            prevLearned.splice(0, prevLearned.length, ...(characterState[STORAGE_KEYS.LEARNED_ABILITIES] || []));
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = [];
+        });
+
+        afterEach(() => {
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = [...prevLearned];
+        });
+
+        test('School of Enchantment multiplies XP on monster dungeon encounters without buff cards', () => {
+            const final = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+                appliedBuffs: [],
+                wizardSchool: 'Enchantment',
+                quest: { type: '♠ Dungeon Crawl', isEncounter: true, isBefriend: false },
+                isEncounter: true,
+                roomNumber: '1',
+                encounterName: 'Will-o-wisps',
+                isBefriend: false
+            });
+
+            expect(final.xp).toBe(45);
+            expect(final.modifiedBy).toContain('School of Enchantment');
+        });
+
+        test('Silver Tongue adds paper scraps on any quest type when learned', () => {
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
+            const genre = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+                quest: { type: '♥ Organize the Stacks' }
+            });
+            expect(genre.paperScraps).toBe(5);
+            expect(genre.modifiedBy).toContain('Silver Tongue');
+
+            const side = RewardCalculator.calculateFinalRewards('♣ Side Quest', 'The Arcane Grimoire', {
+                quest: { type: '♣ Side Quest' }
+            });
+            expect(side.paperScraps).toBeGreaterThanOrEqual(5);
+            expect(side.modifiedBy).toContain('Silver Tongue');
+        });
+
+        test('Alchemic Focus adds XP on extra credit when learned', () => {
+            characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Alchemic Focus'];
+            const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+                quest: { type: '⭐ Extra Credit' }
+            });
+            expect(final.xp).toBe(5);
+            expect(final.modifiedBy).toContain('Alchemic Focus');
+        });
+
+        test('Conjuration does not add quest rewards when a familiar is equipped', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
+            const final = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+                wizardSchool: 'Conjuration',
+                quest: { type: '♥ Organize the Stacks' }
+            });
+            expect(final.inkDrops).toBe(10);
+            expect(final.modifiedBy).not.toContain('School of Conjuration');
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+        });
     });
 
     test('should check both temporaryBuffs and temporaryBuffsFromRewards', () => {
@@ -521,9 +620,26 @@ describe('RewardCalculator - End of Month Calculations', () => {
     });
 
     describe('calculateJournalEntryRewards', () => {
-        test('should calculate paper scraps for journal entries without Scribe bonus', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, '');
-            
+        const emptyPipelineCtx = {
+            stateAdapter: {
+                state: {
+                    [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                    [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                    [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+                },
+                formData: { keeperBackground: '', wizardSchool: '' }
+            },
+            dataModule: {
+                keeperBackgrounds: {},
+                schoolBenefits: {},
+                masteryAbilities: {},
+                allItems: {}
+            }
+        };
+
+        test('should calculate paper scraps for journal entries without pipeline bonuses', () => {
+            const rewards = RewardCalculator.calculateJournalEntryRewards(5, emptyPipelineCtx);
+
             expect(rewards.xp).toBe(0);
             expect(rewards.inkDrops).toBe(0);
             expect(rewards.paperScraps).toBe(25); // 5 × 5
@@ -531,33 +647,70 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.modifiedBy).toEqual([]);
         });
 
-        test('should apply Scribe bonus to journal entries', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, 'scribe');
-            
+        test('should apply Scribe background via ON_JOURNAL_ENTRY pipeline', () => {
+            const ctx = {
+                stateAdapter: {
+                    state: {
+                        [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                        [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                        [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+                    },
+                    formData: { keeperBackground: 'scribe', wizardSchool: '' }
+                },
+                dataModule: {
+                    keeperBackgrounds: {
+                        scribe: {
+                            name: "The Scribe's Acolyte",
+                            effects: [
+                                {
+                                    trigger: TRIGGERS.ON_JOURNAL_ENTRY,
+                                    modifier: {
+                                        type: MODIFIER_TYPES.ADD_FLAT,
+                                        resource: 'paperScraps',
+                                        value: 3
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    schoolBenefits: {},
+                    masteryAbilities: {},
+                    allItems: {}
+                }
+            };
+            const rewards = RewardCalculator.calculateJournalEntryRewards(5, ctx);
+
             expect(rewards.xp).toBe(0);
             expect(rewards.inkDrops).toBe(0);
             expect(rewards.paperScraps).toBe(40); // 5 × (5 + 3)
-            expect(rewards.modifiedBy).toContain('Scribe\'s Acolyte');
+            expect(rewards.modifiedBy).toContain("The Scribe's Acolyte");
         });
 
         test('should return zero for zero entries', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(0, 'scribe');
-            
+            const rewards = RewardCalculator.calculateJournalEntryRewards(0, emptyPipelineCtx);
+
             expect(rewards.paperScraps).toBe(0);
-            expect(rewards.modifiedBy).toEqual([]); // No bonus applied if no entries
+            expect(rewards.modifiedBy).toEqual([]);
         });
 
         test('should handle negative input gracefully', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(-3, 'scribe');
-            
-            expect(rewards.paperScraps).toBe(0); // Math.max(0, -3) × 8 = 0
+            const rewards = RewardCalculator.calculateJournalEntryRewards(-3, emptyPipelineCtx);
+
+            expect(rewards.paperScraps).toBe(0);
             expect(rewards.modifiedBy).toEqual([]);
         });
 
         test('should not apply Scribe bonus for non-scribe backgrounds', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, 'archivist');
-            
-            expect(rewards.paperScraps).toBe(25); // 5 × 5 (no bonus)
+            const ctx = {
+                ...emptyPipelineCtx,
+                stateAdapter: {
+                    ...emptyPipelineCtx.stateAdapter,
+                    formData: { keeperBackground: 'archivist', wizardSchool: '' }
+                }
+            };
+            const rewards = RewardCalculator.calculateJournalEntryRewards(5, ctx);
+
+            expect(rewards.paperScraps).toBe(25);
             expect(rewards.modifiedBy).toEqual([]);
         });
     });
@@ -638,6 +791,19 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.inkDrops).toBe(10); // Only active buff counted
             expect(rewards.modifiedBy).toContain('Active Buff');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
+        });
+
+        test('should count buffs in forcedActiveBuffNames even when isActive is false', () => {
+            const atmosphericBuffs = {
+                'The Soaking in Nature': { daysUsed: 7, isActive: false }
+            };
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                ['The Soaking in Nature']
+            );
+            expect(rewards.inkDrops).toBe(7);
+            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
         });
     });
 });

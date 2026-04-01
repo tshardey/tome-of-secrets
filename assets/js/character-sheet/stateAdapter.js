@@ -80,6 +80,13 @@ export class StateAdapter {
         this.listeners = new Map();
     }
 
+    /**
+     * ON_QUEST_DRAFTED pipeline hook; character-sheet.js replaces this with QuestDraftEffectService wiring.
+     * Default no-op so addActiveQuests never depends on initialization order.
+     * @param {Object[]} _quests
+     */
+    applyQuestDraftedEffects(_quests) {}
+
     _mutateList(key, mutator) {
         let list = this.state[key];
         if (!Array.isArray(list)) {
@@ -208,17 +215,18 @@ export class StateAdapter {
         return this.state[STORAGE_KEYS.DISCARDED_QUESTS];
     }
 
-    addActiveQuests(quests) {
+    addActiveQuests(quests, options = {}) {
+        const { skipQuestDraftedEffects = false } = options;
         const questList = Array.isArray(quests) ? quests : [quests];
         if (questList.length === 0) {
             return [];
         }
-        
+
         const { value, changed } = this._mutateList(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, list => {
             questList.forEach(quest => list.push(quest));
             return { changed: true, value: questList };
         });
-        
+
         // Ensure characterState is synced (should already be since this.state is characterState reference)
         // But double-check to be safe
         if (changed && this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) {
@@ -226,7 +234,11 @@ export class StateAdapter {
         } else if (!changed) {
             console.warn('addActiveQuests: No changes made. List:', this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
         }
-        
+
+        if (!skipQuestDraftedEffects && changed && questList.length) {
+            this.applyQuestDraftedEffects(questList);
+        }
+
         return value || [];
     }
 
@@ -661,10 +673,112 @@ export class StateAdapter {
         return true;
     }
 
+    /**
+     * Whether a pipeline effect may be used for this calendar month/year (one automatic prevention per key per month).
+     * @param {string} cooldownKey - e.g. "school:Abjuration"
+     * @param {string} [_cadence] - reserved for future cadence types (e.g. bi-monthly passive items)
+     */
+    isEffectCooldownAvailable(cooldownKey, _cadence = 'monthly', { month, year } = {}) {
+        if (!cooldownKey || typeof cooldownKey !== 'string') return false;
+        const cadence = _cadence === 'per_use' ? 'per-use' : _cadence;
+
+        const prev = this.state[STORAGE_KEYS.EFFECT_COOLDOWNS];
+        const entry =
+            prev && typeof prev === 'object' && !Array.isArray(prev) ? prev[cooldownKey] : null;
+
+        if (cadence === 'per-use') {
+            if (!entry || typeof entry !== 'object') {
+                return true;
+            }
+            return entry.used !== true;
+        }
+
+        const m = typeof month === 'string' ? month.trim() : '';
+        const y = typeof year === 'string' ? year.trim() : '';
+        if (!m || !y) return false;
+        if (!entry || typeof entry !== 'object') {
+            return true;
+        }
+        return entry.month !== m || entry.year !== y;
+    }
+
+    /** Record that an effect consumed its use for this calendar month/year. */
+    consumeEffectCooldown(cooldownKey, _cadence = 'monthly', { month, year } = {}) {
+        if (!cooldownKey || typeof cooldownKey !== 'string') return false;
+        const cadence = _cadence === 'per_use' ? 'per-use' : _cadence;
+
+        const key = STORAGE_KEYS.EFFECT_COOLDOWNS;
+        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
+            ? this.state[key]
+            : {};
+        let nextEntry;
+        if (cadence === 'per-use') {
+            nextEntry = { used: true };
+        } else {
+            const m = typeof month === 'string' ? month.trim() : '';
+            const y = typeof year === 'string' ? year.trim() : '';
+            if (!m || !y) return false;
+            nextEntry = { month: m, year: y };
+        }
+        const next = { ...prev, [cooldownKey]: nextEntry };
+        this.state[key] = next;
+        void setStateKey(key, next);
+        return true;
+    }
+
+    /**
+     * Phase 5 compatibility wrapper for activated abilities.
+     * @param {string} effectId
+     * @param {string} month
+     * @param {string} year
+     * @returns {boolean}
+     */
+    isCooldownAvailable(effectId, month, year) {
+        return this.isEffectCooldownAvailable(effectId, 'monthly', { month, year });
+    }
+
+    /**
+     * Phase 5 compatibility wrapper for activated abilities.
+     * @param {string} effectId
+     * @param {string} month
+     * @param {string} year
+     * @returns {boolean}
+     */
+    consumeCooldown(effectId, month, year) {
+        return this.consumeEffectCooldown(effectId, 'monthly', { month, year });
+    }
+
+    /**
+     * Reset monthly activated ability cooldown usage at End of Month.
+     * @returns {boolean}
+     */
+    resetMonthlyCooldowns() {
+        this.state[STORAGE_KEYS.ABILITY_COOLDOWNS] = {};
+        void setStateKey(STORAGE_KEYS.ABILITY_COOLDOWNS, {});
+        return true;
+    }
+
     // Quest tab – monthly draw / dice helpers
     getQuestDrawHelperState() {
         const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE];
         return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    }
+
+    getQuestDrawHelperSettings() {
+        const raw = this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS];
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { autoApplyOnDraw: false };
+        }
+        return { autoApplyOnDraw: raw.autoApplyOnDraw === true };
+    }
+
+    setQuestDrawHelperSettings(updates = {}) {
+        const prev = this.getQuestDrawHelperSettings();
+        const next = { ...prev, ...updates };
+        const payload = { autoApplyOnDraw: !!next.autoApplyOnDraw };
+        this.state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = payload;
+        void setStateKey(STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS, payload);
+        return this.getQuestDrawHelperSettings();
     }
 
     /**
@@ -817,6 +931,63 @@ export class StateAdapter {
         return this.state[STORAGE_KEYS.TEMPORARY_BUFFS];
     }
 
+    /**
+     * End-of-month lifecycle for duration-based temporary buffs.
+     * - until-end-month: expires immediately at EOM
+     * - two-months: decrement monthsRemaining; remove when it reaches 0
+     * one-time buffs are intentionally untouched here.
+     * @returns {boolean} whether any buff was updated or removed
+     */
+    expireTemporaryBuffsAtEndOfMonth() {
+        const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
+            if (!Array.isArray(list) || list.length === 0) {
+                return { changed: false };
+            }
+
+            let changed = false;
+            const next = [];
+
+            for (const buff of list) {
+                if (!buff || typeof buff !== 'object') {
+                    next.push(buff);
+                    continue;
+                }
+
+                if (buff.duration === 'until-end-month') {
+                    changed = true;
+                    continue;
+                }
+
+                if (buff.duration === 'two-months') {
+                    const current =
+                        typeof buff.monthsRemaining === 'number' && Number.isFinite(buff.monthsRemaining)
+                            ? Math.max(0, Math.floor(buff.monthsRemaining))
+                            : 2;
+                    const remaining = current - 1;
+                    if (remaining <= 0) {
+                        changed = true;
+                        continue;
+                    }
+                    if (remaining !== current) {
+                        changed = true;
+                        next.push({ ...buff, monthsRemaining: remaining });
+                        continue;
+                    }
+                }
+
+                next.push(buff);
+            }
+
+            if (!changed) {
+                return { changed: false };
+            }
+
+            list.splice(0, list.length, ...next);
+            return { changed: true };
+        });
+        return result.changed;
+    }
+
     addTemporaryBuff(buff) {
         const { value } = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, list => {
             if (!buff) return { changed: false };
@@ -835,6 +1006,42 @@ export class StateAdapter {
             return { changed: true, value: removed };
         });
         return value || null;
+    }
+
+    /**
+     * Decrement `usesLeft` on all active buffs that carry a use-count, removing any that reach zero.
+     * Call this whenever a book is marked complete.
+     * @returns {{ changed: boolean, expired: string[] }} Names of buffs that were removed
+     */
+    decrementUseCountBuffsOnBookComplete() {
+        const expired = [];
+        const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
+            if (!Array.isArray(list) || list.length === 0) return { changed: false };
+            let changed = false;
+            const next = [];
+            for (const buff of list) {
+                if (!buff || typeof buff !== 'object') {
+                    next.push(buff);
+                    continue;
+                }
+                if (typeof buff.usesLeft === 'number' && buff.usesLeft > 0) {
+                    const remaining = buff.usesLeft - 1;
+                    if (remaining <= 0) {
+                        expired.push(buff.name || '');
+                        changed = true;
+                        continue;
+                    }
+                    next.push({ ...buff, usesLeft: remaining });
+                    changed = true;
+                } else {
+                    next.push(buff);
+                }
+            }
+            if (!changed) return { changed: false };
+            list.splice(0, list.length, ...next);
+            return { changed: true };
+        });
+        return { changed: result.changed, expired };
     }
 
     updateTemporaryBuff(index, updates) {

@@ -15,6 +15,8 @@ import { parseIntOr, trimOrEmpty } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { runAllRepairs } from './character-sheet/postLoadRepair.js';
 import { RewardCalculator } from './services/RewardCalculator.js';
+import { applyQuestDraftedEffects } from './services/QuestDraftEffectService.js';
+import { toast } from './ui/toast.js';
 
 // Import controllers
 import { CharacterController } from './controllers/CharacterController.js';
@@ -66,10 +68,20 @@ export async function initializeCharacterSheet() {
     if (librarySanctumSelect && dataModule.sanctumBenefits) {
         librarySanctumSelect.innerHTML = '<option value="">-- Select a Sanctum --</option>';
         Object.keys(dataModule.sanctumBenefits).forEach(sanctumName => {
+            const sanctum = dataModule.sanctumBenefits[sanctumName];
             const opt = document.createElement('option');
-            opt.value = sanctumName;
-            opt.textContent = sanctumName;
+            opt.value = sanctum?.id || sanctumName;
+            opt.textContent = sanctum?.name || sanctumName;
             librarySanctumSelect.appendChild(opt);
+
+            // Backward compatibility: support legacy saved/form values that used display name as value.
+            if (sanctum?.id && sanctumName !== sanctum.id) {
+                const legacyOpt = document.createElement('option');
+                legacyOpt.value = sanctumName;
+                legacyOpt.textContent = sanctum?.name || sanctumName;
+                legacyOpt.hidden = true;
+                librarySanctumSelect.appendChild(legacyOpt);
+            }
         });
     }
 
@@ -99,6 +111,39 @@ export async function initializeCharacterSheet() {
 
     // --- INITIAL LOAD (may be async due to IndexedDB-backed storage) ---
     await loadState(form);
+
+    function getCurrentCalendarPeriod() {
+        const now = new Date();
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        return {
+            month: monthNames[now.getMonth()],
+            year: String(now.getFullYear())
+        };
+    }
+
+    function defaultQuestMonthYearIfEmpty() {
+        const monthSel = document.getElementById('quest-month');
+        const yearSel = document.getElementById('quest-year');
+        const fallback = getCurrentCalendarPeriod();
+        if (!monthSel || !yearSel) {
+            return fallback;
+        }
+        if (!monthSel.value) {
+            monthSel.value = fallback.month;
+        }
+        if (!yearSel.value) {
+            yearSel.value = fallback.year;
+        }
+        return {
+            month: monthSel.value?.trim?.() || fallback.month,
+            year: yearSel.value?.trim?.() || fallback.year
+        };
+    }
+
+    defaultQuestMonthYearIfEmpty();
 
     // Initialize form persistence (auto-save on input/change)
     initializeFormPersistence(form);
@@ -223,6 +268,32 @@ export async function initializeCharacterSheet() {
         }
     }
 
+    stateAdapter.applyQuestDraftedEffects = function questDraftedHook(addedQuests) {
+        const drafted = Array.isArray(addedQuests) ? addedQuests : [];
+        const firstWithPeriod = drafted.find((quest) => {
+            const monthVal = typeof quest?.month === 'string' ? quest.month.trim() : '';
+            const yearVal = typeof quest?.year === 'string' ? quest.year.trim() : '';
+            return !!(monthVal && yearVal);
+        });
+        const questMonthEl = document.getElementById('quest-month');
+        const questYearEl = document.getElementById('quest-year');
+        const fallback = getCurrentCalendarPeriod();
+        const monthFromQuest = typeof firstWithPeriod?.month === 'string' ? firstWithPeriod.month.trim() : '';
+        const yearFromQuest = typeof firstWithPeriod?.year === 'string' ? firstWithPeriod.year.trim() : '';
+        const monthRaw = questMonthEl?.value?.trim?.() || '';
+        const yearRaw = questYearEl?.value?.trim?.() || '';
+        const month = monthFromQuest || monthRaw || fallback.month;
+        const year = yearFromQuest || yearRaw || fallback.year;
+        applyQuestDraftedEffects(this, addedQuests, {
+            updateCurrency,
+            dataModule,
+            toast,
+            form,
+            month,
+            year
+        });
+    };
+
     // Genre quest dropdown management
     function updateGenreQuestDropdown() {
         const genreQuestSelect = document.getElementById('genre-quest-select');
@@ -303,6 +374,7 @@ export async function initializeCharacterSheet() {
         if (result.book && result.book.title && completedBooksSet && !completedBooksSet.has(result.book.title)) {
             completedBooksSet.add(result.book.title);
             if (saveCompletedBooksSet) saveCompletedBooksSet();
+            stateAdapter.decrementUseCountBuffsOnBookComplete();
             const booksCompletedInput = document.getElementById('books-completed-month');
             if (booksCompletedInput) {
                 const current = parseIntOr(booksCompletedInput.value, 0);
@@ -382,6 +454,24 @@ export async function initializeCharacterSheet() {
                 saveCollapsed(bodyKey, collapsed);
                 applyState();
             });
+        });
+    })();
+
+    // Quest draw helpers: toggle long help copy (panel info icon)
+    (function setupQuestDrawHelpersHelpToggle() {
+        const btn = document.getElementById('quest-draw-helpers-help-toggle');
+        const details = document.getElementById('quest-draw-helpers-help-details');
+        if (!btn || !details) return;
+
+        btn.addEventListener('click', () => {
+            const open = details.hasAttribute('hidden');
+            if (open) {
+                details.removeAttribute('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                details.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
         });
     })();
 
@@ -670,7 +760,8 @@ export async function initializeCharacterSheet() {
             !target.classList.contains('mark-helper-used-btn') &&
             !target.classList.contains('undo-helper-used-btn') &&
             !target.classList.contains('mark-quest-draw-helper-used-btn') &&
-            !target.classList.contains('undo-quest-draw-helper-used-btn')) {
+            !target.classList.contains('undo-quest-draw-helper-used-btn') &&
+            !target.classList.contains('activate-ability-btn')) {
             return;
         }
 

@@ -67,7 +67,7 @@ describe('Quest Handlers', () => {
                 // Should have buff modifier applied
                 expect(completedQuest.rewards.modifiedBy).toContain('Long Read Focus');
                 // Should have Biblioslinker bonus (+10 Paper Scraps for dungeons)
-                expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
+                expect(completedQuest.rewards.modifiedBy).toContain('The Biblioslinker');
                 expect(completedQuest.rewards.inkDrops).toBe(15); // 5 base + 10 from Long Read Focus
                 expect(completedQuest.rewards.paperScraps).toBe(15); // 5 base + 10 from Biblioslinker
             });
@@ -86,7 +86,7 @@ describe('Quest Handlers', () => {
 
                 const completedQuest = BaseQuestHandler.completeActiveQuest(quest, 'biblioslinker');
 
-                expect(completedQuest.rewards.modifiedBy).toContain('Biblioslinker');
+                expect(completedQuest.rewards.modifiedBy).toContain('The Biblioslinker');
                 expect(completedQuest.rewards.paperScraps).toBe(15); // 5 base + 10 from Biblioslinker
             });
         });

@@ -667,6 +667,30 @@ permalink: /character-sheet.html
             </div>
 
             <div class="rpg-monthly-stats">
+                <div class="rpg-monthly-stat-item">
+                    <label for="quest-month" class="rpg-monthly-stat-label">📅 Month</label>
+                    <select id="quest-month" class="rpg-select rpg-stat-input" aria-label="Current game month">
+                        <option value="">— Select —</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                </div>
+                <div class="rpg-monthly-stat-item">
+                    <label for="quest-year" class="rpg-monthly-stat-label">📅 Year</label>
+                    <select id="quest-year" class="rpg-select rpg-stat-input" aria-label="Current game year">
+                        <option value="">— Select Year —</option>
+                    </select>
+                </div>
                 <div class="rpg-monthly-stat-item rpg-monthly-stat-item--hidden" id="books-completed-month-wrap" aria-hidden="true">
                     <label for="books-completed-month" class="rpg-monthly-stat-label">📚 Books Completed</label>
                     <input type="number" id="books-completed-month" class="rpg-stat-input" value="0" min="0" max="10" />
@@ -719,7 +743,18 @@ permalink: /character-sheet.html
         <div class="rpg-panel-body" id="quest-card-draw-panel-body">
             <div class="rpg-panel rpg-quest-draw-helpers-panel" style="margin-bottom: 1rem;">
                 <div class="rpg-panel-header">
-                    <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                    <div class="rpg-panel-header-lead">
+                        <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                        <button type="button"
+                                class="rpg-panel-help-icon-btn no-print"
+                                id="quest-draw-helpers-help-toggle"
+                                aria-expanded="false"
+                                aria-controls="quest-draw-helpers-help-details"
+                                aria-label="About monthly draw and dice helpers"
+                                title="About these helpers">
+                            <span class="rpg-panel-help-icon-btn__glyph" aria-hidden="true">ℹ</span>
+                        </button>
+                    </div>
                     <button type="button"
                             class="panel-toggle-btn"
                             data-panel-target="quest-draw-helpers-panel-body"
@@ -729,9 +764,21 @@ permalink: /character-sheet.html
                     </button>
                 </div>
                 <div class="rpg-panel-body" id="quest-draw-helpers-panel-body">
-                    <p class="deck-hint">Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                    <div id="quest-draw-helpers-help-details"
+                         class="quest-draw-helpers-help-details"
+                         hidden>
+                        <p>Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                        <p>When drawing quest cards below, turning on <strong>Auto-use helpers on draw</strong> will automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn it off to draw one card per click and mark helpers used manually.</p>
+                        <p>With <strong>Auto-use helpers on draw</strong>, <strong>Divination</strong> is marked used when you click any quest pool deck — ♥ genre, ♣ side, ♠ dungeon rooms, or ⭐ Extra Credit (roll 2 dice for that pick; no extra cards drawn). You can still mark it manually if auto is off.</p>
+                    </div>
+                    <div id="quest-draw-helpers-auto-controls" class="no-print quest-draw-helpers-auto-controls"></div>
                     <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
                 </div>
+            </div>
+            <div id="activated-abilities-container" class="rpg-panel rpg-activated-abilities-panel" style="margin-bottom: 1rem;">
+                <h3 id="activated-abilities-summary">✨ Activated Abilities</h3>
+                <p class="description">Monthly activated effects from your school, learned abilities, and equipped effect-driven items. Click Activate to consume cooldowns for this month/year.</p>
+                <div id="activated-abilities-body" class="worn-page-helpers-grid" role="list"></div>
             </div>
             <div class="quest-deck-interface">
                 <div class="deck-section">
@@ -925,6 +972,14 @@ permalink: /character-sheet.html
 
         <div class="add-curse-form">
             <h3>Add Curse Penalty</h3>
+            <p class="description">If this curse comes from a <strong>Worn Page</strong> (rolled after missing monthly quests), turn on the switch so Abjuration, Ward Against the Shroud, Raven Familiar, or Chalice can automatically prevent it when their monthly use is available. Set <strong>Month</strong> and <strong>Year</strong> in the <strong>Monthly Tracker</strong> at the top of the Quests tab (cooldowns use that calendar). The switch stays on until you turn it off.</p>
+            <div class="form-row encounter-action-toggle-wrap curse-worn-page-toggle-wrap">
+                <span class="encounter-action-label" id="curse-from-worn-page-label">From Worn Page (auto-prevent)</span>
+                <label class="switch" for="curse-from-worn-page">
+                    <input type="checkbox" id="curse-from-worn-page" aria-labelledby="curse-from-worn-page-label" />
+                    <span class="slider"></span>
+                </label>
+            </div>
             <div class="form-row">
                 <select id="curse-penalty-select">
                     <option value="">-- Select Curse Penalty --</option>

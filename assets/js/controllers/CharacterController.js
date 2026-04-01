@@ -168,6 +168,13 @@ export class CharacterController extends BaseController {
 
         this.addEventListener(wizardSchoolSelect, 'change', () => {
             uiModule.renderBenefits(wizardSchoolSelect, librarySanctumSelect, keeperBackgroundSelect);
+            const wearableSlotsInput = document.getElementById('wearable-slots');
+            const nonWearableSlotsInput = document.getElementById('non-wearable-slots');
+            const familiarSlotsInput = document.getElementById('familiar-slots');
+            if (wearableSlotsInput) {
+                uiModule.renderLoadout(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+                uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
+            }
             this.saveState();
         });
 

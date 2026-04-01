@@ -132,7 +132,7 @@ export class AtmosphericBuffDeckController extends BaseController {
         const { ui: uiModule } = this.dependencies;
 
         for (const buff of toAdd) {
-            stateAdapter.setAtmosphericBuffActive(buff.name, true);
+            stateAdapter.setAtmosphericBuffActive(buff.key || buff.id || buff.name, true);
         }
 
         if (uiModule) {

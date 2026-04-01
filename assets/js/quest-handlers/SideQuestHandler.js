@@ -51,14 +51,19 @@ export class SideQuestHandler extends BaseQuestHandler {
 
     createQuests() {
         const common = this.getCommonFormData();
-        const prompt = this.formElements.sideQuestSelect.value;
+        const sideQuestId = this.formElements.sideQuestSelect.value;
+        const sideQuest = this.data.getSideQuest ? this.data.getSideQuest(sideQuestId) : null;
+        const prompt = sideQuest?.name && sideQuest?.prompt
+            ? `${sideQuest.name}: ${sideQuest.prompt}`
+            : sideQuestId;
 
-        const rewards = RewardCalculator.getBaseRewards(this.type, prompt);
+        const rewards = RewardCalculator.getBaseRewards(this.type, prompt, { sideQuestId });
 
         const quest = {
             month: common.month,
             year: common.year,
             type: this.type,
+            sideQuestId: sideQuest?.id || sideQuestId || null,
             prompt: prompt,
             bookId: common.bookId || null,
             book: common.book,

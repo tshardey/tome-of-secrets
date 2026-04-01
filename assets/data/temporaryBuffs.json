@@ -21,7 +21,7 @@
     "Long Read Focus": {
         "id": "long-read-focus",
         "name": "Long Read Focus",
-        "description": "+10 Ink Drops per 100 pages over 300",
+        "description": "Gain +10 Ink Drops on your next completed book.",
         "duration": "one-time",
         "source": "Side Quest: The Arcane Grimoire",
         "rewardModifier": {
@@ -52,6 +52,7 @@
         "name": "Enchanted Focus",
         "description": "The next three books you complete grant a x1.5 Ink Drop bonus.",
         "duration": "one-time",
+        "useCount": 3,
         "source": "Dungeon Completion Reward",
         "rewardModifier": {
             "inkDropsMultiplier": 1.5

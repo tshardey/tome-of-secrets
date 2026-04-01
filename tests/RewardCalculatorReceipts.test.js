@@ -148,17 +148,21 @@ describe('RewardCalculator Receipt System', () => {
                 isEncounter: false,
                 roomNumber: '1'
             });
-            const modified = RewardCalculator.applyBackgroundBonuses(baseReward, {
-                type: '♠ Dungeon Crawl'
-            }, 'biblioslinker');
+            const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+                baseRewardOverride: baseReward,
+                background: 'biblioslinker',
+                quest: { type: '♠ Dungeon Crawl' },
+                isEncounter: false,
+                roomNumber: '1'
+            });
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(1);
-            expect(receipt.modifiers[0].source).toBe('Biblioslinker');
-            expect(receipt.modifiers[0].type).toBe('background');
+            expect(receipt.modifiers[0].source).toBe('The Biblioslinker');
+            expect(receipt.modifiers[0].type).toBe('effect:add_flat');
             expect(receipt.modifiers[0].value).toBe(10);
             expect(receipt.modifiers[0].currency).toBe('paperScraps');
-            expect(receipt.final.paperScraps).toBe(15); // 5 base + 10 bonus
+            expect(receipt.final.paperScraps).toBe(15);
         });
 
         test('should track school bonus in receipt', () => {
@@ -167,17 +171,25 @@ describe('RewardCalculator Receipt System', () => {
                 roomNumber: '1',
                 encounterName: 'Will-o-wisps'
             });
-            const modified = RewardCalculator.applySchoolBonuses(baseReward, {
-                type: '♠ Dungeon Crawl',
+            const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+                baseRewardOverride: baseReward,
+                wizardSchool: 'Enchantment',
+                quest: {
+                    type: '♠ Dungeon Crawl',
+                    isEncounter: true,
+                    isBefriend: true
+                },
                 isEncounter: true,
+                roomNumber: '1',
+                encounterName: 'Will-o-wisps',
                 isBefriend: true
-            }, 'Enchantment');
+            });
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(1);
             expect(receipt.modifiers[0].source).toBe('School of Enchantment');
-            expect(receipt.modifiers[0].type).toBe('school');
-            expect(receipt.modifiers[0].value).toBe(15); // 30 × 1.5 = 45, bonus = 15
+            expect(receipt.modifiers[0].type).toBe('effect:multiply');
+            expect(receipt.modifiers[0].value).toBe(15);
             expect(receipt.final.xp).toBe(45);
         });
     });
@@ -256,14 +268,39 @@ describe('RewardCalculator Receipt System', () => {
         });
 
         test('should track journal entry rewards in receipt', () => {
-            const reward = RewardCalculator.calculateJournalEntryRewards(3, 'scribe');
+            const reward = RewardCalculator.calculateJournalEntryRewards(3, {
+                stateAdapter: {
+                    state: {
+                        [STORAGE_KEYS.LEARNED_ABILITIES]: [],
+                        [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
+                        [STORAGE_KEYS.TEMPORARY_BUFFS]: []
+                    },
+                    formData: { keeperBackground: 'scribe', wizardSchool: '' }
+                },
+                dataModule: {
+                    keeperBackgrounds: {
+                        scribe: {
+                            name: "The Scribe's Acolyte",
+                            effects: [
+                                {
+                                    trigger: 'ON_JOURNAL_ENTRY',
+                                    modifier: { type: 'ADD_FLAT', resource: 'paperScraps', value: 3 }
+                                }
+                            ]
+                        }
+                    },
+                    schoolBenefits: {},
+                    masteryAbilities: {},
+                    allItems: {}
+                }
+            });
             const receipt = reward.getReceipt();
 
             expect(receipt.base.paperScraps).toBe(15); // 3 × 5 base
             expect(receipt.final.paperScraps).toBe(24); // 3 × (5 + 3) with Scribe bonus
             expect(receipt.modifiers.length).toBeGreaterThanOrEqual(1);
-            
-            const scribeModifier = receipt.modifiers.find(m => m.source === "Scribe's Acolyte");
+
+            const scribeModifier = receipt.modifiers.find(m => m.source === "The Scribe's Acolyte");
             expect(scribeModifier).toBeDefined();
             expect(scribeModifier.value).toBe(9); // 3 × 3 bonus
         });

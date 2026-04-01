@@ -4,6 +4,7 @@
 
 import * as data from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { EffectRegistry } from './EffectRegistry.js';
 
 /**
  * Calculate daily value for an atmospheric buff
@@ -12,17 +13,31 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
  * @returns {number} Daily value (1 or 2)
  */
 export function calculateDailyValue(buffName, associatedBuffs = []) {
-    return associatedBuffs.includes(buffName) ? 2 : 1;
+    const buff = data.getAtmosphericBuff(buffName);
+    const key = buff?.id || buffName;
+    return (associatedBuffs.includes(key) || associatedBuffs.includes(buff?.name) || associatedBuffs.includes(buffName))
+        ? 2
+        : 1;
 }
 
 /**
- * Check if a buff is always active due to Grove Tender background
- * @param {string} buffName - Name of the atmospheric buff
- * @param {string} background - Background key
- * @returns {boolean} True if buff is always active
+ * Buff is locked on (month-start forced) per EffectRegistry ON_MONTH_START / force_atmospheric_buff.
+ * @param {string} buffName
+ * @param {{ state?: Object, formData?: { keeperBackground?: string, wizardSchool?: string } }} stateAdapterLike - state + form selections
+ * @param {Object} [dataModule]
+ * @returns {boolean}
+ */
+export function isForcedAtmosphericBuff(buffName, stateAdapterLike, dataModule = data) {
+    if (!buffName || !stateAdapterLike) return false;
+    const names = EffectRegistry.getForcedAtmosphericBuffNames(stateAdapterLike, dataModule);
+    return names.includes(buffName);
+}
+
+/**
+ * @deprecated Use isForcedAtmosphericBuff with { state: {}, formData: { keeperBackground } }.
  */
 export function isGroveTenderBuff(buffName, background) {
-    return background === 'groveTender' && buffName === 'The Soaking in Nature';
+    return isForcedAtmosphericBuff(buffName, { state: {}, formData: { keeperBackground: background || '' } }, data);
 }
 
 /**
@@ -41,10 +56,10 @@ export function calculateTotalInkDrops(daysUsed, dailyValue) {
  * @returns {Array<string>} Array of associated buff names
  */
 export function getAssociatedBuffs(sanctumKey) {
-    if (!sanctumKey || !data.sanctumBenefits[sanctumKey]) {
+    if (!sanctumKey) {
         return [];
     }
-    return data.sanctumBenefits[sanctumKey].associatedBuffs || [];
+    return EffectRegistry.getSanctumAssociatedBuffIds(sanctumKey, data);
 }
 
 /**
@@ -55,7 +70,9 @@ export function getAssociatedBuffs(sanctumKey) {
  */
 export function getBuffState(state, buffName) {
     const atmosphericBuffs = state[STORAGE_KEYS.ATMOSPHERIC_BUFFS] || {};
-    const buffState = atmosphericBuffs[buffName] || {};
+    const buff = data.getAtmosphericBuff(buffName);
+    const buffKey = buff?.id || buffName;
+    const buffState = atmosphericBuffs[buffKey] || atmosphericBuffs[buffName] || {};
     
     return {
         daysUsed: buffState.daysUsed || 0,

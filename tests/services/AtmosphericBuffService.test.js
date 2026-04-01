@@ -6,17 +6,94 @@
 jest.mock('../../assets/js/character-sheet/data.js', () => ({
     sanctumBenefits: {
         'sanctum1': {
+            id: 'sanctum1',
+            name: 'sanctum1',
+            effects: [
+                {
+                    trigger: 'ON_MONTH_END',
+                    condition: { hasAtmosphericBuff: 'Buff1' },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                },
+                {
+                    trigger: 'ON_MONTH_END',
+                    condition: { hasAtmosphericBuff: 'Buff2' },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                }
+            ],
             associatedBuffs: ['Buff1', 'Buff2']
         },
         'sanctum2': {
+            id: 'sanctum2',
+            name: 'sanctum2',
             associatedBuffs: ['Buff3']
         }
+    },
+    atmosphericBuffs: {
+        Buff1: { id: 'buff-1', name: 'Buff1' },
+        Buff2: { id: 'buff-2', name: 'Buff2' },
+        Buff3: { id: 'buff-3', name: 'Buff3' },
+        'The Soaking in Nature': { id: 'the-soaking-in-nature', name: 'The Soaking in Nature' }
+    },
+    keeperBackgrounds: {
+        groveTender: {
+            id: 'groveTender',
+            effects: [
+                {
+                    trigger: 'ON_MONTH_START',
+                    modifier: {
+                        type: 'ACTIVATE',
+                        action: 'force_atmospheric_buff',
+                        buffName: 'The Soaking in Nature'
+                    }
+                }
+            ]
+        }
+    },
+    schoolBenefits: {},
+    masteryAbilities: {},
+    allItems: {},
+    temporaryBuffs: {},
+    temporaryBuffsFromRewards: {},
+    getSanctumBenefit: (idOrName) => {
+        const sanctums = {
+            sanctum1: {
+                id: 'sanctum1',
+                effects: [
+                    {
+                        trigger: 'ON_MONTH_END',
+                        condition: { hasAtmosphericBuff: 'Buff1' },
+                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    },
+                    {
+                        trigger: 'ON_MONTH_END',
+                        condition: { hasAtmosphericBuff: 'Buff2' },
+                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    }
+                ],
+                associatedBuffs: ['Buff1', 'Buff2']
+            },
+            sanctum2: { id: 'sanctum2', associatedBuffs: ['Buff3'] }
+        };
+        return sanctums[idOrName] || null;
+    },
+    getAtmosphericBuff: (idOrName) => {
+        const byName = {
+            Buff1: { id: 'buff-1', name: 'Buff1' },
+            Buff2: { id: 'buff-2', name: 'Buff2' },
+            Buff3: { id: 'buff-3', name: 'Buff3' },
+            'The Soaking in Nature': { id: 'the-soaking-in-nature', name: 'The Soaking in Nature' },
+            'buff-1': { id: 'buff-1', name: 'Buff1' },
+            'buff-2': { id: 'buff-2', name: 'Buff2' },
+            'buff-3': { id: 'buff-3', name: 'Buff3' }
+        };
+        return byName[idOrName] || null;
     }
 }));
 
 import {
     calculateDailyValue,
     isGroveTenderBuff,
+    isForcedAtmosphericBuff,
     calculateTotalInkDrops,
     getAssociatedBuffs,
     getBuffState,
@@ -60,6 +137,14 @@ describe('AtmosphericBuffService', () => {
         });
     });
 
+    describe('isForcedAtmosphericBuff', () => {
+        test('detects force_atmospheric_buff from keeperBackground via effect data', () => {
+            const ctx = { state: {}, formData: { keeperBackground: 'groveTender', wizardSchool: '' } };
+            expect(isForcedAtmosphericBuff('The Soaking in Nature', ctx)).toBe(true);
+            expect(isForcedAtmosphericBuff('Other Buff', ctx)).toBe(false);
+        });
+    });
+
     describe('calculateTotalInkDrops', () => {
         test('should calculate total correctly', () => {
             expect(calculateTotalInkDrops(5, 1)).toBe(5);
@@ -69,9 +154,14 @@ describe('AtmosphericBuffService', () => {
     });
 
     describe('getAssociatedBuffs', () => {
-        test('should return associated buffs for valid sanctum', () => {
+        test('should return associated buff ids from sanctum effects for valid sanctum', () => {
             const buffs = getAssociatedBuffs('sanctum1');
-            expect(buffs).toEqual(['Buff1', 'Buff2']);
+            expect(buffs).toEqual(['buff-1', 'buff-2']);
+        });
+
+        test('should fallback to legacy associatedBuffs when effects are absent', () => {
+            const buffs = getAssociatedBuffs('sanctum2');
+            expect(buffs).toEqual(['buff-3']);
         });
 
         test('should return empty array for invalid sanctum', () => {
@@ -94,14 +184,14 @@ describe('AtmosphericBuffService', () => {
         test('should return buff state from character state', () => {
             const state = {
                 [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {
-                    'Buff1': {
+                    'buff-1': {
                         daysUsed: 5,
                         isActive: true
                     }
                 }
             };
             
-            const buffState = getBuffState(state, 'Buff1');
+            const buffState = getBuffState(state, 'buff-1');
             expect(buffState.daysUsed).toBe(5);
             expect(buffState.isActive).toBe(true);
         });

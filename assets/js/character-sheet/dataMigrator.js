@@ -12,6 +12,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { getStoredSchemaVersion, SCHEMA_VERSION, saveSchemaVersion } from './dataValidator.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
+import * as data from './data.js';
 
 /**
  * Migrate quest rewards from legacy format
@@ -306,6 +307,102 @@ function migrateToVersion12(state) {
 }
 
 /**
+ * Migration from schema version 12 to version 13
+ * - Adds effectCooldowns ({}) for TCG pipeline effect cooldown tracking
+ */
+function migrateToVersion13(state) {
+    const migrated = { ...state };
+    const key = STORAGE_KEYS.EFFECT_COOLDOWNS;
+    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
+        migrated[key] = {};
+    }
+    return migrated;
+}
+
+/**
+ * Migration from schema version 13 to version 14
+ * - Adds questDrawHelperSettings ({ autoApplyOnDraw: false })
+ */
+function migrateToVersion14(state) {
+    const migrated = { ...state };
+    const key = STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS;
+    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
+        migrated[key] = { autoApplyOnDraw: false };
+    }
+    return migrated;
+}
+
+/**
+ * Migration from schema version 14 to version 15
+ * - Migrates characterSheet.librarySanctum form value from display name -> stable sanctum id
+ * - Migrates atmosphericBuffs state keys from display name -> stable buff id
+ * - Adds sideQuestId to side quests by matching prompt/name text to sideQuestsDetailed ids
+ */
+function migrateToVersion15(state) {
+    const migrated = { ...state };
+
+    const currentBuffs = migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS];
+    if (currentBuffs && typeof currentBuffs === 'object' && !Array.isArray(currentBuffs)) {
+        const upgradedBuffs = {};
+        for (const [legacyKey, legacyValue] of Object.entries(currentBuffs)) {
+            if (!legacyValue || typeof legacyValue !== 'object') continue;
+            const resolved = data.getAtmosphericBuff(legacyKey);
+            const stableKey = resolved?.id || legacyKey;
+            const existing = upgradedBuffs[stableKey];
+            if (!existing) {
+                upgradedBuffs[stableKey] = { ...legacyValue };
+            } else {
+                upgradedBuffs[stableKey] = {
+                    daysUsed: Math.max(existing.daysUsed || 0, legacyValue.daysUsed || 0),
+                    isActive: Boolean(existing.isActive || legacyValue.isActive)
+                };
+            }
+        }
+        migrated[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = upgradedBuffs;
+    }
+
+    const addSideQuestIds = (quests) => {
+        if (!Array.isArray(quests)) return quests;
+        return quests.map((quest) => {
+            if (!quest || typeof quest !== 'object' || quest.type !== '♣ Side Quest') return quest;
+            if (typeof quest.sideQuestId === 'string' && quest.sideQuestId.trim()) return quest;
+            const prompt = typeof quest.prompt === 'string' ? quest.prompt : '';
+            const match = Object.values(data.sideQuestsDetailed || {}).find((sideQuest) => (
+                sideQuest?.id && (
+                    prompt === `${sideQuest.name}: ${sideQuest.prompt}` ||
+                    prompt.includes(sideQuest.name) ||
+                    prompt.includes(sideQuest.prompt)
+                )
+            ));
+            if (!match?.id) return quest;
+            return { ...quest, sideQuestId: match.id };
+        });
+    };
+
+    migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = addSideQuestIds(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
+    migrated[STORAGE_KEYS.COMPLETED_QUESTS] = addSideQuestIds(migrated[STORAGE_KEYS.COMPLETED_QUESTS]);
+    migrated[STORAGE_KEYS.DISCARDED_QUESTS] = addSideQuestIds(migrated[STORAGE_KEYS.DISCARDED_QUESTS]);
+
+    const characterSheetForm = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
+    if (characterSheetForm && typeof characterSheetForm === 'object' && !Array.isArray(characterSheetForm)) {
+        const currentSanctum = characterSheetForm.librarySanctum;
+        if (typeof currentSanctum === 'string' && currentSanctum.trim()) {
+            const sanctum = data.getSanctumBenefit(currentSanctum.trim());
+            if (sanctum?.id && sanctum.id !== characterSheetForm.librarySanctum) {
+                characterSheetForm.librarySanctum = sanctum.id;
+                try {
+                    localStorage.setItem(STORAGE_KEYS.CHARACTER_SHEET_FORM, JSON.stringify(characterSheetForm));
+                } catch (error) {
+                    console.warn('Could not persist migrated characterSheet sanctum value:', error);
+                }
+            }
+        }
+    }
+
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -587,6 +684,15 @@ export function migrateState(state) {
                 break;
             case 12:
                 migratedState = migrateToVersion12(migratedState);
+                break;
+            case 13:
+                migratedState = migrateToVersion13(migratedState);
+                break;
+            case 14:
+                migratedState = migrateToVersion14(migratedState);
+                break;
+            case 15:
+                migratedState = migrateToVersion15(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

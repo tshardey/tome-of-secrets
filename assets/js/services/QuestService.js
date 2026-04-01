@@ -5,6 +5,8 @@
 import { RewardCalculator } from './RewardCalculator.js';
 import { decodeHtmlEntities } from '../utils/sanitize.js';
 import { calculateBlueprintReward } from './QuestRewardService.js';
+import { characterState } from '../character-sheet/state.js';
+import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 
 /**
  * Calculate receipt preview for an active quest
@@ -27,21 +29,31 @@ export function calculateActiveQuestReceipt(quest, background = '', wizardSchool
             wizardSchool = schoolSelect ? schoolSelect.value : '';
         }
         
-        // Calculate final rewards with receipt
-        const reward = RewardCalculator.calculateFinalRewards(
-            quest.type,
-            quest.prompt || '',
-            {
-                appliedBuffs: quest.buffs || [],
-                background: background,
-                wizardSchool: wizardSchool,
-                quest: quest,
-                isEncounter: quest.isEncounter || false,
-                roomNumber: quest.roomNumber || null,
-                encounterName: quest.encounterName || null,
-                isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true
+        const stateAdapter = {
+            state: characterState,
+            formData: {
+                keeperBackground: background,
+                wizardSchool: wizardSchool
             }
-        );
+        };
+        const getBook = bookId => {
+            const books = characterState[STORAGE_KEYS.BOOKS] || {};
+            const b = books[bookId];
+            return b ? { ...b } : null;
+        };
+
+        const reward = RewardCalculator.calculateFinalRewards(quest.type, quest.prompt || '', {
+            appliedBuffs: quest.buffs || [],
+            background: background,
+            wizardSchool: wizardSchool,
+            quest: quest,
+            isEncounter: quest.isEncounter || false,
+            roomNumber: quest.roomNumber || null,
+            encounterName: quest.encounterName || null,
+            isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
+            stateAdapter,
+            getBook
+        });
         
         // Add blueprint rewards for quest types that award them (Organize the Stacks, Extra Credit)
         const blueprintReward = calculateBlueprintReward(quest);

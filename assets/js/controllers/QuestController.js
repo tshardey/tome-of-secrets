@@ -93,6 +93,18 @@ export class QuestController extends BaseController {
         this.cancelEditQuestButton = cancelEditQuestButton;
         this.keeperBackgroundSelect = keeperBackgroundSelect;
 
+        const questDrawHelpersPanel = document.getElementById('quest-draw-helpers-panel-body');
+        if (questDrawHelpersPanel) {
+            this.addEventListener(questDrawHelpersPanel, 'change', (e) => {
+                const t = e.target;
+                if (t && t.id === 'quest-draw-helper-auto-apply') {
+                    stateAdapter.setQuestDrawHelperSettings({ autoApplyOnDraw: t.checked === true });
+                    if (uiModule.renderQuestDrawHelpers) uiModule.renderQuestDrawHelpers();
+                    this.saveState();
+                }
+            });
+        }
+
         // Add-quest form listeners (only when form exists; otherwise quests are added via card draw)
         if (questTypeSelect) {
             this.addEventListener(questTypeSelect, 'change', () => {
@@ -232,10 +244,11 @@ export class QuestController extends BaseController {
             if (sideContainer) sideContainer.style.display = 'flex';
             if (this.sideQuestSelect) {
                 this.sideQuestSelect.innerHTML = '<option value="">-- Select a Side Quest --</option>';
-                for (const key in data.sideQuests) {
+                for (const key in data.sideQuestsDetailed) {
+                    const sideQuest = data.sideQuestsDetailed[key];
                     const option = document.createElement('option');
-                    option.value = data.sideQuests[key];
-                    option.textContent = `${key}: ${data.sideQuests[key].split(':')[0]}`;
+                    option.value = sideQuest.id || key;
+                    option.textContent = `${key}: ${sideQuest.name}`;
                     this.sideQuestSelect.appendChild(option);
                 }
             }
@@ -516,6 +529,13 @@ export class QuestController extends BaseController {
 
         // Preserve restorationData if it exists (for restoration project quests)
         const updates = { month, year, type, prompt, book, bookAuthor, notes, buffs: selectedBuffs };
+        if (type === '♣ Side Quest') {
+            const selectedSideQuestId = this.sideQuestSelect?.value || null;
+            const sideQuestData = selectedSideQuestId ? data.getSideQuest(selectedSideQuestId) : null;
+            updates.sideQuestId = sideQuestData?.id || selectedSideQuestId || originalQuest.sideQuestId || null;
+        } else {
+            updates.sideQuestId = null;
+        }
         if (selectedBookId !== undefined) updates.bookId = selectedBookId || null;
         if (originalQuest.restorationData) {
             // For restoration quests, also update restorationData from form selections
@@ -598,7 +618,11 @@ export class QuestController extends BaseController {
             };
 
             // Get handler for quest type (pass getBook so handlers can propagate book page count to quests)
-            const dataWithGetBook = { ...data, getBook: (bookId) => stateAdapter.getBook(bookId) };
+            const dataWithGetBook = {
+                ...data,
+                getBook: (bookId) => stateAdapter.getBook(bookId),
+                rewardStateAdapter: stateAdapter
+            };
             const handler = QuestHandlerFactory.getHandler(type, formElements, dataWithGetBook);
 
             // Clear any previous errors
@@ -639,12 +663,18 @@ export class QuestController extends BaseController {
                 if (quest && typeof quest === 'object') {
                     if (!quest.id) quest.id = generateQuestId();
                     quest.dateAdded = quest.dateAdded || currentDate;
-                    
-                    // Assign quest to correct period based on dateAdded (Phase 2.2)
-                    const assignedQuest = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
-                    // Update quest with correct month/year from period assignment
-                    quest.month = assignedQuest.month;
-                    quest.year = assignedQuest.year;
+
+                    // Preserve explicit tracker month/year from quest creation when present.
+                    const explicitMonth = typeof quest.month === 'string' ? quest.month.trim() : '';
+                    const explicitYear = typeof quest.year === 'string' ? quest.year.trim() : '';
+                    if (explicitMonth && explicitYear) {
+                        quest.month = explicitMonth;
+                        quest.year = explicitYear;
+                    } else {
+                        const assignedQuest = assignQuestToPeriod(quest, PERIOD_TYPES.MONTHLY);
+                        quest.month = assignedQuest.month;
+                        quest.year = assignedQuest.year;
+                    }
                 }
             });
             
@@ -732,6 +762,11 @@ export class QuestController extends BaseController {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
 
+        if (target.classList.contains('activate-ability-btn')) {
+            this.handleActivateAbility(target);
+            return true;
+        }
+
         const sourceId = target.dataset.sourceId;
         if (sourceId && typeof sourceId === 'string') {
             if (target.classList.contains('mark-quest-draw-helper-used-btn')) {
@@ -809,6 +844,260 @@ export class QuestController extends BaseController {
         return false;
     }
 
+    getActivationPeriod() {
+        const monthEl = document.getElementById('quest-month');
+        const yearEl = document.getElementById('quest-year');
+        if (!monthEl || !yearEl) {
+            const now = new Date();
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            return {
+                month: monthNames[now.getMonth()],
+                year: String(now.getFullYear())
+            };
+        }
+        return {
+            month: monthEl.value?.trim?.() || '',
+            year: yearEl.value?.trim?.() || ''
+        };
+    }
+
+    handleActivateAbility(target) {
+        const { stateAdapter } = this;
+        const { ui: uiModule } = this.dependencies;
+        const action = target.dataset.action || '';
+        const sourceType = target.dataset.sourceType || '';
+        const sourceId = target.dataset.sourceId || '';
+        const cooldown = target.dataset.cooldown || '';
+        const abilityName = target.dataset.abilityName || 'Ability';
+        const cooldownKey = `${sourceType}:${sourceId}`;
+        const period = this.getActivationPeriod();
+        if (cooldown === 'monthly' && (!period.month || !period.year)) {
+            toast.warning('Set Month and Year in the Quests monthly tracker before using monthly activated abilities.');
+            return;
+        }
+
+        if (
+            cooldown === 'monthly' &&
+            typeof stateAdapter.isCooldownAvailable === 'function' &&
+            !stateAdapter.isCooldownAvailable(cooldownKey, period.month, period.year)
+        ) {
+            toast.info(`${abilityName} is already used for ${period.month} ${period.year}.`);
+            return;
+        }
+
+        let success = false;
+        const xpCurrentInput = document.getElementById('xp-current');
+        const inkDropsInput = document.getElementById('inkDrops');
+        const paperScrapsInput = document.getElementById('paperScraps');
+
+        if (action === 'complete_two_quests_one_book') {
+            const currentSchool = document.getElementById('wizardSchool')?.value || '';
+            if (sourceType !== 'school' || sourceId !== 'Evocation' || currentSchool !== 'Evocation') {
+                toast.error('Evocation activation is only available when your selected school is Evocation.');
+                return;
+            }
+
+            const completedQuests = stateAdapter.getCompletedQuests?.() || [];
+            const bookOptions = [];
+            const seenBookIds = new Set();
+            const seenLegacyBooks = new Set();
+            completedQuests.forEach((quest) => {
+                if (!quest || typeof quest !== 'object') return;
+                const bookId = typeof quest.bookId === 'string' && quest.bookId.trim() ? quest.bookId.trim() : null;
+                const linkedBook = bookId && typeof stateAdapter.getBook === 'function' ? stateAdapter.getBook(bookId) : null;
+                const title = linkedBook?.title || (typeof quest.book === 'string' ? quest.book.trim() : '');
+                if (!title) return;
+                const author = linkedBook?.author || (typeof quest.bookAuthor === 'string' ? quest.bookAuthor.trim() : '');
+                if (bookId) {
+                    if (seenBookIds.has(bookId)) return;
+                    seenBookIds.add(bookId);
+                } else {
+                    const key = `${title}::${author}`;
+                    if (seenLegacyBooks.has(key)) return;
+                    seenLegacyBooks.add(key);
+                }
+                bookOptions.push({
+                    bookId,
+                    title,
+                    author
+                });
+            });
+
+            if (!bookOptions.length) {
+                toast.error('Complete at least one quest with a book before using Evocation.');
+                return;
+            }
+
+            const activeQuests = stateAdapter.getActiveAssignments?.() || [];
+            if (!activeQuests.length) {
+                toast.error('No active quests available for Evocation to complete.');
+                return;
+            }
+
+            const bookPromptLines = bookOptions.map((bookOption, idx) =>
+                `${idx + 1}. ${bookOption.title}${bookOption.author ? ` — ${bookOption.author}` : ''}`
+            );
+            const selectedBookRaw = window.prompt(
+                `Evocation: choose a completed book\n${bookPromptLines.join('\n')}`,
+                '1'
+            );
+            if (selectedBookRaw == null) {
+                toast.info('Evocation activation cancelled.');
+                return;
+            }
+            const selectedBookIndex = Number.parseInt(String(selectedBookRaw).trim(), 10) - 1;
+            if (
+                !Number.isInteger(selectedBookIndex) ||
+                selectedBookIndex < 0 ||
+                selectedBookIndex >= bookOptions.length
+            ) {
+                toast.error(`Choose a valid book number (1-${bookOptions.length}).`);
+                return;
+            }
+            const selectedBook = bookOptions[selectedBookIndex];
+
+            const questPromptLines = activeQuests.map((quest, idx) => {
+                const type = quest?.type || 'Quest';
+                const prompt = quest?.prompt || '(No prompt)';
+                return `${idx + 1}. ${type} — ${prompt}`;
+            });
+            const selectedQuestRaw = window.prompt(
+                `Evocation: choose an active quest to complete with "${selectedBook.title}"\n${questPromptLines.join('\n')}`,
+                '1'
+            );
+            if (selectedQuestRaw == null) {
+                toast.info('Evocation activation cancelled.');
+                return;
+            }
+            const selectedQuestIndex = Number.parseInt(String(selectedQuestRaw).trim(), 10) - 1;
+            if (
+                !Number.isInteger(selectedQuestIndex) ||
+                selectedQuestIndex < 0 ||
+                selectedQuestIndex >= activeQuests.length
+            ) {
+                toast.error(`Choose a valid quest number (1-${activeQuests.length}).`);
+                return;
+            }
+
+            const selectedQuest = activeQuests[selectedQuestIndex];
+            const beforeCompletedCount = (stateAdapter.getCompletedQuests?.() || []).length;
+
+            const updates = {
+                book: selectedBook.title,
+                bookAuthor: selectedBook.author || ''
+            };
+            if (selectedBook.bookId) {
+                updates.bookId = selectedBook.bookId;
+            }
+            stateAdapter.updateQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, selectedQuestIndex, updates);
+            if (
+                selectedBook.bookId &&
+                selectedQuest?.id &&
+                typeof stateAdapter.linkQuestToBook === 'function'
+            ) {
+                stateAdapter.linkQuestToBook(selectedBook.bookId, selectedQuest.id);
+            }
+
+            this.handleCompleteQuest(selectedQuestIndex);
+            const afterCompletedCount = (stateAdapter.getCompletedQuests?.() || []).length;
+            if (afterCompletedCount <= beforeCompletedCount) {
+                toast.error('Evocation activation failed to complete a quest.');
+                return;
+            }
+
+            toast.success(`Evocation activated: completed 1 additional quest using "${selectedBook.title}".`);
+            success = true;
+        } else if (action === 'transmute_currency') {
+            const directionRaw = window.prompt(
+                'Transmute direction:\n1 = Ink Drops -> Paper Scraps (3:1)\n2 = Paper Scraps -> Ink Drops (1:3)',
+                '1'
+            );
+            const direction = (directionRaw || '').trim();
+            const currentInk = parseIntOr(inkDropsInput?.value, 0);
+            const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
+            const toPaper = direction === '1';
+            const toInk = direction === '2';
+            if (!toPaper && !toInk) {
+                toast.info('Transmutation cancelled.');
+                return;
+            }
+
+            const maxUnits = toPaper ? Math.floor(currentInk / 3) : currentPaper;
+            if (maxUnits <= 0) {
+                toast.error(toPaper ? 'Not enough Ink Drops (need at least 3).' : 'Not enough Paper Scraps (need at least 1).');
+                return;
+            }
+
+            const amountRaw = window.prompt(
+                `How many conversion units? (1-${maxUnits})`,
+                '1'
+            );
+            const amount = Number.parseInt((amountRaw || '').trim(), 10);
+            if (!Number.isFinite(amount) || amount < 1 || amount > maxUnits) {
+                toast.error(`Enter a whole number between 1 and ${maxUnits}.`);
+                return;
+            }
+
+            if (toPaper) {
+                if (inkDropsInput) inkDropsInput.value = String(currentInk - amount * 3);
+                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper + amount);
+                toast.success(`Transmuted ${amount * 3} Ink Drops into ${amount} Paper Scrap${amount === 1 ? '' : 's'}.`);
+            } else {
+                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper - amount);
+                if (inkDropsInput) inkDropsInput.value = String(currentInk + amount * 3);
+                toast.success(`Transmuted ${amount} Paper Scrap${amount === 1 ? '' : 's'} into ${amount * 3} Ink Drops.`);
+            }
+            success = true;
+        } else if (action === 'sacrifice_xp_for_currency') {
+            const currentXp = parseIntOr(xpCurrentInput?.value, 0);
+            if (currentXp < 50) {
+                toast.error('Not enough XP (need 50).');
+                return;
+            }
+            if (xpCurrentInput) xpCurrentInput.value = String(currentXp - 50);
+            if (this.updateCurrency) {
+                this.updateCurrency({ xp: 0, inkDrops: 50, paperScraps: 10, items: [] });
+            } else {
+                if (inkDropsInput) inkDropsInput.value = String(parseIntOr(inkDropsInput.value, 0) + 50);
+                if (paperScrapsInput) paperScrapsInput.value = String(parseIntOr(paperScrapsInput.value, 0) + 10);
+            }
+            if (uiModule.updateXpProgressBar) uiModule.updateXpProgressBar();
+            toast.success("Philosopher's Stone activated: -50 XP, +50 Ink Drops, +10 Paper Scraps.");
+            success = true;
+        } else if (action === 'remove_all_worn_pages') {
+            const activeCount = (stateAdapter.getActiveCurses() || []).length;
+            if (activeCount === 0) {
+                toast.info('No active Worn Page penalties to remove.');
+                return;
+            }
+            for (let i = activeCount - 1; i >= 0; i -= 1) {
+                stateAdapter.moveCurseToCompleted(i);
+            }
+            if (uiModule.renderActiveCurses) uiModule.renderActiveCurses();
+            if (uiModule.renderCompletedCurses) uiModule.renderCompletedCurses();
+            toast.success(`Removed ${activeCount} active Worn Page penalt${activeCount === 1 ? 'y' : 'ies'}.`);
+            success = true;
+        } else {
+            toast.success(`${abilityName} activated. Apply its effect to the relevant quest flow now.`);
+            success = true;
+        }
+
+        if (!success) {
+            return;
+        }
+
+        if (cooldown === 'monthly' && typeof stateAdapter.consumeCooldown === 'function') {
+            stateAdapter.consumeCooldown(cooldownKey, period.month, period.year);
+        }
+        if (uiModule.renderActivatedAbilities) {
+            uiModule.renderActivatedAbilities();
+        }
+        this.saveState();
+    }
+
     handleCompleteQuest(index) {
         const { stateAdapter } = this;
         const { ui: uiModule } = this.dependencies;
@@ -822,7 +1111,7 @@ export class QuestController extends BaseController {
         );
         if (!bookName) {
             // Restore quest to active assignments
-            stateAdapter.addActiveQuests(questToMove);
+            stateAdapter.addActiveQuests(questToMove, { skipQuestDraftedEffects: true });
             uiModule.renderActiveAssignments();
             this.saveState();
             toast.error('Please link a book to this quest before completing it. Quests without books will not count towards monthly totals.');
@@ -839,7 +1128,7 @@ export class QuestController extends BaseController {
         const background = this.keeperBackgroundSelect?.value || '';
         const wizardSchoolSelect = document.getElementById('wizardSchool');
         const wizardSchool = wizardSchoolSelect?.value || '';
-        const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool);
+        const completedQuest = BaseQuestHandler.completeActiveQuest(questToMove, background, wizardSchool, stateAdapter);
         
         // Set dateCompleted (Schema v3)
         completedQuest.dateCompleted = new Date().toISOString();
@@ -848,11 +1137,17 @@ export class QuestController extends BaseController {
             completedQuest.dateAdded = completedQuest.dateCompleted; // Use completion date as fallback
         }
         
-        // Assign quest to correct period based on dateCompleted (Phase 2.2)
-        const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
-        // Update quest with correct month/year from period assignment
-        completedQuest.month = assignedQuest.month;
-        completedQuest.year = assignedQuest.year;
+        // Preserve the quest's original reading period when already set.
+        const existingMonth = typeof completedQuest.month === 'string' ? completedQuest.month.trim() : '';
+        const existingYear = typeof completedQuest.year === 'string' ? completedQuest.year.trim() : '';
+        if (existingMonth && existingYear) {
+            completedQuest.month = existingMonth;
+            completedQuest.year = existingYear;
+        } else {
+            const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
+            completedQuest.month = assignedQuest.month;
+            completedQuest.year = assignedQuest.year;
+        }
 
         // Ensure quest has an id so book link can be stored (e.g. legacy or addActiveQuests-added quests)
         if (!completedQuest.id) {
@@ -867,7 +1162,7 @@ export class QuestController extends BaseController {
         const restorationSuccess = this.handleRestorationProjectCompletion(completedQuest);
         if (!restorationSuccess) {
             // Roll back: restore quest to active queue and exit without adding to completed.
-            stateAdapter.addActiveQuests(questToMove);
+            stateAdapter.addActiveQuests(questToMove, { skipQuestDraftedEffects: true });
             uiModule.renderActiveAssignments();
             this.saveState();
             return;
@@ -1006,15 +1301,22 @@ export class QuestController extends BaseController {
         const background = this.keeperBackgroundSelect?.value || '';
         const wizardSchoolSelect = document.getElementById('wizardSchool');
         const wizardSchool = wizardSchoolSelect?.value || '';
-        const completedQuest = BaseQuestHandler.completeActiveQuest(quest, background, wizardSchool);
+        const completedQuest = BaseQuestHandler.completeActiveQuest(quest, background, wizardSchool, stateAdapter);
 
         completedQuest.dateCompleted = quest.dateCompleted || new Date().toISOString();
         if (!completedQuest.dateAdded) {
             completedQuest.dateAdded = completedQuest.dateCompleted;
         }
-        const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
-        completedQuest.month = assignedQuest.month;
-        completedQuest.year = assignedQuest.year;
+        const existingMonth = typeof completedQuest.month === 'string' ? completedQuest.month.trim() : '';
+        const existingYear = typeof completedQuest.year === 'string' ? completedQuest.year.trim() : '';
+        if (existingMonth && existingYear) {
+            completedQuest.month = existingMonth;
+            completedQuest.year = existingYear;
+        } else {
+            const assignedQuest = assignQuestToPeriod(completedQuest, PERIOD_TYPES.MONTHLY);
+            completedQuest.month = assignedQuest.month;
+            completedQuest.year = assignedQuest.year;
+        }
         if (!completedQuest.id) {
             completedQuest.id = generateQuestId();
         }
@@ -1026,7 +1328,7 @@ export class QuestController extends BaseController {
             const idx = findCompletedQuestIndex(quest);
             if (idx >= 0) {
                 const restored = stateAdapter.removeQuest(STORAGE_KEYS.COMPLETED_QUESTS, idx);
-                if (restored) stateAdapter.addActiveQuests(restored);
+                if (restored) stateAdapter.addActiveQuests(restored, { skipQuestDraftedEffects: true });
             }
             return null; // Exit without receipt, currency, or counters so no duplicate rewards
         }

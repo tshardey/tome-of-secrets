@@ -1,6 +1,7 @@
 {
     "1": {
         "id": "genre-quest-1",
+        "_note": "Display rewards are for deck preview only. Runtime quest rewards are sourced from GAME_CONFIG.rewards.organizeTheStacks.",
         "genre": "Historical Fiction",
         "description": "Read a book set in the past or with a historical figure as a character.",
         "rewards": {
