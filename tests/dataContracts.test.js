@@ -187,6 +187,29 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         });
     });
 
+    test('dungeon room keys are assigned to exactly one wing', () => {
+        const roomKeys = Object.keys(dungeonRooms).map(String);
+        const roomAssignmentCounts = new Map(roomKeys.map((key) => [key, 0]));
+
+        Object.values(wings).forEach((wing) => {
+            (wing.rooms || []).forEach((roomKey) => {
+                const normalized = String(roomKey);
+                roomAssignmentCounts.set(normalized, (roomAssignmentCounts.get(normalized) || 0) + 1);
+            });
+        });
+
+        roomAssignmentCounts.forEach((count, roomKey) => {
+            expect(count).toBe(1);
+            // Keep wing-vs-room metadata aligned too (room should point at its containing wing key).
+            const room = dungeonRooms[roomKey];
+            const containingWingKeys = Object.entries(wings)
+                .filter(([, wing]) => (wing.rooms || []).map(String).includes(roomKey))
+                .map(([wingKey]) => wingKey);
+            expect(containingWingKeys).toHaveLength(1);
+            expect(String(room.wingId)).toBe(containingWingKeys[0]);
+        });
+    });
+
     test('atmosphericBuffs.json contract', () => {
         Object.values(atmosphericBuffs).forEach((buff) => {
             expectString(buff.id);
@@ -274,6 +297,30 @@ describe('Data contracts for assets/data JSON catalogs', () => {
                 expect(typeof buff.rewardModifier).toBe('object');
                 expect(Array.isArray(buff.rewardModifier)).toBe(false);
             });
+        });
+    });
+
+    test('temporary buff catalogs duplicate entries are non-conflicting and use temporaryBuffs precedence', () => {
+        const byIdFromRewards = new Map(
+            Object.values(temporaryBuffsFromRewards).map((buff) => [buff.id, buff])
+        );
+        const byIdCurrent = new Map(
+            Object.values(temporaryBuffs).map((buff) => [buff.id, buff])
+        );
+
+        const overlappingIds = [...byIdCurrent.keys()].filter((id) => byIdFromRewards.has(id));
+        overlappingIds.forEach((id) => {
+            // If a buff exists in both catalogs, keep the definitions in sync.
+            expect(byIdCurrent.get(id)).toEqual(byIdFromRewards.get(id));
+        });
+
+        // Runtime merge pattern used in controllers/services:
+        // { ...temporaryBuffsFromRewards, ...temporaryBuffs } => current catalog wins on duplicate keys.
+        const mergedByKey = { ...temporaryBuffsFromRewards, ...temporaryBuffs };
+        Object.keys(temporaryBuffs).forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(temporaryBuffsFromRewards, key)) {
+                expect(mergedByKey[key]).toEqual(temporaryBuffs[key]);
+            }
         });
     });
 
