@@ -67,6 +67,54 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
         expect(penResult.modifiedBy).toContain('Golden Pen');
     });
 
+    test('Lantern of Foresight exposes an ON_ACTIVATE action from allItems.json', () => {
+        const state = emptyState();
+        state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Lantern of Foresight' }];
+        const dataModule = buildDataModule();
+        const active = EffectRegistry.getActiveEffects(
+            TRIGGERS.ON_ACTIVATE,
+            { state, formData: { keeperBackground: '', wizardSchool: '' } },
+            dataModule
+        );
+
+        expect(active).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    source: expect.objectContaining({ name: 'Lantern of Foresight' }),
+                    effect: expect.objectContaining({
+                        trigger: TRIGGERS.ON_ACTIVATE,
+                        modifier: expect.objectContaining({
+                            type: 'ACTIVATE',
+                            action: 'reroll_prompt_or_die'
+                        })
+                    })
+                })
+            ])
+        );
+    });
+
+    test('Celestial Koi Fish auto-applies +10 XP on celestial-tagged quest completion', () => {
+        const state = emptyState();
+        state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Celestial Koi Fish', type: 'Familiar' }];
+        const withCelestialTag = resolveWithRealData({
+            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+            payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['celestial'] }),
+            baseReward: new Reward({ xp: 15 }),
+            state
+        });
+        expect(withCelestialTag.xp).toBe(25);
+        expect(withCelestialTag.modifiedBy).toContain('Celestial Koi Fish');
+
+        const withoutCelestialTag = resolveWithRealData({
+            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+            payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['mythological'] }),
+            baseReward: new Reward({ xp: 15 }),
+            state
+        });
+        expect(withoutCelestialTag.xp).toBe(15);
+        expect(withoutCelestialTag.modifiedBy).not.toContain('Celestial Koi Fish');
+    });
+
     test('background effects from keeperBackgrounds.json apply across all 6 backgrounds', () => {
         const scenarios = [
             {

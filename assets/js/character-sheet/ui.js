@@ -1146,6 +1146,7 @@ function actionDisplayName(action) {
     const names = {
         complete_two_quests_one_book: 'Complete two quests with one book',
         ignore_prompt_read_nonfiction: 'Ignore prompt for non-fiction',
+        reroll_prompt_or_die: 'Reroll prompt or die',
         transmute_currency: 'Transmute currency',
         sacrifice_xp_for_currency: "Sacrifice XP for currency",
         remove_all_worn_pages: 'Remove all Worn Pages',

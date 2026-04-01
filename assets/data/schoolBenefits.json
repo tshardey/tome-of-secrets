@@ -1,7 +1,7 @@
 {
     "Abjuration": {
-        "description": "Cloaked in shimmering wards and whispered mantras of guardianship, Abjurers dedicate themselves to shielding the Grand Library from the Shroud. Their studies echo with protective charms etched into the very stones of their sanctums.",
-        "benefit": "Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.",
+        "description": "Cloaked in shimmering wards and whispered mantras of guardianship, Abjurers dedicate themselves to shielding the Grand Library from the Shroud. Their studies echo with protective charms etched into the very stones of their sanctums. In the Character Sheet, prevention of the Worn Page penalty is automated; the follow-up quest from the prevented page is a manual player step.",
+        "benefit": "Once per month, when you would gain a Worn Page penalty, you may prevent that penalty. Then manually draw a card from the deck and choose a quest from that draw to complete.",
         "effects": [
             {
                 "trigger": "ON_MONTH_END",

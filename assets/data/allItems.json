@@ -170,7 +170,17 @@
         "passiveBonus": "Once every 2 months, you may re-roll a prompt or a die roll (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
-        "excludeFromQuestBonuses": true
+        "excludeFromQuestBonuses": true,
+        "effects": [
+            {
+                "trigger": "ON_ACTIVATE",
+                "modifier": {
+                    "type": "ACTIVATE",
+                    "action": "reroll_prompt_or_die"
+                },
+                "cooldown": "monthly"
+            }
+        ]
     },
     "The Scepter of Knowledge": {
         "id": "the-scepter-of-knowledge",
@@ -221,7 +231,20 @@
         },
         "passiveRewardModifier": {
             "xp": 5
-        }
+        },
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": {
+                    "hasTag": "celestial"
+                },
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "xp",
+                    "value": 10
+                }
+            }
+        ]
     },
     "Tome-Bound Cat": {
         "id": "tome-bound-cat",
