@@ -1,6 +1,7 @@
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../character-sheet/storageKeys.js';
 import { getStateKey, setStateKey } from '../character-sheet/persistence.js';
+import { characterState } from '../character-sheet/state.js';
 
 const SYNC_TABLE = 'tos_saves';
 const SYNC_KEY_LAST_HASH = 'tos_cloud_lastSyncedHash';
@@ -66,6 +67,22 @@ export function snapshotHash(snapshot) {
   return hashString(stableStringify(snapshot.data));
 }
 
+/**
+ * Deep-clone a snapshot value into live character state (plain JSON shapes only).
+ * Avoids sharing references with the snapshot object and supports environments
+ * without structuredClone (e.g. some test runners).
+ */
+function cloneStateValue(value) {
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(value);
+    } catch (_e) {
+      // Non-cloneable values fall through to JSON round-trip
+    }
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 export async function applySnapshot(snapshot) {
   if (!snapshot || !snapshot.data) {
     throw new Error('Invalid snapshot.');
@@ -87,6 +104,10 @@ export async function applySnapshot(snapshot) {
   for (const key of CHARACTER_STATE_KEYS) {
     if (key in state) {
       await setStateKey(key, state[key], true); // suppressEvents = true
+      // Keep in-memory characterState aligned with persistence. Otherwise the next
+      // saveState() (or any full persist) can overwrite IndexedDB / localStorage
+      // with stale RAM — e.g. book box subscription definitions after a cloud pull.
+      characterState[key] = cloneStateValue(state[key]);
     }
   }
 }

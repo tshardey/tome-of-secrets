@@ -5,6 +5,7 @@ import { applySnapshot, buildLocalSnapshot } from '../assets/js/services/cloudSy
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { getStateKey } from '../assets/js/character-sheet/persistence.js';
+import { characterState } from '../assets/js/character-sheet/state.js';
 
 describe('Cloud Sync - Loop Prevention', () => {
     beforeEach(() => {
@@ -164,6 +165,36 @@ describe('Cloud Sync - Loop Prevention', () => {
             expect(monthlyBooks).toEqual([]);
 
             window.removeEventListener('tos:localStateChanged', eventListener);
+        });
+
+        it('syncs in-memory characterState when applying bookBoxSubscriptions (prevents next saveState from wiping cloud data)', async () => {
+            const subKey = STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS;
+            characterState[subKey] = {
+                stale: { id: 'stale', company: 'Stale RAM only', tier: '', defaultMonthlyCost: null, skipsAllowedPerYear: 0 }
+            };
+
+            const cloudSubs = {
+                cloudSub: { id: 'cloudSub', company: 'From cloud', tier: 'Deluxe', defaultMonthlyCost: 39.99, skipsAllowedPerYear: 2 }
+            };
+
+            await applySnapshot({
+                version: 15,
+                data: {
+                    formData: {},
+                    characterState: {
+                        [subKey]: cloudSubs
+                    },
+                    monthlyCompletedBooks: []
+                }
+            });
+
+            expect(characterState[subKey]).toEqual(cloudSubs);
+            const persisted = await getStateKey(subKey, {});
+            expect(persisted).toEqual(cloudSubs);
+
+            // Snapshot payload must not share references with live state (mutate source → RAM unchanged)
+            cloudSubs.cloudSub.company = 'mutated';
+            expect(characterState[subKey].cloudSub.company).toBe('From cloud');
         });
     });
 
