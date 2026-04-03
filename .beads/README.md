@@ -38,7 +38,7 @@ When adding deterministic bonuses or items, follow the **TCG modifier pipeline**
 
 ### Sync with git
 
-After local work, use `bd sync` before push so issue state travels with commits (see [`AGENTS.md`](../AGENTS.md) “Landing the Plane”).
+After local work, run `bd sync` when issue state changed, then **`git add`** the relevant files (including `.beads/issues.jsonl` if updated). **Agents must not `git commit` or `git push`** — the maintainer commits and publishes (see [`AGENTS.md`](../AGENTS.md) “Landing the Plane”).
 
 ## What is Beads?
 

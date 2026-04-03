@@ -31,7 +31,7 @@ For hands-on steps (JSON, validation, tests), see [`project-docs/EXTENDING-THE-C
 
 Use **subagents** whenever they reduce context load or parallelize slow work.
 
-- **Pre-commit review (required for code changes):** Before committing any **code** change (JavaScript, build scripts, non-trivial HTML/CSS behavior), run a **separate subagent pass** to review the diff for correctness, consistency with ADR-003 and existing patterns, and test gaps. Treat a green review as part of the merge gate alongside automated tests. Purely editorial Markdown copy may skip this if no behavior or data contracts change.
+- **Pre-commit review (required for code changes):** Before handoff on any **code** change (JavaScript, build scripts, non-trivial HTML/CSS behavior), run a **separate subagent pass** to review the diff for correctness, consistency with ADR-003 and existing patterns, and test gaps. Treat a green review as part of the maintainer’s merge gate alongside automated tests. Purely editorial Markdown copy may skip this if no behavior or data contracts change.
 - **Heavy validation:** Delegate **full test suite** or long-running checks to a subagent when the primary session would otherwise block on runtime or output volume. The primary agent should still understand failures and fix them.
 
 ## Repository Structure
@@ -176,29 +176,29 @@ The project uses Jest for testing JavaScript functionality.
 3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
 4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
 5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
+6.  **Git: `git add` only:** Agents may **`git add`** to stage the files that belong to the session’s work (including `bd sync` outputs such as `.beads/issues.jsonl` when Beads changed). Agents must **not** run **`git commit`** or **`git push`** — the maintainer commits and publishes. Run **`bd sync`** when issue state changed so Beads exports are ready to stage alongside code.
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, complete ALL steps below. Work is complete when intended changes are **staged** with `git add` (or explicitly listed if something must stay unstaged), quality gates have run, and the handoff is clear.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds; complete **subagent pre-commit review** for code diffs
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **Stage for the maintainer (`git add` only)**:
    ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
+   bd sync             # when Beads issue state changed; then stage the exported JSONL
+   git add <paths>     # stage every file that is part of this deliverable
+   git status          # show staged vs unstaged; call out anything intentionally not added
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+   **Do not run `git commit` or `git push`.** The handoff should list what is **staged**, branch name, and suggested commit message (if helpful).
+5. **Clean up** - Clear stashes if you created them; do not prune remotes unless asked
+6. **Verify** - Staged set matches intent; no stray generated artifacts in the index unless the task requires them
+7. **Hand off** - Summarize changes, remaining risks, and follow-ups for the next session
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- **Only `git add`** for git writes — **never `git commit`** or **`git push`** as an agent.
+- Avoid **`git pull` / merge / rebase** unless the maintainer explicitly asked; those change history and can surprise a human mid-review.
+- If the environment prevents staging, still run gates and leave an exact file list and diff summary for the maintainer.
