@@ -315,6 +315,23 @@ function createSubscriptionMonthCard(option) {
     moneyInput.step = '0.01';
     moneyInput.min = '0';
     moneyInput.setAttribute('aria-label', 'Actual money spent');
+    function syncMoneyInputHintForSubscription() {
+        const sid = subSelect.value;
+        if (!sid || !stateAdapter || typeof stateAdapter.getBookBoxSubscription !== 'function') {
+            moneyInput.placeholder = 'Money spent (optional)';
+            moneyInput.removeAttribute('title');
+            return;
+        }
+        const sub = stateAdapter.getBookBoxSubscription(sid);
+        const d = sub?.defaultMonthlyCost;
+        if (typeof d === 'number' && !isNaN(d) && d >= 0) {
+            moneyInput.placeholder = `Blank = $${Number(d).toFixed(2)} (subscription default)`;
+            moneyInput.title = `If left blank, the logged amount defaults to $${Number(d).toFixed(2)} from this subscription.`;
+        } else {
+            moneyInput.placeholder = 'Money spent (optional)';
+            moneyInput.removeAttribute('title');
+        }
+    }
     const dateInput = document.createElement('input');
     dateInput.type = 'date';
     dateInput.className = 'shopping-date-input';
@@ -494,8 +511,12 @@ function createSubscriptionMonthCard(option) {
         const n = stateAdapter ? stateAdapter.getSubscriptionSkipsRemaining(sid) : 0;
         skipsRemainingEl.textContent = `Skips remaining this year: ${n}`;
     }
-    subSelect.addEventListener('change', updateSkipsRemaining);
+    subSelect.addEventListener('change', () => {
+        updateSkipsRemaining();
+        syncMoneyInputHintForSubscription();
+    });
     updateSkipsRemaining();
+    syncMoneyInputHintForSubscription();
     skipSection.appendChild(skipsRemainingEl);
     card.appendChild(skipSection);
 
@@ -578,7 +599,19 @@ function createSubscriptionMonthCard(option) {
         }
 
         const actualMoneyRaw = moneyInput.value;
-        const actualSpend = actualMoneyRaw != null && actualMoneyRaw !== '' ? parseFloat(actualMoneyRaw) : null;
+        const trimmedMoney = actualMoneyRaw != null ? String(actualMoneyRaw).trim() : '';
+        let resolvedSpend =
+            trimmedMoney !== '' ? parseFloat(trimmedMoney) : NaN;
+        if (typeof resolvedSpend !== 'number' || isNaN(resolvedSpend)) {
+            const sub = stateAdapter?.getBookBoxSubscription?.(subscriptionId);
+            const def = sub?.defaultMonthlyCost;
+            if (typeof def === 'number' && !isNaN(def) && def >= 0) {
+                resolvedSpend = def;
+            } else {
+                resolvedSpend = NaN;
+            }
+        }
+        const actualSpend = typeof resolvedSpend === 'number' && !isNaN(resolvedSpend) ? resolvedSpend : null;
         const logDate = dateInput.value && dateInput.value.trim() ? dateInput.value.trim() : new Date().toISOString().slice(0, 10);
 
         const originalLabel = logButton.textContent;
@@ -590,7 +623,7 @@ function createSubscriptionMonthCard(option) {
                 month: month.padStart(2, '0'),
                 year,
                 type: 'purchased',
-                actualSpend: typeof actualSpend === 'number' && !isNaN(actualSpend) ? actualSpend : null,
+                actualSpend,
                 inkDrops: option.inkDrops,
                 paperScraps: option.paperScraps,
                 bookIds: linkedBookIds
@@ -598,7 +631,7 @@ function createSubscriptionMonthCard(option) {
             await appendShoppingLogEntry({
                 optionId: option.id,
                 linkedBookIds,
-                actualMoneySpent: typeof actualSpend === 'number' && !isNaN(actualSpend) ? actualSpend : null,
+                actualMoneySpent: actualSpend,
                 storeName: null,
                 logDate,
                 inkDrops: option.inkDrops,

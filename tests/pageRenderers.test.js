@@ -364,6 +364,48 @@ describe('Page Renderers Hydration', () => {
       }
     });
 
+    test('subscription purchase with empty money field uses defaultMonthlyCost in history and shopping log', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 42.5, skipsAllowedPerYear: 1 }
+        });
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+        safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+        const inkDropsEl = document.getElementById('inkDrops');
+        const paperScrapsEl = document.getElementById('paperScraps');
+        inkDropsEl.value = '100';
+        paperScrapsEl.value = '100';
+        safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '100', paperScraps: '100' });
+
+        await initializeShoppingPage();
+        const container = document.getElementById('shopping-options-container');
+        const options = Array.from(container.querySelectorAll('.shopping-option'));
+        const bookBoxOption = options.find(opt =>
+          opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
+        );
+        const moneyInput = bookBoxOption.querySelector('.shopping-money-input');
+        expect(moneyInput).toBeTruthy();
+        expect(moneyInput.value).toBe('');
+        const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+        logButton.click();
+        await flushPromises();
+
+        const history = safeGetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+        expect(history.length).toBe(1);
+        expect(history[0].type).toBe('purchased');
+        expect(history[0].actualSpend).toBe(42.5);
+
+        const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+        expect(log.length).toBe(1);
+        expect(log[0].actualMoneySpent).toBe(42.5);
+      } finally {
+        global.indexedDB = originalIdb;
+      }
+    });
+
     test('shows error when insufficient resources for subscription purchase', async () => {
       resetStateLoadedForTests();
       const originalIdb = global.indexedDB;
