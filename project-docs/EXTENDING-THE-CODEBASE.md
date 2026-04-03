@@ -1,8 +1,29 @@
 # Extending the Codebase
 
-**Last Updated:** 2026-01-12
+**Last Updated:** 2026-04-03
 
 This guide provides straightforward instructions for adding new features to the Tome of Secrets codebase while maintaining consistency and quality.
+
+## TCG modifier pipeline (default for deterministic mechanics)
+
+**Authoritative spec:** [`ADR-003: TCG Modifier Pipeline`](ADR-003-tcg-modifier-pipeline.md)
+
+New **catalog-driven, deterministic** mechanics (numeric rewards, multipliers, prevention, monthly activations, slot unlocks tied to data) should be expressed as JSON **`effects`** on the entity in `assets/data/*.json`, validated by the effect schema, and resolved through **`EffectRegistry`** + **`ModifierPipeline`** — not as one-off branches in `RewardCalculator.js`, services, or controllers.
+
+**Setup pattern for a new item, background perk, school benefit, mastery ability, or sanctum rule:**
+
+1. Add or extend the entity in the appropriate JSON file with stable `id`, display fields, and an **`effects`** array using the trigger / condition / modifier shape from ADR-003.
+2. Run `node scripts/generate-data.js` and `cd tests && npm run validate-data`.
+3. If the pipeline cannot yet express the interaction, document why and use the **legacy** `rewardModifier` or controller path — but **never** duplicate the same bonus in both pipeline and legacy code (ADR-003 “fence” against double application).
+
+Subjective mechanics (player decides if it applies) may correctly stay on legacy paths only.
+
+## Engineering expectations
+
+- **DRY:** One source of truth in JSON; derive legacy shapes in `data.js` when needed; reuse services and helpers instead of copying logic.
+- **Testing:** **Pragmatic, not strict TDD** — add tests for pipelines, pure functions, migrations, and regressions; do not require test-first for every UI change. Keep `dataContracts` and integration tests honest when you touch `effects` or catalog shape.
+- **Frontend:** Follow controller → StateAdapter → service → view model → pure renderer layering. Match existing **Dark Academia** styling (`assets/css/`, existing sheet patterns).
+- **Beads:** Create and claim issues before implementation; mark **done** only after tests and subagent review (code). See [`.beads/README.md`](../.beads/README.md) and [`AGENTS.md`](../AGENTS.md).
 
 ## Table of Contents
 
@@ -25,10 +46,13 @@ This guide provides straightforward instructions for adding new features to the 
 
 `scripts/generate-data.js` converts JSON → JS exports consumed by the site (`assets/js/character-sheet/data.json-exports.js`) and re-exported via `assets/js/character-sheet/data.js`. Use detailed JSON as the single source of truth (e.g., `sideQuestsDetailed.json`, `curseTableDetailed.json`); legacy shapes are derived programmatically inside `data.js` for backward compatibility.
 
+**Mechanics on catalog entities:** Prefer **`effects`** arrays per [ADR-003](ADR-003-tcg-modifier-pipeline.md) for anything the pipeline can resolve. Use **`rewardModifier`** / special controller logic only for subjective or not-yet-pipeline mechanics — and avoid implementing the same rule twice.
+
 **Steps (JSON-first workflow):**
 1. Edit the appropriate JSON file under `assets/data/` (e.g., add an item to `allItems.json`)
    - **Important**: All content must have a stable `id` field (kebab-case format, e.g., `"new-item-name"`)
    - Keep existing `name` field for display purposes
+   - For automated bonuses, add **`effects`** (see ADR-003); validate with `tests/dataContracts.test.js` / `validate-data`
    - See [Stable IDs](#stable-ids) for more details
 2. Run the generator:
    ```bash
@@ -786,10 +810,9 @@ const reward = 10; // Magic number
 - Display receipts in tooltips and modal dialogs
 - Use receipts to debug calculation issues
 
-**When adding new reward sources:**
-- Update `RewardCalculator` to populate receipt base values
-- Add modifier entries to receipt when applying bonuses
-- Update final values in receipt after all calculations
+**When adding new deterministic reward sources:**
+- Prefer adding **`effects`** to catalog JSON and routing resolution through **`ModifierPipeline`** (see [ADR-003](ADR-003-tcg-modifier-pipeline.md)); receipts are produced from pipeline resolution.
+- When legacy or orchestration code in `RewardCalculator` still applies, keep receipts accurate: populate base values, list modifiers, and reconcile finals — **do not** duplicate the same modifier in both pipeline and legacy paths.
 
 ### State Mutations
 
@@ -880,15 +903,26 @@ cd tests && npm run validate-data
 
 ## Testing Requirements
 
-### Minimum Testing
+### Philosophy (pragmatic, not strict TDD)
 
-1. **Unit tests** for new functions/classes
-2. **Integration tests** for new features that interact with existing code
-3. **State persistence tests** if adding new persistent state
+This project does **not** require test-driven development for every change. Do require tests where they **meaningfully reduce risk**:
+
+- **Always:** Pure business logic and math (especially **`ModifierPipeline` / `EffectRegistry` / reward receipts**), schema and data contracts, migrations, and state validation.
+- **Often:** New services, view models with non-trivial transforms, and regressions for fixed bugs.
+- **Optional / spot-check:** Small, obvious UI-only changes — still run the suite before merge; consider delegating **full `npm test`** to a **subagent** when runtime or output is large.
+
+Prefer **DRY** test data (fixtures, real catalog snippets) over duplicated mocks when integrating with JSON content.
+
+### Minimum expectations
+
+1. **Unit tests** for new pure functions and pipeline behavior
+2. **Integration tests** when wiring crosses modules or persisted state
+3. **State persistence / migration tests** when adding or changing stored shape
 
 ### Test Locations
 
 - Unit tests: `/tests/[featureName].test.js`
+- Pipeline / data: `/tests/dataContracts.test.js`, `/tests/realDataIntegration.test.js`, `/tests/activationCooldown.test.js`
 - State tests: `/tests/statePersistence.test.js` or `/tests/stateAdapter.test.js`
 - Config tests: `/tests/gameConfig.test.js`
 
@@ -900,11 +934,10 @@ npm test                    # Run all tests
 npm test -- [pattern]       # Run specific tests
 ```
 
-### Test Requirements
+### Before commit
 
-- All tests must pass before committing
-- New features should have corresponding tests
-- Update existing tests if you change behavior
+- All tests must pass before committing; run `cd tests && npm run validate-data` when `assets/data/` changed.
+- For **code** changes, complete a **subagent review** of the diff (see `AGENTS.md`) in addition to green tests.
 
 ---
 
@@ -943,8 +976,10 @@ When adding new game content:
 
 - [ ] Add stable `id` field (kebab-case) to content JSON
 - [ ] Add `name` field for display purposes
+- [ ] Prefer **`effects`** (ADR-003) for deterministic mechanics; use legacy fields only when appropriate
 - [ ] Run `node scripts/generate-data.js`
 - [ ] Run `cd tests && npm run validate-data` to check for errors
+- [ ] Add or update tests if you changed pipeline behavior or data contracts
 - [ ] Update lookup helpers in `data.js` if needed (usually automatic)
 
 When changing data structure (schema change):
@@ -977,10 +1012,11 @@ When changing data structure (schema change):
 
 ### Adding a New Reward Type
 
-1. Add reward value to `gameConfig.js`
-2. Update `RewardCalculator.js` if needed
-3. Update UI to display new reward type
-4. Add tests
+1. If the type is a **deterministic catalog effect**, model it in JSON **`effects`** / pipeline first (ADR-003); extend schema or pipeline only when a modifier type is genuinely new.
+2. Add or adjust configuration in `gameConfig.js` when values are global numeric constants.
+3. Update `RewardCalculator.js` only for **orchestration or legacy** paths — not as the default for new catalog-tied bonuses.
+4. Update UI to display the new reward type where needed.
+5. Add tests for new pipeline branches, contracts, or receipt fields.
 
 ### Adding a New Card Deck
 
@@ -1070,7 +1106,7 @@ The card draw system uses a layered architecture with services, view models, ren
 ## Getting Help
 
 - Review existing similar features for patterns
-- Check `/docs/REFACTORING-RECOMMENDATIONS.md` for architectural guidance
+- See [ADR-001](ADR-001-character-sheet-refactoring.md) and [this folder’s README](README.md) for architecture and document index
 - Look at test files to understand expected behavior
 - Follow the existing code style and structure
 
@@ -1114,13 +1150,15 @@ The codebase follows a **clean separation of concerns**:
 
 ## Remember
 
-- **Keep it simple** - Follow existing patterns rather than inventing new ones
-- **Test your changes** - Run the test suite and data validation before committing
-- **Extract to services** - Business logic belongs in services, not UI
-- **Use view models** - Transform data before rendering, keep UI pure
-- **Stable IDs** - All content must have kebab-case IDs
-- **Update documentation** - If you add a new pattern, document it here
-- **Maintain consistency** - Use the established patterns and conventions
+- **Keep it simple** — Follow existing patterns rather than inventing new ones
+- **TCG pipeline first** — Prefer JSON `effects` (ADR-003) for deterministic mechanics; avoid duplicate legacy + pipeline bonuses
+- **Test pragmatically** — Strong tests for pipeline, contracts, and migrations; not every UI tweak needs test-first
+- **Run gates before commit** — Full test run and `validate-data` when data changes; subagent review for code (see `AGENTS.md`)
+- **Extract to services** — Business logic belongs in services, not UI
+- **Use view models** — Transform data before rendering, keep UI pure
+- **Stable IDs** — All content must have kebab-case IDs
+- **Update documentation** — If you add a new pattern, document it here
+- **Maintain consistency** — Dark Academia styling and established frontend patterns
 
 ---
 
@@ -1158,5 +1196,5 @@ The codebase follows a **clean separation of concerns**:
 4. **Documentation**
    - Expand examples in this guide
    - Add video tutorials for common tasks
-   - Create architecture decision records (ADRs)
+   - Add further ADRs for new major decisions (ADR-001–003 already cover architecture, cloud save, and the TCG pipeline)
 

@@ -10,6 +10,30 @@ The primary components are:
 1.  **Game Rules**: A collection of Markdown files that detail the rules and mechanics of the game.
 2.  **Interactive Character Sheet**: An HTML page with JavaScript that allows players to manage their character's progress digitally.
 
+## Engineering principles
+
+- **DRY (Don't Repeat Yourself):** Prefer a single source of truth (`assets/data/*.json`, shared services, existing helpers) over copy-pasted rules or parallel implementations. If the same rule appears in two places, consolidate or derive one from the other.
+- **Pragmatic testing — not strict TDD:** Write tests where they buy confidence (pure logic, pipelines, regressions, migrations). Do **not** default to test-first for every UI tweak. Match test effort to risk and keep the suite fast enough to run regularly.
+- **Frontend engineering:** Follow established patterns in this repo (controllers, StateAdapter, services, view models, pure renderers). Prefer small, reviewable changes; avoid drive-by refactors outside the task.
+- **Visual and UX consistency:** New UI should match the existing **Dark Academia** look and feel — reuse classes, spacing, typography, and components from `assets/css/` and existing character-sheet markup. When in doubt, mirror a nearby screen.
+
+## New mechanics and catalog items: TCG modifier pipeline
+
+For **new deterministic bonuses, resources, prevention, activations, and slot unlocks**, follow the **TCG-style modifier pipeline** described in [**ADR-003: TCG Modifier Pipeline**](project-docs/ADR-003-tcg-modifier-pipeline.md).
+
+**Expectation:** Author machine-readable `effects` on the relevant catalog entry in `assets/data/*.json` (see ADR-003 for schema, triggers, and modifier types). The runtime resolves them through `EffectRegistry` and `ModifierPipeline` — avoid adding bespoke branches in calculators or controllers when the pipeline can express the mechanic.
+
+**Dual path (intentional):** Entities with **subjective** or player-judged mechanics may remain on legacy `rewardModifier` / controller flows. When adding content, choose pipeline vs legacy deliberately per ADR-003; do not duplicate the same bonus in both paths.
+
+For hands-on steps (JSON, validation, tests), see [`project-docs/EXTENDING-THE-CODEBASE.md`](project-docs/EXTENDING-THE-CODEBASE.md).
+
+## Subagents
+
+Use **subagents** whenever they reduce context load or parallelize slow work.
+
+- **Pre-commit review (required for code changes):** Before committing any **code** change (JavaScript, build scripts, non-trivial HTML/CSS behavior), run a **separate subagent pass** to review the diff for correctness, consistency with ADR-003 and existing patterns, and test gaps. Treat a green review as part of the merge gate alongside automated tests. Purely editorial Markdown copy may skip this if no behavior or data contracts change.
+- **Heavy validation:** Delegate **full test suite** or long-running checks to a subagent when the primary session would otherwise block on runtime or output volume. The primary agent should still understand failures and fix them.
+
 ## Repository Structure
 
 The repository is organized as a standard Jekyll project.
@@ -21,7 +45,7 @@ The repository is organized as a standard Jekyll project.
     *   `js/`: JavaScript files for site interactivity.
         *   `character-sheet/data.js`: Re-exports auto-generated data from JSON (see `assets/data/`). Some legacy shapes (e.g., `sideQuests`, `curseTable`) are derived here from detailed JSON to maintain backward compatibility without duplicating data.
         *   `character-sheet.js`: Main initialization file using controller-based architecture. Orchestrates all feature controllers.
-        *   `controllers/`: Feature controllers for character sheet functionality:
+        *   `controllers/`: Feature controllers for character sheet functionality (full list and deck controllers in [`project-docs/EXTENDING-THE-CODEBASE.md`](project-docs/EXTENDING-THE-CODEBASE.md)):
             * `BaseController.js` - Base class with common patterns (event listener cleanup, saveState helper)
             * `CharacterController.js` - Character info changes (level, background, school, sanctum)
             * `AbilityController.js` - Ability learning/forgetting
@@ -30,6 +54,7 @@ The repository is organized as a standard Jekyll project.
             * `CurseController.js` - Curse functionality
             * `BuffController.js` - Temporary and atmospheric buffs
             * `EndOfMonthController.js` - End of month processing
+            * …plus deck/draw controllers (dungeon, atmospheric buff, genre quest, side quest decks — see extending guide)
         *   `page-renderers/`: Page hydration modules:
             * `rewardsRenderer.js` (hydrates `rewards.md`)
             * `sanctumRenderer.js` (hydrates `sanctum.md`)
@@ -52,8 +77,10 @@ Use **[Beads](https://github.com/steveyegge/beads)** (`bd`) for task tracking an
 **Required workflow:**
 
 1.  **Before starting work:** Create tasks in Beads *before* you begin implementation. Do not start coding (or content changes) until the work is represented as one or more tasks. Use `bd create "Title" -p <priority>` for each discrete piece of work and `bd dep add <child> <parent>` to link dependencies. For multi-step requests, break the work into tasks first, then pick from `bd ready` to see what is unblocked.
-2.  **When finished:** Mark tasks complete when the work is done. Close or complete each task you created (or that you were assigned) so that Beads reflects the current state and future sessions see accurate progress.
-3.  **Ongoing:** Use `bd ready` to choose next steps; update task state as you go so context persists across sessions.
+2.  **Claim work:** Move an issue to **in progress** when you start it (`bd update <id> --status in_progress`) so other agents or sessions do not duplicate effort.
+3.  **Granularity:** If a task is broad or will take **more than a few minutes**, split it into smaller Beads issues with clear scopes. **Rule of thumb:** if meaningful work exceeds ~3 minutes and is not already tracked, add or refine a Bead before diving in.
+4.  **When finished (definition of done):** Mark a task **done** only after **automated tests have passed** (including `validate-data` when data changed) **and** a **subagent pre-commit review has passed** for code changes. Close or complete each task you created (or that you were assigned) so Beads reflects the current state.
+5.  **Ongoing:** Use `bd ready` to choose next steps; update task state as you go so context persists across sessions.
 
 **Setup and reference:**
 
@@ -94,7 +121,7 @@ You can perform the following tasks. Always use the local development environmen
 2.  Open `rewards.md` and add a new `<div class="reward-item">...</div>` block, updating the image `src` and description.
 3.  **Crucially**, add the item to `assets/data/allItems.json` and run `node scripts/generate-data.js` to update the data exports. The JSON structure should include `type`, `img` path, and `bonus` description.
 
-**Note:** For detailed information about adding new features, extending the codebase, or modifying the character sheet, see [`docs/EXTENDING-THE-CODEBASE.md`](docs/EXTENDING-THE-CODEBASE.md). This includes information about:
+**Note:** For detailed information about adding new features, extending the codebase, or modifying the character sheet, see [`project-docs/EXTENDING-THE-CODEBASE.md`](project-docs/EXTENDING-THE-CODEBASE.md). This includes information about:
 - Adding new game content (items, rewards, quests)
 - Adding new persistent state with validation
 - Creating new feature controllers
@@ -144,7 +171,7 @@ The project uses Jest for testing JavaScript functionality.
 
 ## Important Directives
 
-1.  **Task tracking (Beads):** Create tasks in Beads *before* starting work and mark them complete when finished. Do not begin implementation until the work is represented as tasks; close or complete those tasks when done.
+1.  **Task tracking (Beads):** Create and claim tasks *before* starting work; keep them granular; mark them **done** only after tests pass and subagent review passes (for code). See [`.beads/README.md`](.beads/README.md) for the project-specific Beads workflow.
 2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
 3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
 4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
@@ -157,7 +184,7 @@ The project uses Jest for testing JavaScript functionality.
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
+2. **Run quality gates** (if code changed) - Tests, linters, builds; complete **subagent pre-commit review** for code diffs
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
