@@ -21,3 +21,8 @@ feature_planning/
 
 # Supabase local override config (contains project-specific values)
 _config.supabase.yml
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

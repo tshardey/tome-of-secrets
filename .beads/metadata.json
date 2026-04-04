@@ -1,4 +1,7 @@
 {
-  "database": "beads.db",
-  "jsonl_export": "issues.jsonl"
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "tome_of_secrets",
+  "project_id": "b338df23-6052-4e88-8923-d634e024b3a3"
 }

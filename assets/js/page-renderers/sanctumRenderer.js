@@ -1,6 +1,14 @@
 import { sanctumBenefits } from '../character-sheet/data.js';
 import { slugifyId } from '../utils/slug.js';
+import { getBaseUrl } from '../services/siteConfig.js';
 import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
+
+/** Prefer layout meta tag (always set by Jekyll) so subdirectory deploys work without a prior inline script. */
+function resolveSiteBaseUrl() {
+    const fromMeta = getBaseUrl();
+    if (fromMeta) return fromMeta.replace(/\/+$/, '');
+    return (typeof window !== 'undefined' ? (window.__BASEURL || '') : '').replace(/\/+$/, '');
+}
 
 function getSanctumHeroImage(name) {
     const mapping = {
@@ -52,7 +60,7 @@ function createSanctumCard(baseurl, name, data) {
 }
 
 export function initializeSanctumPage() {
-    const baseurl = (window.__BASEURL || '').replace(/\/+$/, '');
+    const baseurl = resolveSiteBaseUrl();
     const container = document.getElementById('sanctum-list');
     if (!container) return;
     container.innerHTML = '';

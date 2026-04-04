@@ -84,6 +84,26 @@ permalink: /character-sheet.html
         </div>
     </div>
 
+    <!-- Character Creation Guide -->
+    <div class="rpg-panel rpg-character-guide-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📖 Character Creation Guide</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-quest-table-buttons">
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="keeper-backgrounds">
+                    📖 View Keeper Backgrounds
+                </button>
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="wizard-schools">
+                    ✨ View Magical Schools
+                </button>
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="library-sanctums">
+                    🏛️ View Library Sanctums
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- XP Progress Bar Panel -->
     <div class="rpg-panel rpg-xp-panel">
         <div class="rpg-panel-header">
@@ -1076,6 +1096,54 @@ permalink: /character-sheet.html
             <p>Use a School Mastery Point (SMP) to acquire a new, permanent ability from your chosen school. Once you have acquired both abilities from your primary school, you may spend future SMPs to acquire the first ability (costing 1 SMP) from any other Magical School (Multiclassing).</p>
             
             <div id="school-mastery-abilities-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Keeper Backgrounds Drawer -->
+<div id="keeper-backgrounds-backdrop" class="info-drawer-backdrop"></div>
+<div id="keeper-backgrounds-drawer" class="info-drawer" style="display: none;">
+    <div class="info-drawer-header">
+        <h2>📖 Keeper Backgrounds</h2>
+        <button class="close-info-drawer-btn" id="close-keeper-backgrounds" aria-label="Close keeper backgrounds drawer">&times;</button>
+    </div>
+    <div class="info-drawer-body">
+        <div class="info-drawer-content">
+            <p>Before you were a Keeper, you were... something else. This background represents your life before dedicating yourself to the Grand Library, and it grants you a small, permanent benefit born from your past experiences.</p>
+            <blockquote><p><strong>Journaling Prompt:</strong> Where does your Keeper come from? What event or calling led them to this life of protecting the Grand Library?</p></blockquote>
+            <div id="keeper-backgrounds"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Wizard Schools Drawer -->
+<div id="wizard-schools-backdrop" class="info-drawer-backdrop"></div>
+<div id="wizard-schools-drawer" class="info-drawer" style="display: none;">
+    <div class="info-drawer-header">
+        <h2>✨ Magical Schools</h2>
+        <button class="close-info-drawer-btn" id="close-wizard-schools" aria-label="Close magical schools drawer">&times;</button>
+    </div>
+    <div class="info-drawer-body">
+        <div class="info-drawer-content">
+            <p>Every Keeper draws power from a magical school, which grants them unique abilities to aid in their quests. Choose one of the following to be your primary specialization.</p>
+            <blockquote><p><strong>Journaling Prompt:</strong> How did you come to study this school of magic? Were you formally trained, or did you stumble upon its secrets?</p></blockquote>
+            <div id="wizard-schools"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Library Sanctums Drawer -->
+<div id="library-sanctums-backdrop" class="info-drawer-backdrop"></div>
+<div id="library-sanctums-drawer" class="info-drawer" style="display: none;">
+    <div class="info-drawer-header">
+        <h2>🏛️ Library Sanctums</h2>
+        <button class="close-info-drawer-btn" id="close-library-sanctums" aria-label="Close library sanctums drawer">&times;</button>
+    </div>
+    <div class="info-drawer-body">
+        <div class="info-drawer-content">
+            <p>The heart of your adventure is your library, which is also your home. Choosing a type of library grants you a permanent ability that enhances certain Atmospheric Buffs.</p>
+            <blockquote><p><strong>Journaling Prompt:</strong> What does your sanctum look, feel, and smell like? Is it a place of comfort and refuge, or one of mystery and ancient dust?</p></blockquote>
+            <div id="sanctum-list"></div>
         </div>
     </div>
 </div>
