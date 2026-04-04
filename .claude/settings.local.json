@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /workspaces/tome-of-secrets/tests/*.test.js)",
+      "Bash(wc -l /workspaces/tome-of-secrets/tests/*.test.js)",
+      "Bash(grep -r \"class.*Controller\" /workspaces/tome-of-secrets/assets/js/controllers/*.js)",
+      "Bash(bd --help)",
+      "Bash(npx jest:*)",
+      "Bash(wait)",
+      "Bash(npm test:*)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
