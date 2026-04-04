@@ -17,20 +17,29 @@ jest.mock('../assets/js/services/BookMetadataService.js', () => ({
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('Page Renderers Hydration', () => {
-  test('sanctum.md renders sanctums from JSON', () => {
-    loadHTML('sanctum.md');
+  test('sanctum list hydrates from JSON and uses meta baseurl for hero images', () => {
+    document.head.innerHTML = '<meta name="baseurl" content="/tome-of-secrets">';
+    delete window.__BASEURL;
+    document.body.innerHTML = '<div id="sanctum-list"></div>';
     initializeSanctumPage();
     const container = document.getElementById('sanctum-list');
     expect(container).toBeTruthy();
-    // Expect three sections rendered
     const headings = Array.from(container.querySelectorAll('h3')).map(h => h.textContent.trim());
     expect(headings).toContain('The Spire of Whispers');
     expect(headings).toContain('The Verdant Athenaeum');
     expect(headings).toContain('The Sunken Archives');
+    const hero = container.querySelector('.sanctum-hero');
+    expect(hero).toBeTruthy();
+    const bg = hero.style.backgroundImage;
+    expect(bg).toContain('/tome-of-secrets/');
+    expect(bg).toContain('spire-of-whispers-hero.png');
   });
 
-  test('keeper.md renders backgrounds and schools from JSON', () => {
-    loadHTML('keeper.md');
+  test('keeper sections hydrate from JSON', () => {
+    document.body.innerHTML = `
+      <div id="keeper-backgrounds"></div>
+      <div id="wizard-schools"></div>
+    `;
     initializeKeeperPage();
     const backgrounds = document.getElementById('keeper-backgrounds');
     const schools = document.getElementById('wizard-schools');

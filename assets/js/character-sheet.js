@@ -6,6 +6,8 @@
  */
 
 import * as dataModule from './character-sheet/data.js';
+import { initializeKeeperPage } from './page-renderers/keeperRenderer.js';
+import { initializeSanctumPage } from './page-renderers/sanctumRenderer.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
@@ -46,6 +48,10 @@ export async function initializeCharacterSheet() {
         // This is important for testing and for other pages on the site.
         return;
     }
+
+    // --- CHARACTER CREATION GUIDE ---
+    initializeKeeperPage();
+    initializeSanctumPage();
 
     // --- POPULATE DROPDOWNS FIRST (before loadState) ---
     // Populate keeper background dropdown
@@ -1477,6 +1483,24 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
             container: 'side-quests-table-container',
             renderTable: () => processLinksHelper(renderSideQuestsTable())
         },
+        'keeper-backgrounds': {
+            backdrop: 'keeper-backgrounds-backdrop',
+            drawer: 'keeper-backgrounds-drawer',
+            closeBtn: 'close-keeper-backgrounds',
+            preRendered: true
+        },
+        'wizard-schools': {
+            backdrop: 'wizard-schools-backdrop',
+            drawer: 'wizard-schools-drawer',
+            closeBtn: 'close-wizard-schools',
+            preRendered: true
+        },
+        'library-sanctums': {
+            backdrop: 'library-sanctums-backdrop',
+            drawer: 'library-sanctums-drawer',
+            closeBtn: 'close-library-sanctums',
+            preRendered: true
+        },
         'dungeons': {
             backdrop: 'dungeons-info-backdrop',
             drawer: 'dungeons-info-drawer',
@@ -1510,8 +1534,10 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
         const drawer = document.getElementById(config.drawer);
         if (!backdrop || !drawer) return;
         
-        // Render tables
-        if (drawerId === 'dungeons') {
+        // Render tables (skip for pre-rendered drawers)
+        if (config.preRendered) {
+            // Content already populated at init time
+        } else if (drawerId === 'dungeons') {
             const tables = config.renderTables();
             const rewardsContainer = document.getElementById(config.containers.rewards);
             const roomsContainer = document.getElementById(config.containers.rooms);
