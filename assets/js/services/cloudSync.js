@@ -67,6 +67,18 @@ export function snapshotHash(snapshot) {
   return hashString(stableStringify(snapshot.data));
 }
 
+export async function buildUpsertPayload(userId) {
+  const snapshot = await buildLocalSnapshot();
+  const hash = snapshotHash(snapshot);
+  return {
+    user_id: userId,
+    data: snapshot,
+    snapshot_hash: hash,
+    schema_version: snapshot.version,
+    saved_at: new Date().toISOString()
+  };
+}
+
 /**
  * Deep-clone a snapshot value into live character state (plain JSON shapes only).
  * Avoids sharing references with the snapshot object and supports environments
@@ -139,10 +151,17 @@ async function upsertRemoteSave(supabase, snapshot) {
     throw new Error('Not signed in.');
   }
   const userId = session.user.id;
+  const hash = snapshotHash(snapshot);
 
   const { error } = await supabase
     .from(SYNC_TABLE)
-    .upsert({ user_id: userId, data: snapshot }, { onConflict: 'user_id' });
+    .upsert({
+      user_id: userId,
+      data: snapshot,
+      snapshot_hash: hash,
+      schema_version: snapshot.version ?? null,
+      saved_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
 
   if (error) throw error;
 }

@@ -9,7 +9,16 @@
       "Bash(wait)",
       "Bash(npm test:*)",
       "Bash(ls:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(bd ready:*)",
+      "Bash(npx bd:*)",
+      "Bash(bd show:*)",
+      "Bash(grep -n \"Phase\\\\|TODO\\\\|ROADMAP\\\\|Future\\\\|observability\\\\|projection\\\\|metric\" /workspaces/tome-of-secrets/project-docs/*.md)",
+      "Bash(bd update:*)",
+      "Bash(bd sync:*)",
+      "Bash(bd export:*)",
+      "Bash(supabase --version)",
+      "Bash(supabase link:*)"
     ]
   }
 }

@@ -19,6 +19,8 @@ The website is built from a collection of Markdown files and a few key structura
     * **`js/anchor.js`**: This script automatically adds the "#" anchor links that appear when you hover over headers, making sections easy to share.
     * **`images/`**: This folder contains all the images used on the site, including the main hero banner and the pictures for the reward items.
 
+* **`supabase/`**: Supabase CLI project directory. Contains `config.toml` and `migrations/` with timestamped SQL migration files for managing the cloud save database schema.
+
 * **Markdown Pages (`.md`)**: These are the core content files for your game (e.g., `core-mechanics.md`, `rewards.md`, etc.). Each file uses "front matter" at the very top (the part between `---`) to tell Jekyll which layout to use and what the page's title is.
 
 ---
@@ -116,3 +118,37 @@ To run the tests, open the integrated terminal in VS Code while inside the devco
     ```bash
     npm test
     ```
+
+---
+
+## Supabase Database Migrations
+
+The cloud save feature uses [Supabase](https://supabase.com/) as a managed Postgres backend. Database schema changes are managed via the Supabase CLI, which is pre-installed in the Dev Container.
+
+### First-Time Setup
+
+1.  **Authenticate** with your Supabase account:
+    ```bash
+    supabase login
+    ```
+2.  **Link** to the remote project:
+    ```bash
+    supabase link --project-ref cdhorluhpuchzlnahzlt
+    ```
+
+### Creating and Applying Migrations
+
+1.  **Create** a new migration:
+    ```bash
+    supabase migration new <descriptive-name>
+    ```
+    This creates a timestamped SQL file in `supabase/migrations/`.
+
+2.  **Write your DDL** in the generated file. Keep migrations idempotent (`IF NOT EXISTS`, `OR REPLACE`).
+
+3.  **Apply** pending migrations to the remote database:
+    ```bash
+    supabase db push
+    ```
+
+See [`project-docs/SUPABASE-CLOUD-SAVE.md`](project-docs/SUPABASE-CLOUD-SAVE.md) for full Supabase setup details including auth configuration and RLS policies.

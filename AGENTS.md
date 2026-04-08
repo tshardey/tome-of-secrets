@@ -68,6 +68,7 @@ The repository is organized as a standard Jekyll project.
 *   `README.md`: Contains detailed instructions for setting up a local development environment and running tests.
 *   `.devcontainer/`: Configuration for VS Code Dev Containers, allowing for a consistent development environment.
 *   `tests/`: Contains the Jest test suite for the project's JavaScript code, primarily for the character sheet functionality.
+*   `supabase/`: Supabase CLI project directory. Contains `config.toml` and `migrations/` with timestamped SQL migration files managed via `supabase migration new` and applied with `supabase db push`.
 *   `Gemfile`: Specifies the Ruby gem dependencies for Jekyll.
 
 ## Task Tracking and Planning
@@ -160,7 +161,33 @@ The project uses Jest for testing JavaScript functionality.
     cd tests && npm test
     ```
 
-### 4. Workspace and File Generation
+### 4. Supabase Database Migrations
+
+The project uses the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli) to manage database schema changes. The CLI is pre-installed in the Dev Container.
+
+**Setup (one-time per environment):**
+1.  Authenticate: `supabase login`
+2.  Link to the remote project: `supabase link --project-ref cdhorluhpuchzlnahzlt`
+
+**Creating a new migration:**
+```bash
+supabase migration new <descriptive-name>
+```
+This creates a timestamped SQL file in `supabase/migrations/`. Write your DDL there.
+
+**Applying migrations to the remote database:**
+```bash
+supabase db push
+```
+This applies any pending migrations that haven't yet run on the remote Supabase project.
+
+**Conventions:**
+- Use `IF NOT EXISTS`, `OR REPLACE`, and `DROP ... IF EXISTS` to keep migrations idempotent
+- Enable RLS on all new tables; add appropriate policies
+- Projection tables (written by server-side triggers) need only `SELECT` policies — no client `INSERT`/`UPDATE` policies
+- The `sql/` directory contains legacy migration scripts from before the CLI was set up; canonical migrations now live in `supabase/migrations/`
+
+### 5. Workspace and File Generation
 
 **Constraint:** Be mindful of file generation locations. Some processes may incorrectly generate files or directories in the project root.
 
