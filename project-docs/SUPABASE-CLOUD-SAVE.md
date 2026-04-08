@@ -96,6 +96,34 @@ Notes:
 - We don’t sync UI-only state like the last active tab; it’s intentionally local to avoid noisy “newer cloud changes” prompts when multiple windows are open.
 - Auto-sync may **pull** newer cloud data only when the local device has no unsynced changes (safe fast-forward). In that case the page reloads to apply the update.
 
+## 5) Projections and observability migration
+
+After the initial `tos_saves` table is set up (step 3), run the projections migration to enable observability and downstream features:
+
+```
+-- In Supabase SQL Editor, run the contents of:
+sql/001-projections-foundation.sql
+```
+
+This migration:
+- Adds `snapshot_hash`, `schema_version`, `saved_at` columns to `tos_saves`
+- Creates `tos_sync_events` table (append-only sync audit log)
+- Creates projection tables: `tos_save_summary`, `tos_inventory`, `tos_quests`
+- Installs a dispatcher trigger on `tos_saves` that will populate projections on each save
+
+All statements are idempotent (safe to re-run). Projection functions start as no-op stubs; downstream beads replace them with real logic.
+
+**New tables:**
+
+| Table | Purpose | Rows per user |
+|-------|---------|---------------|
+| `tos_sync_events` | Audit log of sync operations | Many (append-only) |
+| `tos_save_summary` | Headline stats (name, level, counts) | 1 |
+| `tos_inventory` | Equipped + inventory items | N |
+| `tos_quests` | Active, completed, discarded quests | N |
+
+All tables have RLS (users can only read their own rows). Projection tables are written by server-side trigger functions, not client inserts.
+
 ## GitHub Pages (GitHub Actions) production setup
 
 This repo builds via `.github/workflows/jekyll.yml`. Configure these **repository secrets**:
