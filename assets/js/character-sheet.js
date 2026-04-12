@@ -19,6 +19,7 @@ import { runAllRepairs } from './character-sheet/postLoadRepair.js';
 import { RewardCalculator } from './services/RewardCalculator.js';
 import { applyQuestDraftedEffects } from './services/QuestDraftEffectService.js';
 import { toast } from './ui/toast.js';
+import { DrawerManager } from './ui/DrawerManager.js';
 
 // Import controllers
 import { CharacterController } from './controllers/CharacterController.js';
@@ -1526,107 +1527,67 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
         }
     };
     
-    function openDrawer(drawerId) {
-        const config = drawerConfig[drawerId];
-        if (!config) return;
-        
-        const backdrop = document.getElementById(config.backdrop);
-        const drawer = document.getElementById(config.drawer);
-        if (!backdrop || !drawer) return;
-        
-        // Render tables (skip for pre-rendered drawers)
-        if (config.preRendered) {
-            // Content already populated at init time
-        } else if (drawerId === 'dungeons') {
-            const tables = config.renderTables();
-            const rewardsContainer = document.getElementById(config.containers.rewards);
-            const roomsContainer = document.getElementById(config.containers.rooms);
-            const completionContainer = document.getElementById(config.containers.completion);
-            if (rewardsContainer) rewardsContainer.innerHTML = tables.rewards;
-            if (roomsContainer) roomsContainer.innerHTML = tables.rooms;
-            if (completionContainer) completionContainer.innerHTML = tables.completion;
-            if (config.updateDrawsUI) config.updateDrawsUI(drawer);
-        } else if (drawerId === 'genre-quests') {
-            const container = document.getElementById(config.container);
-            if (container) {
-                container.innerHTML = config.renderTable();
-                
-                // Remove any existing genre selection UI first to prevent duplicates
-                const existingGenreUI = drawer.querySelector('.genre-selection-overlay-section');
-                if (existingGenreUI) {
-                    existingGenreUI.remove();
-                }
-                
-                // Add genre selection UI
-                if (config.renderGenreUI) {
-                    container.insertAdjacentHTML('afterend', config.renderGenreUI());
-                }
-                // Setup genre selection listeners
-                if (config.setupGenreListeners) {
-                    const drawerBody = drawer.querySelector('.info-drawer-body');
-                    if (drawerBody) {
-                        config.setupGenreListeners(drawerBody);
+    // Build DrawerManager config from drawerConfig
+    const managerConfig = {};
+    Object.keys(drawerConfig).forEach(drawerId => {
+        const cfg = drawerConfig[drawerId];
+        managerConfig[drawerId] = {
+            backdrop: cfg.backdrop,
+            drawer: cfg.drawer,
+            closeBtn: cfg.closeBtn,
+            onBeforeOpen: cfg.preRendered ? undefined : (drawerEl) => {
+                if (drawerId === 'dungeons') {
+                    const tables = cfg.renderTables();
+                    const rewardsContainer = document.getElementById(cfg.containers.rewards);
+                    const roomsContainer = document.getElementById(cfg.containers.rooms);
+                    const completionContainer = document.getElementById(cfg.containers.completion);
+                    if (rewardsContainer) rewardsContainer.innerHTML = tables.rewards;
+                    if (roomsContainer) roomsContainer.innerHTML = tables.rooms;
+                    if (completionContainer) completionContainer.innerHTML = tables.completion;
+                    if (cfg.updateDrawsUI) cfg.updateDrawsUI(drawerEl);
+                } else if (drawerId === 'genre-quests') {
+                    const container = document.getElementById(cfg.container);
+                    if (container) {
+                        container.innerHTML = cfg.renderTable();
+                        // Remove any existing genre selection UI first to prevent duplicates
+                        const existingGenreUI = drawerEl.querySelector('.genre-selection-overlay-section');
+                        if (existingGenreUI) existingGenreUI.remove();
+                        // Add genre selection UI
+                        if (cfg.renderGenreUI) {
+                            container.insertAdjacentHTML('afterend', cfg.renderGenreUI());
+                        }
+                        // Setup genre selection listeners
+                        if (cfg.setupGenreListeners) {
+                            const drawerBody = drawerEl.querySelector('.info-drawer-body');
+                            if (drawerBody) cfg.setupGenreListeners(drawerBody);
+                        }
                     }
+                } else {
+                    const container = document.getElementById(cfg.container);
+                    if (container) container.innerHTML = cfg.renderTable();
                 }
-            }
-        } else {
-            const container = document.getElementById(config.container);
-            if (container) {
-                container.innerHTML = config.renderTable();
-            }
-        }
-        
-        // Show drawer
-        drawer.style.display = 'flex';
-        backdrop.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-    
-    function closeDrawer(drawerId) {
-        const config = drawerConfig[drawerId];
-        if (!config) return;
-        
-        const backdrop = document.getElementById(config.backdrop);
-        const drawer = document.getElementById(config.drawer);
-        if (!backdrop || !drawer) return;
-        
-        // Clean up genre selection UI when closing genre-quests drawer
-        if (drawerId === 'genre-quests') {
-            const genreUI = drawer.querySelector('.genre-selection-overlay-section');
-            if (genreUI) {
-                genreUI.remove();
-            }
-        }
-        
-        drawer.style.display = 'none';
-        backdrop.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-    
+            },
+            onAfterClose: drawerId === 'genre-quests'
+                ? (drawerEl) => {
+                    // Clean up genre selection UI when closing
+                    const genreUI = drawerEl.querySelector('.genre-selection-overlay-section');
+                    if (genreUI) genreUI.remove();
+                }
+                : undefined
+        };
+    });
+
+    const drawerManager = new DrawerManager(managerConfig);
+
     // Set up open buttons
     const openButtons = document.querySelectorAll('.open-quest-info-drawer-btn');
     openButtons.forEach(button => {
         button.addEventListener('click', () => {
             const drawerId = button.dataset.drawer;
             if (drawerId) {
-                openDrawer(drawerId);
+                drawerManager.open(drawerId);
             }
         });
-    });
-    
-    // Set up close buttons and backdrop clicks
-    Object.keys(drawerConfig).forEach(drawerId => {
-        const config = drawerConfig[drawerId];
-        const closeBtn = document.getElementById(config.closeBtn);
-        const backdrop = document.getElementById(config.backdrop);
-        
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => closeDrawer(drawerId));
-        }
-        
-        if (backdrop) {
-            backdrop.addEventListener('click', () => closeDrawer(drawerId));
-        }
     });
 
     // Dungeons drawer: Claim Reward (scroll to completion table) + Roll d20 for reward
@@ -1721,18 +1682,6 @@ async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAda
             }
         });
     }
-    
-    // Close drawers on Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            Object.keys(drawerConfig).forEach(drawerId => {
-                const drawer = document.getElementById(drawerConfig[drawerId].drawer);
-                if (drawer && drawer.style.display === 'flex') {
-                    closeDrawer(drawerId);
-                }
-            });
-        }
-    });
 }
 
 // Run the initialization when the DOM is fully loaded
