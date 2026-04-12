@@ -28,7 +28,8 @@
       "Bash(bd spec:*)",
       "Bash(wc -l /workspaces/tome-of-secrets/assets/js/character-sheet/*.js)",
       "Bash(grep -n \"class.*Drawer\\\\|class.*Modal\\\\|class.*Panel\" /workspaces/tome-of-secrets/assets/js/**/*.js)",
-      "Bash(awk 'NR>=1279 && NR<=1688' /workspaces/tome-of-secrets/assets/js/character-sheet.js)"
+      "Bash(awk 'NR>=1279 && NR<=1688' /workspaces/tome-of-secrets/assets/js/character-sheet.js)",
+      "Bash(bd close:*)"
     ]
   }
 }
