@@ -10,6 +10,7 @@ import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { searchBooks } from '../services/BookMetadataService.js';
 import { trimOrEmpty } from '../utils/helpers.js';
+import { DrawerManager } from '../ui/DrawerManager.js';
 
 const BOOK_SEARCH_DEBOUNCE_MS = 600;
 const BOOK_SEARCH_MIN_LENGTH = 2;
@@ -35,11 +36,19 @@ export class LibraryController extends BaseController {
         const titleInput = document.getElementById('library-book-title');
         const authorInput = document.getElementById('library-book-author');
 
-        const bookEditDrawer = document.getElementById('book-edit-drawer');
-        const bookEditBackdrop = document.getElementById('book-edit-backdrop');
-        const closeBookEditBtn = document.getElementById('close-book-edit');
-        const cancelBookEditBtn = document.getElementById('cancel-book-edit-btn');
         const saveBookEditBtn = document.getElementById('save-book-edit-btn');
+        const cancelBookEditBtn = document.getElementById('cancel-book-edit-btn');
+
+        this.drawerManager = new DrawerManager({
+            'book-edit': {
+                backdrop: 'book-edit-backdrop',
+                drawer: 'book-edit-drawer',
+                closeBtn: 'close-book-edit',
+                onAfterClose: (drawerEl) => {
+                    this._editingBookId = null;
+                }
+            }
+        });
 
         if (addBookBtn) {
             this.addEventListener(addBookBtn, 'click', (e) => {
@@ -69,14 +78,8 @@ export class LibraryController extends BaseController {
 
         this._setupAddFormCoverHandlers();
 
-        if (closeBookEditBtn) {
-            this.addEventListener(closeBookEditBtn, 'click', () => this._closeBookEditDrawer());
-        }
-        if (bookEditBackdrop) {
-            this.addEventListener(bookEditBackdrop, 'click', () => this._closeBookEditDrawer());
-        }
         if (cancelBookEditBtn) {
-            this.addEventListener(cancelBookEditBtn, 'click', () => this._closeBookEditDrawer());
+            this.addEventListener(cancelBookEditBtn, 'click', () => this.drawerManager.close('book-edit'));
         }
         if (saveBookEditBtn) {
             this.addEventListener(saveBookEditBtn, 'click', () => this.handleSaveBookEdit());
@@ -84,12 +87,6 @@ export class LibraryController extends BaseController {
 
         this._setupBookEditCoverHandlers();
         this._setupBookEditSearch();
-
-        this.addEventListener(document, 'keydown', (e) => {
-            if (e.key === 'Escape' && bookEditDrawer && bookEditDrawer.style.display !== 'none') {
-                this._closeBookEditDrawer();
-            }
-        });
 
         form.addEventListener('click', (e) => {
             const editBtn = e.target.closest('.library-edit-book-btn');
@@ -564,20 +561,11 @@ export class LibraryController extends BaseController {
             seriesSelect.value = currentSeries ? currentSeries.id : '';
         }
 
-        const drawer = document.getElementById('book-edit-drawer');
-        const backdrop = document.getElementById('book-edit-backdrop');
-        if (drawer) drawer.style.display = 'flex';
-        if (backdrop) backdrop.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        this.drawerManager.open('book-edit');
     }
 
     _closeBookEditDrawer() {
-        this._editingBookId = null;
-        const drawer = document.getElementById('book-edit-drawer');
-        const backdrop = document.getElementById('book-edit-backdrop');
-        if (drawer) drawer.style.display = 'none';
-        if (backdrop) backdrop.classList.remove('active');
-        document.body.style.overflow = '';
+        this.drawerManager.close('book-edit');
     }
 
     handleSaveBookEdit() {

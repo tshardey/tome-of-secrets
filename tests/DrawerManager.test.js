@@ -69,6 +69,17 @@ describe('DrawerManager', () => {
             manager.close('nonexistent');
             expect(document.body.style.overflow).toBe('');
         });
+
+        it('should use custom displayStyle when configured', () => {
+            createDrawerDOM('test');
+            manager = new DrawerManager({
+                test: { backdrop: 'test-backdrop', drawer: 'test-drawer', closeBtn: 'close-test', displayStyle: 'block' }
+            });
+
+            manager.open('test');
+
+            expect(document.getElementById('test-drawer').style.display).toBe('block');
+        });
     });
 
     describe('isOpen', () => {

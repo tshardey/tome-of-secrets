@@ -932,7 +932,63 @@ async function initializeRollingTables() {
     const closeButton = document.getElementById('close-table-overlay');
     
     if (!overlayPanel || !overlayContent) return;
-    
+
+    let pendingTableId = null;
+
+    const tableOverlayManager = new DrawerManager({
+        'table-overlay': {
+            backdrop: 'table-overlay-backdrop',
+            drawer: 'table-overlay-panel',
+            closeBtn: 'close-table-overlay',
+            displayStyle: 'block',
+            onBeforeOpen: (drawerEl) => {
+                const tableId = pendingTableId;
+                if (!tableId) return;
+
+                let tableHtml = '';
+                let title = tableTitles[tableId] || 'Rolling Table';
+                let showGenreSelection = false;
+
+                switch (tableId) {
+                    case 'genre-quests':
+                        tableHtml = processLinks(renderSelectedGenresTable());
+                        showGenreSelection = true;
+                        break;
+                    case 'atmospheric-buffs':
+                        tableHtml = processLinks(renderAtmosphericBuffsTable());
+                        break;
+                    case 'side-quests':
+                        tableHtml = processLinks(renderSideQuestsTable());
+                        break;
+                    case 'dungeon-rooms':
+                        tableHtml = processLinks(renderDungeonRoomsTable());
+                        break;
+                    default:
+                        return;
+                }
+
+                let contentHtml = `
+                <div class="table-overlay-header">
+                    <h2>${title}</h2>
+                </div>
+                <div class="table-overlay-body">
+                    ${tableHtml}
+                </div>
+            `;
+
+                if (showGenreSelection) {
+                    contentHtml += renderGenreSelectionUI();
+                }
+
+                overlayContent.innerHTML = contentHtml;
+
+                if (showGenreSelection) {
+                    setupGenreSelectionListeners();
+                }
+            }
+        }
+    });
+
     // Table titles mapping
     const tableTitles = {
         'genre-quests': 'Genre Quests Table',
@@ -1020,56 +1076,8 @@ async function initializeRollingTables() {
     
     // Function to open overlay with a specific table
     function openTableOverlay(tableId) {
-        let tableHtml = '';
-        let title = tableTitles[tableId] || 'Rolling Table';
-        let showGenreSelection = false;
-        
-        switch (tableId) {
-            case 'genre-quests':
-                tableHtml = processLinks(renderSelectedGenresTable());
-                showGenreSelection = true;
-                break;
-            case 'atmospheric-buffs':
-                tableHtml = processLinks(renderAtmosphericBuffsTable());
-                break;
-            case 'side-quests':
-                tableHtml = processLinks(renderSideQuestsTable());
-                break;
-            case 'dungeon-rooms':
-                tableHtml = processLinks(renderDungeonRoomsTable());
-                break;
-            default:
-                return;
-        }
-        
-        // Render table in overlay
-        let contentHtml = `
-            <div class="table-overlay-header">
-                <h2>${title}</h2>
-            </div>
-            <div class="table-overlay-body">
-                ${tableHtml}
-            </div>
-        `;
-        
-        // Add genre selection UI if needed
-        if (showGenreSelection) {
-            contentHtml += renderGenreSelectionUI();
-        }
-        
-        overlayContent.innerHTML = contentHtml;
-        
-        // Set up genre selection event listeners if needed
-        if (showGenreSelection) {
-            setupGenreSelectionListeners();
-        }
-        
-        // Show overlay and backdrop
-        if (overlayBackdrop) {
-            overlayBackdrop.classList.add('active');
-        }
-        overlayPanel.style.display = 'block';
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        pendingTableId = tableId;
+        tableOverlayManager.open('table-overlay');
     }
     
     // Track if we're currently processing a removal to prevent double-firing
@@ -1230,15 +1238,6 @@ async function initializeRollingTables() {
         updateGenreSelectionUI();
     }
     
-    // Function to close overlay
-    function closeTableOverlay() {
-        if (overlayBackdrop) {
-            overlayBackdrop.classList.remove('active');
-        }
-        overlayPanel.style.display = 'none';
-        document.body.style.overflow = ''; // Restore scrolling
-    }
-    
     // Set up open buttons
     const openButtons = document.querySelectorAll('.open-table-overlay-btn');
     openButtons.forEach(button => {
@@ -1248,30 +1247,6 @@ async function initializeRollingTables() {
                 openTableOverlay(tableId);
             }
         });
-    });
-    
-    // Set up close button
-    if (closeButton) {
-        closeButton.addEventListener('click', closeTableOverlay);
-    }
-    
-    // Close overlay when clicking on backdrop
-    if (overlayBackdrop) {
-        overlayBackdrop.addEventListener('click', closeTableOverlay);
-    }
-    
-    // Close overlay when clicking outside panel (on panel itself, not content)
-    overlayPanel.addEventListener('click', (e) => {
-        if (e.target === overlayPanel) {
-            closeTableOverlay();
-        }
-    });
-    
-    // Close overlay on Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlayPanel.style.display === 'block') {
-            closeTableOverlay();
-        }
     });
 }
 
