@@ -11,6 +11,7 @@ import { parseIntOr } from '../utils/helpers.js';
 import { clearFormError, showFormError } from '../utils/formErrors.js';
 import * as data from '../character-sheet/data.js';
 import { escapeHtml } from '../utils/sanitize.js';
+import { DrawerManager } from '../ui/DrawerManager.js';
 
 export class AbilityController extends BaseController {
     initialize() {
@@ -18,6 +19,20 @@ export class AbilityController extends BaseController {
         const { ui: uiModule } = this.dependencies;
 
         if (!uiModule) return;
+
+        this.drawerManager = new DrawerManager({
+            'school-mastery': {
+                backdrop: 'school-mastery-backdrop',
+                drawer: 'school-mastery-drawer',
+                closeBtn: 'close-school-mastery',
+                onBeforeOpen: (drawerEl) => {
+                    const contentContainer = document.getElementById('school-mastery-abilities-content');
+                    if (contentContainer) {
+                        this.renderSchoolMasteryAbilities(contentContainer);
+                    }
+                }
+            }
+        });
 
         const smpInput = document.getElementById('smp');
         const learnButton = document.getElementById('learn-ability-button');
@@ -99,63 +114,14 @@ export class AbilityController extends BaseController {
      * Open the school mastery abilities drawer
      */
     openSchoolMasteryDrawer() {
-        const backdrop = document.getElementById('school-mastery-backdrop');
-        const drawer = document.getElementById('school-mastery-drawer');
-        const contentContainer = document.getElementById('school-mastery-abilities-content');
-        
-        if (!backdrop || !drawer) return;
-        
-        // Render school mastery abilities from JSON data
-        if (contentContainer) {
-            this.renderSchoolMasteryAbilities(contentContainer);
-        }
-        
-        // Show drawer
-        drawer.style.display = 'flex';
-        backdrop.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
-        // Close button handler
-        const closeBtn = document.getElementById('close-school-mastery');
-        if (closeBtn) {
-            const closeHandler = () => {
-                this.closeSchoolMasteryDrawer();
-                closeBtn.removeEventListener('click', closeHandler);
-            };
-            closeBtn.addEventListener('click', closeHandler);
-        }
-        
-        // Backdrop click handler
-        const backdropHandler = (e) => {
-            if (e.target === backdrop) {
-                this.closeSchoolMasteryDrawer();
-                backdrop.removeEventListener('click', backdropHandler);
-            }
-        };
-        backdrop.addEventListener('click', backdropHandler);
-        
-        // Escape key handler
-        const escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.closeSchoolMasteryDrawer();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
-        document.addEventListener('keydown', escapeHandler);
+        this.drawerManager.open('school-mastery');
     }
 
     /**
      * Close the school mastery abilities drawer
      */
     closeSchoolMasteryDrawer() {
-        const backdrop = document.getElementById('school-mastery-backdrop');
-        const drawer = document.getElementById('school-mastery-drawer');
-        
-        if (!backdrop || !drawer) return;
-        
-        drawer.style.display = 'none';
-        backdrop.classList.remove('active');
-        document.body.style.overflow = '';
+        this.drawerManager.close('school-mastery');
     }
 
     /**

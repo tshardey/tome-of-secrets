@@ -56,7 +56,7 @@ export class DrawerManager {
         const cfg = this._config[drawerId];
         if (cfg.onBeforeOpen) cfg.onBeforeOpen(els.drawer);
 
-        els.drawer.style.display = 'flex';
+        els.drawer.style.display = cfg.displayStyle || 'flex';
         els.backdrop.classList.add('active');
         document.body.style.overflow = 'hidden';
         this._activeDrawerId = drawerId;

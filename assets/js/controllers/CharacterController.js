@@ -15,6 +15,7 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import * as data from '../character-sheet/data.js';
 import { renderLevelingRewardsTable, processLinks } from '../table-renderer.js';
 import { escapeHtml } from '../utils/sanitize.js';
+import { DrawerManager } from '../ui/DrawerManager.js';
 
 export class CharacterController extends BaseController {
     initialize() {
@@ -40,6 +41,29 @@ export class CharacterController extends BaseController {
             formData.previousLevel = parseIntOr(levelInput.value, 1);
             safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
         }
+
+        this.drawerManager = new DrawerManager({
+            'leveling-rewards': {
+                backdrop: 'leveling-rewards-backdrop',
+                drawer: 'leveling-rewards-drawer',
+                closeBtn: 'close-leveling-rewards',
+                onBeforeOpen: (drawerEl) => {
+                    const levelingRewardsTable = document.getElementById('leveling-rewards-table');
+                    if (levelingRewardsTable && (!levelingRewardsTable.innerHTML || levelingRewardsTable.innerHTML.trim() === '')) {
+                        try {
+                            const tableHtml = renderLevelingRewardsTable();
+                            levelingRewardsTable.innerHTML = processLinks(tableHtml);
+                        } catch (err) {
+                            console.error('Error rendering leveling rewards table:', err);
+                        }
+                    }
+                    const permanentBonusesTable = document.getElementById('permanent-bonuses-table');
+                    if (permanentBonusesTable) {
+                        this.renderPermanentBonusesTable(permanentBonusesTable);
+                    }
+                }
+            }
+        });
 
         // Level badge click handler - open leveling rewards drawer
         const levelBadge = document.getElementById('rpg-level-badge');
@@ -296,74 +320,14 @@ export class CharacterController extends BaseController {
      * Open the leveling rewards drawer
      */
     openLevelingRewardsDrawer() {
-        const backdrop = document.getElementById('leveling-rewards-backdrop');
-        const drawer = document.getElementById('leveling-rewards-drawer');
-        const levelingRewardsTable = document.getElementById('leveling-rewards-table');
-        
-        if (!backdrop || !drawer) return;
-        
-        // Render the leveling rewards table if it's empty or needs updating
-        if (levelingRewardsTable && (!levelingRewardsTable.innerHTML || levelingRewardsTable.innerHTML.trim() === '')) {
-            try {
-                const tableHtml = renderLevelingRewardsTable();
-                levelingRewardsTable.innerHTML = processLinks(tableHtml);
-            } catch (err) {
-                console.error('Error rendering leveling rewards table:', err);
-            }
-        }
-        
-        // Render permanent bonuses table from JSON data
-        const permanentBonusesTable = document.getElementById('permanent-bonuses-table');
-        if (permanentBonusesTable) {
-            this.renderPermanentBonusesTable(permanentBonusesTable);
-        }
-        
-        // Show drawer
-        drawer.style.display = 'flex';
-        backdrop.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
-        // Close button handler
-        const closeBtn = document.getElementById('close-leveling-rewards');
-        if (closeBtn) {
-            const closeHandler = () => {
-                this.closeLevelingRewardsDrawer();
-                closeBtn.removeEventListener('click', closeHandler);
-            };
-            closeBtn.addEventListener('click', closeHandler);
-        }
-        
-        // Backdrop click handler
-        const backdropHandler = (e) => {
-            if (e.target === backdrop) {
-                this.closeLevelingRewardsDrawer();
-                backdrop.removeEventListener('click', backdropHandler);
-            }
-        };
-        backdrop.addEventListener('click', backdropHandler);
-        
-        // Escape key handler
-        const escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.closeLevelingRewardsDrawer();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
-        document.addEventListener('keydown', escapeHandler);
+        this.drawerManager.open('leveling-rewards');
     }
 
     /**
      * Close the leveling rewards drawer
      */
     closeLevelingRewardsDrawer() {
-        const backdrop = document.getElementById('leveling-rewards-backdrop');
-        const drawer = document.getElementById('leveling-rewards-drawer');
-        
-        if (!backdrop || !drawer) return;
-        
-        drawer.style.display = 'none';
-        backdrop.classList.remove('active');
-        document.body.style.overflow = '';
+        this.drawerManager.close('leveling-rewards');
     }
 
     /**

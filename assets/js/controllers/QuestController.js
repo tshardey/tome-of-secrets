@@ -24,6 +24,7 @@ import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../servic
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
 import { createBookSelector } from '../utils/bookSelector.js';
+import { DrawerManager } from '../ui/DrawerManager.js';
 
 function generateQuestId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -148,29 +149,30 @@ export class QuestController extends BaseController {
         // Quest edit drawer elements
         const questEditDrawer = document.getElementById('quest-edit-drawer');
         const questEditBackdrop = document.getElementById('quest-edit-backdrop');
-        const closeQuestEditBtn = document.getElementById('close-quest-edit');
         const cancelQuestEditBtn = document.getElementById('cancel-quest-edit-btn');
         const saveQuestChangesBtn = document.getElementById('save-quest-changes-btn');
 
         this.questEditDrawer = questEditDrawer;
         this.questEditBackdrop = questEditBackdrop;
 
-        // Close drawer handlers
-        if (closeQuestEditBtn) {
-            this.addEventListener(closeQuestEditBtn, 'click', () => {
-                this.closeQuestEditDrawer();
-            });
-        }
-
-        if (questEditBackdrop) {
-            this.addEventListener(questEditBackdrop, 'click', () => {
-                this.closeQuestEditDrawer();
-            });
-        }
+        this.drawerManager = new DrawerManager({
+            'quest-edit': {
+                backdrop: 'quest-edit-backdrop',
+                drawer: 'quest-edit-drawer',
+                closeBtn: 'close-quest-edit',
+                onAfterClose: (drawerEl) => {
+                    if (this._editDrawerBookSelector) {
+                        this._editDrawerBookSelector.destroy();
+                        this._editDrawerBookSelector = null;
+                    }
+                    this.editingQuestInfo = null;
+                }
+            }
+        });
 
         if (cancelQuestEditBtn) {
             this.addEventListener(cancelQuestEditBtn, 'click', () => {
-                this.closeQuestEditDrawer();
+                this.drawerManager.close('quest-edit');
             });
         }
 
@@ -180,13 +182,6 @@ export class QuestController extends BaseController {
                 this.handleSaveQuestChanges();
             });
         }
-
-        // Close drawer on Escape key
-        this.addEventListener(document, 'keydown', (e) => {
-            if (e.key === 'Escape' && questEditDrawer && questEditDrawer.style.display !== 'none') {
-                this.closeQuestEditDrawer();
-            }
-        });
 
         // Add-quest form: book selector (library only; API search is in Library tab)
         const newQuestBookIdInput = document.getElementById('new-quest-book-id');
@@ -1735,33 +1730,11 @@ export class QuestController extends BaseController {
     }
 
     openQuestEditDrawer(quest) {
-        if (!this.questEditDrawer || !this.questEditBackdrop) return;
-
-        // Show drawer and backdrop
-        this.questEditDrawer.style.display = 'flex';
-        this.questEditBackdrop.classList.add('active');
-
-        // Prevent body scroll
-        document.body.style.overflow = 'hidden';
+        this.drawerManager.open('quest-edit');
     }
 
     closeQuestEditDrawer() {
-        if (!this.questEditDrawer || !this.questEditBackdrop) return;
-
-        if (this._editDrawerBookSelector) {
-            this._editDrawerBookSelector.destroy();
-            this._editDrawerBookSelector = null;
-        }
-
-        // Hide drawer and backdrop
-        this.questEditDrawer.style.display = 'none';
-        this.questEditBackdrop.classList.remove('active');
-
-        // Restore body scroll
-        document.body.style.overflow = '';
-
-        // Clear editing state (but don't reset the Add Quest form)
-        this.editingQuestInfo = null;
+        this.drawerManager.close('quest-edit');
     }
 
     handleSaveQuestChanges() {

@@ -29,7 +29,9 @@
       "Bash(wc -l /workspaces/tome-of-secrets/assets/js/character-sheet/*.js)",
       "Bash(grep -n \"class.*Drawer\\\\|class.*Modal\\\\|class.*Panel\" /workspaces/tome-of-secrets/assets/js/**/*.js)",
       "Bash(awk 'NR>=1279 && NR<=1688' /workspaces/tome-of-secrets/assets/js/character-sheet.js)",
-      "Bash(bd close:*)"
+      "Bash(bd close:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('scripts', {}\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('scripts', {}\\).items\\(\\)\\)[:10]\\)\")"
     ]
   }
 }
