@@ -31,7 +31,22 @@
       "Bash(awk 'NR>=1279 && NR<=1688' /workspaces/tome-of-secrets/assets/js/character-sheet.js)",
       "Bash(bd close:*)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('scripts', {}\\)\\)\")",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('scripts', {}\\).items\\(\\)\\)[:10]\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('scripts', {}\\).items\\(\\)\\)[:10]\\)\")",
+      "Bash(wc:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git worktree:*)",
+      "Bash(node scripts/generate-data.js)",
+      "Bash(grep -l \"calendarPeriod\\\\|dropdownInit\" /workspaces/tome-of-secrets/.worktrees/6om/tests/*.test.js)",
+      "Bash(node --check assets/js/character-sheet/calendarPeriod.js)",
+      "Bash(node --check assets/js/character-sheet/dropdownInit.js)",
+      "Bash(node --check assets/js/character-sheet.js)",
+      "Bash(node -c assets/js/character-sheet/currencyService.js)",
+      "Bash(node -e \"import\\('./assets/js/character-sheet/genreSelection.js'\\).then\\(m => console.log\\('Exports:', Object.keys\\(m\\).join\\(', '\\)\\)\\).catch\\(e => console.log\\('Error:', e.message\\)\\)\")",
+      "Bash(npx vitest:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)",
+      "Bash(cat /workspaces/tome-of-secrets/.worktrees/6om/tests/vitest.config.*)",
+      "Bash(bd create:*)"
     ]
   }
 }

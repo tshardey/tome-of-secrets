@@ -2,3 +2,4 @@
 {"id":"int-5ba7c1d0","kind":"field_change","created_at":"2026-04-07T23:25:28.79165531Z","actor":"tshardey","issue_id":"tome-of-secrets-fz4","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-3c90a5e7","kind":"field_change","created_at":"2026-04-12T23:06:18.295590589Z","actor":"tshardey","issue_id":"tome-of-secrets-k8j","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-d090a54b","kind":"field_change","created_at":"2026-04-12T23:54:04.392361532Z","actor":"tshardey","issue_id":"tome-of-secrets-s0r","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
+{"id":"int-c0918955","kind":"field_change","created_at":"2026-04-14T04:35:36.33172403Z","actor":"tshardey","issue_id":"tome-of-secrets-6om","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}

@@ -1,6 +1,7 @@
 .env/
 .troubleshoot/
 .devcontainer/
+.worktrees/
 
 _site/
 
