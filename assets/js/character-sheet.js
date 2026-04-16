@@ -25,7 +25,6 @@ import { createUpdateCurrency } from './character-sheet/currencyService.js';
 import { updateGenreQuestDropdown, initializeGenreSelection } from './character-sheet/genreSelection.js';
 import { initializeCollapsiblePanels, initializeQuestDrawHelpersToggle } from './character-sheet/collapsiblePanels.js';
 import { initializeDeckActions } from './character-sheet/deckActions.js';
-import { initializePrintHandler } from './character-sheet/printHandler.js';
 import { initializeDelegatedClickHandler } from './character-sheet/delegatedClickHandler.js';
 import { initializeRollingTables } from './character-sheet/rollingTables.js';
 import { initializeQuestInfoDrawers } from './character-sheet/questInfoDrawers.js';
@@ -193,8 +192,6 @@ export async function initializeCharacterSheet() {
     dependencies.updateDeckActionsLabel = updateDeckActionsLabel;
 
     // --- MAIN EVENT HANDLERS ---
-    initializePrintHandler();
-
     initializeCurrencyWarning(form);
 
     initializeDelegatedClickHandler(form, {

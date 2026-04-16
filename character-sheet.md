@@ -401,7 +401,7 @@ permalink: /character-sheet.html
                             <th>Effect</th>
                             <th>Duration</th>
                             <th>Status</th>
-                            <th class="no-print">Action</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="active-temp-buffs-body">
@@ -435,7 +435,7 @@ permalink: /character-sheet.html
                 </table>
             </div>
             <div class="form-row" style="margin-top: 20px; justify-content: center;">
-                <button type="button" class="rpg-btn rpg-btn-primary end-of-month-button no-print">End of Month</button>
+                <button type="button" class="rpg-btn rpg-btn-primary end-of-month-button">End of Month</button>
             </div>
         </div>
     </div>
@@ -720,7 +720,7 @@ permalink: /character-sheet.html
                     <input type="number" id="journal-entries-completed" class="rpg-stat-input" value="0" min="0" />
                 </div>
                 <div class="rpg-monthly-stat-item">
-                    <button type="button" class="rpg-btn rpg-btn-primary end-of-month-button no-print">End of Month</button>
+                    <button type="button" class="rpg-btn rpg-btn-primary end-of-month-button">End of Month</button>
                 </div>
             </div>
             <p class="rpg-panel-subtitle" style="margin-top: 12px;">
@@ -766,7 +766,7 @@ permalink: /character-sheet.html
                     <div class="rpg-panel-header-lead">
                         <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
                         <button type="button"
-                                class="rpg-panel-help-icon-btn no-print"
+                                class="rpg-panel-help-icon-btn"
                                 id="quest-draw-helpers-help-toggle"
                                 aria-expanded="false"
                                 aria-controls="quest-draw-helpers-help-details"
@@ -791,7 +791,7 @@ permalink: /character-sheet.html
                         <p>When drawing quest cards below, turning on <strong>Auto-use helpers on draw</strong> will automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn it off to draw one card per click and mark helpers used manually.</p>
                         <p>With <strong>Auto-use helpers on draw</strong>, <strong>Divination</strong> is marked used when you click any quest pool deck — ♥ genre, ♣ side, ♠ dungeon rooms, or ⭐ Extra Credit (roll 2 dice for that pick; no extra cards drawn). You can still mark it manually if auto is off.</p>
                     </div>
-                    <div id="quest-draw-helpers-auto-controls" class="no-print quest-draw-helpers-auto-controls"></div>
+                    <div id="quest-draw-helpers-auto-controls" class="quest-draw-helpers-auto-controls"></div>
                     <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
                 </div>
             </div>
@@ -1018,7 +1018,7 @@ permalink: /character-sheet.html
                         <th class="col-requirement">Requirement</th>
                         <th class="col-book">Book/Activity</th>
                         <th class="col-status">Status</th>
-                        <th class="col-action no-print">Action</th>
+                        <th class="col-action">Action</th>
                     </tr>
                 </thead>
                 <tbody id="active-curses-body">
@@ -1035,7 +1035,7 @@ permalink: /character-sheet.html
                         <th class="col-requirement">Requirement</th>
                         <th class="col-book">Book/Activity</th>
                         <th class="col-status">Status</th>
-                        <th class="col-action no-print">Action</th>
+                        <th class="col-action">Action</th>
                     </tr>
                 </thead>
                 <tbody id="completed-curses-body">
@@ -1434,9 +1434,7 @@ permalink: /character-sheet.html
 </div>
 
 
-    <div class="form-buttons no-print">
-    <button type="submit">Save Character Info</button>
-    <button type="button" id="print-button">Print</button>
+    <div class="form-buttons">
     <span id="save-indicator" class="save-indicator hidden">
         {% if site.images_cdn_base and site.images_cdn_base != "" %}
         <img src="{{ site.images_cdn_base }}/icons/save-icon.png" alt="Saved" class="save-icon" />

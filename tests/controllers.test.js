@@ -185,9 +185,9 @@ describe('Controllers', () => {
             levelInput.value = '2';
             levelInput.dispatchEvent(new Event('change'));
             
-            // Level 2 rewards: 5 inkDrops, 2 paperScraps, 0 SMP
-            expect(parseInt(inkDropsInput.value)).toBe(15); // 10 + 5
-            expect(parseInt(paperScrapsInput.value)).toBe(7); // 5 + 2
+            // Level 2 rewards: 25 inkDrops, 10 paperScraps, 0 SMP
+            expect(parseInt(inkDropsInput.value)).toBe(35); // 10 + 25
+            expect(parseInt(paperScrapsInput.value)).toBe(15); // 5 + 10
             expect(parseInt(smpInput.value)).toBe(0);
         });
 
@@ -213,12 +213,12 @@ describe('Controllers', () => {
             levelInput.value = '4';
             levelInput.dispatchEvent(new Event('change'));
             
-            // Level 2: 5 ink, 2 paper
-            // Level 3: 5 ink, 3 paper
-            // Level 4: 10 ink, 5 paper
-            // Total: 20 ink, 10 paper
-            expect(parseInt(inkDropsInput.value)).toBe(20);
-            expect(parseInt(paperScrapsInput.value)).toBe(10);
+            // Level 2: 25 ink, 10 paper
+            // Level 3: 25 ink, 15 paper
+            // Level 4: 50 ink, 25 paper
+            // Total: 100 ink, 50 paper
+            expect(parseInt(inkDropsInput.value)).toBe(100);
+            expect(parseInt(paperScrapsInput.value)).toBe(50);
         });
 
         it('should award SMP when leveling up to levels with SMP rewards', () => {

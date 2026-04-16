@@ -1010,36 +1010,6 @@ article th:first-child {
 }
 
 /* ==========================================================================
-   Print-specific styles
-   ========================================================================== */
-@media print {
-    body {
-        background-image: none;
-        background-color: #fff;
-        color: #000;
-    }
-
-    .sidebar,
-    footer,
-    .hero,
-    .no-print {
-        display: none;
-    }
-
-    article {
-        border: none;
-        padding: 0;
-    }
-
-    input,
-    textarea {
-        border: 1px solid #ccc;
-        padding: 5px;
-        width: 100%;
-    }
-}
-
-/* ==========================================================================
    Character Sheet Form Styles
    ========================================================================== */
 
@@ -1097,26 +1067,6 @@ article th:first-child {
 
 .form-section {
     margin-bottom: 30px;
-}
-
-.form-buttons button {
-    background-color: #b89f62;
-    /* Muted gold */
-    color: #2a231d;
-    /* Deep brown text */
-    border: none;
-    padding: 10px 20px;
-    font-family: 'Lora', serif;
-    font-size: 1em;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-    margin-right: 10px;
-}
-
-.form-buttons button:hover {
-    background-color: #cca352;
-    /* Brighter gold on hover */
 }
 
 /* ==========================================================================

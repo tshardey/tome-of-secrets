@@ -1280,7 +1280,7 @@ export function renderActivatedAbilities() {
         tile.appendChild(status);
 
         const actions = document.createElement('div');
-        actions.className = 'curse-helper-tile__actions no-print';
+        actions.className = 'curse-helper-tile__actions';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'activate-ability-btn';

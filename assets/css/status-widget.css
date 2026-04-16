@@ -331,10 +331,3 @@
     }
 }
 
-/* Print styles - hide widget */
-@media print {
-    .status-widget {
-        display: none;
-    }
-}
-

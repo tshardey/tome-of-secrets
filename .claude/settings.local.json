@@ -46,7 +46,10 @@
       "Bash(npm ls:*)",
       "Bash(npm install:*)",
       "Bash(cat /workspaces/tome-of-secrets/.worktrees/6om/tests/vitest.config.*)",
-      "Bash(bd create:*)"
+      "Bash(bd create:*)",
+      "Bash(grep -n \"form-buttons\\\\|#print-button\" /workspaces/tome-of-secrets/assets/css/*.css /workspaces/tome-of-secrets/assets/css/*.scss)",
+      "Bash(grep:*)",
+      "Bash(node:*)"
     ]
   }
 }

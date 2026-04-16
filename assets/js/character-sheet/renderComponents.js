@@ -99,7 +99,7 @@ function renderQuestRowPure(viewModel) {
     
     // Add action cell
     const actionCell = document.createElement('td');
-    actionCell.className = 'no-print action-cell';
+    actionCell.className = 'action-cell';
     
     if (viewModel.showComplete) {
         actionCell.appendChild(createActionButton('Complete', 'complete-quest-btn', index));
@@ -303,7 +303,7 @@ export function renderCurseRow(curse, index, status = 'Active') {
     
     // Action cell
     const actionCell = document.createElement('td');
-    actionCell.className = 'no-print action-cell';
+    actionCell.className = 'action-cell';
     
     if (status === 'Active') {
         actionCell.appendChild(createActionButton('Complete', 'complete-curse-btn', index));
@@ -357,7 +357,7 @@ export function renderTemporaryBuffRow(buff, index) {
     
     // Action cell
     const actionCell = document.createElement('td');
-    actionCell.className = 'no-print action-cell';
+    actionCell.className = 'action-cell';
     
     if (buff.status === 'active' && buff.duration === 'one-time') {
         actionCell.appendChild(createActionButton('Mark as Used', 'mark-buff-used-btn', index));
@@ -834,7 +834,7 @@ export function renderQuestCard(quest, index, listType = 'active') {
     }
     
     // Action buttons
-    const actions = createElement('div', { class: 'quest-card-actions no-print' });
+    const actions = createElement('div', { class: 'quest-card-actions' });
     
     // Determine list name for edit button
     const listName = listType === 'active' ? 'activeAssignments' : 
@@ -919,7 +919,7 @@ export function renderCurseHelperRow(helper, helperState = {}, options = {}) {
     status.textContent = statusText;
     tile.appendChild(status);
 
-    const actions = createElement('div', { class: 'curse-helper-tile__actions no-print' });
+    const actions = createElement('div', { class: 'curse-helper-tile__actions' });
     if (canMarkUsed) {
         actions.appendChild(createHelperActionButton('Mark used', markUsedClass, helper.sourceId, helper.cadence));
     }
