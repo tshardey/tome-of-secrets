@@ -49,7 +49,20 @@
       "Bash(bd create:*)",
       "Bash(grep -n \"form-buttons\\\\|#print-button\" /workspaces/tome-of-secrets/assets/css/*.css /workspaces/tome-of-secrets/assets/css/*.scss)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(bundle exec:*)",
+      "Bash(bundle install:*)",
+      "Bash(sed -n '1063,1085p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1087,1101p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1103,1117p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1119,1133p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1135,1149p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1050,1055p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1432,1440p' /workspaces/tome-of-secrets/.worktrees/324-modularize-drawers/character-sheet.md)",
+      "Bash(sed -n '1432,1440p' /tmp/tos-before/character-sheet.html)",
+      "Bash(sed -n '1432,1440p' /tmp/character-sheet-before.html)",
+      "Bash(git status:*)",
+      "Bash(bd dep:*)"
     ]
   }
 }
