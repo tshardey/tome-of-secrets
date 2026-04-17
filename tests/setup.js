@@ -15,7 +15,16 @@ window.confirm = () => true; // Mock the confirm function to always return true
  * @param {string} filePath - The path to the HTML/Markdown file relative to the project root.
  */
 global.loadHTML = (filePath) => {
-  const absolutePath = path.resolve(__dirname, '..', filePath);
-  const html = fs.readFileSync(absolutePath, 'utf8');
+  const projectRoot = path.resolve(__dirname, '..');
+  const absolutePath = path.resolve(projectRoot, filePath);
+  let html = fs.readFileSync(absolutePath, 'utf8');
+  // Resolve Jekyll {% include %} tags by inlining the included file content
+  html = html.replace(/\{%[-\s]*include\s+([\w/.-]+)\s*[-\s]*%\}/g, (match, includePath) => {
+    const includeAbsPath = path.resolve(projectRoot, '_includes', includePath);
+    if (fs.existsSync(includeAbsPath)) {
+      return fs.readFileSync(includeAbsPath, 'utf8');
+    }
+    return match;
+  });
   document.body.innerHTML = html;
 };
