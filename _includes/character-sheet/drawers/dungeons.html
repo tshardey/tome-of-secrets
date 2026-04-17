@@ -1,0 +1,39 @@
+<!-- Dungeons Info Drawer -->
+<div id="dungeons-info-backdrop" class="info-drawer-backdrop"></div>
+<div id="dungeons-info-drawer" class="info-drawer" style="display: none;">
+    <div class="info-drawer-header">
+        <h2>♠ Dungeon Rooms (Roll a d20)</h2>
+        <button class="close-info-drawer-btn" id="close-dungeons-info" aria-label="Close dungeons drawer">&times;</button>
+    </div>
+    <div class="info-drawer-body">
+        <div class="info-drawer-content">
+            <p>Draw cards to determine your dungeon room and encounter. Each room offers a narrative challenge and encounter. Complete both to earn the rewards for the room. Complete all dungeon rooms to be able to roll on the <a href="#dungeon-completion-rewards">Dungeon Completion Rewards</a> table. Each room belongs to a wing of the library—explore the <a href="{{ site.baseurl }}/library.html">Library Restoration</a> page to see how your progress unlocks restoration projects.</p>
+            
+            <p><strong>Note:</strong> Rooms stay in the deck until all encounters are completed. If you have only completed one encounter in a room, you may draw from that room again to complete the remaining encounters.</p>
+            
+            <h3>Journaling: Dungeon Crawls</h3>
+            
+            <p>These are the high-stakes moments of your story. You are venturing into dangerous, unchecked parts of the library to face hostile magical threats. You must weave together the Room, the Creature, and the Book into a narrative.</p>
+            
+            <ul>
+                <li><strong>The Setting:</strong> Describe the room. What made it dangerous or unique? How did the room's mechanics physically manifest around you?</li>
+                <li><strong>The Encounter:</strong> How did the creature appear? Did it crawl out of a book? Did it form from the shadows? Was it friendly or confrontational? What elements of the book impacted the encounter? How did fulfilling the specific prompt translate into something useful for dealing with the creature?</li>
+            </ul>
+            
+            <h3>Dungeon Rewards & Penalties</h3>
+            <div id="dungeon-rewards-table-container"></div>
+            
+            <br>
+            
+            <div id="dungeon-rooms-table-container"></div>
+            
+            <h3 id="dungeon-completion-rewards">♠ Dungeon Completion Rewards</h3>
+            <p>Complete a dungeon room and click "Claim Reward" above to earn a draw. You have <strong><span id="dungeon-completion-draws-available">0</span></strong> draw(s) to use.</p>
+            <div class="form-row" style="margin-bottom: 12px;">
+                <button type="button" id="draw-dungeon-completion-card-btn" class="rpg-btn rpg-btn-primary">Draw item</button>
+            </div>
+            <div id="dungeon-completion-drawn-card-container" style="min-height: 0; margin-bottom: 12px;"></div>
+            <div id="dungeon-completion-rewards-table-container"></div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,79 @@
+<div id="quest-edit-backdrop" class="quest-edit-backdrop"></div>
+<div id="quest-edit-drawer" class="quest-edit-drawer" style="display: none;">
+    <div class="quest-edit-header">
+        <h2 id="quest-edit-header-title">Editing Quest</h2>
+        <button class="close-quest-edit-btn" id="close-quest-edit" aria-label="Close quest edit drawer">&times;</button>
+    </div>
+    <div class="quest-edit-body">
+        <form id="quest-edit-form">
+            <div class="form-row">
+                <label for="edit-quest-month"><strong>Month:</strong></label>
+                <select id="edit-quest-month">
+                    <option value="">-- Select Month --</option>
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="edit-quest-year"><strong>Year:</strong></label>
+                <select id="edit-quest-year">
+                    <option value="">-- Select Year --</option>
+                </select>
+            </div>
+            <div class="form-row edit-quest-date-completed-row">
+                <label><strong>Date completed:</strong></label>
+                <span id="edit-quest-date-completed-display" class="edit-quest-date-completed-display"></span>
+            </div>
+            <div class="form-row">
+                <label for="edit-quest-type"><strong>Quest Type:</strong></label>
+                <select id="edit-quest-type" disabled>
+                    <option value="">-- Quest Type --</option>
+                    <option value="♠ Dungeon Crawl">♠ Dungeon Crawl</option>
+                    <option value="♣ Side Quest">♣ Side Quest</option>
+                    <option value="♥ Organize the Stacks">♥ Organize the Stacks</option>
+                    <option value="🔨 Restoration Project">🔨 Restoration Project</option>
+                    <option value="⭐ Extra Credit">⭐ Extra Credit</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label><strong>Status:</strong></label>
+                <span id="edit-quest-status-display" class="quest-status-badge"></span>
+            </div>
+            <div id="edit-quest-prompt-section" class="quest-edit-section">
+                <label><strong>Prompt:</strong></label>
+                <div id="edit-quest-prompt-display" class="quest-prompt-display"></div>
+            </div>
+            <div class="form-row edit-quest-book-row">
+                <label><strong>Book:</strong></label>
+                <input type="hidden" id="edit-quest-book-id" value="" />
+                <div id="edit-quest-legacy-book-display" class="edit-quest-legacy-book-display" style="display: none;"></div>
+                <div id="edit-quest-book-selector-container" class="book-selector-container" aria-label="Link a book from your library"></div>
+            </div>
+            <div class="form-row">
+                <label for="edit-quest-notes"><strong>Notes (optional):</strong></label>
+                <textarea id="edit-quest-notes" placeholder="Notes" rows="5"></textarea>
+            </div>
+            <div class="form-row">
+                <label style="display: block; margin-bottom: 10px;"><strong>Applicable Buffs & Items:</strong></label>
+                <div id="edit-quest-bonus-selection-container" class="quest-bonus-selection-container">
+                    <p class="no-bonuses-message" style="color: #8a7a61; font-style: italic; padding: 20px; text-align: center;">No bonuses available. Equip items or activate buffs to see them here.</p>
+                </div>
+                <input type="hidden" id="edit-quest-buffs-select" />
+            </div>
+            <div class="quest-edit-actions">
+                <button type="button" id="save-quest-changes-btn" class="save-quest-btn">Save Changes</button>
+                <button type="button" id="cancel-quest-edit-btn" class="cancel-quest-btn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>

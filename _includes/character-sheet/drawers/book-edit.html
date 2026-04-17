@@ -1,0 +1,82 @@
+<div id="book-edit-backdrop" class="quest-edit-backdrop book-edit-backdrop"></div>
+<div id="book-edit-drawer" class="quest-edit-drawer book-edit-drawer" style="display: none;">
+    <div class="quest-edit-header">
+        <h2 id="book-edit-header-title">Edit Book</h2>
+        <button type="button" class="close-quest-edit-btn" id="close-book-edit" aria-label="Close book edit drawer">&times;</button>
+    </div>
+    <div class="quest-edit-body">
+        <form id="book-edit-form">
+            <input type="hidden" id="book-edit-id" value="" />
+            <div class="form-row book-edit-search-row">
+                <label for="book-edit-search-query"><strong>Look up book:</strong></label>
+                <div class="library-search-input-and-results">
+                    <div class="library-search-wrap">
+                        <input type="text" id="book-edit-search-query" class="library-title-input" placeholder="Search to update title, author, cover…" autocomplete="off" aria-label="Search for book details" />
+                        <button type="button" id="book-edit-search-btn" class="rpg-btn rpg-btn-secondary lookup-book-btn" title="Search API for book details">Look up</button>
+                    </div>
+                    <div id="book-edit-search-results" class="book-search-results library-search-results" aria-live="polite" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="book-edit-title"><strong>Title:</strong></label>
+                <input type="text" id="book-edit-title" placeholder="Book Title" required />
+            </div>
+            <div class="form-row">
+                <label for="book-edit-author"><strong>Author (optional):</strong></label>
+                <input type="text" id="book-edit-author" placeholder="Author" />
+            </div>
+            <div class="form-row book-edit-cover-row">
+                <label><strong>Cover:</strong></label>
+                <div class="library-cover-fields">
+                    <div class="library-cover-preview-wrap">
+                        <img id="book-edit-cover-preview" class="library-cover-preview" src="" alt="" role="presentation" style="display: none;">
+                        <span id="book-edit-cover-placeholder" class="library-cover-placeholder">No cover</span>
+                    </div>
+                    <div class="library-cover-inputs">
+                        <input type="url" id="book-edit-cover-url" class="library-cover-url-input" placeholder="Cover image URL" value="" />
+                        <label for="book-edit-cover-upload" class="library-cover-upload-label">Upload</label>
+                        <input type="file" id="book-edit-cover-upload" class="library-cover-upload-input" accept="image/*" />
+                        <input type="hidden" id="book-edit-cover-value" value="" />
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="book-edit-page-count"><strong>Page count (optional):</strong></label>
+                <input type="number" id="book-edit-page-count" class="library-page-count-input" min="1" placeholder="—" value="" />
+            </div>
+            <div class="form-row">
+                <label for="book-edit-status"><strong>Status:</strong></label>
+                <select id="book-edit-status" class="rpg-select">
+                    <option value="reading">Reading</option>
+                    <option value="completed">Completed</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="book-edit-shelf-category"><strong>Shelf:</strong></label>
+                <select id="book-edit-shelf-category" class="rpg-select">
+                    <option value="general">General library</option>
+                    <option value="physical-tbr">Physical TBR</option>
+                </select>
+            </div>
+            <div class="form-row" id="book-edit-date-completed-row">
+                <label for="book-edit-date-completed"><strong>Date completed (optional):</strong></label>
+                <input type="date" id="book-edit-date-completed" class="library-date-input" placeholder="YYYY-MM-DD" aria-label="Date book was completed" />
+            </div>
+            <div class="form-row">
+                <label for="book-edit-series"><strong>Series (Campaign):</strong></label>
+                <select id="book-edit-series" class="rpg-select" aria-label="Tag this book to a series">
+                    <option value="">— None —</option>
+                </select>
+            </div>
+            <div id="book-edit-links-section" class="form-row book-edit-links" style="display: none;">
+                <label><strong>Linked:</strong></label>
+                <div id="book-edit-links-display" class="book-edit-links-display"></div>
+            </div>
+            <div class="quest-edit-actions">
+                <button type="button" id="save-book-edit-btn" class="save-quest-btn">Save</button>
+                <button type="button" id="cancel-book-edit-btn" class="cancel-quest-btn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
