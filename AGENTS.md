@@ -73,21 +73,26 @@ The repository is organized as a standard Jekyll project.
 
 ## Task Tracking and Planning
 
-Use **[Beads](https://github.com/steveyegge/beads)** (`bd`) for task tracking and planning. Beads is a git-backed, dependency-aware graph issue tracker for coding agents.
+Use **[Beads](https://github.com/gastownhall/beads)** (`bd`) for task tracking and planning. Beads is a dependency-aware graph issue tracker for coding agents; this repo stores state under `.beads/` using a **Dolt** backend (embedded mode by default).
+
+**Do not bypass `bd` for issue state.** Agents must create, update, close, and query work **only through the `bd` CLI** (or documented `bd` flows). **Do not** edit `.beads/issues.jsonl` by hand, **do not** open `.beads/beads.db` or other DB files with `sqlite3`, and **do not** mutate `.beads/embeddeddolt/` or other storage files directly. Those paths are managed by Beads; bypassing them corrupts or desynchronizes the tracker. For rare debugging, use `bd sql '<query>'` if you must run SQL, not raw tools against the files on disk. If the tracker misbehaves, follow [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md).
+
+**Concurrency:** Embedded Dolt is effectively **single-writer**. Avoid multiple terminals or parallel agents issuing `bd` writes at the same time; serialize Beads updates or you risk hangs and locks. If you need concurrent writers long-term, plan a Beads **server** mode setup (see upstream docs).
 
 **Required workflow:**
 
 1.  **Before starting work:** Create tasks in Beads *before* you begin implementation. Do not start coding (or content changes) until the work is represented as one or more tasks. Use `bd create "Title" -p <priority>` for each discrete piece of work and `bd dep add <child> <parent>` to link dependencies. For multi-step requests, break the work into tasks first, then pick from `bd ready` to see what is unblocked.
 2.  **Claim work:** Move an issue to **in progress** when you start it (`bd update <id> --status in_progress`) so other agents or sessions do not duplicate effort.
 3.  **Granularity:** If a task is broad or will take **more than a few minutes**, split it into smaller Beads issues with clear scopes. **Rule of thumb:** if meaningful work exceeds ~3 minutes and is not already tracked, add or refine a Bead before diving in.
-4.  **When finished (definition of done):** Mark a task **done** only after **automated tests have passed** (including `validate-data` when data changed) **and** a **subagent pre-commit review has passed** for code changes. Close or complete each task you created (or that you were assigned) so Beads reflects the current state.
+4.  **When finished (definition of done):** Mark a task **done** only after **automated tests have passed** (including `validate-data` when data changed) **and** a **subagent pre-commit review has passed** for code changes. Close finished work with `bd close <id> --reason "..."` (use `bd close --help` for flags such as `--force` when dependency gates block a legitimately complete issue). Keep Beads aligned with reality.
 5.  **Ongoing:** Use `bd ready` to choose next steps; update task state as you go so context persists across sessions.
 
 **Setup and reference:**
 
-*   **Initialization:** If the project does not yet use Beads, run `bd init` in the project root. (Beads is a CLI you install once system-wide; you do not clone the beads repo into this project.)
-*   **Commands:** `bd ready` — list tasks with no open blockers; `bd create "Title" -p 0` — create a task; `bd dep add <child> <parent>` — link tasks; `bd show <id>` — view task details. Close/complete tasks via the appropriate `bd` command when work is finished.
-*   **Docs:** See [Beads documentation](https://github.com/steveyegge/beads) for installation, agent workflow, and full command reference.
+*   **Initialization:** If the project does not yet use Beads, run `bd init` in the project root. (Install the `bd` CLI once per environment; do not clone the Beads repo into this project.)
+*   **Common commands:** `bd ready` — unblocked work; `bd list` / `bd show <id>` — inspect; `bd create`, `bd update`, `bd dep add`, `bd close` — mutate; `bd export --no-memories -o .beads/issues.jsonl` — refresh the git-tracked export after changes (see below).
+*   **Git-tracked export:** The maintainer commits [`.beads/issues.jsonl`](.beads/issues.jsonl). After you change issue state, run `bd export --no-memories -o .beads/issues.jsonl` so that file matches the database, then stage it with `git add`. Older docs may mention `bd sync`; current `bd` uses **`bd export`** for this JSONL snapshot.
+*   **Docs:** [Beads upstream](https://github.com/gastownhall/beads), [`.beads/README.md`](.beads/README.md), and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md) for recovery and troubleshooting.
 
 ## Agent Capabilities and Tasks
 
@@ -198,12 +203,12 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 
 ## Important Directives
 
-1.  **Task tracking (Beads):** Create and claim tasks *before* starting work; keep them granular; mark them **done** only after tests pass and subagent review passes (for code). See [`.beads/README.md`](.beads/README.md) for the project-specific Beads workflow.
+1.  **Task tracking (Beads):** Create and claim tasks *before* starting work; keep them granular; mark them **done** only after tests pass and subagent review passes (for code). Use **`bd` only** for issue CRUD (see Task Tracking section — no manual `.beads` storage edits). See [`.beads/README.md`](.beads/README.md) and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md).
 2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
 3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
 4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
 5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
-6.  **Git: `git add` only:** Agents may **`git add`** to stage the files that belong to the session’s work (including `bd sync` outputs such as `.beads/issues.jsonl` when Beads changed). Agents must **not** run **`git commit`** or **`git push`** — the maintainer commits and publishes. Run **`bd sync`** when issue state changed so Beads exports are ready to stage alongside code.
+6.  **Git: `git add` only:** Agents may **`git add`** to stage the files that belong to the session’s work (including **`.beads/issues.jsonl`** after a `bd export` when Beads changed). Agents must **not** run **`git commit`** or **`git push`** — the maintainer commits and publishes. When issue state changed, run **`bd export --no-memories -o .beads/issues.jsonl`** so the export matches the database before staging.
 
 ## Landing the Plane (Session Completion)
 
@@ -216,8 +221,8 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 3. **Update issue status** - Close finished work, update in-progress items
 4. **Stage for the maintainer (`git add` only)**:
    ```bash
-   bd sync             # when Beads issue state changed; then stage the exported JSONL
-   git add <paths>     # stage every file that is part of this deliverable
+   bd export --no-memories -o .beads/issues.jsonl   # when Beads issue state changed; refreshes git-tracked export
+   git add <paths>     # stage every file that is part of this deliverable (include .beads/issues.jsonl if updated)
    git status          # show staged vs unstaged; call out anything intentionally not added
    ```
    **Do not run `git commit` or `git push`.** The handoff should list what is **staged**, branch name, and suggested commit message (if helpful).

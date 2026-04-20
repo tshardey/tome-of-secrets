@@ -27,3 +27,6 @@ _config.supabase.yml
 .dolt/
 *.db
 .beads-credential-key
+
+# Local Beads forensic backup after recovery (do not commit)
+.beads.pre-recovery-wedged/

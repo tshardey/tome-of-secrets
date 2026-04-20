@@ -8,6 +8,11 @@ Beads is issue tracking that lives in your repo, making it perfect for AI coding
 
 **Learn more:** [github.com/steveyegge/beads](https://github.com/steveyegge/beads)
 
+## Tome of Secrets — recovery and exports
+
+- **Recovery / troubleshooting:** see [`project-docs/BEADS-RECOVERY.md`](../project-docs/BEADS-RECOVERY.md).
+- **Refresh git-tracked issues after changes:** `bd export --no-memories -o .beads/issues.jsonl` then stage `.beads/issues.jsonl` for the maintainer’s commit.
+
 ## Quick Start
 
 ### Essential Commands
