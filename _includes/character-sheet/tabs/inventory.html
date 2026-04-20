@@ -1,0 +1,87 @@
+<!-- TAB 3: INVENTORY -->
+<div class="tab-panel" data-tab-panel="inventory" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-slot-management-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">⚔️ Equipment Slots</h2>
+            <p class="rpg-panel-subtitle">Manage your available equipment slots</p>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-slot-grid">
+                <div class="rpg-slot-item">
+                    <label for="wearable-slots" class="rpg-slot-label">Wearable Slots</label>
+                    <input type="number" id="wearable-slots" class="rpg-stat-input" value="1" min="0" max="9">
+                </div>
+                <div class="rpg-slot-item">
+                    <label for="non-wearable-slots" class="rpg-slot-label">Non-Wearable Slots</label>
+                    <input type="number" id="non-wearable-slots" class="rpg-stat-input" value="1" min="0" max="9">
+                </div>
+                <div class="rpg-slot-item">
+                    <label for="familiar-slots" class="rpg-slot-label">Familiar Slots</label>
+                    <input type="number" id="familiar-slots" class="rpg-stat-input" value="1" min="0" max="9">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-add-item-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">📥 Add Item to Inventory</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="form-row" style="gap: 12px; align-items: center;">
+                <select id="item-select" class="rpg-select" style="flex: 1;">
+                    <option value="">-- Select an item to add --</option>
+                </select>
+                <button type="button" id="add-item-button" class="rpg-btn rpg-btn-primary">Add Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-equipped-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title" id="equipped-summary">⚡ Equipped Items (0/0 Slots Used)</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="equipped-items-list" class="item-grid">
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-inventory-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">📦 Inventory (Unequipped)</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="inventory-list" class="item-grid">
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-passive-equipment-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">🌟 Passive Equipment</h3>
+            <p class="rpg-panel-subtitle">
+                Items and familiars placed in passive slots provide half their normal bonus automatically. Complete restoration projects in the <a href="{{ site.baseurl }}/library.html">Library Restoration</a> to unlock passive slots.
+            </p>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-passive-grid">
+                <div class="rpg-passive-column">
+                    <h4 class="rpg-passive-column-title">Display Slots</h4>
+                    <div id="passive-item-slots-character-sheet" class="passive-slots-container">
+                        <p class="no-slots-message">Complete restoration projects to unlock display slots.</p>
+                    </div>
+                </div>
+                <div class="rpg-passive-column">
+                    <h4 class="rpg-passive-column-title">Adoption Slots</h4>
+                    <div id="passive-familiar-slots-character-sheet" class="passive-slots-container">
+                        <p class="no-slots-message">Complete restoration projects to unlock adoption slots.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB 3: INVENTORY -->

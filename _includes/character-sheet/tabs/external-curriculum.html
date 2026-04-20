@@ -1,0 +1,46 @@
+<!-- TAB: EXTERNAL CURRICULUM -->
+<div class="tab-panel" data-tab-panel="external-curriculum" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-external-curriculum-add-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📋 Add Curriculum</h2>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="external-curriculum-add-panel-body"
+                    aria-expanded="true"
+                    aria-controls="external-curriculum-add-panel-body">
+                Hide
+            </button>
+        </div>
+        <div class="rpg-panel-body" id="external-curriculum-add-panel-body">
+            <div id="external-curriculum-add-form" class="curriculum-add-form" role="form" aria-label="Add a curriculum">
+                <div class="form-row">
+                    <label for="external-curriculum-name"><strong>Curriculum name:</strong></label>
+                    <input type="text" id="external-curriculum-name" class="curriculum-name-input" placeholder="e.g. Book Club 2025" />
+                </div>
+                <div class="form-row">
+                    <label for="external-curriculum-type"><strong>Type:</strong></label>
+                    <select id="external-curriculum-type">
+                        <option value="prompt">Prompt-based (categories & prompts)</option>
+                        <option value="book-club">Book Club (list of books)</option>
+                        <option value="bingo">Bingo Board (5×5)</option>
+                    </select>
+                </div>
+                <div class="form-row curriculum-add-actions">
+                    <button type="button" id="external-curriculum-add-btn" class="rpg-btn rpg-btn-primary">Add Curriculum</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-external-curriculum-list-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">Your Curriculums</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="external-curriculum-list" class="curriculum-list" aria-label="List of external curriculums"></div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB: EXTERNAL CURRICULUM -->

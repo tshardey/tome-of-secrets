@@ -1,0 +1,135 @@
+<!-- TAB 1: CHARACTER INFO & RESOURCES -->
+<div class="tab-panel active" data-tab-panel="character" role="tabpanel">
+    <!-- RPG Hero Section -->
+    <div class="rpg-hero-section">
+        <div class="rpg-hero-content">
+            <div class="rpg-hero-main">
+                <div class="rpg-hero-name-section">
+                    <label for="keeperName" class="rpg-hero-label">Keeper Name</label>
+                    <input type="text" id="keeperName" class="rpg-hero-name-input" placeholder="Enter your name" />
+                </div>
+                <div class="rpg-hero-level-section">
+                    <label for="level" class="rpg-hero-label">Level</label>
+                    <div class="rpg-level-container">
+                        <span class="rpg-level-badge" id="rpg-level-badge">
+                            <span class="rpg-level-number" id="rpg-level-number">1</span>
+                        </span>
+                        <input type="number" id="level" class="rpg-level-input" value="1" min="1" />
+                    </div>
+                </div>
+            </div>
+            <div class="rpg-hero-attributes">
+                <div class="rpg-attribute-item">
+                    <label for="keeperBackground" class="rpg-attribute-label">📖 Background</label>
+                    <select id="keeperBackground" class="rpg-attribute-select">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <div class="rpg-attribute-item">
+                    <label for="wizardSchool" class="rpg-attribute-label">✨ School</label>
+                    <select id="wizardSchool" class="rpg-attribute-select">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <div class="rpg-attribute-item">
+                    <label for="librarySanctum" class="rpg-attribute-label">🏛️ Sanctum</label>
+                    <select id="librarySanctum" class="rpg-attribute-select">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Creation Guide -->
+    <div class="rpg-panel rpg-character-guide-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📖 Character Creation Guide</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-quest-table-buttons">
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="keeper-backgrounds">
+                    📖 View Keeper Backgrounds
+                </button>
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="wizard-schools">
+                    ✨ View Magical Schools
+                </button>
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="library-sanctums">
+                    🏛️ View Library Sanctums
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- XP Progress Bar Panel -->
+    <div class="rpg-panel rpg-xp-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📈 Experience & Progression</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-xp-container">
+                <div class="rpg-xp-info">
+                    <label for="xp-current" class="rpg-xp-label">Current XP</label>
+                    <div class="rpg-xp-values">
+                        <input type="number" id="xp-current" class="rpg-xp-current-input" value="0" min="0" />
+                        <span class="rpg-xp-divider">/</span>
+                        <span class="rpg-xp-needed" id="xp-needed">100</span>
+                    </div>
+                </div>
+                <div class="rpg-xp-progress-bar">
+                    <div class="rpg-xp-progress-fill" id="rpg-xp-progress-fill" style="width: 0%;"></div>
+                    <span class="rpg-xp-progress-text" id="rpg-xp-progress-text">0 / 100 XP</span>
+                </div>
+                <div class="rpg-xp-actions">
+                    <button type="button" id="level-up-btn" class="rpg-level-up-btn" disabled>✨ Level Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Grid Panel -->
+    <div class="rpg-panel rpg-stats-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">💰 Resources</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-stats-grid">
+                <div class="rpg-stat-card">
+                    <label for="inkDrops" class="rpg-stat-icon">💧</label>
+                    <div class="rpg-stat-content">
+                        <label for="inkDrops" class="rpg-stat-label">Ink Drops</label>
+                        <input type="number" id="inkDrops" class="rpg-stat-input" value="0" min="0" />
+                    </div>
+                </div>
+                <div class="rpg-stat-card">
+                    <label for="paperScraps" class="rpg-stat-icon">📄</label>
+                    <div class="rpg-stat-content">
+                        <label for="paperScraps" class="rpg-stat-label">Paper Scraps</label>
+                        <input type="number" id="paperScraps" class="rpg-stat-input" value="0" min="0" />
+                    </div>
+                </div>
+                <div class="rpg-stat-card">
+                    <label for="dustyBlueprints" class="rpg-stat-icon">📜</label>
+                    <div class="rpg-stat-content">
+                        <label for="dustyBlueprints" class="rpg-stat-label">Blueprints</label>
+                        <input type="number" id="dustyBlueprints" class="rpg-stat-input" value="0" min="0" />
+                    </div>
+                </div>
+                <div class="rpg-stat-card">
+                    <label for="smp" class="rpg-stat-icon">🎓</label>
+                    <div class="rpg-stat-content">
+                        <label for="smp" class="rpg-stat-label">SMP</label>
+                        <input type="number" id="smp" class="rpg-stat-input" value="0" min="0" />
+                    </div>
+                </div>
+            </div>
+            <div id="currency-unsaved-warning" class="currency-warning" style="display: none;">
+                <div class="warning-message">
+                    <strong>⚠️ Warning:</strong> You have unsaved changes to your currency. Please save your character sheet before redeeming items on the <a href="{{ site.baseurl }}/shopping.html">Shopping</a> page to ensure your changes are preserved.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- END TAB 1: CHARACTER -->

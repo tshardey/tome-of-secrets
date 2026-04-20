@@ -1,0 +1,252 @@
+<!-- TAB 6: QUESTS -->
+<div class="tab-panel" data-tab-panel="quests" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-monthly-tracker-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📅 Monthly Tracker</h2>
+        </div>
+        <div class="rpg-panel-body">
+
+            <div class="completed-reads-shelf-container">
+                <svg id="completed-reads-shelf" viewBox="0 0 360 140" xmlns="http://www.w3.org/2000/svg" aria-label="Completed Reads Bookshelf">
+                <!-- Shelf wood grain background -->
+                <defs>
+                    <pattern id="wood-grain" patternUnits="userSpaceOnUse" width="100" height="10">
+                        <line x1="0" y1="3" x2="100" y2="3" stroke="#5c4033" stroke-width="0.5" opacity="0.3"/>
+                        <line x1="0" y1="7" x2="100" y2="7" stroke="#5c4033" stroke-width="0.3" opacity="0.2"/>
+                    </pattern>
+                </defs>
+                
+                <!-- Shelf base -->
+                <rect x="0" y="118" width="360" height="22" fill="#8b6914" stroke="#3d2914" stroke-width="2"/>
+                <rect x="0" y="118" width="360" height="22" fill="url(#wood-grain)"/>
+                <line x1="0" y1="120" x2="360" y2="120" stroke="#a67c00" stroke-width="1" opacity="0.5"/>
+                
+                <!-- Book shapes - each has id="shelf-book-N" for JS to fill -->
+                <!-- Book 0: Slim book -->
+                <rect id="shelf-book-0" x="15" y="14" width="20" height="102"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 1: Tall straight -->
+                <rect id="shelf-book-1" x="39" y="8" width="28" height="108"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 2: Medium height -->
+                <rect id="shelf-book-2" x="71" y="32" width="26" height="84"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 3: Tall -->
+                <rect id="shelf-book-3" x="101" y="12" width="30" height="104"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 4: Horizontal stack - bottom (longest, offset left) -->
+                <rect id="shelf-book-4" x="140" y="96" width="90" height="20"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 5: Horizontal stack - middle (offset right) -->
+                <rect id="shelf-book-5" x="148" y="74" width="86" height="20"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 6: Horizontal stack - top (offset left) -->
+                <rect id="shelf-book-6" x="144" y="52" width="78" height="20"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 7: Tall after stack -->
+                <rect id="shelf-book-7" x="238" y="6" width="30" height="110"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 8: Short book -->
+                <rect id="shelf-book-8" x="272" y="48" width="28" height="68"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Book 9: Tall rightmost -->
+                <rect id="shelf-book-9" x="304" y="10" width="32" height="106"
+                      fill="transparent" stroke="#2a1f1a" stroke-width="2"/>
+                
+                <!-- Decorative spine lines (subtle) -->
+                <g stroke="#2a1f1a" stroke-width="0.5" opacity="0.4">
+                    <line x1="53" y1="14" x2="53" y2="110"/>
+                    <line x1="116" y1="18" x2="116" y2="110"/>
+                    <line x1="253" y1="12" x2="253" y2="110"/>
+                    <line x1="320" y1="16" x2="320" y2="110"/>
+                </g>
+                </svg>
+            </div>
+
+            <div class="rpg-monthly-stats">
+                <div class="rpg-monthly-stat-item">
+                    <label for="quest-month" class="rpg-monthly-stat-label">📅 Month</label>
+                    <select id="quest-month" class="rpg-select rpg-stat-input" aria-label="Current game month">
+                        <option value="">— Select —</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                </div>
+                <div class="rpg-monthly-stat-item">
+                    <label for="quest-year" class="rpg-monthly-stat-label">📅 Year</label>
+                    <select id="quest-year" class="rpg-select rpg-stat-input" aria-label="Current game year">
+                        <option value="">— Select Year —</option>
+                    </select>
+                </div>
+                <div class="rpg-monthly-stat-item rpg-monthly-stat-item--hidden" id="books-completed-month-wrap" aria-hidden="true">
+                    <label for="books-completed-month" class="rpg-monthly-stat-label">📚 Books Completed</label>
+                    <input type="number" id="books-completed-month" class="rpg-stat-input" value="0" min="0" max="10" />
+                </div>
+                <div class="rpg-monthly-stat-item">
+                    <label for="journal-entries-completed" class="rpg-monthly-stat-label">📝 Journal Entries</label>
+                    <input type="number" id="journal-entries-completed" class="rpg-stat-input" value="0" min="0" />
+                </div>
+                <div class="rpg-monthly-stat-item">
+                    <button type="button" class="rpg-btn rpg-btn-primary end-of-month-button">End of Month</button>
+                </div>
+            </div>
+            <p class="rpg-panel-subtitle" style="margin-top: 12px;">
+                <strong>End of Month:</strong> Book completion XP is awarded when you mark a book complete in the Library. End of Month awards 5 Paper Scraps per journal entry (+3 for Scribe's Acolyte), processes atmospheric buffs, and resets monthly counters.
+            </p>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-quest-tables-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">🎴 Quest Tables</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-quest-table-buttons">
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="genre-quests">
+                    ♥ View Genre Quests
+                </button>
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="side-quests">
+                    ♣ View Side Quests
+                </button>
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="dungeons">
+                    ♠ View Dungeons
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quest Card Draw Interface -->
+    <div class="rpg-panel rpg-quest-card-draw-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">🎴 Draw Quest Cards</h3>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="quest-card-draw-panel-body"
+                    aria-expanded="true"
+                    aria-controls="quest-card-draw-panel-body">
+                Hide
+            </button>
+        </div>
+        <div class="rpg-panel-body" id="quest-card-draw-panel-body">
+            <div class="rpg-panel rpg-quest-draw-helpers-panel" style="margin-bottom: 1rem;">
+                <div class="rpg-panel-header">
+                    <div class="rpg-panel-header-lead">
+                        <h3 class="rpg-panel-title" id="quest-draw-helpers-summary">Monthly draw and dice helpers</h3>
+                        <button type="button"
+                                class="rpg-panel-help-icon-btn"
+                                id="quest-draw-helpers-help-toggle"
+                                aria-expanded="false"
+                                aria-controls="quest-draw-helpers-help-details"
+                                aria-label="About monthly draw and dice helpers"
+                                title="About these helpers">
+                            <span class="rpg-panel-help-icon-btn__glyph" aria-hidden="true">ℹ</span>
+                        </button>
+                    </div>
+                    <button type="button"
+                            class="panel-toggle-btn"
+                            data-panel-target="quest-draw-helpers-panel-body"
+                            aria-expanded="true"
+                            aria-controls="quest-draw-helpers-panel-body">
+                        Hide
+                    </button>
+                </div>
+                <div class="rpg-panel-body" id="quest-draw-helpers-panel-body">
+                    <div id="quest-draw-helpers-help-details"
+                         class="quest-draw-helpers-help-details"
+                         hidden>
+                        <p>Sources that affect establishing your monthly quest pool or related dice rolls (equipped items, passive display or familiar slots, not inventory-only). Mark uses that reset at End of Month (same pattern as Worn Page helpers on the Curses tab).</p>
+                        <p>When drawing quest cards below, turning on <strong>Auto-use helpers on draw</strong> will automatically use the first available monthly helper for that deck (one helper per click; no stacking). Turn it off to draw one card per click and mark helpers used manually.</p>
+                        <p>With <strong>Auto-use helpers on draw</strong>, <strong>Divination</strong> is marked used when you click any quest pool deck — ♥ genre, ♣ side, ♠ dungeon rooms, or ⭐ Extra Credit (roll 2 dice for that pick; no extra cards drawn). You can still mark it manually if auto is off.</p>
+                    </div>
+                    <div id="quest-draw-helpers-auto-controls" class="quest-draw-helpers-auto-controls"></div>
+                    <div id="quest-draw-helpers-body" class="worn-page-helpers-grid" role="list"></div>
+                </div>
+            </div>
+            <div id="activated-abilities-container" class="rpg-panel rpg-activated-abilities-panel" style="margin-bottom: 1rem;">
+                <h3 id="activated-abilities-summary">✨ Activated Abilities</h3>
+                <p class="description">Monthly activated effects from your school, learned abilities, and equipped effect-driven items. Click Activate to consume cooldowns for this month/year.</p>
+                <div id="activated-abilities-body" class="worn-page-helpers-grid" role="list"></div>
+            </div>
+            <div class="quest-deck-interface">
+                <div class="deck-section">
+                    <div class="deck-group">
+                        <h4 class="deck-title">♦ Atmospheric Buffs</h4>
+                        <div id="atmospheric-buff-deck-container" class="card-deck available"></div>
+                    </div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♥ Genre Quests</h4>
+                        <div id="genre-quest-deck-container" class="card-deck available"></div>
+                    </div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♣ Side Quests</h4>
+                        <div id="side-quest-deck-container" class="card-deck available"></div>
+                    </div>
+                    <div class="deck-group">
+                        <h4 class="deck-title">♠ Dungeon Rooms</h4>
+                        <div id="room-deck-container" class="card-deck available"></div>
+                        <div id="encounter-deck-container" class="card-deck available" style="display: none;"></div>
+                    </div>
+                    <div class="deck-group" id="restoration-deck-group">
+                        <h4 class="deck-title">🔨 Restoration Projects</h4>
+                        <div id="restoration-entry-container" class="card-deck restoration-entry-card available" role="button" tabindex="0" aria-expanded="false" aria-controls="restoration-expandable"></div>
+                        <div id="restoration-expandable" class="restoration-expandable" style="display: none;">
+                            <p class="deck-hint">Select a wing to see its restoration projects, then select cards to add.</p>
+                            <div id="restoration-wing-cards-container" class="restoration-wing-cards"></div>
+                            <div id="restoration-drawn-card-display" class="drawn-card-area"></div>
+                        </div>
+                    </div>
+                    <div class="deck-group" id="extra-credit-deck-group">
+                        <h4 class="deck-title">⭐ Extra Credit</h4>
+                        <div id="extra-credit-deck-container" class="card-deck available"></div>
+                    </div>
+                </div>
+                
+                <!-- Drawn Cards Display -->
+                <div class="drawn-cards-section">
+                    <div id="atmospheric-buff-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="genre-quest-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="side-quest-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="extra-credit-drawn-card-display" class="drawn-card-area"></div>
+                    <div id="drawn-card-display" class="drawn-card-area"></div>
+                </div>
+                
+                <!-- Action Buttons (shared for all deck types) -->
+                <div class="deck-actions">
+                    <button type="button" id="add-selected-cards-btn" class="rpg-btn rpg-btn-primary">Add selected</button>
+                    <button type="button" id="clear-drawn-cards-btn" class="rpg-btn rpg-btn-secondary">Clear draw</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-active-quests-panel" id="active-assignments-container">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title" id="active-summary">⚡ Active Book Assignments</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="quest-cards-container"></div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB 6: QUESTS -->

@@ -1,0 +1,87 @@
+<!-- TAB 2: ABILITIES -->
+<div class="tab-panel" data-tab-panel="abilities" role="tabpanel">
+    <!-- Character Benefits Panel -->
+    <div class="rpg-panel rpg-benefits-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">🔮 Character Benefits</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-benefits-grid">
+                <div class="rpg-benefit-card">
+                    <div class="rpg-benefit-icon">📖</div>
+                    <div class="rpg-benefit-content">
+                        <h3 class="rpg-benefit-title">Keeper Background</h3>
+                        <p id="keeperBackgroundDescriptionDisplay" class="rpg-benefit-description">-- Select a background to see its description --</p>
+                        <div class="rpg-benefit-effect">
+                            <strong>Benefit:</strong>
+                            <p id="keeperBackgroundBenefitDisplay" class="rpg-benefit-text">-- Select a background to see its benefit --</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rpg-benefit-card">
+                    <div class="rpg-benefit-icon">✨</div>
+                    <div class="rpg-benefit-content">
+                        <h3 class="rpg-benefit-title">Magical School</h3>
+                        <p id="magicalSchoolDescriptionDisplay" class="rpg-benefit-description">-- Select a school to see its description --</p>
+                        <div class="rpg-benefit-effect">
+                            <strong>Benefit:</strong>
+                            <p id="magicalSchoolBenefitDisplay" class="rpg-benefit-text">-- Select a school to see its benefit --</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rpg-benefit-card">
+                    <div class="rpg-benefit-icon">🏛️</div>
+                    <div class="rpg-benefit-content">
+                        <h3 class="rpg-benefit-title">Library Sanctum</h3>
+                        <p id="librarySanctumDescriptionDisplay" class="rpg-benefit-description">-- Select a sanctum to see its description --</p>
+                        <div class="rpg-benefit-effect">
+                            <strong>Benefit:</strong>
+                            <p id="librarySanctumBenefitDisplay" class="rpg-benefit-text">-- Select a sanctum to see its benefit --</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mastery Abilities Panel -->
+    <div class="rpg-panel rpg-mastery-panel">
+        <div class="rpg-panel-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h2 class="rpg-panel-title">🧙 School Mastery Abilities</h2>
+                    <p class="rpg-panel-subtitle">Use your School Mastery Points (SMP) to learn new abilities. Your current SMP: <strong id="smp-display">0</strong></p>
+                </div>
+                <button type="button" id="open-school-mastery-btn" class="rpg-btn rpg-btn-secondary" title="View School Mastery Abilities Guide">📖 View Guide</button>
+            </div>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="rpg-mastery-form">
+                <div class="form-row">
+                    <select id="ability-select" class="rpg-select">
+                        <option value="">-- Select an ability to learn --</option>
+                    </select>
+                    <button type="button" id="learn-ability-button" class="rpg-btn rpg-btn-primary">Learn Ability</button>
+                </div>
+            </div>
+            <div id="learned-abilities-list" class="rpg-abilities-grid">
+            </div>
+        </div>
+    </div>
+
+    <!-- Permanent Bonuses Panel -->
+    <div class="rpg-panel rpg-bonuses-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">🏆 Permanent Bonuses</h2>
+            <p class="rpg-panel-subtitle">Bonuses unlocked through leveling up</p>
+        </div>
+        <div class="rpg-panel-body">
+            <ul id="permanentBonusesList" class="rpg-bonuses-list">
+                <li>-- No bonuses unlocked at this level --</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<!-- END TAB 2: ABILITIES -->

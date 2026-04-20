@@ -1,0 +1,89 @@
+<!-- TAB 4: ENVIRONMENT -->
+<div class="tab-panel" data-tab-panel="environment" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-environment-header-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">🌿 Reading Environment</h2>
+            <p class="rpg-panel-subtitle">Manage your temporary buffs and atmospheric conditions to enhance your reading experience. Future: Decorate your study to unlock permanent bonuses!</p>
+        </div>
+        <div class="rpg-panel-body">
+            <div class="form-row" style="justify-content: center;">
+                <button type="button" class="rpg-btn rpg-btn-secondary open-quest-info-drawer-btn" data-drawer="atmospheric-buffs">
+                    ♦ View Atmospheric Buffs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-temporary-buffs-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">✨ Active Temporary Buffs</h3>
+            <p class="rpg-panel-subtitle"><strong>Remember:</strong> When you complete all dungeon rooms, open the Quests tab and click “♠ View Dungeons” to roll on the Dungeon Completion Rewards table. Some rewards are temporary buffs that will be automatically added.</p>
+            <p class="rpg-panel-subtitle">Temporary buffs are automatically added when earned from side quests and dungeon rewards. Buffs last for the remainder of the current month and the next month unless otherwise specified. One-time buffs are consumed when used.</p>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="temporary-buffs-panel-body"
+                    aria-expanded="true"
+                    aria-controls="temporary-buffs-panel-body">
+                Hide
+            </button>
+        </div>
+        <div class="rpg-panel-body" id="temporary-buffs-panel-body">
+            <div class="rpg-add-buff-form">
+                <div class="form-row" style="gap: 12px; align-items: center;">
+                    <select id="temp-buff-select" class="rpg-select" style="flex: 1;">
+                        <option value="">-- Select a predefined buff --</option>
+                    </select>
+                    <button type="button" id="add-temp-buff-from-dropdown-button" class="rpg-btn rpg-btn-primary">Add Buff</button>
+                </div>
+            </div>
+
+            <div id="active-temp-buffs-list">
+                <table class="tracker-table">
+                    <thead>
+                        <tr>
+                            <th>Buff Name</th>
+                            <th>Effect</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-temp-buffs-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-atmospheric-buffs-panel">
+        <div class="rpg-panel-header">
+            <h3 class="rpg-panel-title">♦️ Atmospheric Buffs</h3>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="room-visualization-container" class="room-visualization-wrapper" aria-hidden="true">
+                <!-- Rendered by RoomVisualization.js -->
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="tracker-table" style="width: 100%; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>Atmospheric Buff</th>
+                            <th>Daily Buff</th>
+                            <th>Active</th>
+                            <th>Total Days Used</th>
+                            <th>Monthly Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="atmospheric-buffs-body">
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-row" style="margin-top: 20px; justify-content: center;">
+                <button type="button" class="rpg-btn rpg-btn-primary end-of-month-button">End of Month</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB 4: ENVIRONMENT -->
