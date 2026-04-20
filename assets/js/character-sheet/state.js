@@ -25,8 +25,9 @@ export async function loadState(form = null) {
         if (characterData) {
             const validatedFormData = validateFormDataSafe(characterData);
             for (const key in validatedFormData) {
-                if (form.elements[key]) {
-                    form.elements[key].value = validatedFormData[key];
+                const el = form.elements[key];
+                if (el && el.type !== 'file') {
+                    el.value = validatedFormData[key];
                 }
             }
         }
@@ -82,7 +83,7 @@ export async function loadState(form = null) {
 export async function saveState(form) {
     const characterData = {};
     for (const element of form.elements) {
-        if (element.id && element.type !== 'button' && !element.id.startsWith('new-quest-') && element.id !== 'item-select' && element.id !== 'ability-select' && element.id !== 'xp-needed') {
+        if (element.id && element.type !== 'button' && element.type !== 'file' && !element.id.startsWith('new-quest-') && element.id !== 'item-select' && element.id !== 'ability-select' && element.id !== 'xp-needed') {
             characterData[element.id] = element.value;
         }
     }

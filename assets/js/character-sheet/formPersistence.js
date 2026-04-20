@@ -21,8 +21,8 @@ function shouldPersistElement(element) {
         return false;
     }
     
-    // Exclude buttons
-    if (element.type === 'button' || element.type === 'submit') {
+    // Exclude buttons and file inputs (file inputs cannot have values set programmatically)
+    if (element.type === 'button' || element.type === 'submit' || element.type === 'file') {
         return false;
     }
     
