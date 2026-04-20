@@ -2,44 +2,6 @@
 
 Welcome to Beads! This repository uses **Beads** for issue tracking - a modern, AI-native tool designed to live directly in your codebase alongside your code.
 
-## Tome of Secrets — agent workflow
-
-This repo’s full agent guide is [`AGENTS.md`](../AGENTS.md). Beads rules here are **mandatory** for coding agents.
-
-### Claim work
-
-1. **Before coding:** Ensure the work exists as one or more Beads issues (`bd create`, `bd dep add` as needed). Do not start implementation on an untracked slice of work.
-2. **When you start:** Mark the issue **`in_progress`** so others do not duplicate it:
-   ```bash
-   bd update <issue-id> --status in_progress
-   ```
-
-### Keep beads granular
-
-- If an issue is **too broad** or mixes unrelated outcomes, **split it**: create child issues and link them with `bd dep add <child> <parent>`.
-- **Rule of thumb:** if the next piece of work will take **more than ~3 minutes** and is not already represented, **create or refine a Bead** before doing it. Small exploratory spikes can stay in a single issue if the description is explicit.
-
-### Definition of done
-
-Close an issue (**`done`**) only when **all** of the following are true:
-
-1. **Automated quality gates pass** — e.g. `cd tests && npm test`, and `cd tests && npm run validate-data` whenever `assets/data/` changed.
-2. **Subagent pre-commit review passed** for **code** changes (JavaScript, behavior-changing HTML/CSS, scripts) — per [`AGENTS.md`](../AGENTS.md). Editorial-only Markdown may omit the review if no contracts or behavior change.
-
-Documentation-only tasks still need accurate content and correct links; use judgment on whether a quick peer/subagent pass adds value.
-
-### Heavy or full test runs
-
-Delegate **full suite** or long-running checks to a **subagent** when it keeps the main session responsive; the primary agent remains responsible for fixing failures.
-
-### Catalog / effects work
-
-When adding deterministic bonuses or items, follow the **TCG modifier pipeline** in [`project-docs/ADR-003-tcg-modifier-pipeline.md`](../project-docs/ADR-003-tcg-modifier-pipeline.md) and [`project-docs/EXTENDING-THE-CODEBASE.md`](../project-docs/EXTENDING-THE-CODEBASE.md).
-
-### Sync with git
-
-After local work, run `bd sync` when issue state changed, then **`git add`** the relevant files (including `.beads/issues.jsonl` if updated). **Agents must not `git commit` or `git push`** — the maintainer commits and publishes (see [`AGENTS.md`](../AGENTS.md) “Landing the Plane”).
-
 ## What is Beads?
 
 Beads is issue tracking that lives in your repo, making it perfect for AI coding agents and developers who want their issues close to their code. No web UI required - everything works through the CLI and integrates seamlessly with git.
@@ -61,17 +23,17 @@ bd list
 bd show <issue-id>
 
 # Update issue status
-bd update <issue-id> --status in_progress
+bd update <issue-id> --claim
 bd update <issue-id> --status done
 
-# Sync with git remote
-bd sync
+# Sync with Dolt remote
+bd dolt push
 ```
 
 ### Working with Issues
 
 Issues in Beads are:
-- **Git-native**: Stored in `.beads/issues.jsonl` and synced like code
+- **Git-native**: Stored in Dolt database with version control and branching
 - **AI-friendly**: CLI-first design works perfectly with AI coding agents
 - **Branch-aware**: Issues can follow your branch workflow
 - **Always in sync**: Auto-syncs with your commits
@@ -91,7 +53,7 @@ Issues in Beads are:
 🔧 **Git Integration**
 - Automatic sync with git commits
 - Branch-aware issue tracking
-- Intelligent JSONL merge resolution
+- Dolt-native three-way merge resolution
 
 ## Get Started with Beads
 
