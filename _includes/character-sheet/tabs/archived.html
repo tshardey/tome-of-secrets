@@ -1,0 +1,65 @@
+<!-- TAB 7: ARCHIVED QUESTS -->
+<div class="tab-panel" data-tab-panel="archived" role="tabpanel">
+    <div class="form-section">
+        <h2>📦 Archived Quests</h2>
+        <p class="description">View your quest history - completed books and discarded quests.</p>
+
+        <div id="completed-quests-container">
+            <h3 id="completed-summary">Completed Quests</h3>
+            <div class="archive-card-face-toggle" role="group" aria-label="Archive card front face">
+                <span class="archive-card-face-toggle__label">Card front:</span>
+                <button type="button" class="archive-face-toggle-btn" data-archive-face="poster" aria-pressed="true">Poster</button>
+                <button type="button" class="archive-face-toggle-btn" data-archive-face="cover" aria-pressed="false">Cover</button>
+            </div>
+            <div class="archive-group-by-toggle" role="group" aria-label="Group archived quests by">
+                <span class="archive-group-by-toggle__label">Group by:</span>
+                <button type="button" class="archive-group-by-btn" data-archive-group-by="month" aria-pressed="false">Month / Year</button>
+                <button type="button" class="archive-group-by-btn" data-archive-group-by="type" aria-pressed="true">Quest type</button>
+            </div>
+            <nav class="archive-jump-links archive-jump-links--type-mode" aria-label="Jump to archive section">
+                <a href="#archive-rooms" class="archive-jump-link">♠ Rooms</a>
+                <a href="#archive-encounters" class="archive-jump-link">♠ Encounters</a>
+                <a href="#archive-genre" class="archive-jump-link">♥ Genre</a>
+                <a href="#archive-side" class="archive-jump-link">♣ Side</a>
+                <a href="#archive-other" class="archive-jump-link">Other</a>
+            </nav>
+            <div id="archive-by-month-container" class="completed-quests-by-month" aria-hidden="true" style="display: none;"></div>
+            <div class="completed-quests-sections completed-quests-sections--by-type">
+                <!-- Dungeon Section -->
+                <div id="archive-rooms" class="dungeon-archive-section archive-section-anchor">
+                    <h4>Dungeon Rooms</h4>
+                    <div id="dungeon-rooms-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <div id="archive-encounters" class="dungeon-archive-section archive-section-anchor">
+                    <h4>Dungeon Encounters</h4>
+                    <div id="dungeon-encounters-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <!-- Genre Quests Section -->
+                <div id="archive-genre" class="dungeon-archive-section archive-section-anchor">
+                    <h4>Organize the Stacks (Genre Quests)</h4>
+                    <div id="genre-quests-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <!-- Side Quests Section -->
+                <div id="archive-side" class="dungeon-archive-section archive-section-anchor">
+                    <h4>Side Quests</h4>
+                    <div id="side-quests-archive-container" class="dungeon-archive-cards-grid"></div>
+                </div>
+                
+                <!-- Other Quests Section -->
+                <div id="archive-other" class="other-quests-section archive-section-anchor">
+                    <h4>Other Quests</h4>
+                    <div class="quest-cards-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="discarded-quests-container">
+            <h3 id="discarded-summary">Discarded Quests</h3>
+            <div class="quest-cards-container"></div>
+        </div>
+    </div>
+</div>
+<!-- END TAB 7: ARCHIVED QUESTS -->

@@ -1,0 +1,99 @@
+<!-- TAB 5: LIBRARY -->
+<div class="tab-panel" data-tab-panel="library" role="tabpanel">
+<div class="rpg-tab-content">
+    <div class="rpg-panel rpg-library-add-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">📚 Add a Book</h2>
+            <button type="button"
+                    class="panel-toggle-btn"
+                    data-panel-target="library-add-panel-body"
+                    aria-expanded="true"
+                    aria-controls="library-add-panel-body">
+                Hide
+            </button>
+        </div>
+        <div class="rpg-panel-body" id="library-add-panel-body">
+            <div id="library-add-book-form" class="library-add-form" role="form" aria-label="Add a book">
+                <div class="form-row library-book-search-row">
+                    <label for="library-book-title"><strong>Title:</strong></label>
+                    <div class="library-search-input-and-results">
+                        <div class="library-search-wrap">
+                            <input type="text" id="library-book-title" class="library-title-input" placeholder="Search or enter title" autocomplete="off" />
+                            <button type="button" id="library-book-search-btn" class="rpg-btn rpg-btn-secondary lookup-book-btn" title="Search for cover and details">Look up</button>
+                        </div>
+                        <div id="library-book-search-results" class="book-search-results library-search-results" aria-live="polite" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label for="library-book-author"><strong>Author (optional):</strong></label>
+                    <input type="text" id="library-book-author" class="library-author-input" placeholder="Author" />
+                </div>
+                <div class="form-row library-cover-row">
+                    <label><strong>Cover:</strong></label>
+                    <div class="library-cover-fields">
+                        <div class="library-cover-preview-wrap">
+                            <img id="library-add-cover-preview" class="library-cover-preview" src="" alt="" role="presentation" style="display: none;">
+                            <span id="library-add-cover-placeholder" class="library-cover-placeholder">No cover</span>
+                        </div>
+                        <div class="library-cover-inputs">
+                            <input type="url" id="library-add-cover-url" class="library-cover-url-input" placeholder="Cover image URL" value="" />
+                            <label for="library-add-cover-upload" class="library-cover-upload-label">Upload</label>
+                            <input type="file" id="library-add-cover-upload" class="library-cover-upload-input" accept="image/*" />
+                            <input type="hidden" id="library-add-cover-value" value="" />
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label for="library-add-page-count"><strong>Page count (optional):</strong></label>
+                    <input type="number" id="library-add-page-count" class="library-page-count-input" min="1" placeholder="—" value="" />
+                </div>
+                <div class="form-row library-status-row">
+                    <label><strong>Status:</strong></label>
+                    <div class="library-status-radios">
+                        <label class="library-status-option"><input type="radio" name="library-add-status" value="reading" checked /> Reading</label>
+                        <label class="library-status-option"><input type="radio" name="library-add-status" value="completed" /> Completed</label>
+                        <label class="library-status-option"><input type="radio" name="library-add-status" value="other" /> Other</label>
+                    </div>
+                </div>
+                <div class="form-row library-shelf-row">
+                    <label><strong>Shelf:</strong></label>
+                    <div class="library-shelf-radios">
+                        <label class="library-shelf-option">
+                            <input type="radio" name="library-add-shelf-category" value="general" checked />
+                            General library
+                        </label>
+                        <label class="library-shelf-option">
+                            <input type="radio" name="library-add-shelf-category" value="physical-tbr" />
+                            Physical TBR
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row library-add-actions">
+                    <button type="button" id="library-add-book-btn" class="rpg-btn rpg-btn-primary">Add Book</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpg-panel rpg-library-books-panel">
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">Your Library</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="library-books-reading" class="library-books-section">
+                <h3 class="library-section-title">Reading</h3>
+                <div id="library-cards-reading" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-completed" class="library-books-section">
+                <h3 class="library-section-title">Completed</h3>
+                <div id="library-cards-completed" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-other" class="library-books-section">
+                <h3 class="library-section-title">Other</h3>
+                <div id="library-cards-other" class="library-cards-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- END TAB 5: LIBRARY -->

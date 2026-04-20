@@ -1,0 +1,69 @@
+<!-- TAB 8: CURSES -->
+<div class="tab-panel" data-tab-panel="curses" role="tabpanel">
+    <div class="form-section">
+        <h2>📜 The Shroud's Curse</h2>
+        <p class="description">When you fail to complete your monthly quest pool, the Shroud advances and you receive a Worn Page penalty for each book you missed. For each Worn Page you have, roll on the Curse Table at the start of your next month's quest.</p>
+
+        <div id="worn-page-helpers-container" class="rpg-panel rpg-worn-page-helpers-panel">
+            <h3 id="worn-page-helpers-summary">📖 Worn Page Mitigation Helpers</h3>
+            <p class="description">Sources that can remove or negate Worn Page penalties. Mark when you use them; monthly and every-2-months uses refresh at End of Month.</p>
+            <div id="worn-page-helpers-body" class="worn-page-helpers-grid" role="list">
+            </div>
+        </div>
+
+        <div class="add-curse-form">
+            <h3>Add Curse Penalty</h3>
+            <p class="description">If this curse comes from a <strong>Worn Page</strong> (rolled after missing monthly quests), turn on the switch so Abjuration, Ward Against the Shroud, Raven Familiar, or Chalice can automatically prevent it when their monthly use is available. Set <strong>Month</strong> and <strong>Year</strong> in the <strong>Monthly Tracker</strong> at the top of the Quests tab (cooldowns use that calendar). The switch stays on until you turn it off.</p>
+            <div class="form-row encounter-action-toggle-wrap curse-worn-page-toggle-wrap">
+                <span class="encounter-action-label" id="curse-from-worn-page-label">From Worn Page (auto-prevent)</span>
+                <label class="switch" for="curse-from-worn-page">
+                    <input type="checkbox" id="curse-from-worn-page" aria-labelledby="curse-from-worn-page-label" />
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="form-row">
+                <select id="curse-penalty-select">
+                    <option value="">-- Select Curse Penalty --</option>
+                </select>
+                <input type="text" id="curse-book-title" placeholder="Book/Activity Title">
+                <button type="button" id="add-curse-button">Add Curse</button>
+            </div>
+        </div>
+
+        <div id="active-curses-container">
+            <h3 id="active-curses-summary">Active Curse Penalties</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th class="col-curse">Curse Penalty</th>
+                        <th class="col-requirement">Requirement</th>
+                        <th class="col-book">Book/Activity</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="active-curses-body">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="completed-curses-container">
+            <h3 id="completed-curses-summary">Completed Curse Penalties</h3>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th class="col-curse">Curse Penalty</th>
+                        <th class="col-requirement">Requirement</th>
+                        <th class="col-book">Book/Activity</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="completed-curses-body">
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+<!-- END TAB 8: CURSES -->

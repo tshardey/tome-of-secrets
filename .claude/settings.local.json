@@ -62,7 +62,10 @@
       "Bash(sed -n '1432,1440p' /tmp/tos-before/character-sheet.html)",
       "Bash(sed -n '1432,1440p' /tmp/character-sheet-before.html)",
       "Bash(git status:*)",
-      "Bash(bd dep:*)"
+      "Bash(bd dep:*)",
+      "Bash(xxd)",
+      "Bash(python3:*)",
+      "Bash(xargs -I {} basename {})"
     ]
   }
 }
