@@ -113,6 +113,51 @@ describe('state persistence compatibility', () => {
         });
     });
 
+    it('saveState excludes file inputs', async () => {
+        document.body.innerHTML = `
+            <form id="character-sheet">
+                <input type="text" id="level" value="5" />
+                <input type="text" id="keeperBackground" value="Grove Tender" />
+                <input type="file" id="library-add-cover-upload" accept="image/*" />
+                <input type="file" id="book-edit-cover-upload" accept="image/*" />
+            </form>
+        `;
+        const form = document.getElementById('character-sheet');
+
+        await saveState(form);
+
+        const persistedForm = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM));
+        expect(persistedForm.level).toBe('5');
+        expect(persistedForm['library-add-cover-upload']).toBeUndefined();
+        expect(persistedForm['book-edit-cover-upload']).toBeUndefined();
+    });
+
+    it('loadState skips file inputs even if their values exist in localStorage', async () => {
+        document.body.innerHTML = `
+            <form id="character-sheet">
+                <input type="text" id="level" value="1" />
+                <input type="text" id="keeperBackground" value="" />
+                <input type="file" id="library-add-cover-upload" accept="image/*" />
+            </form>
+        `;
+        const form = document.getElementById('character-sheet');
+
+        // Simulate stale localStorage that includes a file input value
+        localStorage.setItem(STORAGE_KEYS.CHARACTER_SHEET_FORM, JSON.stringify({
+            level: '7',
+            keeperBackground: 'Biblioslinger',
+            'library-add-cover-upload': 'C:\\fakepath\\cover.png'
+        }));
+
+        // loadState should not throw and should restore other fields
+        await loadState(form);
+
+        expect(form.querySelector('#level').value).toBe('7');
+        expect(form.querySelector('#keeperBackground').value).toBe('Biblioslinger');
+        // File input should remain empty (not crash)
+        expect(form.querySelector('#library-add-cover-upload').value).toBe('');
+    });
+
     it('loads legacy localStorage data (and may migrate large keys out of localStorage)', async () => {
         const form = setupForm();
         const legacyActiveAssignments = [{ type: '♥ Organize the Stacks', prompt: 'Restore the reading room' }];

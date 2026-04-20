@@ -98,6 +98,32 @@ describe('formPersistence', () => {
             expect(savedData['new-quest-prompt']).toBeUndefined();
         });
 
+        it('should NOT persist file input fields', async () => {
+            const form = setupForm();
+            // Add a file input to the form (like the library cover upload)
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = 'library-add-cover-upload';
+            form.appendChild(fileInput);
+
+            const keeperNameInput = document.getElementById('keeperName');
+
+            initializeFormPersistence(form, 500);
+
+            // Set keeperName to trigger a save
+            keeperNameInput.value = 'Test';
+            keeperNameInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+
+            // Fast-forward past debounce delay
+            jest.advanceTimersByTime(500);
+
+            await Promise.resolve();
+
+            const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            expect(savedData.keeperName).toBe('Test');
+            expect(savedData['library-add-cover-upload']).toBeUndefined();
+        });
+
         it('should NOT persist transient select fields', async () => {
             const form = setupForm();
             const itemSelect = document.getElementById('item-select');
