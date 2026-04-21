@@ -4,6 +4,7 @@ import { getStateKey, setStateKey } from '../character-sheet/persistence.js';
 import { characterState } from '../character-sheet/state.js';
 
 const SYNC_TABLE = 'tos_saves';
+const SYNC_EVENTS_TABLE = 'tos_sync_events';
 const SYNC_KEY_LAST_HASH = 'tos_cloud_lastSyncedHash';
 const SYNC_KEY_LAST_AT = 'tos_cloud_lastSyncedAt';
 const SYNC_KEY_LAST_SOURCE = 'tos_cloud_lastSyncedSource';
@@ -192,6 +193,24 @@ function confirmChoice(message) {
 }
 
 /**
+ * Fire-and-forget: log a sync event to tos_sync_events.
+ * Failures are silently ignored so they never break sync.
+ */
+async function logSyncEvent(supabase, userId, eventType, { snapshotHash: hash, schemaVersion, detail } = {}) {
+  try {
+    await supabase.from(SYNC_EVENTS_TABLE).insert({
+      user_id: userId,
+      event_type: eventType,
+      snapshot_hash: hash ?? null,
+      schema_version: schemaVersion ?? null,
+      detail: detail ?? null
+    });
+  } catch (_e) {
+    // Intentionally swallowed — logging must never break sync
+  }
+}
+
+/**
  * Sync algorithm (simple + safe for solo use):
  * - If this device hasn't changed since last sync (hash matches), and remote differs -> pull remote.
  * - If remote matches last sync and local differs -> push local.
@@ -213,29 +232,58 @@ export async function syncAuto(supabase) {
 }
 
 async function syncNowWithOptions(supabase, { mode }) {
-  const localSnapshot = await buildLocalSnapshot();
+  // Extract userId early for event logging.
+  // getRemoteSave() also calls getSession internally — that's a local cache hit, not a network call.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const session = sessionData?.session;
+  if (!session) {
+    throw new Error('Not signed in.');
+  }
+  const userId = session.user.id;
+
+  let localSnapshot;
+  try {
+    localSnapshot = await buildLocalSnapshot();
+  } catch (err) {
+    await logSyncEvent(supabase, userId, 'error', { detail: `buildLocalSnapshot failed: ${err.message}` });
+    throw err;
+  }
+
   const localHash = snapshotHash(localSnapshot);
   const lastHash = getLastSyncedHash();
+  const schemaVersion = localSnapshot.version ?? null;
 
-  const remoteRow = await getRemoteSave(supabase);
-  const remoteSnapshot = remoteRow?.data || null;
-  const remoteHash = remoteSnapshot ? snapshotHash(remoteSnapshot) : '';
+  let remoteRow, remoteSnapshot, remoteHash;
+  try {
+    remoteRow = await getRemoteSave(supabase);
+    remoteSnapshot = remoteRow?.data || null;
+    remoteHash = remoteSnapshot ? snapshotHash(remoteSnapshot) : '';
+  } catch (err) {
+    await logSyncEvent(supabase, userId, 'error', {
+      snapshotHash: localHash, schemaVersion, detail: `getRemoteSave failed: ${err.message}`
+    });
+    throw err;
+  }
 
   // No remote save yet
   if (!remoteSnapshot) {
     if (mode === 'auto' && !lastHash) {
-      // First time: require manual user choice.
       return { action: 'manual_required', detail: 'Auto-sync needs an initial manual sync to establish a baseline.' };
     }
     await upsertRemoteSave(supabase, localSnapshot);
     setLastSynced(localHash, mode);
-    return { action: 'push', detail: 'Created cloud save from local data.' };
+    const result = { action: 'push', detail: 'Created cloud save from local data.' };
+    await logSyncEvent(supabase, userId, 'push', { snapshotHash: localHash, schemaVersion, detail: result.detail });
+    return result;
   }
 
   // Exact match
   if (localHash === remoteHash) {
     setLastSynced(localHash, mode);
-    return { action: 'noop', detail: 'Already in sync.' };
+    const result = { action: 'noop', detail: 'Already in sync.' };
+    await logSyncEvent(supabase, userId, 'noop', { snapshotHash: localHash, schemaVersion, detail: result.detail });
+    return result;
   }
 
   // First-time sync (no lastHash) -> ask
@@ -252,12 +300,16 @@ async function syncNowWithOptions(supabase, { mode }) {
     if (useRemote) {
       await applySnapshot(remoteSnapshot);
       setLastSynced(remoteHash, mode);
-      return { action: 'pull', detail: 'Replaced local data with cloud save (reload recommended).' };
+      const result = { action: 'pull', detail: 'Replaced local data with cloud save (reload recommended).' };
+      await logSyncEvent(supabase, userId, 'conflict_pull', { snapshotHash: remoteHash, schemaVersion, detail: result.detail });
+      return result;
     }
 
     await upsertRemoteSave(supabase, localSnapshot);
     setLastSynced(localHash, mode);
-    return { action: 'push', detail: 'Overwrote cloud save with local data.' };
+    const result = { action: 'push', detail: 'Overwrote cloud save with local data.' };
+    await logSyncEvent(supabase, userId, 'conflict_push', { snapshotHash: localHash, schemaVersion, detail: result.detail });
+    return result;
   }
 
   const localUnchangedSinceLastSync = localHash === lastHash;
@@ -267,14 +319,18 @@ async function syncNowWithOptions(supabase, { mode }) {
   if (localUnchangedSinceLastSync && !remoteUnchangedSinceLastSync) {
     await applySnapshot(remoteSnapshot);
     setLastSynced(remoteHash, mode);
-    return { action: 'pull', detail: 'Pulled newer cloud save (reload recommended).' };
+    const result = { action: 'pull', detail: 'Pulled newer cloud save (reload recommended).' };
+    await logSyncEvent(supabase, userId, 'pull', { snapshotHash: remoteHash, schemaVersion, detail: result.detail });
+    return result;
   }
 
   // Remote unchanged, local changed -> push
   if (!localUnchangedSinceLastSync && remoteUnchangedSinceLastSync) {
     await upsertRemoteSave(supabase, localSnapshot);
     setLastSynced(localHash, mode);
-    return { action: 'push', detail: 'Uploaded local changes to cloud save.' };
+    const result = { action: 'push', detail: 'Uploaded local changes to cloud save.' };
+    await logSyncEvent(supabase, userId, 'push', { snapshotHash: localHash, schemaVersion, detail: result.detail });
+    return result;
   }
 
   // Conflict -> prompt
@@ -290,12 +346,16 @@ async function syncNowWithOptions(supabase, { mode }) {
   if (useRemote) {
     await applySnapshot(remoteSnapshot);
     setLastSynced(remoteHash, mode);
-    return { action: 'pull', detail: 'Conflict resolved in favor of cloud (reload recommended).' };
+    const result = { action: 'pull', detail: 'Conflict resolved in favor of cloud (reload recommended).' };
+    await logSyncEvent(supabase, userId, 'conflict_pull', { snapshotHash: remoteHash, schemaVersion, detail: result.detail });
+    return result;
   }
 
   await upsertRemoteSave(supabase, localSnapshot);
   setLastSynced(localHash, mode);
-  return { action: 'push', detail: 'Conflict resolved in favor of local (cloud overwritten).' };
+  const result = { action: 'push', detail: 'Conflict resolved in favor of local (cloud overwritten).' };
+  await logSyncEvent(supabase, userId, 'conflict_push', { snapshotHash: localHash, schemaVersion, detail: result.detail });
+  return result;
 }
 
 
