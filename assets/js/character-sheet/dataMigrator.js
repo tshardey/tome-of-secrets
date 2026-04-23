@@ -403,6 +403,30 @@ function migrateToVersion15(state) {
 }
 
 /**
+ * Migration from schema version 15 to version 16
+ * - Adds tags: [] to existing books that don't have tags
+ */
+function migrateToVersion16(state) {
+    const migrated = { ...state };
+    const books = migrated[STORAGE_KEYS.BOOKS];
+    if (books && typeof books === 'object' && !Array.isArray(books)) {
+        const updated = {};
+        for (const [id, book] of Object.entries(books)) {
+            if (!book || typeof book !== 'object') {
+                updated[id] = book;
+                continue;
+            }
+            updated[id] = {
+                ...book,
+                tags: Array.isArray(book.tags) ? book.tags : []
+            };
+        }
+        migrated[STORAGE_KEYS.BOOKS] = updated;
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -693,6 +717,9 @@ export function migrateState(state) {
                 break;
             case 15:
                 migratedState = migrateToVersion15(migratedState);
+                break;
+            case 16:
+                migratedState = migrateToVersion16(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

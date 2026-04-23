@@ -42,7 +42,8 @@ const JSON_EXPORTS = {
     'shoppingOptions.json': 'shoppingOptions',
     'wings.json': 'wings',
     'restorationProjects.json': 'restorationProjects',
-    'roomThemes.json': 'roomThemes'
+    'roomThemes.json': 'roomThemes',
+    'bookTags.json': 'bookTags'
 };
 
 function generateExports() {

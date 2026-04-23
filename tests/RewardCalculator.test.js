@@ -140,11 +140,11 @@ describe('RewardCalculator - Apply Modifiers', () => {
     test('should apply additive ink drop bonuses', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Librarian\'s Compass' // +20 ink drops
+            '[Item] Coffee Elemental' // +10 ink drops
         ]);
-        
-        expect(modified.inkDrops).toBe(30);
-        expect(modified.modifiedBy).toContain('Librarian\'s Compass');
+
+        expect(modified.inkDrops).toBe(20);
+        expect(modified.modifiedBy).toContain('Coffee Elemental');
     });
 
     test('should apply multiplier bonuses', () => {
@@ -160,11 +160,11 @@ describe('RewardCalculator - Apply Modifiers', () => {
     test('should apply additive bonuses before multipliers', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Librarian\'s Compass', // +20 = 30 total
-            '[Item] Scatter Brain Scarab'  // x3 = 90 total
+            '[Item] Coffee Elemental',    // +10 = 20 total
+            '[Item] Scatter Brain Scarab' // x3 = 60 total
         ]);
-        
-        expect(modified.inkDrops).toBe(90); // (10 + 20) * 3
+
+        expect(modified.inkDrops).toBe(60); // (10 + 10) * 3
     });
 
     test('should apply background bonuses', () => {
@@ -177,29 +177,29 @@ describe('RewardCalculator - Apply Modifiers', () => {
         expect(modified.modifiedBy).toContain('Archivist Bonus');
     });
 
-    test('should apply paper scrap bonuses', () => {
-        const base = new Reward({ paperScraps: 0 });
+    test('should apply ink drop bonuses from atmospheric items', () => {
+        const base = new Reward({ inkDrops: 0 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Librarian\'s Quill' // +2 paper scraps
+            '[Item] Gilded Painting' // +2 ink drops
         ]);
-        
-        expect(modified.paperScraps).toBe(2);
-        expect(modified.modifiedBy).toContain('Librarian\'s Quill');
+
+        expect(modified.inkDrops).toBe(2);
+        expect(modified.modifiedBy).toContain('Gilded Painting');
     });
 
     test('should handle multiple modifiers', () => {
         const base = new Reward({ xp: 10, inkDrops: 10, paperScraps: 5 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Librarian\'s Compass',  // +20 ink drops
-            '[Item] Librarian\'s Quill',    // +2 paper scraps
-            '[Background] Prophet Bonus'    // +10 ink drops
+            '[Item] Coffee Elemental',     // +10 ink drops
+            '[Item] Gilded Painting',      // +2 ink drops
+            '[Background] Prophet Bonus'   // +10 ink drops
         ]);
-        
+
         expect(modified.xp).toBe(10);
-        expect(modified.inkDrops).toBe(45); // 10 + 20 + 15
-        expect(modified.paperScraps).toBe(7); // 5 + 2
-        expect(modified.modifiedBy).toContain('Librarian\'s Compass');
-        expect(modified.modifiedBy).toContain('Librarian\'s Quill');
+        expect(modified.inkDrops).toBe(37); // 10 + 10 + 2 + 15
+        expect(modified.paperScraps).toBe(5);
+        expect(modified.modifiedBy).toContain('Coffee Elemental');
+        expect(modified.modifiedBy).toContain('Gilded Painting');
         expect(modified.modifiedBy).toContain('Prophet Bonus');
     });
 });
@@ -223,14 +223,14 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
             baseRewardOverride: base,
-            appliedBuffs: ['[Background] Archivist Bonus', '[Item] Librarian\'s Compass'],
+            appliedBuffs: ['[Background] Archivist Bonus', '[Item] Coffee Elemental'],
             background: 'archivist',
             quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
         });
 
-        expect(modified.inkDrops).toBe(40);
+        expect(modified.inkDrops).toBe(30);
         expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
-        expect(modified.modifiedBy).toContain("Librarian's Compass");
+        expect(modified.modifiedBy).toContain("Coffee Elemental");
         expect(modified.modifiedBy).not.toContain('Archivist Bonus');
     });
 
@@ -276,15 +276,15 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             '♥ Organize the Stacks',
             'Fantasy: Read a book with magical creatures',
             {
-                appliedBuffs: ['[Item] Librarian\'s Compass'],
+                appliedBuffs: ['[Item] Coffee Elemental'],
                 background: null,
                 quest: { type: '♥ Organize the Stacks' }
             }
         );
-        
+
         expect(final.xp).toBe(15); // Base genre quest XP
-        expect(final.inkDrops).toBe(30); // 10 base + 20 from compass
-        expect(final.modifiedBy).toContain('Librarian\'s Compass');
+        expect(final.inkDrops).toBe(20); // 10 base + 10 from Coffee Elemental
+        expect(final.modifiedBy).toContain('Coffee Elemental');
     });
 
     test('should calculate dungeon rewards with background bonus', () => {
@@ -313,16 +313,16 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
                 roomNumber: '1',
                 encounterName: 'Will-o-wisps',
                 appliedBuffs: [
-                    '[Item] Pocket Dragon', // +20 ink drops
+                    '[Item] Coffee Elemental', // +10 ink drops
                     '[Background] Cartographer Bonus' // +10 ink drops
                 ],
                 background: 'biblioslinker',
                 quest: { type: '♠ Dungeon Crawl' }
             }
         );
-        
+
         expect(final.xp).toBe(30); // Monster base XP
-        expect(final.inkDrops).toBe(20); // 0 + 20 (background legacy card intentionally skipped)
+        expect(final.inkDrops).toBe(10); // 0 + 10 (background legacy card intentionally skipped)
         expect(final.modifiedBy.length).toBeGreaterThan(0);
     });
 
@@ -399,44 +399,42 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 
     test('should use passiveRewardModifier for items in passive slots', () => {
-        // Setup: Add an item to a passive slot; quest meets page condition (>= 500)
+        // Setup: Add an atmospheric item to a passive slot
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "The Bookwyrm's Scale" }
+            { itemName: "Coffee Elemental" }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        const quest = { pageCountEffective: 600 };
-        // The Bookwyrm's Scale in passive slot should give +5 ink drops (passive), not +10 (active)
+        // Coffee Elemental in passive slot should give +5 ink drops (passive), not +10 (active)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] The Bookwyrm\'s Scale'
-        ], { quest });
+            '[Item] Coffee Elemental'
+        ]);
 
         expect(modified.inkDrops).toBe(15); // 10 base + 5 passive bonus
-        expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+        expect(modified.modifiedBy).toContain("Coffee Elemental");
 
         // Cleanup
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
     });
 
     test('should use active rewardModifier for equipped items, even if also in passive slot', () => {
-        // Setup: Item in both passive slot AND equipped; quest meets page condition (>= 500)
+        // Setup: Item in both passive slot AND equipped
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "The Bookwyrm's Scale" }
+            { itemName: "Coffee Elemental" }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-            { name: "The Bookwyrm's Scale" }
+            { name: "Coffee Elemental" }
         ];
 
         const base = new Reward({ inkDrops: 10 });
-        const quest = { pageCountEffective: 600 };
         // When equipped, should use active modifier (+10), not passive (+5)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] The Bookwyrm\'s Scale'
-        ], { quest });
+            '[Item] Coffee Elemental'
+        ]);
 
         expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
-        expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+        expect(modified.modifiedBy).toContain("Coffee Elemental");
 
         // Cleanup
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
@@ -464,124 +462,101 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 
     test('should use active modifier for items not in passive slots', () => {
-        // Setup: No passive slots, item is just equipped; quest meets page condition (>= 500)
+        // Setup: No passive slots, item is just equipped
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-            { name: "The Bookwyrm's Scale" }
+            { name: "Coffee Elemental" }
         ];
 
         const base = new Reward({ inkDrops: 10 });
-        const quest = { pageCountEffective: 600 };
         // Should use active modifier (+10)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] The Bookwyrm\'s Scale'
-        ], { quest });
+            '[Item] Coffee Elemental'
+        ]);
 
         expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
-        expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
+        expect(modified.modifiedBy).toContain("Coffee Elemental");
 
         // Cleanup
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
     });
 
     test('should handle passive multiplier modifiers correctly', () => {
-        // Setup: Add an item with a passive multiplier to a passive slot; Page Sprite requires < 300 pages
+        // Setup: Add an item with a passive multiplier to a passive slot
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: 'Page Sprite' }
+            { itemName: 'Scatter Brain Scarab' }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        const quest = { pageCountEffective: 200 };
-        // Page Sprite passive: x1.5 multiplier (active is x2) when book under 300 pages
+        // Scatter Brain Scarab passive: x1.5 multiplier (active is x3)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Page Sprite'
-        ], { quest });
+            '[Item] Scatter Brain Scarab'
+        ]);
 
         expect(modified.inkDrops).toBe(15); // 10 * 1.5 = 15
-        expect(modified.modifiedBy).toContain('Page Sprite');
+        expect(modified.modifiedBy).toContain('Scatter Brain Scarab');
 
         // Cleanup
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
     });
 
-    describe('page-count-aware item modifiers', () => {
-        test('should apply Bookwyrm\'s Scale when pageCountEffective >= 500', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "The Bookwyrm's Scale" }];
-            const base = new Reward({ inkDrops: 10 });
-            const modified = RewardCalculator.applyModifiers(base, ['[Item] The Bookwyrm\'s Scale'], {
-                quest: { pageCountEffective: 500 }
-            });
-            expect(modified.inkDrops).toBe(20);
-            expect(modified.modifiedBy).toContain("The Bookwyrm's Scale");
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-        });
+    // Note: page-count-aware item modifier tests removed during effects migration (Task 4).
+    // Items like Bookwyrm's Scale, Tome of Potential, and Page Sprite now use the effects
+    // pipeline with pageCount conditions instead of legacy rewardModifier + pageCondition.
+    // Effects-based page-count tests are covered in the ModifierPipeline test suite.
+});
 
-        test('should skip Bookwyrm\'s Scale when pageCountEffective < 500', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "The Bookwyrm's Scale" }];
-            const base = new Reward({ inkDrops: 10 });
-            const modified = RewardCalculator.applyModifiers(base, ['[Item] The Bookwyrm\'s Scale'], {
-                quest: { pageCountEffective: 320 }
-            });
-            expect(modified.inkDrops).toBe(10);
-            expect(modified.modifiedBy).not.toContain("The Bookwyrm's Scale");
-            const skipEntry = modified.receipt.modifiers.find(m =>
-                m.source === "The Bookwyrm's Scale" && m.description && m.description.includes('skipped')
-            );
-            expect(skipEntry).toBeDefined();
-            expect(skipEntry.description).toContain('320 pages < 500 threshold');
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-        });
+describe('RewardCalculator - Book tags in TriggerPayload', () => {
+    test('should include book tags in pipeline payload via getBook', () => {
+        const quest = { bookId: 'book-123', type: '♥ Organize the Stacks' };
+        const getBook = (id) => {
+            if (id === 'book-123') return { title: 'Test Book', tags: ['fantasy', 'dragons'], genre: 'Fantasy' };
+            return null;
+        };
+        // Use the internal method to verify tags reach the payload
+        const payload = RewardCalculator._buildQuestCompletedPayload(
+            '♥ Organize the Stacks', 'Fantasy', quest,
+            { isEncounter: false, roomNumber: null, encounterName: null, isBefriend: true, getBook, state: {} }
+        );
+        expect(payload.tags).toEqual(expect.arrayContaining(['fantasy', 'dragons']));
+        expect(payload.tags).toHaveLength(2);
+    });
 
-        test('should skip page-condition item when page count unknown', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "The Bookwyrm's Scale" }];
-            const base = new Reward({ inkDrops: 10 });
-            const modified = RewardCalculator.applyModifiers(base, ['[Item] The Bookwyrm\'s Scale'], {});
-            expect(modified.inkDrops).toBe(10);
-            expect(modified.modifiedBy).not.toContain("The Bookwyrm's Scale");
-            const skipEntry = modified.receipt.modifiers.find(m =>
-                m.source === "The Bookwyrm's Scale" && m.description && m.description.includes('page count unknown')
-            );
-            expect(skipEntry).toBeDefined();
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-        });
+    test('should merge quest.tags with book.tags deduplicating', () => {
+        const quest = { bookId: 'book-123', tags: ['fantasy', 'magic'] };
+        const getBook = (id) => {
+            if (id === 'book-123') return { title: 'Test Book', tags: ['fantasy', 'dragons'] };
+            return null;
+        };
+        const payload = RewardCalculator._buildQuestCompletedPayload(
+            '♥ Organize the Stacks', 'Fantasy', quest,
+            { isEncounter: false, roomNumber: null, encounterName: null, isBefriend: true, getBook, state: {} }
+        );
+        expect(payload.tags).toEqual(expect.arrayContaining(['fantasy', 'magic', 'dragons']));
+        expect(payload.tags).toHaveLength(3);
+    });
 
-        test('should apply Tome of Potential when pageCountEffective >= 400', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Tome of Potential' }];
-            const base = new Reward({ inkDrops: 10 });
-            const modified = RewardCalculator.applyModifiers(base, ['[Item] Tome of Potential'], {
-                quest: { pageCountEffective: 450 }
-            });
-            expect(modified.inkDrops).toBe(30); // 10 * 3
-            expect(modified.modifiedBy).toContain('Tome of Potential');
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-        });
+    test('should return empty tags when book has no tags', () => {
+        const quest = { bookId: 'book-123' };
+        const getBook = (id) => {
+            if (id === 'book-123') return { title: 'Test Book' };
+            return null;
+        };
+        const payload = RewardCalculator._buildQuestCompletedPayload(
+            '♥ Organize the Stacks', 'Fantasy', quest,
+            { isEncounter: false, roomNumber: null, encounterName: null, isBefriend: true, getBook, state: {} }
+        );
+        expect(payload.tags).toEqual([]);
+    });
 
-        test('should apply Page Sprite when pageCountEffective < 300', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Page Sprite' }];
-            const base = new Reward({ inkDrops: 10 });
-            const modified = RewardCalculator.applyModifiers(base, ['[Item] Page Sprite'], {
-                quest: { pageCountEffective: 200 }
-            });
-            expect(modified.inkDrops).toBe(20); // 10 * 2
-            expect(modified.modifiedBy).toContain('Page Sprite');
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-        });
-
-        test('should skip Page Sprite when pageCountEffective >= 300', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Page Sprite' }];
-            const base = new Reward({ inkDrops: 10 });
-            const modified = RewardCalculator.applyModifiers(base, ['[Item] Page Sprite'], {
-                quest: { pageCountEffective: 350 }
-            });
-            expect(modified.inkDrops).toBe(10);
-            expect(modified.modifiedBy).not.toContain('Page Sprite');
-            const skipEntry = modified.receipt.modifiers.find(m =>
-                m.source === 'Page Sprite' && m.description && m.description.includes('skipped')
-            );
-            expect(skipEntry).toBeDefined();
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-        });
+    test('should return empty tags when no getBook function', () => {
+        const quest = { bookId: 'book-123' };
+        const payload = RewardCalculator._buildQuestCompletedPayload(
+            '♥ Organize the Stacks', 'Fantasy', quest,
+            { isEncounter: false, roomNumber: null, encounterName: null, isBefriend: true, getBook: null, state: {} }
+        );
+        expect(payload.tags).toEqual([]);
     });
 });
 

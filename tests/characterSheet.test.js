@@ -2907,23 +2907,29 @@ describe('Character Sheet', () => {
       expect(warningEl.style.display).toBe('none');
     });
 
-    it('should hide warning when currency is changed back to saved value', async () => {
+    it('should hide warning when currency is changed back to saved value', () => {
       const inkDropsEl = document.getElementById('inkDrops');
       const warningEl = document.getElementById('currency-unsaved-warning');
-      
-      // Modify currency
-      inkDropsEl.value = '150';
+
+      // Pin the saved value in localStorage so auto-save cannot cause flakiness
+      const formData = JSON.parse(localStorage.getItem('characterSheet') || '{}');
+      formData.inkDrops = '100';
+      localStorage.setItem('characterSheet', JSON.stringify(formData));
+
+      // Set the form field to the saved value first
+      inkDropsEl.value = '100';
+      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(warningEl.style.display).toBe('none');
+
+      // Modify currency to a different value
+      inkDropsEl.value = '9999';
       inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
       expect(warningEl.style.display).toBe('block');
-      
-      // Wait for form persistence debounce to complete (if it triggered)
-      // This ensures the saved value is updated before we change back
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      // Change back to saved value (which is now '150' after auto-save)
-      inkDropsEl.value = '150';
+
+      // Change back to the saved value
+      inkDropsEl.value = '100';
       inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      
+
       // Warning should be hidden
       expect(warningEl.style.display).toBe('none');
     });

@@ -119,13 +119,13 @@ export class EffectRegistry {
         const effects = [];
         const seenItemKeys = new Set();
 
-        const pushForItemName = rawName => {
+        const pushForItem = (rawName, itemSlot) => {
             if (!rawName || typeof rawName !== 'string') {
                 return;
             }
             const item = findByIdOrName(catalog, rawName);
             const id = item?.id || rawName;
-            const dedupeKey = `item:${id}`;
+            const dedupeKey = `item:${id}:${itemSlot}`;
             if (seenItemKeys.has(dedupeKey)) {
                 return;
             }
@@ -135,23 +135,28 @@ export class EffectRegistry {
                 id,
                 name: item?.name || rawName
             };
-            effects.push(...collectEffects(item?.effects, trigger, source));
+            const collected = collectEffects(item?.effects, trigger, source);
+            for (const entry of collected) {
+                if (!entry.effect.slot || entry.effect.slot === itemSlot) {
+                    effects.push(entry);
+                }
+            }
         };
 
         const equipped = state[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
         for (const equippedItem of equipped) {
             const name = typeof equippedItem === 'string' ? equippedItem : equippedItem?.name;
-            pushForItemName(name);
+            pushForItem(name, 'equipped');
         }
 
         const passiveItems = state[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
         for (const slot of passiveItems) {
-            pushForItemName(slot?.itemName);
+            pushForItem(slot?.itemName, 'passive');
         }
 
         const passiveFamiliars = state[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
         for (const slot of passiveFamiliars) {
-            pushForItemName(slot?.itemName);
+            pushForItem(slot?.itemName, 'passive');
         }
 
         return effects;

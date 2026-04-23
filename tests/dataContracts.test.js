@@ -58,6 +58,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     const sideQuestsDetailed = loadJson('sideQuestsDetailed.json');
     const temporaryBuffs = loadJson('temporaryBuffs.json');
     const temporaryBuffsFromRewards = loadJson('temporaryBuffsFromRewards.json');
+    const bookTags = loadJson('bookTags.json');
     const wings = loadJson('wings.json');
     const xpLevels = loadJson('xpLevels.json');
 
@@ -512,6 +513,53 @@ describe('Data contracts for assets/data JSON catalogs', () => {
                 expectString(buffName);
                 expect(atmosphericBuffRefs.has(buffName)).toBe(true);
             });
+        });
+    });
+
+    test('bookTags.json contract', () => {
+        const ids = new Set();
+        expect(Array.isArray(bookTags)).toBe(true);
+        bookTags.forEach((tag) => {
+            expectString(tag.id);
+            expect(ids.has(tag.id)).toBe(false);
+            ids.add(tag.id);
+            expectString(tag.label);
+            expect(['genre', 'content']).toContain(tag.category);
+            expect(tag.id).toMatch(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
+        });
+    });
+
+    describe('allItems.json — migrated items have effects', () => {
+        const LEGACY_MODIFIER_EXCLUSIONS = new Set([
+            'gilded-painting', 'garden-gnome', 'mystical-moth',
+            'coffee-elemental', 'scatter-brain-scarab', 'tome-bound-cat',
+            'the-grand-key' // Quest key item — no effects by design
+        ]);
+
+        it('every non-excluded item has an effects array', () => {
+            const missing = [];
+            Object.values(allItems).forEach((item) => {
+                if (LEGACY_MODIFIER_EXCLUSIONS.has(item.id)) return;
+                if (!Array.isArray(item.effects) || item.effects.length === 0) {
+                    missing.push(item.name || item.id);
+                }
+            });
+            expect(missing).toEqual([]);
+        });
+
+        it('no migrated item retains rewardModifier with values', () => {
+            const retained = [];
+            Object.values(allItems).forEach((item) => {
+                if (LEGACY_MODIFIER_EXCLUSIONS.has(item.id)) return;
+                const rm = item.rewardModifier;
+                const prm = item.passiveRewardModifier;
+                const hasActiveValues = rm && typeof rm === 'object' && Object.keys(rm).length > 0;
+                const hasPassiveValues = prm && typeof prm === 'object' && Object.keys(prm).length > 0;
+                if (hasActiveValues || hasPassiveValues) {
+                    retained.push(item.name || item.id);
+                }
+            });
+            expect(retained).toEqual([]);
         });
     });
 

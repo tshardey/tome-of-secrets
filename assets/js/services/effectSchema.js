@@ -36,6 +36,7 @@ export const CONDITION_KEYS = Object.freeze([
     'genre',
     'pageCount',
     'hasTag',
+    'tagMatch',
     'isNewAuthor',
     'hasAtmosphericBuff',
     // Used by Conjuration school quest-complete effect.

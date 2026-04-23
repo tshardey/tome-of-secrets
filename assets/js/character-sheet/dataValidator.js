@@ -26,8 +26,10 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: same shape as curse helpers)
  * Version 13: Modifier pipeline effect cooldowns (effectCooldowns: last-used month/year per effect source key)
  * Version 14: Quest draw helper UI prefs (questDrawHelperSettings: { autoApplyOnDraw })
+ * Version 15: Sanctum/buff ID stabilization and side quest ID backfill
+ * Version 16: Book tags (tags: [] on each book)
  */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 /**
  * Schema version key in localStorage
@@ -456,7 +458,8 @@ function validateBook(book, context = 'book') {
         links: {
             questIds: Array.isArray(links.questIds) ? links.questIds.filter(x => typeof x === 'string') : (typeof links.tomeQuestId === 'string' ? [links.tomeQuestId] : []),
             curriculumPromptIds: Array.isArray(links.curriculumPromptIds) ? links.curriculumPromptIds.filter(x => typeof x === 'string') : []
-        }
+        },
+        tags: Array.isArray(book.tags) ? book.tags.filter(t => typeof t === 'string') : []
     };
 }
 

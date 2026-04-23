@@ -47,8 +47,20 @@ export class ModifierPipeline {
             }
         }
 
+        if (condition.tagMatch != null) {
+            const tags = Array.isArray(payload.tags) ? payload.tags : [];
+            const groups = Array.isArray(condition.tagMatch) ? condition.tagMatch : [];
+            const matched = groups.some(group => {
+                if (!Array.isArray(group)) return false;
+                return group.every(requiredTag => tags.includes(requiredTag));
+            });
+            if (!matched) {
+                return false;
+            }
+        }
+
         for (const [key, expectedValue] of Object.entries(condition)) {
-            if (key === 'pageCount' || key === 'hasTag') {
+            if (key === 'pageCount' || key === 'hasTag' || key === 'tagMatch') {
                 continue;
             }
             if (key === 'encounterType' && expectedValue === 'any') {

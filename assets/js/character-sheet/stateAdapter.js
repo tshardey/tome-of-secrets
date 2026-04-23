@@ -1426,7 +1426,8 @@ export class StateAdapter {
                     questIds: Array.isArray(bookData.links.questIds) ? bookData.links.questIds.filter(x => typeof x === 'string') : [],
                     curriculumPromptIds: Array.isArray(bookData.links.curriculumPromptIds) ? bookData.links.curriculumPromptIds.filter(x => typeof x === 'string') : []
                 }
-                : { questIds: [], curriculumPromptIds: [] }
+                : { questIds: [], curriculumPromptIds: [] },
+            tags: Array.isArray(bookData.tags) ? bookData.tags.filter(x => typeof x === 'string') : []
         };
         books[id] = book;
         this._persistBooks(books);
@@ -1447,6 +1448,7 @@ export class StateAdapter {
             if (updates.shelfCategory === 'general' || updates.shelfCategory === 'physical-tbr') book.shelfCategory = updates.shelfCategory;
             if (typeof updates.dateAdded === 'string') book.dateAdded = updates.dateAdded;
             if (updates.dateCompleted !== undefined) book.dateCompleted = typeof updates.dateCompleted === 'string' ? updates.dateCompleted : null;
+            if (Array.isArray(updates.tags)) book.tags = updates.tags.filter(x => typeof x === 'string');
             if (updates.links && typeof updates.links === 'object') {
                 if (!book.links || typeof book.links !== 'object') {
                     book.links = { questIds: [], curriculumPromptIds: [] };
