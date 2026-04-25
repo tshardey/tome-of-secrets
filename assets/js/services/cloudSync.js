@@ -38,6 +38,46 @@ function hashString(str) {
   return (hash >>> 0).toString(36);
 }
 
+/**
+ * Returns true if a string is a base64 data URI (e.g. "data:image/jpeg;base64,...").
+ * These can be multi-MB and must not be included in cloud snapshots.
+ */
+function isDataUri(value) {
+  return typeof value === 'string' && value.startsWith('data:');
+}
+
+/**
+ * Strip base64 data-URI cover images from the snapshot to keep payload size manageable.
+ * HTTP/HTTPS URLs are preserved (they're small and useful for cross-device restore).
+ */
+function stripInlineImages(stateData) {
+  // Books: { [id]: { cover, ... } }
+  if (stateData.books && typeof stateData.books === 'object') {
+    const cleaned = {};
+    for (const [id, book] of Object.entries(stateData.books)) {
+      if (book && isDataUri(book.cover)) {
+        cleaned[id] = { ...book, cover: null };
+      } else {
+        cleaned[id] = book;
+      }
+    }
+    stateData.books = cleaned;
+  }
+
+  // Completed/active/discarded quests: [{ coverUrl, ... }]
+  for (const key of ['completedQuests', 'activeAssignments', 'discardedQuests']) {
+    if (Array.isArray(stateData[key])) {
+      stateData[key] = stateData[key].map(quest =>
+        quest && isDataUri(quest.coverUrl)
+          ? { ...quest, coverUrl: null }
+          : quest
+      );
+    }
+  }
+
+  return stateData;
+}
+
 export async function buildLocalSnapshot() {
   const empty = createEmptyCharacterState();
 
@@ -53,12 +93,16 @@ export async function buildLocalSnapshot() {
   // Note: we intentionally do NOT sync activeCharacterTab. It's UI-only state and can cause
   // confusing "cloud has newer changes" prompts when multiple windows are open.
 
+  // Strip base64 data-URI images from covers to prevent multi-MB payloads.
+  // Local state retains the images; only the cloud snapshot is trimmed.
+  const syncSafeState = stripInlineImages(stateData);
+
   return {
     version: schemaVersion ? parseInt(schemaVersion, 10) : null,
     updatedAt: new Date().toISOString(),
     data: {
       formData,
-      characterState: stateData,
+      characterState: syncSafeState,
       monthlyCompletedBooks
     }
   };

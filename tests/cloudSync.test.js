@@ -218,6 +218,57 @@ describe('Cloud Sync - Loop Prevention', () => {
             expect(snapshot.data.characterState[STORAGE_KEYS.SELECTED_GENRES]).toEqual(['Fantasy']);
             expect(snapshot.updatedAt).toBeDefined();
         });
+
+        it('should strip base64 data-URI covers from books', async () => {
+            const books = {
+                'book-1': { title: 'Big Cover', author: 'A', cover: 'data:image/jpeg;base64,/9j/4AAQ...', status: 'tbr' },
+                'book-2': { title: 'URL Cover', author: 'B', cover: 'https://example.com/cover.jpg', status: 'tbr' },
+                'book-3': { title: 'No Cover', author: 'C', cover: null, status: 'tbr' }
+            };
+            safeSetJSON(STORAGE_KEYS.BOOKS, books);
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '1');
+
+            const snapshot = await buildLocalSnapshot();
+            const syncBooks = snapshot.data.characterState[STORAGE_KEYS.BOOKS];
+
+            expect(syncBooks['book-1'].cover).toBeNull();
+            expect(syncBooks['book-1'].title).toBe('Big Cover');
+            expect(syncBooks['book-2'].cover).toBe('https://example.com/cover.jpg');
+            expect(syncBooks['book-3'].cover).toBeNull();
+        });
+
+        it('should strip base64 data-URI coverUrl from quests', async () => {
+            const quests = [
+                { id: 'q1', book: 'A', coverUrl: 'data:image/png;base64,iVBOR...' },
+                { id: 'q2', book: 'B', coverUrl: 'https://example.com/cover.jpg' },
+                { id: 'q3', book: 'C', coverUrl: null }
+            ];
+            safeSetJSON(STORAGE_KEYS.COMPLETED_QUESTS, quests);
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '1');
+
+            const snapshot = await buildLocalSnapshot();
+            const syncQuests = snapshot.data.characterState[STORAGE_KEYS.COMPLETED_QUESTS];
+
+            expect(syncQuests[0].coverUrl).toBeNull();
+            expect(syncQuests[0].book).toBe('A');
+            expect(syncQuests[1].coverUrl).toBe('https://example.com/cover.jpg');
+            expect(syncQuests[2].coverUrl).toBeNull();
+        });
+
+        it('should not mutate local state when stripping covers', async () => {
+            const dataUri = 'data:image/jpeg;base64,/9j/4AAQ...';
+            const books = {
+                'book-1': { title: 'Test', cover: dataUri }
+            };
+            safeSetJSON(STORAGE_KEYS.BOOKS, books);
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '1');
+
+            await buildLocalSnapshot();
+
+            // Local state should still have the data URI
+            const localBooks = safeGetJSON(STORAGE_KEYS.BOOKS, {});
+            expect(localBooks['book-1'].cover).toBe(dataUri);
+        });
     });
 });
 
