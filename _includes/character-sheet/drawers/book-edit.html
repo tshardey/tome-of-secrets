@@ -69,6 +69,15 @@
                     <option value="">— None —</option>
                 </select>
             </div>
+            <div class="form-row">
+                <label>
+                    <strong>Tags:</strong>
+                    <button type="button" class="library-tag-info-btn rpg-panel-help-icon-btn" aria-label="What are tags?" title="Tags determine which equipped items grant bonuses when you complete a book.">i</button>
+                </label>
+                <div id="book-edit-tags" class="library-tag-picker" role="group" aria-label="Book tags">
+                    <!-- Tags are rendered by LibraryController from bookTags.json -->
+                </div>
+            </div>
             <div id="book-edit-links-section" class="form-row book-edit-links" style="display: none;">
                 <label><strong>Linked:</strong></label>
                 <div id="book-edit-links-display" class="book-edit-links-display"></div>

@@ -6,12 +6,22 @@
         "img": "assets/images/rewards/librarians-compass.png",
         "bonus": "Earn a +20 Ink Drop bonus for any book by a new-to-you author.",
         "passiveBonus": "Earn a +10 Ink Drop bonus for any book by a new-to-you author (passive).",
-        "rewardModifier": {
-            "inkDrops": 20
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 10
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["new-author"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["new-author"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "passive"
+            }
+        ]
     },
     "Amulet of Duality": {
         "id": "amulet-of-duality",
@@ -20,12 +30,22 @@
         "img": "assets/images/rewards/amulet-of-duality.png",
         "bonus": "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators.",
         "passiveBonus": "Earn a +7 Ink Drop bonus on books with multiple POVs (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["multiple-pov"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["multiple-pov"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Scatter Brain Scarab": {
         "id": "scatter-brain-scarab",
@@ -48,12 +68,22 @@
         "img": "assets/images/rewards/cloak-of-the-story-weaver.png",
         "bonus": "Earn a permanent +10 Ink Drop bonus for books that are part of a series.",
         "passiveBonus": "Earn a +5 Ink Drop bonus for series books (passive).",
-        "rewardModifier": {
-            "inkDrops": 10
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 5
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["series"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["series"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+                "slot": "passive"
+            }
+        ]
     },
     "Blood Fury Tattoo": {
         "id": "blood-fury-tattoo",
@@ -62,12 +92,22 @@
         "img": "assets/images/rewards/blood-fury-tattoo.png",
         "bonus": "Earn a +15 Ink Drop bonus for your next book in a series.",
         "passiveBonus": "Earn a +7 Ink Drop bonus for series continuations (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["series"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["series"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "The Bookwyrm's Scale": {
         "id": "the-bookwyrms-scale",
@@ -76,14 +116,22 @@
         "img": "assets/images/rewards/bookwyrms-scale.png",
         "bonus": "For every book over 500 pages, gain a +10 Ink Drop bonus.",
         "passiveBonus": "Gain a +5 Ink Drop bonus for books over 500 pages (passive).",
-        "rewardModifier": {
-            "inkDrops": 10
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 5
-        },
-        "pageCondition": { "min": 500 },
-        "passivePageCondition": { "min": 500 }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "pageCount": { "min": 500 } },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "pageCount": { "min": 500 } },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+                "slot": "passive"
+            }
+        ]
     },
     "Key of the Archive": {
         "id": "key-of-the-archive",
@@ -92,12 +140,22 @@
         "img": "assets/images/rewards/key-of-the-archive.png",
         "bonus": "Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively.",
         "passiveBonus": "Earn a +7 Ink Drop bonus on unlock-themed books (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["unlocked"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["unlocked"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Tome of Potential": {
         "id": "tome-of-potential",
@@ -106,14 +164,22 @@
         "img": "assets/images/rewards/tome-of-potential.png",
         "bonus": "Earn a x3 Ink Drop bonus for books over 400 pages.",
         "passiveBonus": "Earn a x1.5 Ink Drop bonus for books over 400 pages (passive).",
-        "rewardModifier": {
-            "inkDropsMultiplier": 3
-        },
-        "passiveRewardModifier": {
-            "inkDropsMultiplier": 1.5
-        },
-        "pageCondition": { "min": 400 },
-        "passivePageCondition": { "min": 400 }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "pageCount": { "min": 400 } },
+                "modifier": { "type": "MULTIPLY", "resource": "inkDrops", "value": 3 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "pageCount": { "min": 400 } },
+                "modifier": { "type": "MULTIPLY", "resource": "inkDrops", "value": 1.5 },
+                "slot": "passive"
+            }
+        ]
     },
     "Librarian's Quill": {
         "id": "librarians-quill",
@@ -122,12 +188,8 @@
         "img": "assets/images/rewards/librarians-quill.png",
         "bonus": "An additional +2 paper scraps for each journal entry",
         "passiveBonus": "Earn +1 Paper Scrap for journaling (passive).",
-        "rewardModifier": {
-            "paperScraps": 2
-        },
-        "passiveRewardModifier": {
-            "paperScraps": 1
-        },
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
         "excludeFromQuestBonuses": true,
         "effects": [
             {
@@ -136,7 +198,17 @@
                     "type": "ADD_FLAT",
                     "resource": "paperScraps",
                     "value": 2
-                }
+                },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_JOURNAL_ENTRY",
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "paperScraps",
+                    "value": 1
+                },
+                "slot": "passive"
             }
         ]
     },
@@ -226,23 +298,32 @@
         "img": "assets/images/rewards/celestial-koi-fish.png",
         "bonus": "An additional +10XP for books with celestial motif or a nights sky on the cover",
         "passiveBonus": "Once every 2 months, you may switch a genre quest to its opposing genre (passive).",
-        "rewardModifier": {
-            "xp": 10
-        },
-        "passiveRewardModifier": {
-            "xp": 5
-        },
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": {
-                    "hasTag": "celestial"
+                    "tagMatch": [["celestial"]]
                 },
                 "modifier": {
                     "type": "ADD_FLAT",
                     "resource": "xp",
                     "value": 10
-                }
+                },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": {
+                    "tagMatch": [["celestial"]]
+                },
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "xp",
+                    "value": 5
+                },
+                "slot": "passive"
             }
         ]
     },
@@ -269,12 +350,22 @@
         "img": "assets/images/rewards/pocket-dragon.png",
         "bonus": "Earn a +20 Ink Drop bonus for books in a fantasy series.",
         "passiveBonus": "Fantasy series books grant +10 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 20
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 10
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["fantasy", "series"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["fantasy", "series"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "passive"
+            }
+        ]
     },
     "Garden Gnome": {
         "id": "garden-gnome",
@@ -317,14 +408,22 @@
         "img": "assets/images/rewards/page-sprite.png",
         "bonus": "Earn a x2 Ink Drop bonus on any book under 300 pages.",
         "passiveBonus": "Short books grant x1.5 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDropsMultiplier": 2
-        },
-        "passiveRewardModifier": {
-            "inkDropsMultiplier": 1.5
-        },
-        "pageCondition": { "max": 299 },
-        "passivePageCondition": { "max": 299 }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "pageCount": { "max": 299 } },
+                "modifier": { "type": "MULTIPLY", "resource": "inkDrops", "value": 2 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "pageCount": { "max": 299 } },
+                "modifier": { "type": "MULTIPLY", "resource": "inkDrops", "value": 1.5 },
+                "slot": "passive"
+            }
+        ]
     },
     "The Grand Key": {
         "id": "the-grand-key",
@@ -342,12 +441,22 @@
         "img": "assets/images/rewards/crystal-sprite.png",
         "bonus": "Books with beautiful prose grant +15 Paper Scraps.",
         "passiveBonus": "Literary fiction grants +7 Paper Scraps (passive).",
-        "rewardModifier": {
-            "paperScraps": 15
-        },
-        "passiveRewardModifier": {
-            "paperScraps": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["literary-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["literary-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Reading Glasses": {
         "id": "reading-glasses",
@@ -356,12 +465,22 @@
         "img": "assets/images/rewards/reading-glasses.png",
         "bonus": "Dense or challenging texts grant +20 XP.",
         "passiveBonus": "Complex books grant +10 XP (passive).",
-        "rewardModifier": {
-            "xp": 20
-        },
-        "passiveRewardModifier": {
-            "xp": 10
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["non-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["non-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 10 },
+                "slot": "passive"
+            }
+        ]
     },
     "Baby Hollyphant": {
         "id": "baby-hollyphant",
@@ -370,13 +489,28 @@
         "img": "assets/images/rewards/baby-hollyphant.png",
         "bonus": "Books exploring faith, spirituality, or philosophical themes grant +15 XP and +5 Paper Scraps.",
         "passiveBonus": "Thought-provoking books grant +7 XP (passive).",
-        "rewardModifier": {
-            "xp": 15,
-            "paperScraps": 5
-        },
-        "passiveRewardModifier": {
-            "xp": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["philosophical"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["philosophical"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["philosophical"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Coffee Elemental": {
         "id": "coffee-elemental",
@@ -399,12 +533,22 @@
         "img": "assets/images/rewards/lab-assistant-automaton.png",
         "bonus": "Books featuring robots, AI, or helpful technology grant +15 Ink Drops.",
         "passiveBonus": "Tech-themed books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["technology"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["technology"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Temporal Sprite": {
         "id": "temporal-sprite",
@@ -413,12 +557,22 @@
         "img": "assets/images/rewards/temporal-sprite.png",
         "bonus": "Books with non-linear storytelling or time jumps grant +20 Ink Drops.",
         "passiveBonus": "Non-linear narratives grant +10 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 20
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 10
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["non-linear-narrative"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["non-linear-narrative"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "passive"
+            }
+        ]
     },
     "Ingredient Sprite": {
         "id": "ingredient-sprite",
@@ -427,12 +581,22 @@
         "img": "assets/images/rewards/ingredient-sprite.png",
         "bonus": "Books with interesting magical systems grant +15 Ink Drops.",
         "passiveBonus": "Magic system books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["magic-system"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["magic-system"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Herb Dragon": {
         "id": "herb-dragon",
@@ -441,12 +605,22 @@
         "img": "assets/images/rewards/herb-dragon.png",
         "bonus": "Books with nature magic, plants, or green covers grant +15 Ink Drops.",
         "passiveBonus": "Nature-themed books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["nature-magic"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["nature-magic"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Dancing Shoes": {
         "id": "dancing-shoes",
@@ -455,13 +629,28 @@
         "img": "assets/images/rewards/dancing-shoes.png",
         "bonus": "Romance or contemporary fiction with social gatherings grants +10 Ink Drops and +5 Paper Scraps.",
         "passiveBonus": "Social scene books grant +5 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 10,
-            "paperScraps": 5
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 5
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["romance"], ["contemporary-fiction", "social"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["romance"], ["contemporary-fiction", "social"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["romance"], ["contemporary-fiction", "social"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+                "slot": "passive"
+            }
+        ]
     },
     "Dragon Fang": {
         "id": "dragon-fang",
@@ -470,12 +659,22 @@
         "img": "assets/images/rewards/dragon-fang-necklace.png",
         "bonus": "Books with dragons or legendary creatures grant +20 Ink Drops.",
         "passiveBonus": "Dragon or creature books grant +10 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 20
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 10
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["dragons"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["dragons"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "passive"
+            }
+        ]
     },
     "Romance Reader's Ribbon": {
         "id": "romance-readers-ribbon",
@@ -484,12 +683,22 @@
         "img": "assets/images/rewards/romance-readers-ribbon.png",
         "bonus": "Romance or romantasy books grant +15 Ink Drops.",
         "passiveBonus": "Romance books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["romance"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["romance"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Star Navigator's Chart": {
         "id": "star-navigators-chart",
@@ -498,12 +707,22 @@
         "img": "assets/images/rewards/star-navigators-chart.png",
         "bonus": "Sci-fi books grant +15 Ink Drops (always active).",
         "passiveBonus": "Sci-fi books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["sci-fi"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["sci-fi"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Fae-Touched Crystal": {
         "id": "fae-touched-crystal",
@@ -512,12 +731,22 @@
         "img": "assets/images/rewards/fae-touched-crystal.png",
         "bonus": "Fantasy with fae or nature magic grants +15 Ink Drops.",
         "passiveBonus": "Fae fantasy books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["fantasy", "fae"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["fantasy", "fae"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Warding Candle": {
         "id": "warding-candle",
@@ -526,12 +755,22 @@
         "img": "assets/images/rewards/warding-candle.png",
         "bonus": "Horror or dark fantasy books grant +15 Ink Drops.",
         "passiveBonus": "Horror books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["horror"], ["fantasy", "dark"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["horror"], ["fantasy", "dark"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Literary Medallion": {
         "id": "literary-medallion",
@@ -540,12 +779,22 @@
         "img": "assets/images/rewards/literary-medallion.png",
         "bonus": "Classics or literary fiction grant +20 XP.",
         "passiveBonus": "Literary fiction grants +10 XP (passive).",
-        "rewardModifier": {
-            "xp": 20
-        },
-        "passiveRewardModifier": {
-            "xp": 10
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["classics"], ["literary-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["classics"], ["literary-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 10 },
+                "slot": "passive"
+            }
+        ]
     },
     "Golden Pen": {
         "id": "golden-pen",
@@ -554,12 +803,8 @@
         "img": "assets/images/rewards/golden-pen.png",
         "bonus": "Extensive journaling after a book grants +10 Paper Scraps.",
         "passiveBonus": "Journaling grants +5 Paper Scraps (passive).",
-        "rewardModifier": {
-            "paperScraps": 10
-        },
-        "passiveRewardModifier": {
-            "paperScraps": 5
-        },
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_JOURNAL_ENTRY",
@@ -567,7 +812,17 @@
                     "type": "ADD_FLAT",
                     "resource": "paperScraps",
                     "value": 10
-                }
+                },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_JOURNAL_ENTRY",
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "paperScraps",
+                    "value": 5
+                },
+                "slot": "passive"
             }
         ]
     },
@@ -578,12 +833,22 @@
         "img": "assets/images/rewards/detectives-magnifying-glass.png",
         "bonus": "Mystery or crime books with puzzles grant +15 Ink Drops.",
         "passiveBonus": "Mystery books grant +7 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 15
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 7
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["mystery"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["mystery"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "slot": "passive"
+            }
+        ]
     },
     "Raven Familiar": {
         "id": "raven-familiar",

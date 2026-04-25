@@ -9,6 +9,7 @@
 import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { searchBooks } from '../services/BookMetadataService.js';
+import { bookTags } from '../character-sheet/data.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 
@@ -75,6 +76,8 @@ export class LibraryController extends BaseController {
                 }, BOOK_SEARCH_DEBOUNCE_MS);
             });
         }
+
+        this._renderTagPicker(document.getElementById('library-add-tags'));
 
         this._setupAddFormCoverHandlers();
 
@@ -428,13 +431,16 @@ export class LibraryController extends BaseController {
         const shelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"]:checked');
         const shelfCategory = shelfRadio?.value === 'physical-tbr' ? 'physical-tbr' : 'general';
 
+        const tags = this._readTagPicker(document.getElementById('library-add-tags'));
+
         const book = this.stateAdapter.addBook({
             title,
             author,
             cover,
             pageCount: pageCountNum,
             status,
-            shelfCategory
+            shelfCategory,
+            tags
         });
         if (book) {
             this._clearAddForm();
@@ -461,6 +467,7 @@ export class LibraryController extends BaseController {
         if (readingRadio) readingRadio.checked = true;
         const generalShelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"][value="general"]');
         if (generalShelfRadio) generalShelfRadio.checked = true;
+        this._renderTagPicker(document.getElementById('library-add-tags'));
     }
 
     handleEditBook(bookId) {
@@ -551,6 +558,8 @@ export class LibraryController extends BaseController {
             searchResultsEl.innerHTML = '';
         }
 
+        this._renderTagPicker(document.getElementById('book-edit-tags'), book.tags || []);
+
         // Series (campaign) selector: tag this book to a series
         const seriesSelect = document.getElementById('book-edit-series');
         if (seriesSelect) {
@@ -616,6 +625,8 @@ export class LibraryController extends BaseController {
             }
         }
 
+        const tags = this._readTagPicker(document.getElementById('book-edit-tags'));
+
         this.stateAdapter.updateBook(bookId, {
             title,
             author,
@@ -623,7 +634,8 @@ export class LibraryController extends BaseController {
             pageCount: pageCountNum,
             status,
             dateCompleted,
-            shelfCategory
+            shelfCategory,
+            tags
         });
         this._closeBookEditDrawer();
         this.renderBooks();
@@ -755,6 +767,50 @@ export class LibraryController extends BaseController {
                     </div>`;
             })
             .join('');
+    }
+
+    _renderTagPicker(container, selectedTags = []) {
+        if (!container) return;
+        const tags = bookTags || [];
+        container.innerHTML = '';
+
+        const categories = { genre: [], content: [] };
+        for (const tag of tags) {
+            if (categories[tag.category]) {
+                categories[tag.category].push(tag);
+            }
+        }
+
+        for (const [category, categoryTags] of Object.entries(categories)) {
+            const column = document.createElement('div');
+            column.className = 'library-tag-column';
+
+            const heading = document.createElement('div');
+            heading.className = 'library-tag-category';
+            heading.textContent = category === 'genre' ? 'Genre' : 'Content';
+            column.appendChild(heading);
+
+            for (const tag of categoryTags) {
+                const label = document.createElement('label');
+                label.className = 'library-tag-option';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = container.id + '-tag';
+                checkbox.value = tag.id;
+                checkbox.checked = selectedTags.includes(tag.id);
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + tag.label));
+                column.appendChild(label);
+            }
+
+            container.appendChild(column);
+        }
+    }
+
+    _readTagPicker(container) {
+        if (!container) return [];
+        const checked = container.querySelectorAll('input[type="checkbox"]:checked');
+        return Array.from(checked).map(cb => cb.value);
     }
 
     _escapeHtml(s) {

@@ -24,7 +24,8 @@ import {
     shoppingOptions,
     wings,
     restorationProjects,
-    roomThemes
+    roomThemes,
+    bookTags
 } from './data.json-exports.js';
 
 // Derive allGenres from genreQuests (genre name -> description mapping)
@@ -39,7 +40,7 @@ export const allGenres = (() => {
 })();
 
 // Re-export JSON data for backward compatibility
-export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, seriesCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects, roomThemes };
+export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, seriesCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects, roomThemes, bookTags };
 
 // atmosphericBuffs and other data are now imported from JSON exports above
 

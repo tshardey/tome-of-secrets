@@ -94,38 +94,38 @@ describe('RewardCalculator Receipt System', () => {
 
     describe('Modifier Receipt Tracking', () => {
         test('should track item modifier in receipt', () => {
-            // Mock item in equipped items
+            // Mock item in equipped items (using atmospheric item that still has rewardModifier)
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Librarian's Compass", type: 'Wearable' }
+                { name: "Coffee Elemental", type: 'Familiar' }
             ];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Librarian\'s Compass']);
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(1);
-            expect(receipt.modifiers[0].source).toBe("Librarian's Compass");
+            expect(receipt.modifiers[0].source).toBe("Coffee Elemental");
             expect(receipt.modifiers[0].type).toBe('item');
-            expect(receipt.modifiers[0].value).toBe(20);
+            expect(receipt.modifiers[0].value).toBe(10);
             expect(receipt.modifiers[0].currency).toBe('inkDrops');
-            expect(receipt.final.inkDrops).toBe(30); // 10 base + 20 modifier
+            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 modifier
         });
 
         test('should track multiple modifiers in receipt', () => {
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Librarian's Compass", type: 'Wearable' },
-                { name: "Amulet of Duality", type: 'Wearable' }
+                { name: "Coffee Elemental", type: 'Familiar' },
+                { name: "Gilded Painting", type: 'Non-Wearable' }
             ];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
             const modified = RewardCalculator.applyModifiers(baseReward, [
-                '[Item] Librarian\'s Compass',
-                '[Item] Amulet of Duality'
+                '[Item] Coffee Elemental',
+                '[Item] Gilded Painting'
             ]);
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(2);
-            expect(receipt.final.inkDrops).toBe(45); // 10 base + 20 (Compass) + 15 (Amulet)
+            expect(receipt.final.inkDrops).toBe(22); // 10 base + 10 (Coffee) + 2 (Painting)
         });
 
         test('should track multiplier modifiers correctly', () => {
@@ -197,11 +197,11 @@ describe('RewardCalculator Receipt System', () => {
     describe('Complete Calculation Receipt Tracking', () => {
         test('should track complete calculation with all modifiers', () => {
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Librarian's Compass", type: 'Wearable' }
+                { name: "Coffee Elemental", type: 'Familiar' }
             ];
 
             const reward = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
-                appliedBuffs: ['[Item] Librarian\'s Compass'],
+                appliedBuffs: ['[Item] Coffee Elemental'],
                 background: 'biblioslinker',
                 quest: { type: '♥ Organize the Stacks' }
             });
@@ -213,45 +213,45 @@ describe('RewardCalculator Receipt System', () => {
 
             // Verify modifiers
             expect(receipt.modifiers.length).toBeGreaterThan(0);
-            const itemModifier = receipt.modifiers.find(m => m.source === "Librarian's Compass");
+            const itemModifier = receipt.modifiers.find(m => m.source === "Coffee Elemental");
             expect(itemModifier).toBeDefined();
 
             // Verify final
             expect(receipt.final.xp).toBe(15);
-            expect(receipt.final.inkDrops).toBe(30); // 10 base + 20 item
+            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 item
         });
 
         test('should track passive slot modifier correctly', () => {
-            // Item in passive slot, not equipped
+            // Item in passive slot, not equipped (using atmospheric item)
             characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-                { itemName: "Librarian's Compass", unlockedFrom: 'test-project' }
+                { itemName: "Coffee Elemental", unlockedFrom: 'test-project' }
             ];
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Librarian\'s Compass']);
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(1);
-            expect(receipt.modifiers[0].value).toBe(10); // Passive bonus (half of 20)
-            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 passive
+            expect(receipt.modifiers[0].value).toBe(5); // Passive bonus (half of 10)
+            expect(receipt.final.inkDrops).toBe(15); // 10 base + 5 passive
         });
 
         test('should prioritize active modifier when item is both equipped and in passive slot', () => {
-            // Item in both equipped and passive slot
+            // Item in both equipped and passive slot (using atmospheric item)
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Librarian's Compass", type: 'Wearable' }
+                { name: "Coffee Elemental", type: 'Familiar' }
             ];
             characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-                { itemName: "Librarian's Compass", unlockedFrom: 'test-project' }
+                { itemName: "Coffee Elemental", unlockedFrom: 'test-project' }
             ];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Librarian\'s Compass']);
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
             const receipt = modified.getReceipt();
 
-            expect(receipt.modifiers[0].value).toBe(20); // Active bonus (not passive)
-            expect(receipt.final.inkDrops).toBe(30); // 10 base + 20 active
+            expect(receipt.modifiers[0].value).toBe(10); // Active bonus (not passive)
+            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 active
         });
     });
 
@@ -326,11 +326,11 @@ describe('RewardCalculator Receipt System', () => {
     describe('Receipt Accuracy Verification', () => {
         test('receipt final values should match actual reward values', () => {
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Librarian's Compass", type: 'Wearable' }
+                { name: "Coffee Elemental", type: 'Familiar' }
             ];
 
             const reward = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
-                appliedBuffs: ['[Item] Librarian\'s Compass']
+                appliedBuffs: ['[Item] Coffee Elemental']
             });
             const receipt = reward.getReceipt();
 
@@ -345,14 +345,14 @@ describe('RewardCalculator Receipt System', () => {
             expect(baseReward.receipt.base.inkDrops).toBe(10);
 
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Librarian's Compass", type: 'Wearable' }
+                { name: "Coffee Elemental", type: 'Familiar' }
             ];
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Librarian\'s Compass']);
-            
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
+
             // Verify step-by-step
             expect(modified.receipt.base.inkDrops).toBe(10);
-            expect(modified.receipt.modifiers[0].value).toBe(20);
-            expect(modified.receipt.final.inkDrops).toBe(30);
+            expect(modified.receipt.modifiers[0].value).toBe(10);
+            expect(modified.receipt.final.inkDrops).toBe(20);
         });
 
         test('receipt should handle zero values correctly', () => {

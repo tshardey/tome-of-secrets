@@ -256,35 +256,6 @@ export class RewardCalculator {
         return reward;
     }
 
-    /**
-     * Check if page count meets a condition { min?, max? }
-     * @private
-     */
-    static _meetsPageCondition(pageCount, condition) {
-        if (!condition || (condition.min == null && condition.max == null)) return true;
-        if (pageCount == null || typeof pageCount !== 'number' || isNaN(pageCount)) return false;
-        if (condition.min != null && pageCount < condition.min) return false;
-        if (condition.max != null && pageCount > condition.max) return false;
-        return true;
-    }
-
-    /**
-     * Get skip reason for page-condition items when condition is not met (for receipt)
-     * @private
-     */
-    static _getPageConditionSkipReason(cleanName, pageCountEffective, condition) {
-        if (!condition || (condition.min == null && condition.max == null)) return null;
-        if (pageCountEffective == null || typeof pageCountEffective !== 'number' || isNaN(pageCountEffective)) {
-            return 'page count unknown';
-        }
-        if (condition.min != null && pageCountEffective < condition.min) {
-            return `${pageCountEffective} pages < ${condition.min} threshold`;
-        }
-        if (condition.max != null && pageCountEffective > condition.max) {
-            return `${pageCountEffective} pages > ${condition.max} threshold`;
-        }
-        return null;
-    }
 
     /**
      * Apply buff and item modifiers to base rewards
@@ -468,8 +439,8 @@ export class RewardCalculator {
         let tags = Array.isArray(quest?.tags) ? [...quest.tags] : [];
         if (getBook && typeof getBook === 'function' && bookId) {
             const book = getBook(bookId);
-            if (book && Array.isArray(book.premiseTags)) {
-                tags = [...new Set([...tags, ...book.premiseTags])];
+            if (book && Array.isArray(book.tags)) {
+                tags = [...new Set([...tags, ...book.tags])];
             }
         }
         return TriggerPayload.questCompleted({
@@ -642,17 +613,6 @@ export class RewardCalculator {
             const equippedItems = characterState?.[STORAGE_KEYS.EQUIPPED_ITEMS] || [];
             const isEquipped = equippedItems.some(equipped => equipped.name === cleanName);
             const forPassive = isInPassiveSlot && !isEquipped;
-
-            // Use passive condition when in passive slot, fall back to pageCondition when passive variant not defined
-            const condition = forPassive
-                ? (item.passivePageCondition ?? item.pageCondition)
-                : item.pageCondition;
-            if (condition && (condition.min != null || condition.max != null)) {
-                if (!this._meetsPageCondition(pageCountEffective, condition)) {
-                    const skipReason = this._getPageConditionSkipReason(cleanName, pageCountEffective, condition);
-                    return { modifier: null, skipReason };
-                }
-            }
 
             const baseModifier = forPassive && item.passiveRewardModifier
                 ? item.passiveRewardModifier
