@@ -211,7 +211,7 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
             baseRewardOverride: base,
             appliedBuffs: ['[Background] Archivist Bonus'],
             background: 'archivist',
-            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
         });
 
         expect(modified.inkDrops).toBe(20);
@@ -225,7 +225,7 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
             baseRewardOverride: base,
             appliedBuffs: ['[Background] Archivist Bonus', '[Item] Coffee Elemental'],
             background: 'archivist',
-            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
         });
 
         expect(modified.inkDrops).toBe(30);

@@ -728,13 +728,14 @@ export class RewardCalculator {
             ? baseRewardOverride.clone()
             : this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName, isBefriend });
 
-        const adapter = stateAdapter || {
-            state: characterState,
-            formData: {
-                keeperBackground: background ?? '',
-                wizardSchool: wizardSchool ?? ''
-            }
+        const formData = {
+            ...(stateAdapter?.formData || {}),
+            keeperBackground: background ?? '',
+            wizardSchool: wizardSchool ?? ''
         };
+        const adapter = stateAdapter
+            ? Object.create(stateAdapter, { formData: { value: formData, enumerable: true } })
+            : { state: characterState, formData };
 
         this._appendBuffCardSkips(rewards, appliedBuffs, quest);
 

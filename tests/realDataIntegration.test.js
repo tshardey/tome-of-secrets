@@ -128,7 +128,7 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
             {
                 id: 'archivist',
                 trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                payload: TriggerPayload.questCompleted({ questType: 'genre_quest', genre: 'Non-Fiction' }),
+                payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['non-fiction'] }),
                 baseReward: new Reward({ inkDrops: 0 }),
                 assert: (result) => expect(result.inkDrops).toBe(10),
                 sourceName: "The Archivist's Apprentice"
@@ -144,7 +144,7 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
             {
                 id: 'prophet',
                 trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['mythological'] }),
+                payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['mythology'] }),
                 baseReward: new Reward({ inkDrops: 0 }),
                 assert: (result) => expect(result.inkDrops).toBe(15),
                 sourceName: 'The Cloistered Prophet'
@@ -316,7 +316,7 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
             baseRewardOverride: new Reward({ inkDrops: 10 }),
             appliedBuffs: ['[Background] Archivist Bonus'],
             background: 'archivist',
-            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction' }
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
         });
 
         expect(result.inkDrops).toBe(20);
