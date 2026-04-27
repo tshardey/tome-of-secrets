@@ -146,6 +146,82 @@ export function renderQuestRow(questOrViewModel, index, listType = 'active') {
 }
 
 /**
+ * Extract deduplicated tagMatch groups from an item's effects.
+ * Returns array of groups, where each group is an array of tag IDs.
+ * E.g. [['romance'], ['fantasy', 'fae']] means "romance" OR "fantasy AND fae".
+ */
+export function extractItemTagGroups(item) {
+    if (!item || !Array.isArray(item.effects)) return [];
+    const seen = new Set();
+    const groups = [];
+    for (const effect of item.effects) {
+        const tagMatch = effect?.condition?.tagMatch;
+        if (!Array.isArray(tagMatch)) continue;
+        for (const group of tagMatch) {
+            if (!Array.isArray(group) || group.length === 0) continue;
+            const key = group.slice().sort().join('\0');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            groups.push(group);
+        }
+    }
+    return groups;
+}
+
+/**
+ * Render tag badges for an item's tagMatch groups.
+ * @param {Array<Array<string>>} groups - from extractItemTagGroups
+ * @param {Array<{id: string, label: string}>} bookTags - tag definitions
+ * @returns {HTMLElement|null} - container element, or null if no groups
+ */
+export function renderItemTagBadges(groups, bookTags) {
+    if (!groups || groups.length === 0) return null;
+
+    const tagLookup = {};
+    if (Array.isArray(bookTags)) {
+        for (const tag of bookTags) {
+            tagLookup[tag.id] = tag.label;
+        }
+    }
+
+    const hasAndGroup = groups.some(g => g.length > 1);
+
+    const container = createElement('div', { class: 'item-tag-section' });
+    const label = createElement('span', { class: 'item-tag-label' });
+    label.textContent = 'Responds to:';
+    container.appendChild(label);
+
+    const badgeRow = createElement('div', { class: 'item-tag-row' });
+
+    for (let gi = 0; gi < groups.length; gi++) {
+        const group = groups[gi];
+
+        // "or" connector between groups (only when AND groups exist)
+        if (gi > 0 && hasAndGroup) {
+            const orConn = createElement('span', { class: 'item-tag-connector item-tag-or' });
+            orConn.textContent = 'or';
+            badgeRow.appendChild(orConn);
+        }
+
+        for (let ti = 0; ti < group.length; ti++) {
+            // "+" connector within AND group
+            if (ti > 0) {
+                const plusConn = createElement('span', { class: 'item-tag-connector item-tag-plus' });
+                plusConn.textContent = '+';
+                badgeRow.appendChild(plusConn);
+            }
+
+            const badge = createElement('span', { class: 'item-tag-badge' });
+            badge.textContent = tagLookup[group[ti]] || group[ti];
+            badgeRow.appendChild(badge);
+        }
+    }
+
+    container.appendChild(badgeRow);
+    return container;
+}
+
+/**
  * Renders an item card
  * @param {Object} item - Item object
  * @param {number} index - Item index
@@ -244,6 +320,13 @@ export function renderItemCard(item, index, options = {}) {
         }
     }
     
+    // Tag badges from tagMatch conditions
+    const tagGroups = extractItemTagGroups(item);
+    const tagBadgesEl = renderItemTagBadges(tagGroups, data.bookTags);
+    if (tagBadgesEl) {
+        info.appendChild(tagBadgesEl);
+    }
+
     // Action buttons
     if (canEquip) {
         info.appendChild(createActionButton('Equip', 'equip-btn', index));

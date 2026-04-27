@@ -1634,6 +1634,45 @@ input:checked+.slider:before {
     color: #fff;
 }
 
+.item-tag-section {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.item-tag-label {
+    display: block;
+    font-size: 0.7em;
+    color: #8a7a61;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.item-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.item-tag-badge {
+    background: rgba(184, 159, 98, 0.15);
+    border: 1px solid rgba(184, 159, 98, 0.3);
+    color: #b89f62;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+}
+
+.item-tag-connector {
+    font-size: 0.65em;
+    color: #8a7a61;
+}
+
+.item-tag-or {
+    font-style: italic;
+}
+
 .inventory-container {
     margin-top: 40px;
     padding-top: 20px;
