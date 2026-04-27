@@ -1695,6 +1695,19 @@ export class QuestController extends BaseController {
                 appendTo: 'container',
                 onSelect: (bookId) => {
                     if (editQuestBookIdInput) editQuestBookIdInput.value = bookId || '';
+                    // Refresh buff cards to reflect the newly linked book's tags
+                    const { ui: uiModule } = this.dependencies;
+                    if (uiModule && uiModule.updateEditQuestBuffsDropdown) {
+                        let bookTags;
+                        if (bookId) {
+                            const books = characterState[STORAGE_KEYS.BOOKS];
+                            const linkedBook = books && books[bookId];
+                            bookTags = Array.isArray(linkedBook?.tags) ? linkedBook.tags : [];
+                        }
+                        const buffsSelect = document.getElementById('edit-quest-buffs-select');
+                        const currentBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
+                        uiModule.updateEditQuestBuffsDropdown(currentBuffs, bookTags);
+                    }
                 }
             });
         }
@@ -1716,10 +1729,16 @@ export class QuestController extends BaseController {
             }
         }
 
-        // Populate buffs selection (card-based)
+        // Populate buffs selection (card-based) with book tag awareness
         const { ui: uiModule } = this.dependencies;
         if (uiModule && uiModule.updateEditQuestBuffsDropdown) {
-            uiModule.updateEditQuestBuffsDropdown(quest.buffs || []);
+            let bookTags;
+            if (quest.bookId) {
+                const books = characterState[STORAGE_KEYS.BOOKS];
+                const linkedBook = books && books[quest.bookId];
+                bookTags = Array.isArray(linkedBook?.tags) ? linkedBook.tags : [];
+            }
+            uiModule.updateEditQuestBuffsDropdown(quest.buffs || [], bookTags);
         }
     }
 

@@ -3571,6 +3571,94 @@
     display: none;
 }
 
+/* Auto-applied: tagMatch hit — green border, locked on */
+.quest-bonus-card.auto-applied {
+    border-color: #4a8a4a;
+    background: linear-gradient(135deg, rgba(74, 138, 74, 0.15) 0%, rgba(42, 80, 42, 0.1) 100%);
+    cursor: default;
+    pointer-events: none;
+}
+
+.quest-bonus-card.auto-applied::after {
+    content: '✓ Auto';
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 2px 10px;
+    background: #4a8a4a;
+    color: #fff;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quest-bonus-card.auto-applied:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #4a8a4a;
+}
+
+/* Unmatched: tagMatch miss — grayed out, shows needed tags */
+.quest-bonus-card.unmatched {
+    opacity: 0.5;
+    cursor: default;
+    pointer-events: none;
+    border-color: #3a3a4a;
+}
+
+.quest-bonus-card.unmatched:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #3a3a4a;
+}
+
+/* Subjective: no tagMatch — player toggle */
+.quest-bonus-card.subjective {
+    border-color: #6a5a8a;
+}
+
+.quest-bonus-card.subjective:hover {
+    border-color: #8a7aaa;
+    box-shadow: 0 4px 12px rgba(106, 90, 138, 0.2);
+}
+
+.quest-bonus-card.subjective.selected {
+    border-color: #8a7aaa;
+    background: linear-gradient(135deg, rgba(106, 90, 138, 0.2) 0%, rgba(80, 65, 110, 0.15) 100%);
+    box-shadow: 0 0 0 3px rgba(106, 90, 138, 0.3);
+}
+
+/* "Your Choice" badge for subjective cards */
+.quest-bonus-card-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+}
+
+.quest-bonus-card-badge.badge-subjective {
+    background: #6a5a8a;
+    color: #d0c0e0;
+}
+
+/* "Needs:" tag section on unmatched cards */
+.quest-bonus-card-needs {
+    margin-top: 4px;
+    font-size: 0.8em;
+}
+
+.quest-bonus-card-needs-label {
+    color: #888;
+    font-size: 0.85em;
+    margin-right: 4px;
+}
+
 .no-bonuses-message {
     grid-column: 1 / -1;
     margin: 0;

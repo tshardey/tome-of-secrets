@@ -6,17 +6,19 @@ import { escapeHtml } from '../utils/sanitize.js';
 import { clearElement, appendHTML, createElement } from '../utils/domHelpers.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from './storageKeys.js';
-import { 
+import {
     renderQuestRow,
-    renderQuestCard, 
-    renderItemCard, 
-    renderEmptySlot, 
-    renderCurseRow, 
+    renderQuestCard,
+    renderItemCard,
+    renderEmptySlot,
+    renderCurseRow,
     renderCurseHelperRow,
     renderCurseHelpersEmptyRow,
     renderQuestDrawHelpersEmptyRow,
     renderTemporaryBuffRow,
-    renderAbilityCard
+    renderAbilityCard,
+    extractItemTagGroups,
+    renderItemTagBadges
 } from './renderComponents.js';
 import { buildCurseHelperList } from './curseHelperDiscovery.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
@@ -1322,9 +1324,29 @@ export function renderTemporaryBuffs() {
 }
 
 /**
+ * Classify a bonus card as 'auto-applied', 'unmatched', or 'subjective'.
+ * @param {Object} bonus - bonus object with type, itemData, or backgroundData
+ * @param {string[]|null} bookTags - array of tag IDs from the linked book, or null if no book
+ * @returns {'auto-applied'|'unmatched'|'subjective'}
+ */
+export function classifyBonusCardState(bonus, bookTags) {
+    if (bookTags == null) return 'subjective';
+
+    const effectSource = bonus.type === 'background' ? bonus.backgroundData : bonus.itemData;
+    const tagGroups = extractItemTagGroups(effectSource);
+
+    if (tagGroups.length === 0) return 'subjective';
+
+    const matched = tagGroups.some(group =>
+        group.every(tag => bookTags.includes(tag))
+    );
+    return matched ? 'auto-applied' : 'unmatched';
+}
+
+/**
  * Render a bonus card element
  */
-function createBonusCard(bonus, value, containerId) {
+function createBonusCard(bonus, value, containerId, state = null, bookTags = undefined) {
     const card = document.createElement('div');
     card.className = 'quest-bonus-card';
     card.dataset.value = value;
@@ -1371,12 +1393,48 @@ function createBonusCard(bonus, value, containerId) {
     description.textContent = bonus.description;
     card.appendChild(description);
     
-    // Handle click to toggle selection
-    card.addEventListener('click', () => {
-        card.classList.toggle('selected');
-        updateBonusSelection(containerId);
-    });
-    
+    // State-specific rendering
+    if (state === 'subjective') {
+        // "Your Choice" badge
+        const badge = document.createElement('span');
+        badge.className = 'quest-bonus-card-badge badge-subjective';
+        badge.textContent = 'Your Choice';
+        card.appendChild(badge);
+
+        // Clickable toggle
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            updateBonusSelection(containerId);
+        });
+    } else if (state === 'unmatched') {
+        // Show "Needs:" tag badges for unmatched cards
+        const effectSource = bonus.type === 'background' ? bonus.backgroundData : bonus.itemData;
+        const tagGroups = extractItemTagGroups(effectSource);
+        if (tagGroups.length > 0) {
+            const needsDiv = document.createElement('div');
+            needsDiv.className = 'quest-bonus-card-needs';
+            const needsLabel = document.createElement('span');
+            needsLabel.className = 'quest-bonus-card-needs-label';
+            needsLabel.textContent = 'Needs:';
+            needsDiv.appendChild(needsLabel);
+
+            const badgesEl = renderItemTagBadges(tagGroups, data.bookTags);
+            if (badgesEl) {
+                needsDiv.appendChild(badgesEl);
+            }
+            card.appendChild(needsDiv);
+        }
+        // No click handler — non-interactive
+    } else if (state === 'auto-applied') {
+        // No click handler — ::after pseudo-element shows "✓ Auto" badge via CSS
+    } else {
+        // Legacy mode (no state) — clickable toggle
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            updateBonusSelection(containerId);
+        });
+    }
+
     return card;
 }
 
@@ -1392,14 +1450,18 @@ function updateBonusSelection(containerId) {
     if (!container || !hiddenInput) return;
     
     const selectedCards = container.querySelectorAll('.quest-bonus-card.selected');
-    const selectedValues = Array.from(selectedCards).map(card => card.dataset.value);
+    const autoAppliedCards = container.querySelectorAll('.quest-bonus-card.auto-applied');
+    const selectedValues = [
+        ...Array.from(autoAppliedCards).map(card => card.dataset.value),
+        ...Array.from(selectedCards).map(card => card.dataset.value)
+    ];
     hiddenInput.value = JSON.stringify(selectedValues);
 }
 
 /**
  * Render bonus selection cards for a specific container
  */
-function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
+function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookTags = undefined) {
     const container = document.getElementById(containerId);
     const hiddenInput = document.getElementById(hiddenInputId);
     if (!container || !hiddenInput) return;
@@ -1420,27 +1482,30 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
                 name: 'Archivist Bonus',
                 description: '+10 Ink Drops (Non-Fiction/Historical Fiction)',
                 type: 'background',
-                typeLabel: 'Background Bonus'
+                typeLabel: 'Background Bonus',
+                backgroundData: keeperBackgrounds.archivist
             });
         }
-        
+
         if (background === 'prophet') {
             bonuses.push({
                 value: '[Background] Prophet Bonus',
                 name: 'Prophet Bonus',
                 description: '+10 Ink Drops (Religious/Spiritual/Mythological)',
                 type: 'background',
-                typeLabel: 'Background Bonus'
+                typeLabel: 'Background Bonus',
+                backgroundData: keeperBackgrounds.prophet
             });
         }
-        
+
         if (background === 'cartographer') {
             bonuses.push({
                 value: '[Background] Cartographer Bonus',
                 name: 'Cartographer Bonus',
                 description: '+10 Ink Drops (First Dungeon Crawl this month)',
                 type: 'background',
-                typeLabel: 'Background Bonus'
+                typeLabel: 'Background Bonus',
+                backgroundData: keeperBackgrounds.cartographer
             });
         }
     }
@@ -1527,17 +1592,29 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = []) {
     
     // Render bonus cards
     bonuses.forEach(bonus => {
-        const card = createBonusCard(bonus, bonus.value, containerId);
-        
-        // Restore selection state
-        if (selectedValues.includes(bonus.value)) {
-            card.classList.add('selected');
+        const state = bookTags !== undefined ? classifyBonusCardState(bonus, bookTags) : null;
+        const card = createBonusCard(bonus, bonus.value, containerId, state, bookTags);
+
+        if (state === 'auto-applied') {
+            card.classList.add('auto-applied');
+        } else if (state === 'unmatched') {
+            card.classList.add('unmatched');
+        } else if (state === 'subjective') {
+            card.classList.add('subjective');
+            if (selectedValues.includes(bonus.value)) {
+                card.classList.add('selected');
+            }
+        } else {
+            // Legacy mode (no bookTags) — restore selection state
+            if (selectedValues.includes(bonus.value)) {
+                card.classList.add('selected');
+            }
         }
-        
+
         container.appendChild(card);
     });
-    
-    // Update hidden input with current selection
+
+    // Update hidden input: auto-applied cards are always included
     updateBonusSelection(containerId);
 }
 
@@ -1553,8 +1630,8 @@ export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInp
 /**
  * Update bonus selection for edit quest drawer
  */
-export function updateEditQuestBuffsDropdown(selectedValues = []) {
-    renderBonusCards('edit-quest-bonus-selection-container', 'edit-quest-buffs-select', selectedValues);
+export function updateEditQuestBuffsDropdown(selectedValues = [], bookTags = undefined) {
+    renderBonusCards('edit-quest-bonus-selection-container', 'edit-quest-buffs-select', selectedValues, bookTags);
 }
 
 export function populateBackgroundDropdown() {
