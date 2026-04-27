@@ -69,6 +69,48 @@ describe('tagMatch condition evaluation', () => {
         const payload = { tags: ['romance'], pageCount: 100 };
         expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(false);
     });
+
+    test('Archivist tagMatch: matches non-fiction tag', () => {
+        const condition = { tagMatch: [['non-fiction'], ['historical-fiction']] };
+        const payload = { tags: ['non-fiction'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(true);
+    });
+
+    test('Archivist tagMatch: matches historical-fiction tag', () => {
+        const condition = { tagMatch: [['non-fiction'], ['historical-fiction']] };
+        const payload = { tags: ['historical-fiction'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(true);
+    });
+
+    test('Archivist tagMatch: rejects unrelated tags', () => {
+        const condition = { tagMatch: [['non-fiction'], ['historical-fiction']] };
+        const payload = { tags: ['fantasy', 'series'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(false);
+    });
+
+    test('Prophet tagMatch: matches philosophical tag', () => {
+        const condition = { tagMatch: [['philosophical'], ['mythology'], ['celestial']] };
+        const payload = { tags: ['philosophical'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(true);
+    });
+
+    test('Prophet tagMatch: matches mythology tag', () => {
+        const condition = { tagMatch: [['philosophical'], ['mythology'], ['celestial']] };
+        const payload = { tags: ['mythology'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(true);
+    });
+
+    test('Prophet tagMatch: matches celestial tag', () => {
+        const condition = { tagMatch: [['philosophical'], ['mythology'], ['celestial']] };
+        const payload = { tags: ['celestial'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(true);
+    });
+
+    test('Prophet tagMatch: rejects unrelated tags', () => {
+        const condition = { tagMatch: [['philosophical'], ['mythology'], ['celestial']] };
+        const payload = { tags: ['romance', 'series'] };
+        expect(ModifierPipeline.evaluateCondition(condition, payload)).toBe(false);
+    });
 });
 
 describe('slot-aware effect filtering', () => {

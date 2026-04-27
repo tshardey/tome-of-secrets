@@ -8,6 +8,7 @@
   { "id": "contemporary-fiction", "label": "Contemporary Fiction", "category": "genre" },
   { "id": "non-fiction", "label": "Non-Fiction", "category": "genre" },
   { "id": "classics", "label": "Classics", "category": "genre" },
+  { "id": "historical-fiction", "label": "Historical Fiction", "category": "genre" },
   { "id": "series", "label": "Part of a Series", "category": "content" },
   { "id": "dragons", "label": "Dragons / Legendary Creatures", "category": "content" },
   { "id": "fae", "label": "Fae / Faerie", "category": "content" },
@@ -21,5 +22,6 @@
   { "id": "dark", "label": "Dark Themes", "category": "content" },
   { "id": "new-author", "label": "New-to-You Author", "category": "content" },
   { "id": "celestial", "label": "Celestial Motifs", "category": "content" },
+  { "id": "mythology", "label": "Mythology", "category": "content" },
   { "id": "unlocked", "label": "Unlocking / Discovery", "category": "content" }
 ]
