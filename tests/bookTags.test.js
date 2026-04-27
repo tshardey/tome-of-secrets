@@ -34,12 +34,12 @@ describe('bookTags.json vocabulary', () => {
         });
     });
 
-    test('has expected counts: 9 genre tags and 14 content tags', () => {
+    test('has expected counts: 10 genre tags and 16 content tags', () => {
         const genre = bookTags.filter(t => t.category === 'genre');
         const content = bookTags.filter(t => t.category === 'content');
         expect(genre).toHaveLength(10);
-        expect(content).toHaveLength(15);
-        expect(bookTags).toHaveLength(25);
+        expect(content).toHaveLength(16);
+        expect(bookTags).toHaveLength(26);
     });
 });
 

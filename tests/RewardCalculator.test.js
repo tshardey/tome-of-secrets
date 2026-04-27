@@ -140,11 +140,11 @@ describe('RewardCalculator - Apply Modifiers', () => {
     test('should apply additive ink drop bonuses', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental' // +10 ink drops
+            '[Item] Gilded Painting' // +2 ink drops
         ]);
 
-        expect(modified.inkDrops).toBe(20);
-        expect(modified.modifiedBy).toContain('Coffee Elemental');
+        expect(modified.inkDrops).toBe(12);
+        expect(modified.modifiedBy).toContain('Gilded Painting');
     });
 
     test('should apply multiplier bonuses', () => {
@@ -160,11 +160,11 @@ describe('RewardCalculator - Apply Modifiers', () => {
     test('should apply additive bonuses before multipliers', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental',    // +10 = 20 total
-            '[Item] Scatter Brain Scarab' // x3 = 60 total
+            '[Item] Gilded Painting',     // +2 = 12 total
+            '[Item] Scatter Brain Scarab' // x3 = 36 total
         ]);
 
-        expect(modified.inkDrops).toBe(60); // (10 + 10) * 3
+        expect(modified.inkDrops).toBe(36); // (10 + 2) * 3
     });
 
     test('should apply background bonuses', () => {
@@ -190,15 +190,13 @@ describe('RewardCalculator - Apply Modifiers', () => {
     test('should handle multiple modifiers', () => {
         const base = new Reward({ xp: 10, inkDrops: 10, paperScraps: 5 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental',     // +10 ink drops
             '[Item] Gilded Painting',      // +2 ink drops
-            '[Background] Prophet Bonus'   // +10 ink drops
+            '[Background] Prophet Bonus'   // +15 ink drops
         ]);
 
         expect(modified.xp).toBe(10);
-        expect(modified.inkDrops).toBe(37); // 10 + 10 + 2 + 15
+        expect(modified.inkDrops).toBe(27); // 10 + 2 + 15
         expect(modified.paperScraps).toBe(5);
-        expect(modified.modifiedBy).toContain('Coffee Elemental');
         expect(modified.modifiedBy).toContain('Gilded Painting');
         expect(modified.modifiedBy).toContain('Prophet Bonus');
     });
@@ -220,15 +218,17 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
     });
 
     test('should still apply non-background buff cards with pipeline backgrounds', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
             baseRewardOverride: base,
             appliedBuffs: ['[Background] Archivist Bonus', '[Item] Coffee Elemental'],
             background: 'archivist',
-            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction', 'cozy'] }
         });
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
-        expect(modified.inkDrops).toBe(30);
+        expect(modified.inkDrops).toBe(30); // 10 base + 10 Archivist pipeline + 10 Coffee pipeline
         expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
         expect(modified.modifiedBy).toContain("Coffee Elemental");
         expect(modified.modifiedBy).not.toContain('Archivist Bonus');
@@ -272,18 +272,20 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
 
 describe('RewardCalculator - Calculate Final Rewards', () => {
     test('should calculate final rewards with all modifiers', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
         const final = RewardCalculator.calculateFinalRewards(
             '♥ Organize the Stacks',
             'Fantasy: Read a book with magical creatures',
             {
                 appliedBuffs: ['[Item] Coffee Elemental'],
                 background: null,
-                quest: { type: '♥ Organize the Stacks' }
+                quest: { type: '♥ Organize the Stacks', tags: ['cozy'] }
             }
         );
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         expect(final.xp).toBe(15); // Base genre quest XP
-        expect(final.inkDrops).toBe(20); // 10 base + 10 from Coffee Elemental
+        expect(final.inkDrops).toBe(20); // 10 base + 10 from Coffee Elemental pipeline
         expect(final.modifiedBy).toContain('Coffee Elemental');
     });
 
@@ -305,6 +307,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 
     test('should handle complex reward calculation', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
         const final = RewardCalculator.calculateFinalRewards(
             '♠ Dungeon Crawl',
             '',
@@ -313,16 +316,17 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
                 roomNumber: '1',
                 encounterName: 'Will-o-wisps',
                 appliedBuffs: [
-                    '[Item] Coffee Elemental', // +10 ink drops
-                    '[Background] Cartographer Bonus' // +10 ink drops
+                    '[Item] Coffee Elemental', // +10 ink drops (pipeline, needs cozy tag)
+                    '[Background] Cartographer Bonus' // +10 ink drops (legacy, intentionally skipped)
                 ],
                 background: 'biblioslinker',
-                quest: { type: '♠ Dungeon Crawl' }
+                quest: { type: '♠ Dungeon Crawl', tags: ['cozy'] }
             }
         );
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         expect(final.xp).toBe(30); // Monster base XP
-        expect(final.inkDrops).toBe(10); // 0 + 10 (background legacy card intentionally skipped)
+        expect(final.inkDrops).toBe(10); // 0 + 10 from Coffee Elemental pipeline
         expect(final.modifiedBy.length).toBeGreaterThan(0);
     });
 
@@ -401,18 +405,18 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     test('should use passiveRewardModifier for items in passive slots', () => {
         // Setup: Add an atmospheric item to a passive slot
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "Coffee Elemental" }
+            { itemName: "Gilded Painting" }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        // Coffee Elemental in passive slot should give +5 ink drops (passive), not +10 (active)
+        // Gilded Painting in passive slot should give +1 ink drop (passive), not +2 (active)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental'
+            '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(15); // 10 base + 5 passive bonus
-        expect(modified.modifiedBy).toContain("Coffee Elemental");
+        expect(modified.inkDrops).toBe(11); // 10 base + 1 passive bonus
+        expect(modified.modifiedBy).toContain("Gilded Painting");
 
         // Cleanup
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
@@ -421,61 +425,61 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     test('should use active rewardModifier for equipped items, even if also in passive slot', () => {
         // Setup: Item in both passive slot AND equipped
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "Coffee Elemental" }
+            { itemName: "Gilded Painting" }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-            { name: "Coffee Elemental" }
+            { name: "Gilded Painting" }
         ];
 
         const base = new Reward({ inkDrops: 10 });
-        // When equipped, should use active modifier (+10), not passive (+5)
+        // When equipped, should use active modifier (+2), not passive (+1)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental'
+            '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
-        expect(modified.modifiedBy).toContain("Coffee Elemental");
+        expect(modified.inkDrops).toBe(12); // 10 base + 2 active bonus
+        expect(modified.modifiedBy).toContain("Gilded Painting");
 
         // Cleanup
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
     });
 
-    test('should use passiveRewardModifier for familiars in passive slots', () => {
-        // Setup: Add a familiar to a passive familiar slot
-        characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [
-            { itemName: "Coffee Elemental" }
+    test('should use passiveRewardModifier for items in passive item slots (via PASSIVE_ITEM_SLOTS)', () => {
+        // Setup: Add an item to a passive item slot
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
+            { itemName: "Gilded Painting" }
         ];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        // Coffee Elemental in passive slot should give +5 ink drops (passive), not +10 (active)
+        // Gilded Painting in passive slot should give +1 ink drop (passive), not +2 (active)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental'
+            '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(15); // 10 base + 5 passive bonus
-        expect(modified.modifiedBy).toContain('Coffee Elemental');
+        expect(modified.inkDrops).toBe(11); // 10 base + 1 passive bonus
+        expect(modified.modifiedBy).toContain('Gilded Painting');
 
         // Cleanup
-        characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
     });
 
     test('should use active modifier for items not in passive slots', () => {
         // Setup: No passive slots, item is just equipped
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-            { name: "Coffee Elemental" }
+            { name: "Gilded Painting" }
         ];
 
         const base = new Reward({ inkDrops: 10 });
-        // Should use active modifier (+10)
+        // Should use active modifier (+2)
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Coffee Elemental'
+            '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(20); // 10 base + 10 active bonus
-        expect(modified.modifiedBy).toContain("Coffee Elemental");
+        expect(modified.inkDrops).toBe(12); // 10 base + 2 active bonus
+        expect(modified.modifiedBy).toContain("Gilded Painting");
 
         // Cleanup
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];

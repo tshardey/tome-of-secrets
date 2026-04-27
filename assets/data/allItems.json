@@ -519,12 +519,22 @@
         "img": "assets/images/rewards/coffee-elemental.png",
         "bonus": "Cozy reads or books enjoyed with a hot beverage grant +10 Ink Drops.",
         "passiveBonus": "Cozy books grant +5 Ink Drops (passive).",
-        "rewardModifier": {
-            "inkDrops": 10
-        },
-        "passiveRewardModifier": {
-            "inkDrops": 5
-        }
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["cozy"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["cozy"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+                "slot": "passive"
+            }
+        ]
     },
     "Lab Assistant Automaton": {
         "id": "lab-assistant-automaton",

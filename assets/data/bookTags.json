@@ -23,5 +23,6 @@
   { "id": "new-author", "label": "New-to-You Author", "category": "content" },
   { "id": "celestial", "label": "Celestial Motifs", "category": "content" },
   { "id": "mythology", "label": "Mythology", "category": "content" },
-  { "id": "unlocked", "label": "Unlocking / Discovery", "category": "content" }
+  { "id": "unlocked", "label": "Unlocking / Discovery", "category": "content" },
+  { "id": "cozy", "label": "Cozy / Comfort Read", "category": "content" }
 ]

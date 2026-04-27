@@ -96,36 +96,36 @@ describe('RewardCalculator Receipt System', () => {
         test('should track item modifier in receipt', () => {
             // Mock item in equipped items (using atmospheric item that still has rewardModifier)
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Coffee Elemental", type: 'Familiar' }
-            ];
-
-            const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
-            const receipt = modified.getReceipt();
-
-            expect(receipt.modifiers).toHaveLength(1);
-            expect(receipt.modifiers[0].source).toBe("Coffee Elemental");
-            expect(receipt.modifiers[0].type).toBe('item');
-            expect(receipt.modifiers[0].value).toBe(10);
-            expect(receipt.modifiers[0].currency).toBe('inkDrops');
-            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 modifier
-        });
-
-        test('should track multiple modifiers in receipt', () => {
-            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Coffee Elemental", type: 'Familiar' },
                 { name: "Gilded Painting", type: 'Non-Wearable' }
             ];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Gilded Painting']);
+            const receipt = modified.getReceipt();
+
+            expect(receipt.modifiers).toHaveLength(1);
+            expect(receipt.modifiers[0].source).toBe("Gilded Painting");
+            expect(receipt.modifiers[0].type).toBe('item');
+            expect(receipt.modifiers[0].value).toBe(2);
+            expect(receipt.modifiers[0].currency).toBe('inkDrops');
+            expect(receipt.final.inkDrops).toBe(12); // 10 base + 2 modifier
+        });
+
+        test('should track multiple modifiers in receipt', () => {
+            characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
+                { name: "Gilded Painting", type: 'Non-Wearable' },
+                { name: "Scatter Brain Scarab", type: 'Wearable' }
+            ];
+
+            const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
             const modified = RewardCalculator.applyModifiers(baseReward, [
-                '[Item] Coffee Elemental',
-                '[Item] Gilded Painting'
+                '[Item] Gilded Painting',
+                '[Item] Scatter Brain Scarab'
             ]);
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(2);
-            expect(receipt.final.inkDrops).toBe(22); // 10 base + 10 (Coffee) + 2 (Painting)
+            expect(receipt.final.inkDrops).toBe(36); // (10 + 2) * 3
         });
 
         test('should track multiplier modifiers correctly', () => {
@@ -203,7 +203,7 @@ describe('RewardCalculator Receipt System', () => {
             const reward = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
                 appliedBuffs: ['[Item] Coffee Elemental'],
                 background: 'biblioslinker',
-                quest: { type: '♥ Organize the Stacks' }
+                quest: { type: '♥ Organize the Stacks', tags: ['cozy'] }
             });
             const receipt = reward.getReceipt();
 
@@ -218,40 +218,40 @@ describe('RewardCalculator Receipt System', () => {
 
             // Verify final
             expect(receipt.final.xp).toBe(15);
-            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 item
+            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 item (pipeline)
         });
 
         test('should track passive slot modifier correctly', () => {
             // Item in passive slot, not equipped (using atmospheric item)
             characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-                { itemName: "Coffee Elemental", unlockedFrom: 'test-project' }
+                { itemName: "Gilded Painting", unlockedFrom: 'test-project' }
             ];
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Gilded Painting']);
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(1);
-            expect(receipt.modifiers[0].value).toBe(5); // Passive bonus (half of 10)
-            expect(receipt.final.inkDrops).toBe(15); // 10 base + 5 passive
+            expect(receipt.modifiers[0].value).toBe(1); // Passive bonus (half of 2)
+            expect(receipt.final.inkDrops).toBe(11); // 10 base + 1 passive
         });
 
         test('should prioritize active modifier when item is both equipped and in passive slot', () => {
             // Item in both equipped and passive slot (using atmospheric item)
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Coffee Elemental", type: 'Familiar' }
+                { name: "Gilded Painting", type: 'Non-Wearable' }
             ];
             characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-                { itemName: "Coffee Elemental", unlockedFrom: 'test-project' }
+                { itemName: "Gilded Painting", unlockedFrom: 'test-project' }
             ];
 
             const baseReward = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Gilded Painting']);
             const receipt = modified.getReceipt();
 
-            expect(receipt.modifiers[0].value).toBe(10); // Active bonus (not passive)
-            expect(receipt.final.inkDrops).toBe(20); // 10 base + 10 active
+            expect(receipt.modifiers[0].value).toBe(2); // Active bonus (not passive)
+            expect(receipt.final.inkDrops).toBe(12); // 10 base + 2 active
         });
     });
 
@@ -345,14 +345,14 @@ describe('RewardCalculator Receipt System', () => {
             expect(baseReward.receipt.base.inkDrops).toBe(10);
 
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-                { name: "Coffee Elemental", type: 'Familiar' }
+                { name: "Gilded Painting", type: 'Non-Wearable' }
             ];
-            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Coffee Elemental']);
+            const modified = RewardCalculator.applyModifiers(baseReward, ['[Item] Gilded Painting']);
 
             // Verify step-by-step
             expect(modified.receipt.base.inkDrops).toBe(10);
-            expect(modified.receipt.modifiers[0].value).toBe(10);
-            expect(modified.receipt.final.inkDrops).toBe(20);
+            expect(modified.receipt.modifiers[0].value).toBe(2);
+            expect(modified.receipt.final.inkDrops).toBe(12);
         });
 
         test('receipt should handle zero values correctly', () => {
