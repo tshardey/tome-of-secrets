@@ -1324,29 +1324,62 @@ export function renderTemporaryBuffs() {
 }
 
 /**
+ * Extract the first pageCount condition from an item's effects.
+ * @param {Object} item - item or background data object with effects array
+ * @returns {{ min?: number, max?: number } | null}
+ */
+function extractPageCountCondition(item) {
+    if (!item || !Array.isArray(item.effects)) return null;
+    for (const effect of item.effects) {
+        const pc = effect?.condition?.pageCount;
+        if (pc && (typeof pc.min === 'number' || typeof pc.max === 'number')) {
+            return pc;
+        }
+    }
+    return null;
+}
+
+/**
  * Classify a bonus card as 'auto-applied', 'unmatched', or 'subjective'.
  * @param {Object} bonus - bonus object with type, itemData, or backgroundData
  * @param {string[]|null} bookTags - array of tag IDs from the linked book, or null if no book
+ * @param {number|null} bookPageCount - page count of the linked book, or null if unknown
  * @returns {'auto-applied'|'unmatched'|'subjective'}
  */
-export function classifyBonusCardState(bonus, bookTags) {
-    if (bookTags == null) return 'subjective';
+export function classifyBonusCardState(bonus, bookTags, bookPageCount = null) {
+    if (bookTags == null) return 'unmatched';
 
     const effectSource = bonus.type === 'background' ? bonus.backgroundData : bonus.itemData;
     const tagGroups = extractItemTagGroups(effectSource);
+    const pageCountCondition = extractPageCountCondition(effectSource);
 
-    if (tagGroups.length === 0) return 'subjective';
+    // No conditions at all → subjective (always applies, user's choice)
+    if (tagGroups.length === 0 && !pageCountCondition) return 'subjective';
 
-    const matched = tagGroups.some(group =>
-        group.every(tag => bookTags.includes(tag))
-    );
-    return matched ? 'auto-applied' : 'unmatched';
+    // Check if any tagMatch condition is satisfied
+    if (tagGroups.length > 0) {
+        const tagMatched = tagGroups.some(group =>
+            group.every(tag => bookTags.includes(tag))
+        );
+        if (tagMatched) return 'auto-applied';
+    }
+
+    // Check if pageCount condition is satisfied
+    if (pageCountCondition) {
+        if (bookPageCount == null) return 'subjective'; // can't determine without page count
+        let pageMatched = true;
+        if (typeof pageCountCondition.min === 'number' && bookPageCount < pageCountCondition.min) pageMatched = false;
+        if (typeof pageCountCondition.max === 'number' && bookPageCount > pageCountCondition.max) pageMatched = false;
+        if (pageMatched) return 'auto-applied';
+    }
+
+    return 'unmatched';
 }
 
 /**
  * Render a bonus card element
  */
-function createBonusCard(bonus, value, containerId, state = null, bookTags = undefined) {
+function createBonusCard(bonus, value, containerId, state = null, bookTags = undefined, bookPageCount = null) {
     const card = document.createElement('div');
     card.className = 'quest-bonus-card';
     card.dataset.value = value;
@@ -1407,10 +1440,11 @@ function createBonusCard(bonus, value, containerId, state = null, bookTags = und
             updateBonusSelection(containerId);
         });
     } else if (state === 'unmatched') {
-        // Show "Needs:" tag badges for unmatched cards
+        // Show "Needs:" info for unmatched cards
         const effectSource = bonus.type === 'background' ? bonus.backgroundData : bonus.itemData;
         const tagGroups = extractItemTagGroups(effectSource);
-        if (tagGroups.length > 0) {
+        const pageCountCond = extractPageCountCondition(effectSource);
+        if (tagGroups.length > 0 || pageCountCond) {
             const needsDiv = document.createElement('div');
             needsDiv.className = 'quest-bonus-card-needs';
             const needsLabel = document.createElement('span');
@@ -1418,9 +1452,23 @@ function createBonusCard(bonus, value, containerId, state = null, bookTags = und
             needsLabel.textContent = 'Needs:';
             needsDiv.appendChild(needsLabel);
 
-            const badgesEl = renderItemTagBadges(tagGroups, data.bookTags);
-            if (badgesEl) {
-                needsDiv.appendChild(badgesEl);
+            if (tagGroups.length > 0) {
+                const badgesEl = renderItemTagBadges(tagGroups, data.bookTags);
+                if (badgesEl) {
+                    needsDiv.appendChild(badgesEl);
+                }
+            }
+            if (pageCountCond) {
+                const pageLabel = document.createElement('span');
+                pageLabel.className = 'quest-bonus-card-needs-page';
+                if (typeof pageCountCond.min === 'number' && typeof pageCountCond.max === 'number') {
+                    pageLabel.textContent = `${pageCountCond.min}–${pageCountCond.max} pages`;
+                } else if (typeof pageCountCond.min === 'number') {
+                    pageLabel.textContent = `${pageCountCond.min}+ pages`;
+                } else {
+                    pageLabel.textContent = `Under ${pageCountCond.max + 1} pages`;
+                }
+                needsDiv.appendChild(pageLabel);
             }
             card.appendChild(needsDiv);
         }
@@ -1461,7 +1509,7 @@ function updateBonusSelection(containerId) {
 /**
  * Render bonus selection cards for a specific container
  */
-function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookTags = undefined) {
+function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookTags = undefined, bookPageCount = null) {
     const container = document.getElementById(containerId);
     const hiddenInput = document.getElementById(hiddenInputId);
     if (!container || !hiddenInput) return;
@@ -1592,8 +1640,8 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookT
     
     // Render bonus cards
     bonuses.forEach(bonus => {
-        const state = bookTags !== undefined ? classifyBonusCardState(bonus, bookTags) : null;
-        const card = createBonusCard(bonus, bonus.value, containerId, state, bookTags);
+        const state = bookTags !== undefined ? classifyBonusCardState(bonus, bookTags, bookPageCount) : null;
+        const card = createBonusCard(bonus, bonus.value, containerId, state, bookTags, bookPageCount);
 
         if (state === 'auto-applied') {
             card.classList.add('auto-applied');
@@ -1630,8 +1678,8 @@ export function updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInp
 /**
  * Update bonus selection for edit quest drawer
  */
-export function updateEditQuestBuffsDropdown(selectedValues = [], bookTags = undefined) {
-    renderBonusCards('edit-quest-bonus-selection-container', 'edit-quest-buffs-select', selectedValues, bookTags);
+export function updateEditQuestBuffsDropdown(selectedValues = [], bookTags = undefined, bookPageCount = null) {
+    renderBonusCards('edit-quest-bonus-selection-container', 'edit-quest-buffs-select', selectedValues, bookTags, bookPageCount);
 }
 
 export function populateBackgroundDropdown() {
