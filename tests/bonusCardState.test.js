@@ -29,6 +29,26 @@ jest.mock('../assets/js/character-sheet/data.js', () => {
                     condition: { tagMatch: [['series']] },
                     modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
                 }]
+            },
+            "Bookwyrm's Scale": {
+                name: "Bookwyrm's Scale",
+                bonus: '+10 Ink Drops for long books',
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { min: 500 } },
+                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 },
+                    slot: 'equipped'
+                }]
+            },
+            'Page Sprite': {
+                name: 'Page Sprite',
+                bonus: 'x2 Ink Drops for short books',
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { max: 299 } },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 },
+                    slot: 'equipped'
+                }]
             }
         },
         keeperBackgrounds: {
@@ -105,7 +125,7 @@ describe('classifyBonusCardState', () => {
         expect(classifyBonusCardState(bonus, ['fantasy'])).toBe('subjective');
     });
 
-    test('subjective when bookTags is null (no book linked)', () => {
+    test('unmatched when bookTags is null (no book linked)', () => {
         const bonus = {
             type: 'item',
             itemData: {
@@ -116,7 +136,7 @@ describe('classifyBonusCardState', () => {
                 }]
             }
         };
-        expect(classifyBonusCardState(bonus, null)).toBe('subjective');
+        expect(classifyBonusCardState(bonus, null)).toBe('unmatched');
     });
 
     test('unmatched when bookTags is empty array and item has tagMatch', () => {
@@ -187,6 +207,90 @@ describe('classifyBonusCardState', () => {
             }
         };
         expect(classifyBonusCardState(bonus, ['historical-fiction', 'award-winner'])).toBe('auto-applied');
+    });
+
+    test('auto-applied when pageCount min condition met', () => {
+        const bonus = {
+            type: 'item',
+            itemData: {
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { min: 500 } },
+                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                }]
+            }
+        };
+        expect(classifyBonusCardState(bonus, ['fantasy'], 600)).toBe('auto-applied');
+    });
+
+    test('unmatched when pageCount min condition not met', () => {
+        const bonus = {
+            type: 'item',
+            itemData: {
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { min: 500 } },
+                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                }]
+            }
+        };
+        expect(classifyBonusCardState(bonus, ['fantasy'], 300)).toBe('unmatched');
+    });
+
+    test('auto-applied when pageCount max condition met', () => {
+        const bonus = {
+            type: 'item',
+            itemData: {
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { max: 299 } },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                }]
+            }
+        };
+        expect(classifyBonusCardState(bonus, ['fantasy'], 250)).toBe('auto-applied');
+    });
+
+    test('unmatched when pageCount max condition not met', () => {
+        const bonus = {
+            type: 'item',
+            itemData: {
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { max: 299 } },
+                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                }]
+            }
+        };
+        expect(classifyBonusCardState(bonus, ['fantasy'], 400)).toBe('unmatched');
+    });
+
+    test('subjective when pageCount condition exists but bookPageCount is null', () => {
+        const bonus = {
+            type: 'item',
+            itemData: {
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { min: 500 } },
+                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                }]
+            }
+        };
+        expect(classifyBonusCardState(bonus, ['fantasy'], null)).toBe('subjective');
+    });
+
+    test('auto-applied when pageCount exactly equals min boundary', () => {
+        const bonus = {
+            type: 'item',
+            itemData: {
+                effects: [{
+                    trigger: 'ON_QUEST_COMPLETED',
+                    condition: { pageCount: { min: 500 } },
+                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                }]
+            }
+        };
+        expect(classifyBonusCardState(bonus, ['fantasy'], 500)).toBe('auto-applied');
     });
 });
 
@@ -383,5 +487,76 @@ describe('renderBonusCards with bookTags', () => {
         const cards = container.querySelectorAll('.quest-bonus-card');
         expect(cards.length).toBe(1);
         expect(cards[0].classList.contains('unmatched')).toBe(true);
+    });
+
+    it('renders pageCount item as auto-applied when page count meets condition', () => {
+        characterState.equippedItems = [{ name: "Bookwyrm's Scale" }];
+        document.getElementById('keeperBackground').value = '';
+
+        ui.updateEditQuestBuffsDropdown([], ['fantasy'], 600);
+
+        const container = document.getElementById('edit-quest-bonus-selection-container');
+        const cards = container.querySelectorAll('.quest-bonus-card');
+        expect(cards.length).toBe(1);
+        expect(cards[0].classList.contains('auto-applied')).toBe(true);
+    });
+
+    it('renders pageCount item as unmatched with "Needs:" page info when not met', () => {
+        characterState.equippedItems = [{ name: "Bookwyrm's Scale" }];
+        document.getElementById('keeperBackground').value = '';
+
+        ui.updateEditQuestBuffsDropdown([], ['fantasy'], 300);
+
+        const container = document.getElementById('edit-quest-bonus-selection-container');
+        const card = container.querySelector('.quest-bonus-card.unmatched');
+        expect(card).not.toBeNull();
+        const needsSection = card.querySelector('.quest-bonus-card-needs');
+        expect(needsSection).not.toBeNull();
+        expect(needsSection.textContent).toContain('500+ pages');
+    });
+
+    it('renders pageCount item as subjective when bookPageCount is null', () => {
+        characterState.equippedItems = [{ name: "Bookwyrm's Scale" }];
+        document.getElementById('keeperBackground').value = '';
+
+        ui.updateEditQuestBuffsDropdown([], ['fantasy'], null);
+
+        const container = document.getElementById('edit-quest-bonus-selection-container');
+        const cards = container.querySelectorAll('.quest-bonus-card');
+        expect(cards.length).toBe(1);
+        expect(cards[0].classList.contains('subjective')).toBe(true);
+    });
+
+    it('renders Page Sprite unmatched with "Under X pages" when condition not met', () => {
+        characterState.equippedItems = [{ name: 'Page Sprite' }];
+        document.getElementById('keeperBackground').value = '';
+
+        ui.updateEditQuestBuffsDropdown([], ['fantasy'], 400);
+
+        const container = document.getElementById('edit-quest-bonus-selection-container');
+        const card = container.querySelector('.quest-bonus-card.unmatched');
+        expect(card).not.toBeNull();
+        const needsSection = card.querySelector('.quest-bonus-card-needs');
+        expect(needsSection).not.toBeNull();
+        expect(needsSection.textContent).toContain('Under 300 pages');
+    });
+
+    it('all items become unmatched when bookTags is null (no book linked)', () => {
+        characterState.equippedItems = [
+            { name: "Librarian's Compass" },
+            { name: "Bookwyrm's Scale" },
+            { name: 'Scatter Brain Scarab' }
+        ];
+        document.getElementById('keeperBackground').value = '';
+
+        ui.updateEditQuestBuffsDropdown([], null);
+
+        const container = document.getElementById('edit-quest-bonus-selection-container');
+        const subjective = container.querySelectorAll('.quest-bonus-card.subjective');
+        const autoApplied = container.querySelectorAll('.quest-bonus-card.auto-applied');
+        const unmatched = container.querySelectorAll('.quest-bonus-card.unmatched');
+        expect(subjective.length).toBe(0);
+        expect(autoApplied.length).toBe(0);
+        expect(unmatched.length).toBe(3);
     });
 });

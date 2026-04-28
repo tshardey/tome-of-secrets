@@ -310,9 +310,10 @@ describe('Quest Edit Drawer', () => {
         });
 
         it('should pre-select buffs that are already on the quest', () => {
-            // Use a real item from allItems that won't be filtered out
-            const testItemName = 'Pocket Dragon';
-            
+            // Scatter Brain Scarab has no tagMatch/pageCount conditions (legacy rewardModifier only),
+            // so it's subjective (toggleable) when a book is linked
+            const testItemName = 'Scatter Brain Scarab';
+
             // Add temporary buff
             characterState.temporaryBuffs = [{
                 name: 'Test Buff',
@@ -325,15 +326,19 @@ describe('Quest Edit Drawer', () => {
             // Add equipped item
             characterState.equippedItems = [{
                 name: testItemName,
-                bonus: '+20 Ink Drops',
-                type: 'Familiar'
+                bonus: 'x3 Ink Drops',
+                type: 'Wearable'
             }];
 
-            // Add a quest with buffs
+            // Link a book with tags so buff cards enter tag-aware mode (not all-greyed-out)
+            characterState[STORAGE_KEYS.BOOKS]['test-book-1'].tags = ['fantasy'];
+
+            // Add a quest with buffs linked to a book
             characterState.activeAssignments = [{
                 type: '♥ Organize the Stacks',
                 prompt: 'Fantasy',
                 book: 'Test Book',
+                bookId: 'test-book-1',
                 month: 'January',
                 year: '2024',
                 notes: '',
@@ -347,7 +352,7 @@ describe('Quest Edit Drawer', () => {
             const editBtn = document.querySelector('.edit-quest-btn[data-index="0"]');
             editBtn.click();
 
-            // Check that buffs are selected (cards + hidden JSON input)
+            // Buff and Scatter Brain Scarab have no tagMatch conditions → subjective → can be pre-selected
             const container = document.getElementById('edit-quest-bonus-selection-container');
             const buffCard = container?.querySelector('.quest-bonus-card[data-value="[Buff] Test Buff"]');
             const itemCard = container?.querySelector(`.quest-bonus-card[data-value="[Item] ${testItemName}"]`);
@@ -528,21 +533,25 @@ describe('Quest Edit Drawer', () => {
                 status: 'active'
             }];
 
-            // Use a real item from allItems that won't be filtered out
-            const testItemName = 'Pocket Dragon';
-            
+            // Scatter Brain Scarab has no tagMatch/pageCount (legacy rewardModifier only) → subjective
+            const testItemName = 'Scatter Brain Scarab';
+
             // Add equipped item
             characterState.equippedItems = [{
                 name: testItemName,
-                bonus: '+20 Ink Drops',
-                type: 'Familiar'
+                bonus: 'x3 Ink Drops',
+                type: 'Wearable'
             }];
 
-            // Add a quest without buffs
+            // Link a book so buff cards are in tag-aware mode (not all-greyed-out)
+            characterState[STORAGE_KEYS.BOOKS]['test-book-1'].tags = ['fantasy'];
+
+            // Add a quest without buffs, linked to a book
             characterState.activeAssignments = [{
                 type: '♥ Organize the Stacks',
                 prompt: 'Fantasy',
                 book: 'Test Book',
+                bookId: 'test-book-1',
                 month: 'January',
                 year: '2024',
                 notes: '',
@@ -556,7 +565,7 @@ describe('Quest Edit Drawer', () => {
             const editBtn = document.querySelector('.edit-quest-btn[data-index="0"]');
             editBtn.click();
 
-            // Select buffs (card-based)
+            // Select buffs (card-based) — these are subjective items, so toggleable
             const container = document.getElementById('edit-quest-bonus-selection-container');
             const buffCard = container?.querySelector('.quest-bonus-card[data-value="[Buff] Test Buff"]');
             const itemCard = container?.querySelector(`.quest-bonus-card[data-value="[Item] ${testItemName}"]`);

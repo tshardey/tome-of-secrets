@@ -3659,6 +3659,12 @@
     margin-right: 4px;
 }
 
+.quest-bonus-card-needs-page {
+    color: #888;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
 .no-bonuses-message {
     grid-column: 1 / -1;
     margin: 0;

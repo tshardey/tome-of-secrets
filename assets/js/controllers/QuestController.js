@@ -1698,15 +1698,17 @@ export class QuestController extends BaseController {
                     // Refresh buff cards to reflect the newly linked book's tags
                     const { ui: uiModule } = this.dependencies;
                     if (uiModule && uiModule.updateEditQuestBuffsDropdown) {
-                        let bookTags;
+                        let bookTags = null;
+                        let bookPageCount = null;
                         if (bookId) {
                             const books = characterState[STORAGE_KEYS.BOOKS];
                             const linkedBook = books && books[bookId];
                             bookTags = Array.isArray(linkedBook?.tags) ? linkedBook.tags : [];
+                            bookPageCount = typeof linkedBook?.pageCount === 'number' ? linkedBook.pageCount : null;
                         }
                         const buffsSelect = document.getElementById('edit-quest-buffs-select');
                         const currentBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
-                        uiModule.updateEditQuestBuffsDropdown(currentBuffs, bookTags);
+                        uiModule.updateEditQuestBuffsDropdown(currentBuffs, bookTags, bookPageCount);
                     }
                 }
             });
@@ -1732,13 +1734,15 @@ export class QuestController extends BaseController {
         // Populate buffs selection (card-based) with book tag awareness
         const { ui: uiModule } = this.dependencies;
         if (uiModule && uiModule.updateEditQuestBuffsDropdown) {
-            let bookTags;
+            let bookTags = null;
+            let bookPageCount = null;
             if (quest.bookId) {
                 const books = characterState[STORAGE_KEYS.BOOKS];
                 const linkedBook = books && books[quest.bookId];
                 bookTags = Array.isArray(linkedBook?.tags) ? linkedBook.tags : [];
+                bookPageCount = typeof linkedBook?.pageCount === 'number' ? linkedBook.pageCount : null;
             }
-            uiModule.updateEditQuestBuffsDropdown(quest.buffs || [], bookTags);
+            uiModule.updateEditQuestBuffsDropdown(quest.buffs || [], bookTags, bookPageCount);
         }
     }
 
