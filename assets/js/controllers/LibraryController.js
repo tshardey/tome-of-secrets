@@ -12,6 +12,8 @@ import { searchBooks } from '../services/BookMetadataService.js';
 import { bookTags } from '../character-sheet/data.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
+import { getUnlinkedActiveQuests, linkExistingQuestToBook, createExtraCreditForBook } from '../utils/questBookLinker.js';
+import { toast } from '../ui/toast.js';
 
 const BOOK_SEARCH_DEBOUNCE_MS = 600;
 const BOOK_SEARCH_MIN_LENGTH = 2;
@@ -22,6 +24,9 @@ export class LibraryController extends BaseController {
         this._searchAbortController = null;
         this._editSearchAbortController = null;
         this._editingBookId = null;
+        this._linkQuestPopoverEl = null;
+        this._linkQuestOutsideClickHandler = null;
+        this._linkQuestEscHandler = null;
     }
 
     initialize() {
@@ -94,6 +99,12 @@ export class LibraryController extends BaseController {
         form.addEventListener('click', (e) => {
             const editBtn = e.target.closest('.library-edit-book-btn');
             const markCompleteBtn = e.target.closest('.library-mark-complete-btn');
+            const linkQuestBtn = e.target.closest('.library-link-quest-btn');
+            if (linkQuestBtn && linkQuestBtn.dataset.bookId) {
+                e.preventDefault();
+                this._openLinkQuestPopover(linkQuestBtn, linkQuestBtn.dataset.bookId);
+                return;
+            }
             if (editBtn && editBtn.dataset.bookId) {
                 e.preventDefault();
                 this.handleEditBook(editBtn.dataset.bookId);
@@ -482,7 +493,6 @@ export class LibraryController extends BaseController {
         const pageCountEl = document.getElementById('book-edit-page-count');
         const statusEl = document.getElementById('book-edit-status');
         const linksSection = document.getElementById('book-edit-links-section');
-        const linksDisplay = document.getElementById('book-edit-links-display');
         const valueEl = document.getElementById('book-edit-cover-value');
 
         if (idEl) idEl.value = book.id;
@@ -540,15 +550,8 @@ export class LibraryController extends BaseController {
         const uploadEl = document.getElementById('book-edit-cover-upload');
         if (uploadEl) uploadEl.value = '';
 
-        const links = book.links || { questIds: [], curriculumPromptIds: [] };
-        const hasLinks = (links.questIds && links.questIds.length > 0) || (links.curriculumPromptIds && links.curriculumPromptIds.length > 0);
-        if (linksSection) linksSection.style.display = hasLinks ? 'block' : 'none';
-        if (linksDisplay) {
-            const parts = [];
-            if (links.questIds && links.questIds.length) parts.push(`${links.questIds.length} quest(s)`);
-            if (links.curriculumPromptIds && links.curriculumPromptIds.length) parts.push(`${links.curriculumPromptIds.length} prompt(s)`);
-            linksDisplay.textContent = parts.join(', ') || '—';
-        }
+        if (linksSection) linksSection.style.display = 'block';
+        this._renderDrawerLinksSection(bookId);
 
         const searchQueryEl = document.getElementById('book-edit-search-query');
         const searchResultsEl = document.getElementById('book-edit-search-results');
@@ -746,6 +749,7 @@ export class LibraryController extends BaseController {
                         ? `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-mark-complete-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Mark complete" title="Mark complete">✓</button>`
                         : '';
                 const editBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-edit-book-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Edit" title="Edit">✏</button>`;
+                const linkQuestBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-link-quest-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Link quest" title="Link quest">🔗</button>`;
                 return `
                     <div class="library-card" data-book-id="${this._escapeAttr(book.id)}">
                         <div class="library-card-cover-wrap">
@@ -761,12 +765,348 @@ export class LibraryController extends BaseController {
                             <div class="library-card-actions">
                                 ${markCompleteBtn}
                                 ${editBtn}
+                                ${linkQuestBtn}
                                 ${shelfBadge}
                             </div>
                         </div>
                     </div>`;
             })
             .join('');
+    }
+
+    _renderDrawerLinksSection(bookId) {
+        const book = this.stateAdapter.getBook(bookId);
+        if (!book) return;
+
+        const listEl = document.getElementById('book-edit-links-list');
+        const dropdown = document.getElementById('book-edit-link-quest-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+        if (!listEl) return;
+
+        listEl.innerHTML = '';
+
+        const questIds = (book.links && book.links.questIds) || [];
+        const activeQuests = this.stateAdapter.getActiveAssignments() || [];
+
+        if (questIds.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'book-edit-links-empty';
+            emptyDiv.textContent = 'No linked quests';
+            listEl.appendChild(emptyDiv);
+        } else {
+            for (const qid of questIds) {
+                const quest = activeQuests.find(q => q.id === qid);
+                const row = document.createElement('div');
+                row.className = 'book-edit-linked-quest-row';
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'book-edit-linked-quest-text';
+                if (quest) {
+                    const typeEmoji = quest.type ? quest.type.split(' ')[0] : '';
+                    textSpan.textContent = `${typeEmoji} ${quest.prompt || '(no prompt)'}`;
+                } else {
+                    textSpan.textContent = `(completed/archived quest)`;
+                }
+                row.appendChild(textSpan);
+
+                const unlinkBtn = document.createElement('button');
+                unlinkBtn.type = 'button';
+                unlinkBtn.className = 'book-edit-unlink-btn';
+                unlinkBtn.textContent = '\u2715';
+                unlinkBtn.title = 'Unlink quest';
+                unlinkBtn.dataset.questId = qid;
+                unlinkBtn.addEventListener('click', () => {
+                    this.stateAdapter.unlinkQuestFromBook(bookId, qid);
+                    this.stateAdapter.updateActiveQuest(qid, {
+                        bookId: null,
+                        book: '',
+                        bookAuthor: '',
+                        coverUrl: undefined
+                    });
+                    this.saveState();
+                    toast.success('Quest unlinked');
+                    this._renderDrawerLinksSection(bookId);
+                    this.renderBooks();
+                    this._refreshQuestUI();
+                });
+                row.appendChild(unlinkBtn);
+
+                listEl.appendChild(row);
+            }
+        }
+
+        // Wire up Link Quest button — opens dropdown with both link and create options
+        const linkBtn = document.getElementById('book-edit-link-quest-btn');
+        if (linkBtn) {
+            const newBtn = linkBtn.cloneNode(true);
+            linkBtn.parentNode.replaceChild(newBtn, linkBtn);
+            newBtn.addEventListener('click', () => {
+                this._renderDrawerLinkQuestDropdown(bookId);
+            });
+        }
+    }
+
+    _renderDrawerLinkQuestDropdown(bookId) {
+        const dropdown = document.getElementById('book-edit-link-quest-dropdown');
+        if (!dropdown) return;
+
+        // Toggle: if already visible, hide it
+        if (dropdown.style.display === 'block') {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const linkableQuests = getUnlinkedActiveQuests(this.stateAdapter, bookId);
+
+        dropdown.innerHTML = '';
+
+        // Quest list section
+        if (linkableQuests.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'link-quest-empty';
+            empty.textContent = 'No available quests to link';
+            dropdown.appendChild(empty);
+        } else {
+            for (const q of linkableQuests) {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'link-quest-option';
+                option.dataset.questId = q.id;
+
+                if (q.coverUrl) {
+                    const img = document.createElement('img');
+                    img.className = 'link-quest-option-cover';
+                    img.src = q.coverUrl;
+                    img.alt = '';
+                    option.appendChild(img);
+                } else {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'link-quest-option-cover-placeholder';
+                    option.appendChild(placeholder);
+                }
+
+                const textWrap = document.createElement('span');
+                textWrap.className = 'link-quest-option-text';
+
+                const typeSpan = document.createElement('span');
+                typeSpan.className = 'link-quest-option-type';
+                typeSpan.textContent = q.type ? q.type.split(' ')[0] : '';
+                textWrap.appendChild(typeSpan);
+
+                const promptSpan = document.createElement('span');
+                promptSpan.className = 'link-quest-option-prompt';
+                promptSpan.textContent = q.prompt || '(no prompt)';
+                textWrap.appendChild(promptSpan);
+
+                option.appendChild(textWrap);
+                dropdown.appendChild(option);
+            }
+        }
+
+        // Divider
+        const divider = document.createElement('div');
+        divider.style.borderTop = '1px solid #54483b';
+        divider.style.margin = '6px 0';
+        dropdown.appendChild(divider);
+
+        // Create Extra Credit option
+        const ecBtn = document.createElement('button');
+        ecBtn.type = 'button';
+        ecBtn.className = 'link-quest-create-ec-btn';
+        ecBtn.dataset.action = 'create-ec';
+        ecBtn.textContent = '\u2B50 Create Extra Credit Quest';
+        dropdown.appendChild(ecBtn);
+
+        // Single delegated click handler on the dropdown
+        dropdown.onclick = (e) => {
+            const optionEl = e.target.closest('.link-quest-option');
+            const ecBtnEl = e.target.closest('.link-quest-create-ec-btn');
+
+            if (optionEl) {
+                const selectedQuestId = optionEl.dataset.questId;
+                if (!selectedQuestId) return;
+                const success = linkExistingQuestToBook(selectedQuestId, bookId, this.stateAdapter);
+                if (success) {
+                    this.saveState();
+                    const book = this.stateAdapter.getBook(bookId);
+                    toast.success(`Quest linked to "${book ? book.title : 'book'}"`);
+                } else {
+                    toast.error('Failed to link quest — check browser console for details');
+                }
+                this._renderDrawerLinksSection(bookId);
+                this.renderBooks();
+                this._refreshQuestUI();
+            } else if (ecBtnEl) {
+                const quest = createExtraCreditForBook(bookId, this.stateAdapter);
+                if (quest) {
+                    this.saveState();
+                    const book = this.stateAdapter.getBook(bookId);
+                    toast.success(`Extra Credit quest created for "${book ? book.title : 'book'}"`);
+                } else {
+                    toast.error('Failed to create quest');
+                }
+                this._renderDrawerLinksSection(bookId);
+                this.renderBooks();
+                this._refreshQuestUI();
+            }
+        };
+
+        dropdown.style.display = 'block';
+    }
+
+    _openLinkQuestPopover(anchorEl, bookId) {
+        this._closeLinkQuestPopover();
+
+        const book = this.stateAdapter.getBook(bookId);
+        if (!book) return;
+
+        const linkableQuests = getUnlinkedActiveQuests(this.stateAdapter, bookId);
+
+        const popover = document.createElement('div');
+        popover.className = 'library-link-quest-popover';
+
+        const header = document.createElement('div');
+        header.className = 'library-link-quest-popover-header';
+        header.textContent = `Link quest to "${book.title}"`;
+        popover.appendChild(header);
+
+        const list = document.createElement('div');
+        list.className = 'link-quest-list';
+
+        if (linkableQuests.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'link-quest-empty';
+            empty.textContent = 'No available quests';
+            list.appendChild(empty);
+        } else {
+            for (const q of linkableQuests) {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'link-quest-option';
+                option.dataset.questId = q.id;
+
+                if (q.coverUrl) {
+                    const img = document.createElement('img');
+                    img.className = 'link-quest-option-cover';
+                    img.src = q.coverUrl;
+                    img.alt = '';
+                    option.appendChild(img);
+                } else {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'link-quest-option-cover-placeholder';
+                    option.appendChild(placeholder);
+                }
+
+                const textWrap = document.createElement('span');
+                textWrap.className = 'link-quest-option-text';
+
+                const typeSpan = document.createElement('span');
+                typeSpan.className = 'link-quest-option-type';
+                typeSpan.textContent = q.type ? q.type.split(' ')[0] : '';
+                textWrap.appendChild(typeSpan);
+
+                const promptSpan = document.createElement('span');
+                promptSpan.className = 'link-quest-option-prompt';
+                promptSpan.textContent = q.prompt || '(no prompt)';
+                textWrap.appendChild(promptSpan);
+
+                option.appendChild(textWrap);
+                list.appendChild(option);
+            }
+        }
+
+        popover.appendChild(list);
+
+        // Divider
+        const divider = document.createElement('div');
+        divider.style.borderTop = '1px solid #54483b';
+        divider.style.margin = '6px 0';
+        popover.appendChild(divider);
+
+        const createBtn = document.createElement('button');
+        createBtn.type = 'button';
+        createBtn.className = 'link-quest-create-ec-btn';
+        createBtn.textContent = '\u2B50 Create Extra Credit Quest';
+        popover.appendChild(createBtn);
+
+        // Single delegated click handler on the popover
+        popover.addEventListener('click', (e) => {
+            const optionEl = e.target.closest('.link-quest-option');
+            const ecBtnEl = e.target.closest('.link-quest-create-ec-btn');
+
+            if (optionEl) {
+                const selectedQuestId = optionEl.dataset.questId;
+                if (!selectedQuestId) return;
+                const success = linkExistingQuestToBook(selectedQuestId, bookId, this.stateAdapter);
+                if (success) {
+                    this.saveState();
+                    toast.success(`Quest linked to "${book.title}"`);
+                } else {
+                    toast.error('Failed to link quest');
+                }
+                this.renderBooks();
+                this._closeLinkQuestPopover();
+                this._refreshQuestUI();
+            } else if (ecBtnEl) {
+                const quest = createExtraCreditForBook(bookId, this.stateAdapter);
+                if (quest) {
+                    this.saveState();
+                    toast.success(`Extra Credit quest created for "${book.title}"`);
+                } else {
+                    toast.error('Failed to create quest');
+                }
+                this.renderBooks();
+                this._closeLinkQuestPopover();
+                this._refreshQuestUI();
+            }
+        });
+
+        // Position popover using fixed positioning relative to viewport
+        const rect = anchorEl.getBoundingClientRect();
+        popover.style.position = 'fixed';
+        popover.style.top = `${rect.bottom + 4}px`;
+        popover.style.right = `${window.innerWidth - rect.right}px`;
+        document.body.appendChild(popover);
+
+        this._linkQuestPopoverEl = popover;
+
+        this._linkQuestOutsideClickHandler = (evt) => {
+            if (!popover.contains(evt.target) && !anchorEl.contains(evt.target)) {
+                this._closeLinkQuestPopover();
+            }
+        };
+        this._linkQuestEscHandler = (evt) => {
+            if (evt.key === 'Escape') {
+                this._closeLinkQuestPopover();
+            }
+        };
+
+        setTimeout(() => {
+            document.addEventListener('click', this._linkQuestOutsideClickHandler);
+            document.addEventListener('keydown', this._linkQuestEscHandler);
+        }, 0);
+    }
+
+    _closeLinkQuestPopover() {
+        if (this._linkQuestPopoverEl && this._linkQuestPopoverEl.parentNode) {
+            this._linkQuestPopoverEl.parentNode.removeChild(this._linkQuestPopoverEl);
+        }
+        this._linkQuestPopoverEl = null;
+        if (this._linkQuestOutsideClickHandler) {
+            document.removeEventListener('click', this._linkQuestOutsideClickHandler);
+            this._linkQuestOutsideClickHandler = null;
+        }
+        if (this._linkQuestEscHandler) {
+            document.removeEventListener('keydown', this._linkQuestEscHandler);
+            this._linkQuestEscHandler = null;
+        }
+    }
+
+    _refreshQuestUI() {
+        const { ui: uiModule } = this.dependencies;
+        if (uiModule && uiModule.renderActiveAssignments) {
+            uiModule.renderActiveAssignments();
+        }
     }
 
     _renderTagPicker(container, selectedTags = []) {

@@ -78,9 +78,13 @@
                     <!-- Tags are rendered by LibraryController from bookTags.json -->
                 </div>
             </div>
-            <div id="book-edit-links-section" class="form-row book-edit-links" style="display: none;">
-                <label><strong>Linked:</strong></label>
-                <div id="book-edit-links-display" class="book-edit-links-display"></div>
+            <div id="book-edit-links-section" class="form-row book-edit-links">
+                <label><strong>Linked Quests:</strong></label>
+                <div id="book-edit-links-list" class="book-edit-links-list"></div>
+                <div class="book-edit-links-actions">
+                    <button type="button" id="book-edit-link-quest-btn" class="rpg-btn rpg-btn-secondary book-edit-link-action-btn">🔗 Link Quest</button>
+                </div>
+                <div id="book-edit-link-quest-dropdown" class="book-edit-link-quest-dropdown" style="display: none;"></div>
             </div>
             <div class="quest-edit-actions">
                 <button type="button" id="save-book-edit-btn" class="save-quest-btn">Save</button>

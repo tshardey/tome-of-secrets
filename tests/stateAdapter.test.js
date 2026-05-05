@@ -69,6 +69,39 @@ describe('StateAdapter', () => {
     expect(handler).toHaveBeenCalledWith(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
   });
 
+  it('updateActiveQuest merges updates into matching quest and emits event', () => {
+    const quest = { id: 'quest-1', type: 'Book Quest' };
+    adapter.addActiveQuests([quest]);
+    const handler = jest.fn();
+    adapter.on(STATE_EVENTS.ACTIVE_ASSIGNMENTS_CHANGED, handler);
+
+    const result = adapter.updateActiveQuest('quest-1', { bookId: 'book-42', book: 'Dune' });
+
+    expect(result).toBe(true);
+    expect(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0]).toMatchObject({ id: 'quest-1', type: 'Book Quest', bookId: 'book-42', book: 'Dune' });
+    expect(handler).toHaveBeenCalledWith(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]);
+  });
+
+  it('updateActiveQuest returns false when quest id is not found', () => {
+    adapter.addActiveQuests([{ id: 'quest-1', type: 'Book Quest' }]);
+    const handler = jest.fn();
+    adapter.on(STATE_EVENTS.ACTIVE_ASSIGNMENTS_CHANGED, handler);
+
+    const result = adapter.updateActiveQuest('quest-999', { bookId: 'book-42' });
+
+    expect(result).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('updateActiveQuest preserves existing quest fields not in updates', () => {
+    const quest = { id: 'quest-2', type: 'Reading Quest', prompt: 'Read something' };
+    adapter.addActiveQuests([quest]);
+
+    adapter.updateActiveQuest('quest-2', { bookId: 'book-7' });
+
+    expect(state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0]).toMatchObject({ id: 'quest-2', type: 'Reading Quest', prompt: 'Read something', bookId: 'book-7' });
+  });
+
   it('addActiveQuests invokes applyQuestDraftedEffects when assigned', () => {
     const hook = jest.fn();
     adapter.applyQuestDraftedEffects = hook;
