@@ -4386,3 +4386,188 @@
     font-family: inherit;
 }
 
+
+/* --- fwr.9: Link Quest popover & drawer links --- */
+
+.library-link-quest-popover {
+    position: absolute;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    max-height: 360px;
+    min-width: 280px;
+    max-width: 340px;
+    background: #2a231d;
+    border: 2px solid #54483b;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    padding: 8px;
+}
+
+.library-link-quest-popover-header {
+    font-size: 0.85em;
+    color: #8a7a61;
+    padding: 2px 4px 6px;
+    border-bottom: 1px solid #54483b;
+    margin-bottom: 6px;
+}
+
+.link-quest-list {
+    overflow-y: auto;
+    max-height: 220px;
+    margin-bottom: 8px;
+}
+
+.link-quest-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #d4c8b0;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.link-quest-option:hover {
+    background: rgba(184, 159, 98, 0.12);
+    border-color: #54483b;
+}
+
+.link-quest-option-cover {
+    width: 32px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+    background: rgba(62, 53, 47, 0.6);
+}
+
+.link-quest-option-cover-placeholder {
+    width: 32px;
+    height: 44px;
+    flex-shrink: 0;
+    background: rgba(62, 53, 47, 0.6);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    color: #8a7a61;
+}
+
+.link-quest-option-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.link-quest-option-type {
+    font-size: 0.8em;
+    margin-right: 4px;
+}
+
+.link-quest-option-prompt {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.link-quest-empty {
+    color: #8a7a61;
+    font-style: italic;
+    padding: 8px;
+    font-size: 0.9em;
+}
+
+.link-quest-create-ec-btn {
+    width: 100%;
+    padding: 8px;
+    background: rgba(184, 159, 98, 0.15);
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    color: #d4c8b0;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.link-quest-create-ec-btn:hover {
+    background: rgba(184, 159, 98, 0.25);
+}
+
+.book-edit-links-list {
+    margin-bottom: 8px;
+}
+
+.book-edit-linked-quest-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    color: #d4c8b0;
+    font-size: 0.9rem;
+}
+
+.book-edit-linked-quest-row + .book-edit-linked-quest-row {
+    border-top: 1px solid rgba(84, 72, 59, 0.4);
+}
+
+.book-edit-linked-quest-text {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.book-edit-unlink-btn {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #8a7a61;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.book-edit-unlink-btn:hover {
+    color: #d4c8b0;
+    border-color: #54483b;
+}
+
+.book-edit-links-empty {
+    color: #8a7a61;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.book-edit-links-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.book-edit-link-action-btn {
+    font-size: 0.85rem;
+    padding: 4px 10px;
+}
+
+.book-edit-link-quest-dropdown {
+    margin-top: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: rgba(42, 35, 29, 0.9);
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    padding: 4px;
+}

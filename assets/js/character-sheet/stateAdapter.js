@@ -215,11 +215,37 @@ export class StateAdapter {
         return this.state[STORAGE_KEYS.DISCARDED_QUESTS];
     }
 
+    /**
+     * Update fields on an active quest by ID.
+     * @param {string} questId
+     * @param {Object} updates — fields to merge into the quest object
+     * @returns {boolean} true if quest was found and updated
+     */
+    updateActiveQuest(questId, updates) {
+        const quests = this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS];
+        const quest = Array.isArray(quests) ? quests.find(q => q.id === questId) : null;
+        if (!quest) return false;
+        Object.assign(quest, updates);
+        const eventName = LIST_EVENTS[STORAGE_KEYS.ACTIVE_ASSIGNMENTS];
+        void setStateKey(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, quests);
+        if (eventName) {
+            this.emit(eventName, [...quests]);
+        }
+        return true;
+    }
+
     addActiveQuests(quests, options = {}) {
         const { skipQuestDraftedEffects = false } = options;
         const questList = Array.isArray(quests) ? quests : [quests];
         if (questList.length === 0) {
             return [];
+        }
+
+        // Ensure every quest has a stable ID (deck controllers may omit it)
+        for (const quest of questList) {
+            if (quest && typeof quest === 'object' && !quest.id) {
+                quest.id = this._generateId();
+            }
         }
 
         const { value, changed } = this._mutateList(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, list => {
