@@ -85,6 +85,7 @@ function createLibraryFormHTML() {
                     <label><input type="radio" name="library-add-status" value="other" /> Other</label>
                 </div>
             </div>
+            <div id="library-add-tags" class="library-tag-picker"></div>
             <button type="submit" id="library-add-book-btn">Add Book</button>
         </form>
     `;
@@ -341,6 +342,32 @@ describe('LibraryController', () => {
             const completedHtml = document.getElementById('library-cards-completed').innerHTML;
             expect(readingHtml).toContain('library-mark-complete-btn');
             expect(completedHtml).not.toContain('library-mark-complete-btn');
+        });
+    });
+
+    describe('tag picker highlighting', () => {
+        it('should highlight applicable tags based on equipped items', () => {
+            // Equip Cloak of the Story-Weaver, which has tagMatch: [["series"]]
+            stateAdapter.state.equippedItems = ['Cloak of the Story-Weaver'];
+
+            const controller = new LibraryController(stateAdapter, form, dependencies);
+            controller.initialize();
+
+            const tagContainer = document.getElementById('library-add-tags');
+            const tagLabels = tagContainer.querySelectorAll('.library-tag-option');
+
+            const seriesLabel = Array.from(tagLabels).find(
+                (label) => label.querySelector('input[value="series"]')
+            );
+            const fantasyLabel = Array.from(tagLabels).find(
+                (label) => label.querySelector('input[value="fantasy"]')
+            );
+
+            expect(seriesLabel).toBeTruthy();
+            expect(seriesLabel.classList.contains('tag--applicable')).toBe(true);
+
+            expect(fantasyLabel).toBeTruthy();
+            expect(fantasyLabel.classList.contains('tag--applicable')).toBe(false);
         });
     });
 });
