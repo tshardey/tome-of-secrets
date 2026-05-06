@@ -9,11 +9,12 @@
 import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { searchBooks } from '../services/BookMetadataService.js';
-import { bookTags } from '../character-sheet/data.js';
+import { bookTags, allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 import { getUnlinkedActiveQuests, linkExistingQuestToBook, createExtraCreditForBook } from '../utils/questBookLinker.js';
 import { toast } from '../ui/toast.js';
+import { getApplicableTagIds } from '../utils/applicableTagIds.js';
 
 const BOOK_SEARCH_DEBOUNCE_MS = 600;
 const BOOK_SEARCH_MIN_LENGTH = 2;
@@ -82,7 +83,7 @@ export class LibraryController extends BaseController {
             });
         }
 
-        this._renderTagPicker(document.getElementById('library-add-tags'));
+        this._renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
 
         this._setupAddFormCoverHandlers();
 
@@ -478,7 +479,7 @@ export class LibraryController extends BaseController {
         if (readingRadio) readingRadio.checked = true;
         const generalShelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"][value="general"]');
         if (generalShelfRadio) generalShelfRadio.checked = true;
-        this._renderTagPicker(document.getElementById('library-add-tags'));
+        this._renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
     }
 
     handleEditBook(bookId) {
@@ -561,7 +562,7 @@ export class LibraryController extends BaseController {
             searchResultsEl.innerHTML = '';
         }
 
-        this._renderTagPicker(document.getElementById('book-edit-tags'), book.tags || []);
+        this._renderTagPicker(document.getElementById('book-edit-tags'), book.tags || [], this._getApplicableTagIds());
 
         // Series (campaign) selector: tag this book to a series
         const seriesSelect = document.getElementById('book-edit-series');
@@ -1109,7 +1110,19 @@ export class LibraryController extends BaseController {
         }
     }
 
-    _renderTagPicker(container, selectedTags = []) {
+    _getApplicableTagIds() {
+        const dataModule = {
+            allItems,
+            keeperBackgrounds,
+            schoolBenefits,
+            masteryAbilities,
+            temporaryBuffsFromRewards,
+            temporaryBuffs
+        };
+        return getApplicableTagIds(this.stateAdapter, dataModule);
+    }
+
+    _renderTagPicker(container, selectedTags = [], applicableTags = new Set()) {
         if (!container) return;
         const tags = bookTags || [];
         container.innerHTML = '';
@@ -1132,7 +1145,7 @@ export class LibraryController extends BaseController {
 
             for (const tag of categoryTags) {
                 const label = document.createElement('label');
-                label.className = 'library-tag-option';
+                label.className = 'library-tag-option' + (applicableTags.has(tag.id) ? ' tag--applicable' : '');
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.name = container.id + '-tag';
