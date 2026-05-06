@@ -15,6 +15,7 @@ import { DrawerManager } from '../ui/DrawerManager.js';
 import { getUnlinkedActiveQuests, linkExistingQuestToBook, createExtraCreditForBook } from '../utils/questBookLinker.js';
 import { toast } from '../ui/toast.js';
 import { getApplicableTagIds } from '../utils/applicableTagIds.js';
+import { buildEffectContext } from '../services/effectContext.js';
 
 const BOOK_SEARCH_DEBOUNCE_MS = 600;
 const BOOK_SEARCH_MIN_LENGTH = 2;
@@ -1119,7 +1120,8 @@ export class LibraryController extends BaseController {
             temporaryBuffsFromRewards,
             temporaryBuffs
         };
-        return getApplicableTagIds(this.stateAdapter, dataModule);
+        const effectContext = buildEffectContext(this.stateAdapter, this.form);
+        return getApplicableTagIds(effectContext, dataModule);
     }
 
     _renderTagPicker(container, selectedTags = [], applicableTags = new Set()) {
