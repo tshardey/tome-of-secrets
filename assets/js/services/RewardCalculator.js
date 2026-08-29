@@ -859,7 +859,7 @@ export class RewardCalculator {
         forcedActiveBuffNames = [],
         options = {}
     ) {
-        const { multiplier = 1, multiplierSource = null } = options;
+        const { multiplier = 1, multiplierSource = null, trackableItemValues = {} } = options;
         let total = 0;
         const processedBuffs = [];
         const reward = new Reward({
@@ -885,25 +885,41 @@ export class RewardCalculator {
 
         for (const buffName in atmosphericBuffs) {
             const buff = atmosphericBuffs[buffName];
+            const trackableValue = trackableItemValues[buffName];
+            const isTrackableItem = typeof trackableValue === 'number';
             const countsForReward =
-                buff.daysUsed > 0 && (buff.isActive === true || forcedActive.has(buffName));
-            if (countsForReward) {
+                buff.daysUsed > 0 &&
+                (isTrackableItem || buff.isActive === true || forcedActive.has(buffName));
+            if (!countsForReward) continue;
+
+            let dailyValue;
+            let descriptionSuffix;
+            if (isTrackableItem) {
+                // Equipped/displayed atmospheric items are always active; their per-day
+                // value comes from the item, not the sanctum table.
+                dailyValue = trackableValue;
+                descriptionSuffix = ' (from item)';
+            } else {
                 const buffId = data.getAtmosphericBuff(buffName)?.id || buffName;
                 const isAssociated = associatedSet.has(buffId);
-                const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
-                const buffTotal = buff.daysUsed * dailyValue;
-                total += buffTotal;
+                dailyValue = isAssociated
+                    ? GAME_CONFIG.atmospheric.sanctumBonus
+                    : GAME_CONFIG.atmospheric.baseValue;
+                descriptionSuffix = isAssociated ? ' (Sanctum bonus)' : '';
+            }
 
-                if (buffTotal > 0) {
-                    processedBuffs.push(buffName);
-                    reward.receipt.modifiers.push({
-                        source: buffName,
-                        type: 'atmospheric',
-                        value: buffTotal,
-                        description: `${buff.daysUsed} days × ${dailyValue} Paper Scraps${isAssociated ? ' (Sanctum bonus)' : ''}`,
-                        currency: GAME_CONFIG.atmospheric.resource
-                    });
-                }
+            const buffTotal = buff.daysUsed * dailyValue;
+            total += buffTotal;
+
+            if (buffTotal > 0) {
+                processedBuffs.push(buffName);
+                reward.receipt.modifiers.push({
+                    source: buffName,
+                    type: 'atmospheric',
+                    value: buffTotal,
+                    description: `${buff.daysUsed} days × ${dailyValue} Paper Scraps${descriptionSuffix}`,
+                    currency: GAME_CONFIG.atmospheric.resource
+                });
             }
         }
 

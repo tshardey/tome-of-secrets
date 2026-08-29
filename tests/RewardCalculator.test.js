@@ -847,6 +847,69 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.paperScraps).toBe(20);
             expect(rewards.getReceipt().modifiers.length).toBe(1);
         });
+
+        test('should pay trackable items at their own per-day value even when isActive is false', () => {
+            const atmosphericBuffs = {
+                'Garden Gnome': { daysUsed: 10, isActive: false }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { trackableItemValues: { 'Garden Gnome': 2 } }
+            );
+
+            expect(rewards.paperScraps).toBe(20); // 10 days × the item's own 2/day
+            expect(rewards.modifiedBy).toContain('Garden Gnome');
+        });
+
+        test('should use the passive per-day value when the item is displayed not equipped', () => {
+            const atmosphericBuffs = {
+                'Gilded Painting': { daysUsed: 10, isActive: false }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { trackableItemValues: { 'Gilded Painting': 1 } }
+            );
+
+            expect(rewards.paperScraps).toBe(10);
+        });
+
+        test('should multiply trackable item totals alongside buff totals', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 5, isActive: true },
+                'Garden Gnome': { daysUsed: 5, isActive: false }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { multiplier: 2, multiplierSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 2 } }
+            );
+
+            expect(rewards.paperScraps).toBe(40); // (5×2 buff + 5×2 gnome) = 20, × 2 = 40
+        });
+
+        test('should not pay a trackable item with zero days used', () => {
+            const atmosphericBuffs = {
+                'Garden Gnome': { daysUsed: 0, isActive: false }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { trackableItemValues: { 'Garden Gnome': 2 } }
+            );
+
+            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.modifiedBy).not.toContain('Garden Gnome');
+        });
     });
 });
 

@@ -158,3 +158,40 @@ export function shouldExcludeFromQuestBonuses(itemData) {
     return bonus.includes('atmospheric') || passiveBonus.includes('atmospheric');
 }
 
+/**
+ * Per-day reward value for each equipped or displayed trackable atmospheric item
+ * (Gilded Painting, Garden Gnome, Mystical Moth).
+ *
+ * Equipped items use `rewardModifier`, display/adoption slots use `passiveRewardModifier`,
+ * both keyed by GAME_CONFIG.atmospheric.resource. Equipped wins when an item appears in both.
+ *
+ * @param {Object} state - Character state object
+ * @param {Object} [dataModule]
+ * @returns {Object<string, number>} Map of item name to per-day value
+ */
+export function getTrackableAtmosphericItemValues(state, dataModule = data) {
+    const values = {};
+    const allItems = dataModule.allItems || {};
+    const resource = GAME_CONFIG.atmospheric.resource;
+
+    const add = (itemName, isEquipped) => {
+        if (!itemName || values[itemName] !== undefined) return;
+        const itemData = allItems[itemName];
+        if (!itemData?.atmosphericReward || !itemData?.atmosphericRewardTrackable) return;
+        const modifier = isEquipped ? itemData.rewardModifier : itemData.passiveRewardModifier;
+        const value = modifier?.[resource];
+        if (typeof value === 'number' && value > 0) {
+            values[itemName] = value;
+        }
+    };
+
+    const equipped = state?.[STORAGE_KEYS.EQUIPPED_ITEMS];
+    if (Array.isArray(equipped)) {
+        equipped.forEach((item) => { add(item?.name, true); });
+    }
+    (state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || []).forEach((slot) => { add(slot?.itemName, false); });
+    (state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || []).forEach((slot) => { add(slot?.itemName, false); });
+
+    return values;
+}
+

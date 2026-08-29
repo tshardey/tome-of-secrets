@@ -33,7 +33,11 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
             return { multiplier: 1.5, modifierItemName: 'Tome-Bound Cat' };
         }
         return { multiplier: 1, modifierItemName: null };
-    })
+    }),
+    getTrackableAtmosphericItemValues: jest.fn((state) => {
+        const equipped = state?.equippedItems || [];
+        return equipped.some((i) => i?.name === 'Garden Gnome') ? { 'Garden Gnome': 2 } : {};
+    }),
 }));
 
 // Mock data (allItems: empty for most tests; with Tome-Bound Cat / Garden Gnome for modifier and trackable tests)
@@ -45,7 +49,12 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
     },
     allItems: {
         'Tome-Bound Cat': { atmosphericReward: true, atmosphericBuffMultiplier: 2, passiveAtmosphericMultiplier: 1.5 },
-        'Garden Gnome': { atmosphericReward: true, atmosphericRewardTrackable: true }
+        'Garden Gnome': {
+            atmosphericReward: true,
+            atmosphericRewardTrackable: true,
+            rewardModifier: { paperScraps: 2 },
+            passiveRewardModifier: { paperScraps: 1 }
+        }
     }
 }));
 
@@ -163,9 +172,9 @@ describe('AtmosphericBuffViewModel', () => {
             expect(gnomeRow.isTrackableItem).toBe(true);
             expect(gnomeRow.isActive).toBe(true); // Always active when equipped/displayed
             expect(gnomeRow.isDisabled).toBe(true); // Checkbox disabled
-            expect(gnomeRow.dailyValue).toBe(1);
+            expect(gnomeRow.dailyValue).toBe(2); // Equipped Garden Gnome's own rewardModifier.paperScraps
             expect(gnomeRow.daysUsed).toBe(4);
-            expect(gnomeRow.total).toBe(4);
+            expect(gnomeRow.total).toBe(8); // 4 days * 2/day
         });
 
         test('should apply x2 to trackable item total when Tome-Bound Cat also equipped', () => {
@@ -177,7 +186,20 @@ describe('AtmosphericBuffViewModel', () => {
             };
             const viewModels = createAtmosphericBuffViewModel(stateWithBoth, '', '');
             const gnomeRow = viewModels.find(vm => vm.name === 'Garden Gnome');
-            expect(gnomeRow.total).toBe(10); // 5 * 1 * 2
+            expect(gnomeRow.total).toBe(20); // 5 * 2 * 2 (2/day equipped value, then x2 Cat multiplier)
+        });
+
+        test('trackable item row uses the item per-day value, not a hardcoded 1', () => {
+            const state = {
+                atmosphericBuffs: { 'Garden Gnome': { daysUsed: 4, isActive: false } },
+                equippedItems: [{ name: 'Garden Gnome' }]
+            };
+
+            const viewModels = createAtmosphericBuffViewModel(state, '', '');
+            const gnomeRow = viewModels.find((vm) => vm.name === 'Garden Gnome');
+
+            expect(gnomeRow.dailyValue).toBe(2);
+            expect(gnomeRow.total).toBe(8); // 4 days × 2
         });
 
         test('should add modifier row for Tome-Bound Cat when equipped (x2 from item data)', () => {
