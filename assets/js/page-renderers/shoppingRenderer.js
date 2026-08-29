@@ -8,6 +8,7 @@ import { characterState, isStateLoaded, loadState } from '../character-sheet/sta
 import { StateAdapter, STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { createBookSelector } from '../utils/bookSelector.js';
 import { searchBooks } from '../services/BookMetadataService.js';
+import { findOverdrafts, formatOverdraftPrompt } from '../services/ShoppingBalanceService.js';
 
 /**
  * @typedef {Object} ShoppingOption
@@ -165,15 +166,15 @@ function updateResources(newInkDrops, newPaperScraps) {
     const paperScrapsEl = document.getElementById('paperScraps');
 
     if (inkDropsEl) {
-        inkDropsEl.value = Math.max(0, newInkDrops);
+        inkDropsEl.value = newInkDrops;
     }
     if (paperScrapsEl) {
-        paperScrapsEl.value = Math.max(0, newPaperScraps);
+        paperScrapsEl.value = newPaperScraps;
     }
 
     const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
-    formData.inkDrops = Math.max(0, newInkDrops);
-    formData.paperScraps = Math.max(0, newPaperScraps);
+    formData.inkDrops = newInkDrops;
+    formData.paperScraps = newPaperScraps;
     safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
 
     if (inkDropsEl) {
@@ -193,6 +194,7 @@ function updateCurrencyDisplay() {
     const { inkDrops, paperScraps } = getCurrentResources();
     currencyDisplay.textContent =
         `Ink Drops: ${inkDrops} | Paper Scraps: ${paperScraps} (read-only — update in Character Sheet)`;
+    currencyDisplay.classList.toggle('currency-negative', inkDrops < 0 || paperScraps < 0);
 }
 
 function showError(errorContainer, message) {
@@ -589,14 +591,11 @@ function createSubscriptionMonthCard(option) {
         }
 
         const current = getCurrentResources();
-        if (current.inkDrops < option.inkDrops) {
-            showError(errorContainer, `Insufficient Ink Drops. You have ${current.inkDrops}, need ${option.inkDrops}.`);
-            return;
-        }
-        if (current.paperScraps < option.paperScraps) {
-            showError(errorContainer, `Insufficient Paper Scraps. You have ${current.paperScraps}, need ${option.paperScraps}.`);
-            return;
-        }
+        const overdrafts = findOverdrafts(current, {
+            inkDrops: option.inkDrops,
+            paperScraps: option.paperScraps
+        });
+        if (overdrafts.length > 0 && !confirm(formatOverdraftPrompt(overdrafts))) return;
 
         const actualMoneyRaw = moneyInput.value;
         const trimmedMoney = actualMoneyRaw != null ? String(actualMoneyRaw).trim() : '';
@@ -950,14 +949,11 @@ function createShoppingOptionCard(option) {
         const totalPaperScraps = option.paperScraps * quantity;
         const current = getCurrentResources();
 
-        if (current.inkDrops < totalInkDrops) {
-            showError(errorContainer, `Insufficient Ink Drops. You have ${current.inkDrops}, but need ${totalInkDrops}.`);
-            return;
-        }
-        if (current.paperScraps < totalPaperScraps) {
-            showError(errorContainer, `Insufficient Paper Scraps. You have ${current.paperScraps}, but need ${totalPaperScraps}.`);
-            return;
-        }
+        const overdrafts = findOverdrafts(current, {
+            inkDrops: totalInkDrops,
+            paperScraps: totalPaperScraps
+        });
+        if (overdrafts.length > 0 && !confirm(formatOverdraftPrompt(overdrafts))) return;
 
         const actualMoneyRaw = moneyInput.value;
         const actualMoney = actualMoneyRaw != null && actualMoneyRaw !== '' ? parseFloat(actualMoneyRaw) : null;

@@ -224,6 +224,11 @@
     font-family: 'Lora', serif;
 }
 
+.status-widget__currency-value.currency-negative,
+.status-widget__icon.currency-negative {
+    color: #d4a5a5;
+}
+
 .status-widget__actions {
     padding-top: 12px;
     border-top: 1px solid #54483b;

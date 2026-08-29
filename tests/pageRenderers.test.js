@@ -263,13 +263,13 @@ describe('Page Renderers Hydration', () => {
       expect(successMsg.textContent).toContain('Redeemed successfully');
     });
 
-    test('shows error when insufficient ink drops', async () => {
+    test('confirms and allows a negative ink drops balance on redeem', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '10'; // Not enough for Bookish Item (25)
       paperScrapsEl.value = '0';
-      
+
       safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
         inkDrops: '10',
         paperScraps: '0'
@@ -278,37 +278,40 @@ describe('Page Renderers Hydration', () => {
       await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const bookishItemOption = options.find(opt => 
+
+      const bookishItemOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'Bookish Item'
       );
-      
+
       const redeemButton = bookishItemOption.querySelector('.redeem-button');
       const errorContainer = bookishItemOption.querySelector('.error-message');
-      
+
       // Initially hidden
       expect(errorContainer.style.display).toBe('none');
-      
+
+      const confirmSpy = jest.spyOn(window, 'confirm');
+
       // Click redeem
       redeemButton.click();
-      
-      // Error should be shown
-      expect(errorContainer.style.display).toBe('block');
-      expect(errorContainer.textContent).toContain('Insufficient Ink Drops');
-      expect(errorContainer.textContent).toContain('10');
-      expect(errorContainer.textContent).toContain('25');
-      
-      // Resources should not be deducted
-      expect(parseInt(inkDropsEl.value)).toBe(10);
+      await flushPromises();
+
+      // The overdraft is confirmed (setup.js mocks confirm to always return true) rather than blocked
+      expect(confirmSpy).toHaveBeenCalledWith('This will put you at -15 Ink Drops. Log anyway?');
+      expect(errorContainer.style.display).toBe('none');
+
+      // Resources go negative
+      expect(parseInt(inkDropsEl.value)).toBe(-15);
+
+      confirmSpy.mockRestore();
     });
 
-    test('shows error when insufficient paper scraps', async () => {
+    test('confirms and allows a negative paper scraps balance on redeem', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
       const paperScrapsEl = document.getElementById('paperScraps');
       inkDropsEl.value = '150';
       paperScrapsEl.value = '20'; // Not enough for Local Indie Bookstore (25)
-      
+
       safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
         inkDrops: '150',
         paperScraps: '20'
@@ -317,26 +320,29 @@ describe('Page Renderers Hydration', () => {
       await initializeShoppingPage();
       const container = document.getElementById('shopping-options-container');
       const options = Array.from(container.querySelectorAll('.shopping-option'));
-      
-      const indieBookstoreOption = options.find(opt => 
+
+      const indieBookstoreOption = options.find(opt =>
         opt.querySelector('h3')?.textContent === 'Local Indie Bookstore'
       );
-      
+
       const redeemButton = indieBookstoreOption.querySelector('.redeem-button');
       const errorContainer = indieBookstoreOption.querySelector('.error-message');
-      
+
+      const confirmSpy = jest.spyOn(window, 'confirm');
+
       // Click redeem
       redeemButton.click();
-      
-      // Error should be shown
-      expect(errorContainer.style.display).toBe('block');
-      expect(errorContainer.textContent).toContain('Insufficient Paper Scraps');
-      expect(errorContainer.textContent).toContain('20');
-      expect(errorContainer.textContent).toContain('25');
-      
-      // Resources should not be deducted
-      expect(parseInt(inkDropsEl.value)).toBe(150);
-      expect(parseInt(paperScrapsEl.value)).toBe(20);
+      await flushPromises();
+
+      // The overdraft is confirmed (setup.js mocks confirm to always return true) rather than blocked
+      expect(confirmSpy).toHaveBeenCalledWith('This will put you at -5 Paper Scraps. Log anyway?');
+      expect(errorContainer.style.display).toBe('none');
+
+      // Ink drops deducted normally, paper scraps go negative
+      expect(parseInt(inkDropsEl.value)).toBe(50);
+      expect(parseInt(paperScrapsEl.value)).toBe(-5);
+
+      confirmSpy.mockRestore();
     });
 
     test('logging subscription purchase deducts ink and paper', async () => {
@@ -415,7 +421,7 @@ describe('Page Renderers Hydration', () => {
       }
     });
 
-    test('shows error when insufficient resources for subscription purchase', async () => {
+    test('confirms and allows a negative balance for subscription purchase', async () => {
       resetStateLoadedForTests();
       const originalIdb = global.indexedDB;
       global.indexedDB = undefined;
@@ -437,12 +443,21 @@ describe('Page Renderers Hydration', () => {
       );
       const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
       const errorContainer = bookBoxOption.querySelector('.error-message');
-      logButton.click();
 
-      expect(errorContainer.style.display).toBe('block');
-      expect(errorContainer.textContent).toContain('Insufficient');
-      expect(parseInt(inkDropsEl.value)).toBe(10);
-      expect(parseInt(paperScrapsEl.value)).toBe(10);
+      const confirmSpy = jest.spyOn(window, 'confirm');
+
+      logButton.click();
+      await flushPromises();
+
+      // The overdraft is confirmed (setup.js mocks confirm to always return true) and the
+      // month is logged with a negative resulting balance rather than being blocked.
+      expect(confirmSpy).toHaveBeenCalledWith('This will put you at -15 Ink Drops and -15 Paper Scraps. Log anyway?');
+      expect(errorContainer.style.display).toBe('none');
+      expect(parseInt(inkDropsEl.value)).toBe(-15);
+      expect(parseInt(paperScrapsEl.value)).toBe(-15);
+      expect(logButton.textContent).toContain('Logged');
+
+      confirmSpy.mockRestore();
       } finally {
         global.indexedDB = originalIdb;
       }
