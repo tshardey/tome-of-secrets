@@ -36,7 +36,15 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
     }),
     getTrackableAtmosphericItemValues: jest.fn((state) => {
         const equipped = state?.equippedItems || [];
-        return equipped.some((i) => i?.name === 'Garden Gnome') ? { 'Garden Gnome': 2 } : {};
+        if (equipped.some((i) => i?.name === 'Garden Gnome')) {
+            return { 'Garden Gnome': 2 };
+        }
+        const passiveItems = state?.passiveItemSlots || [];
+        const passiveFamiliars = state?.passiveFamiliarSlots || [];
+        const isPassive =
+            passiveItems.some((s) => s?.itemName === 'Garden Gnome') ||
+            passiveFamiliars.some((s) => s?.itemName === 'Garden Gnome');
+        return isPassive ? { 'Garden Gnome': 1 } : {};
     }),
 }));
 

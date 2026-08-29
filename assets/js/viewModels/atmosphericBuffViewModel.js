@@ -111,7 +111,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             // Always active when equipped/displayed (user wants to use the ability).
             const itemState = atmosphericBuffsState[name] || {};
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
-            const dailyValue = trackableItemValues[name] ?? 1;
+            const dailyValue = trackableItemValues[name] ?? 0;
             let total = calculateBuffTotal(daysUsed, dailyValue);
             if (atmosphericMultiplier !== 1 && total > 0) {
                 total = Math.floor(total * atmosphericMultiplier);

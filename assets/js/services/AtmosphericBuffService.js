@@ -194,4 +194,3 @@ export function getTrackableAtmosphericItemValues(state, dataModule = data) {
 
     return values;
 }
-
