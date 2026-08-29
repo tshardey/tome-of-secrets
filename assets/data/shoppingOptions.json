@@ -43,6 +43,33 @@
     "paperScraps": 50,
     "allowQuantity": false,
     "type": "special-edition"
+  },
+  "book-crawl": {
+    "id": "book-crawl",
+    "label": "The Book Crawl",
+    "description": "A day spent moving between bookshops. Set the quantity to the number of shops you visited.",
+    "inkDrops": 150,
+    "paperScraps": 5,
+    "allowQuantity": true,
+    "type": "book-purchase"
+  },
+  "used-bookstore-haul": {
+    "id": "used-bookstore-haul",
+    "label": "Used Bookstore Haul",
+    "description": "Secondhand finds carried home by the armful. Set the quantity to the number of books.",
+    "inkDrops": 75,
+    "paperScraps": 0,
+    "allowQuantity": true,
+    "type": "book-purchase"
+  },
+  "library-book-sale": {
+    "id": "library-book-sale",
+    "label": "Library Book Sale",
+    "description": "Withdrawn stock, sold by the bagful. Set the quantity to the number of books.",
+    "inkDrops": 50,
+    "paperScraps": 0,
+    "allowQuantity": true,
+    "type": "book-purchase"
   }
 }
 
