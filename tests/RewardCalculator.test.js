@@ -787,6 +787,66 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.paperScraps).toBe(14);
             expect(rewards.modifiedBy).toContain('The Soaking in Nature');
         });
+
+        test('should apply an atmospheric multiplier to the total', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 10, isActive: true }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { multiplier: 2, multiplierSource: 'Tome-Bound Cat' }
+            );
+
+            expect(rewards.paperScraps).toBe(40); // 10 × 2 base, then × 2
+        });
+
+        test('should record the multiplier as its own receipt line', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 10, isActive: true }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { multiplier: 2, multiplierSource: 'Tome-Bound Cat' }
+            );
+            const receipt = rewards.getReceipt();
+
+            const catLine = receipt.modifiers.find((m) => m.source === 'Tome-Bound Cat');
+            expect(catLine).toBeDefined();
+            expect(catLine.value).toBe(20); // the added half
+            expect(receipt.final.paperScraps).toBe(40);
+        });
+
+        test('should floor a fractional multiplied total', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 5, isActive: true }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                atmosphericBuffs,
+                [],
+                [],
+                { multiplier: 1.5, multiplierSource: 'Tome-Bound Cat' }
+            );
+
+            expect(rewards.paperScraps).toBe(15); // 5 × 2 = 10, × 1.5 = 15
+        });
+
+        test('should leave the total alone when there is no multiplier', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 10, isActive: true }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, [], [], {});
+
+            expect(rewards.paperScraps).toBe(20);
+            expect(rewards.getReceipt().modifiers.length).toBe(1);
+        });
     });
 });
 

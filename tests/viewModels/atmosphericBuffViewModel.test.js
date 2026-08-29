@@ -22,6 +22,17 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
             daysUsed: buffs[name]?.daysUsed || 0,
             isActive: buffs[name]?.isActive || false
         };
+    }),
+    getAtmosphericBuffMultiplier: jest.fn((state) => {
+        const equipped = state?.equippedItems || [];
+        if (equipped.some((i) => i?.name === 'Tome-Bound Cat')) {
+            return { multiplier: 2, modifierItemName: 'Tome-Bound Cat' };
+        }
+        const passiveFamiliars = state?.passiveFamiliarSlots || [];
+        if (passiveFamiliars.some((s) => s?.itemName === 'Tome-Bound Cat')) {
+            return { multiplier: 1.5, modifierItemName: 'Tome-Bound Cat' };
+        }
+        return { multiplier: 1, modifierItemName: null };
     })
 }));
 

@@ -53,6 +53,46 @@ export function calculateBuffTotal(daysUsed, dailyValue) {
 }
 
 /**
+ * Get the atmospheric buff multiplier from equipped/displayed items (e.g. Tome-Bound Cat).
+ * Reads atmosphericBuffMultiplier when item is equipped, passiveAtmosphericMultiplier when adopted (passive slot).
+ * Equipped takes precedence if the same item could appear in both.
+ * @param {Object} state - Character state object
+ * @returns {{ multiplier: number, modifierItemName: string|null }} Multiplier to apply (1 if none) and name of item providing it (for modifier row)
+ */
+export function getAtmosphericBuffMultiplier(state) {
+    let multiplier = 1;
+    let modifierItemName = null;
+    const allItems = data.allItems || {};
+
+    const checkSlot = (itemName, isEquipped) => {
+        const itemData = allItems[itemName];
+        if (!itemData?.atmosphericReward) return;
+        const value = isEquipped
+            ? itemData.atmosphericBuffMultiplier
+            : itemData.passiveAtmosphericMultiplier;
+        if (typeof value === 'number' && value > 0 && value !== 1) {
+            multiplier = value;
+            modifierItemName = itemName;
+        }
+    };
+
+    const equipped = state?.[STORAGE_KEYS.EQUIPPED_ITEMS];
+    if (Array.isArray(equipped)) {
+        equipped.forEach((item) => { checkSlot(item?.name, true); });
+    }
+    if (modifierItemName) return { multiplier, modifierItemName };
+
+    const passiveItems = state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    passiveItems.forEach((slot) => { checkSlot(slot?.itemName, false); });
+    if (modifierItemName) return { multiplier, modifierItemName };
+
+    const passiveFamiliars = state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    passiveFamiliars.forEach((slot) => { checkSlot(slot?.itemName, false); });
+
+    return { multiplier, modifierItemName };
+}
+
+/**
  * Get associated buffs for a sanctum
  * @param {string} sanctumKey - Sanctum key
  * @returns {Array<string>} Array of associated buff names

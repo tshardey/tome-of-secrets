@@ -12,48 +12,9 @@ import {
     isForcedAtmosphericBuff,
     calculateBuffTotal,
     getAssociatedBuffs,
-    getBuffState
+    getBuffState,
+    getAtmosphericBuffMultiplier
 } from '../services/AtmosphericBuffService.js';
-
-/**
- * Get the atmospheric buff multiplier from equipped/displayed items (e.g. Tome-Bound Cat).
- * Reads atmosphericBuffMultiplier when item is equipped, passiveAtmosphericMultiplier when adopted (passive slot).
- * Equipped takes precedence if the same item could appear in both.
- * @param {Object} state - Character state object
- * @returns {{ multiplier: number, modifierItemName: string|null }} Multiplier to apply (1 if none) and name of item providing it (for modifier row)
- */
-function getAtmosphericBuffMultiplier(state) {
-    let multiplier = 1;
-    let modifierItemName = null;
-    const allItems = data.allItems || {};
-
-    const checkSlot = (itemName, isEquipped) => {
-        const itemData = allItems[itemName];
-        if (!itemData?.atmosphericReward) return;
-        const value = isEquipped
-            ? itemData.atmosphericBuffMultiplier
-            : itemData.passiveAtmosphericMultiplier;
-        if (typeof value === 'number' && value > 0 && value !== 1) {
-            multiplier = value;
-            modifierItemName = itemName;
-        }
-    };
-
-    const equipped = state?.[STORAGE_KEYS.EQUIPPED_ITEMS];
-    if (Array.isArray(equipped)) {
-        equipped.forEach((item) => { checkSlot(item?.name, true); });
-    }
-    if (modifierItemName) return { multiplier, modifierItemName };
-
-    const passiveItems = state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
-    passiveItems.forEach((slot) => { checkSlot(slot?.itemName, false); });
-    if (modifierItemName) return { multiplier, modifierItemName };
-
-    const passiveFamiliars = state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
-    passiveFamiliars.forEach((slot) => { checkSlot(slot?.itemName, false); });
-
-    return { multiplier, modifierItemName };
-}
 
 /**
  * Get item names that are equipped or in display (passive) slots and are atmospheric rewards.

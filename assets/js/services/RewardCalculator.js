@@ -856,8 +856,10 @@ export class RewardCalculator {
     static calculateAtmosphericBuffRewards(
         atmosphericBuffs = {},
         associatedBuffs = [],
-        forcedActiveBuffNames = []
+        forcedActiveBuffNames = [],
+        options = {}
     ) {
+        const { multiplier = 1, multiplierSource = null } = options;
         let total = 0;
         const processedBuffs = [];
         const reward = new Reward({
@@ -903,6 +905,18 @@ export class RewardCalculator {
                     });
                 }
             }
+        }
+
+        if (multiplier !== 1 && total > 0) {
+            const beforeMultiplier = total;
+            total = Math.floor(total * multiplier);
+            reward.receipt.modifiers.push({
+                source: multiplierSource || 'Atmospheric multiplier',
+                type: 'atmospheric-multiplier',
+                value: total - beforeMultiplier,
+                description: `x${multiplier} to atmospheric buff total`,
+                currency: GAME_CONFIG.atmospheric.resource
+            });
         }
 
         reward.paperScraps = total;
