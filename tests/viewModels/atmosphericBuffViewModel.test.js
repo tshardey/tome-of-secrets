@@ -11,7 +11,7 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
     isForcedAtmosphericBuff: jest.fn(
         (name, ctx) => ctx?.formData?.keeperBackground === 'groveTender' && name === 'The Soaking in Nature'
     ),
-    calculateTotalInkDrops: jest.fn((daysUsed, dailyValue) => daysUsed * dailyValue),
+    calculateBuffTotal: jest.fn((daysUsed, dailyValue) => daysUsed * dailyValue),
     getAssociatedBuffs: jest.fn((sanctum) => {
         if (sanctum === 'sanctum1') return ['Buff1'];
         return [];

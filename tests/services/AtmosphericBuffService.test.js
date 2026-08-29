@@ -94,7 +94,7 @@ import {
     calculateDailyValue,
     isGroveTenderBuff,
     isForcedAtmosphericBuff,
-    calculateTotalInkDrops,
+    calculateBuffTotal,
     getAssociatedBuffs,
     getBuffState,
     shouldExcludeFromQuestBonuses
@@ -104,19 +104,19 @@ import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';
 describe('AtmosphericBuffService', () => {
 
     describe('calculateDailyValue', () => {
-        test('should return 1 for non-associated buff', () => {
+        test('should return base value for non-associated buff', () => {
             const value = calculateDailyValue('Buff1', []);
-            expect(value).toBe(1);
-        });
-
-        test('should return 2 for associated buff', () => {
-            const value = calculateDailyValue('Buff1', ['Buff1', 'Buff2']);
             expect(value).toBe(2);
         });
 
-        test('should return 1 when associatedBuffs is undefined', () => {
+        test('should return sanctum bonus for associated buff', () => {
+            const value = calculateDailyValue('Buff1', ['Buff1', 'Buff2']);
+            expect(value).toBe(3);
+        });
+
+        test('should return base value when associatedBuffs is undefined', () => {
             const value = calculateDailyValue('Buff1', undefined);
-            expect(value).toBe(1);
+            expect(value).toBe(2);
         });
     });
 
@@ -145,11 +145,11 @@ describe('AtmosphericBuffService', () => {
         });
     });
 
-    describe('calculateTotalInkDrops', () => {
+    describe('calculateBuffTotal', () => {
         test('should calculate total correctly', () => {
-            expect(calculateTotalInkDrops(5, 1)).toBe(5);
-            expect(calculateTotalInkDrops(3, 2)).toBe(6);
-            expect(calculateTotalInkDrops(0, 2)).toBe(0);
+            expect(calculateBuffTotal(5, 1)).toBe(5);
+            expect(calculateBuffTotal(3, 2)).toBe(6);
+            expect(calculateBuffTotal(0, 2)).toBe(0);
         });
     });
 

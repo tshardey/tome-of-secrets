@@ -10,7 +10,7 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import {
     calculateDailyValue,
     isForcedAtmosphericBuff,
-    calculateTotalInkDrops,
+    calculateBuffTotal,
     getAssociatedBuffs,
     getBuffState
 } from '../services/AtmosphericBuffService.js';
@@ -118,7 +118,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         }
 
         // Calculate total; apply multiplier from item data (e.g. Tome-Bound Cat x2 equipped or x1.5 adopted)
-        let total = calculateTotalInkDrops(buffState.daysUsed, dailyValue);
+        let total = calculateBuffTotal(buffState.daysUsed, dailyValue);
         if (atmosphericMultiplier !== 1 && isActive && total > 0) {
             total = Math.floor(total * atmosphericMultiplier);
         }
@@ -149,7 +149,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             const itemState = atmosphericBuffsState[name] || {};
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
             const dailyValue = 1;
-            let total = calculateTotalInkDrops(daysUsed, dailyValue);
+            let total = calculateBuffTotal(daysUsed, dailyValue);
             if (atmosphericMultiplier !== 1 && total > 0) {
                 total = Math.floor(total * atmosphericMultiplier);
             }

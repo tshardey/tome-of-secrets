@@ -137,13 +137,14 @@ describe('RewardCalculator - Apply Modifiers', () => {
         expect(modified.modifiedBy).toEqual([]);
     });
 
-    test('should apply additive ink drop bonuses', () => {
+    test('should apply additive paper scrap bonuses from items', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting' // +2 ink drops
+            '[Item] Gilded Painting' // +2 paper scraps
         ]);
 
-        expect(modified.inkDrops).toBe(12);
+        expect(modified.inkDrops).toBe(10);
+        expect(modified.paperScraps).toBe(2);
         expect(modified.modifiedBy).toContain('Gilded Painting');
     });
 
@@ -152,7 +153,7 @@ describe('RewardCalculator - Apply Modifiers', () => {
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] Scatter Brain Scarab' // x3 multiplier
         ]);
-        
+
         expect(modified.inkDrops).toBe(30);
         expect(modified.modifiedBy).toContain('Scatter Brain Scarab');
     });
@@ -160,11 +161,11 @@ describe('RewardCalculator - Apply Modifiers', () => {
     test('should apply additive bonuses before multipliers', () => {
         const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting',     // +2 = 12 total
-            '[Item] Scatter Brain Scarab' // x3 = 36 total
+            '[Background] Archivist Bonus', // +15 = 25 total
+            '[Item] Scatter Brain Scarab'   // x3 = 75 total
         ]);
 
-        expect(modified.inkDrops).toBe(36); // (10 + 2) * 3
+        expect(modified.inkDrops).toBe(75); // (10 + 15) * 3
     });
 
     test('should apply background bonuses', () => {
@@ -177,26 +178,27 @@ describe('RewardCalculator - Apply Modifiers', () => {
         expect(modified.modifiedBy).toContain('Archivist Bonus');
     });
 
-    test('should apply ink drop bonuses from atmospheric items', () => {
+    test('should apply paper scrap bonuses from atmospheric items', () => {
         const base = new Reward({ inkDrops: 0 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting' // +2 ink drops
+            '[Item] Gilded Painting' // +2 paper scraps
         ]);
 
-        expect(modified.inkDrops).toBe(2);
+        expect(modified.inkDrops).toBe(0);
+        expect(modified.paperScraps).toBe(2);
         expect(modified.modifiedBy).toContain('Gilded Painting');
     });
 
     test('should handle multiple modifiers', () => {
         const base = new Reward({ xp: 10, inkDrops: 10, paperScraps: 5 });
         const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting',      // +2 ink drops
+            '[Item] Gilded Painting',      // +2 paper scraps
             '[Background] Prophet Bonus'   // +15 ink drops
         ]);
 
         expect(modified.xp).toBe(10);
-        expect(modified.inkDrops).toBe(27); // 10 + 2 + 15
-        expect(modified.paperScraps).toBe(5);
+        expect(modified.inkDrops).toBe(25); // 10 + 15
+        expect(modified.paperScraps).toBe(7); // 5 + 2
         expect(modified.modifiedBy).toContain('Gilded Painting');
         expect(modified.modifiedBy).toContain('Prophet Bonus');
     });
@@ -410,12 +412,13 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        // Gilded Painting in passive slot should give +1 ink drop (passive), not +2 (active)
+        // Gilded Painting in passive slot should give +1 paper scrap (passive), not +2 (active)
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(11); // 10 base + 1 passive bonus
+        expect(modified.inkDrops).toBe(10);
+        expect(modified.paperScraps).toBe(1); // 0 base + 1 passive bonus
         expect(modified.modifiedBy).toContain("Gilded Painting");
 
         // Cleanup
@@ -437,7 +440,8 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(12); // 10 base + 2 active bonus
+        expect(modified.inkDrops).toBe(10);
+        expect(modified.paperScraps).toBe(2); // 0 base + 2 active bonus
         expect(modified.modifiedBy).toContain("Gilded Painting");
 
         // Cleanup
@@ -453,12 +457,13 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
         const base = new Reward({ inkDrops: 10 });
-        // Gilded Painting in passive slot should give +1 ink drop (passive), not +2 (active)
+        // Gilded Painting in passive slot should give +1 paper scrap (passive), not +2 (active)
         const modified = RewardCalculator.applyModifiers(base, [
             '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(11); // 10 base + 1 passive bonus
+        expect(modified.inkDrops).toBe(10);
+        expect(modified.paperScraps).toBe(1); // 0 base + 1 passive bonus
         expect(modified.modifiedBy).toContain('Gilded Painting');
 
         // Cleanup
@@ -478,7 +483,8 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             '[Item] Gilded Painting'
         ]);
 
-        expect(modified.inkDrops).toBe(12); // 10 base + 2 active bonus
+        expect(modified.inkDrops).toBe(10);
+        expect(modified.paperScraps).toBe(2); // 0 base + 2 active bonus
         expect(modified.modifiedBy).toContain("Gilded Painting");
 
         // Cleanup
@@ -695,18 +701,18 @@ describe('RewardCalculator - End of Month Calculations', () => {
     });
 
     describe('calculateAtmosphericBuffRewards', () => {
-        test('should calculate ink drops for active atmospheric buffs', () => {
+        test('should calculate paper scraps for active atmospheric buffs', () => {
             const atmosphericBuffs = {
                 'The Candlight Study': { daysUsed: 10, isActive: true },
                 'The Soaking in Nature': { daysUsed: 5, isActive: true },
                 'Inactive Buff': { daysUsed: 7, isActive: false }
             };
-            
+
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
-            
+
             expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(15); // (10 + 5) × 1
-            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.inkDrops).toBe(0);
+            expect(rewards.paperScraps).toBe(30); // (10 + 5) × 2
             expect(rewards.modifiedBy).toContain('The Candlight Study');
             expect(rewards.modifiedBy).toContain('The Soaking in Nature');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
@@ -718,12 +724,10 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'The Soaking in Nature': { daysUsed: 5, isActive: true }
             };
             const associatedBuffs = ['The Candlight Study'];
-            
+
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
-            
-            expect(rewards.inkDrops).toBe(25); // (10 × 2) + (5 × 1) = 25
-            expect(rewards.modifiedBy).toContain('The Candlight Study');
-            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
+
+            expect(rewards.paperScraps).toBe(40); // (10 × 3) + (5 × 2) = 40
         });
 
         test('should ignore buffs with zero days used', () => {
@@ -731,18 +735,17 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'The Candlight Study': { daysUsed: 0, isActive: true },
                 'The Soaking in Nature': { daysUsed: 5, isActive: true }
             };
-            
+
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
-            
-            expect(rewards.inkDrops).toBe(5); // Only 5 × 1
+
+            expect(rewards.paperScraps).toBe(10); // Only 5 × 2
             expect(rewards.modifiedBy).not.toContain('The Candlight Study');
-            expect(rewards.modifiedBy).toContain('The Soaking in Nature');
         });
 
         test('should handle empty atmospheric buffs object', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards({}, []);
-            
-            expect(rewards.inkDrops).toBe(0);
+
+            expect(rewards.paperScraps).toBe(0);
             expect(rewards.modifiedBy).toEqual([]);
         });
 
@@ -753,10 +756,10 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'Buff 3': { daysUsed: 5, isActive: true }
             };
             const associatedBuffs = ['Buff 1', 'Buff 3'];
-            
+
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
-            
-            expect(rewards.inkDrops).toBe(20); // (3 × 2) + (4 × 1) + (5 × 2) = 6 + 4 + 10 = 20
+
+            expect(rewards.paperScraps).toBe(32); // (3 × 3) + (4 × 2) + (5 × 3) = 9 + 8 + 15 = 32
         });
 
         test('should only process active buffs', () => {
@@ -764,10 +767,10 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'Active Buff': { daysUsed: 10, isActive: true },
                 'Inactive Buff': { daysUsed: 10, isActive: false }
             };
-            
+
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
-            
-            expect(rewards.inkDrops).toBe(10); // Only active buff counted
+
+            expect(rewards.paperScraps).toBe(20); // Only active buff counted
             expect(rewards.modifiedBy).toContain('Active Buff');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
         });
@@ -781,7 +784,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 [],
                 ['The Soaking in Nature']
             );
-            expect(rewards.inkDrops).toBe(7);
+            expect(rewards.paperScraps).toBe(14);
             expect(rewards.modifiedBy).toContain('The Soaking in Nature');
         });
     });

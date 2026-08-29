@@ -72,11 +72,14 @@ export const GAME_CONFIG = Object.freeze({
     },
 
     /**
-     * Atmospheric buff configuration
+     * Atmospheric buff configuration.
+     * Atmospheric play is the Paper Scrap faucet; `resource` keeps the currency
+     * a single knob rather than a value hardcoded across calculator and view model.
      */
     atmospheric: {
-        baseValue: 1,
-        sanctumBonus: 2
+        resource: 'paperScraps',
+        baseValue: 2,
+        sanctumBonus: 3
     },
 
     /**

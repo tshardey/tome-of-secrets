@@ -5,6 +5,7 @@
 import * as data from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { EffectRegistry } from './EffectRegistry.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 
 /**
  * Calculate daily value for an atmospheric buff
@@ -16,8 +17,8 @@ export function calculateDailyValue(buffName, associatedBuffs = []) {
     const buff = data.getAtmosphericBuff(buffName);
     const key = buff?.id || buffName;
     return (associatedBuffs.includes(key) || associatedBuffs.includes(buff?.name) || associatedBuffs.includes(buffName))
-        ? 2
-        : 1;
+        ? GAME_CONFIG.atmospheric.sanctumBonus
+        : GAME_CONFIG.atmospheric.baseValue;
 }
 
 /**
@@ -41,12 +42,13 @@ export function isGroveTenderBuff(buffName, background) {
 }
 
 /**
- * Calculate total ink drops for an atmospheric buff
- * @param {number} daysUsed - Number of days the buff was used
- * @param {number} dailyValue - Daily value (1 or 2)
- * @returns {number} Total ink drops
+ * Calculate the total reward for an atmospheric buff.
+ * Currency-agnostic: the resource is GAME_CONFIG.atmospheric.resource.
+ * @param {number} daysUsed
+ * @param {number} dailyValue
+ * @returns {number}
  */
-export function calculateTotalInkDrops(daysUsed, dailyValue) {
+export function calculateBuffTotal(daysUsed, dailyValue) {
     return daysUsed * dailyValue;
 }
 
