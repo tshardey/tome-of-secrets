@@ -28,21 +28,21 @@
         "name": "Amulet of Duality",
         "type": "Wearable",
         "img": "assets/images/rewards/amulet-of-duality.png",
-        "bonus": "Earn a +15 Ink Drop bonus on books with multiple points of view or multiple narrators.",
-        "passiveBonus": "Earn a +7 Ink Drop bonus on books with multiple POVs (passive).",
+        "bonus": "Earn a +5 Paper Scrap bonus on books with multiple points of view or multiple narrators.",
+        "passiveBonus": "Earn a +2 Paper Scrap bonus on books with multiple POVs (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["multiple-pov"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["multiple-pov"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 2 },
                 "slot": "passive"
             }
         ]
@@ -66,21 +66,21 @@
         "name": "Cloak of the Story-Weaver",
         "type": "Wearable",
         "img": "assets/images/rewards/cloak-of-the-story-weaver.png",
-        "bonus": "Earn a permanent +10 Ink Drop bonus for books that are part of a series.",
-        "passiveBonus": "Earn a +5 Ink Drop bonus for series books (passive).",
+        "bonus": "Earn a permanent +3 Paper Scrap bonus for books that are part of a series.",
+        "passiveBonus": "Earn a +1 Paper Scrap bonus for series books (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["series"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 3 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["series"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 1 },
                 "slot": "passive"
             }
         ]
@@ -114,21 +114,21 @@
         "name": "The Bookwyrm's Scale",
         "type": "Non-Wearable",
         "img": "assets/images/rewards/bookwyrms-scale.png",
-        "bonus": "For every book over 500 pages, gain a +10 Ink Drop bonus.",
-        "passiveBonus": "Gain a +5 Ink Drop bonus for books over 500 pages (passive).",
+        "bonus": "For every book over 500 pages, gain a +3 Paper Scrap bonus.",
+        "passiveBonus": "Gain a +1 Paper Scrap bonus for books over 500 pages (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "pageCount": { "min": 500 } },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 3 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "pageCount": { "min": 500 } },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 1 },
                 "slot": "passive"
             }
         ]
@@ -138,21 +138,21 @@
         "name": "Key of the Archive",
         "type": "Non-Wearable",
         "img": "assets/images/rewards/key-of-the-archive.png",
-        "bonus": "Earn a +15 Ink Drop bonus on books where something is unlocked, either literally or figuratively.",
-        "passiveBonus": "Earn a +7 Ink Drop bonus on unlock-themed books (passive).",
+        "bonus": "Earn a +5 Paper Scrap bonus on books where something is unlocked, either literally or figuratively.",
+        "passiveBonus": "Earn a +2 Paper Scrap bonus on unlock-themed books (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["unlocked"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["unlocked"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 2 },
                 "slot": "passive"
             }
         ]
@@ -565,21 +565,21 @@
         "name": "Temporal Sprite",
         "type": "Familiar",
         "img": "assets/images/rewards/temporal-sprite.png",
-        "bonus": "Books with non-linear storytelling or time jumps grant +20 Ink Drops.",
-        "passiveBonus": "Non-linear narratives grant +10 Ink Drops (passive).",
+        "bonus": "Books with non-linear storytelling or time jumps grant +7 Paper Scraps.",
+        "passiveBonus": "Non-linear narratives grant +3 Paper Scraps (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["non-linear-narrative"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 20 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 7 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["non-linear-narrative"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 10 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 3 },
                 "slot": "passive"
             }
         ]
@@ -589,21 +589,21 @@
         "name": "Ingredient Sprite",
         "type": "Familiar",
         "img": "assets/images/rewards/ingredient-sprite.png",
-        "bonus": "Books with interesting magical systems grant +15 Ink Drops.",
-        "passiveBonus": "Magic system books grant +7 Ink Drops (passive).",
+        "bonus": "Books with interesting magical systems grant +5 Paper Scraps.",
+        "passiveBonus": "Magic system books grant +2 Paper Scraps (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["magic-system"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["magic-system"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 2 },
                 "slot": "passive"
             }
         ]
@@ -715,21 +715,21 @@
         "name": "Star Navigator's Chart",
         "type": "Non-Wearable",
         "img": "assets/images/rewards/star-navigators-chart.png",
-        "bonus": "Sci-fi books grant +15 Ink Drops (always active).",
-        "passiveBonus": "Sci-fi books grant +7 Ink Drops (passive).",
+        "bonus": "Sci-fi books grant +5 Paper Scraps (always active).",
+        "passiveBonus": "Sci-fi books grant +2 Paper Scraps (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["sci-fi"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["sci-fi"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 2 },
                 "slot": "passive"
             }
         ]
@@ -787,8 +787,8 @@
         "name": "Literary Medallion",
         "type": "Non-Wearable",
         "img": "assets/images/rewards/literary-medallion.png",
-        "bonus": "Classics or literary fiction grant +20 XP.",
-        "passiveBonus": "Literary fiction grants +10 XP (passive).",
+        "bonus": "Classics or literary fiction grant +20 XP and +6 Paper Scraps.",
+        "passiveBonus": "Literary fiction grants +10 XP and +3 Paper Scraps (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
@@ -802,6 +802,18 @@
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["classics"], ["literary-fiction"]] },
                 "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 10 },
+                "slot": "passive"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["classics"], ["literary-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 6 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["classics"], ["literary-fiction"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 3 },
                 "slot": "passive"
             }
         ]
@@ -841,21 +853,21 @@
         "name": "Detective's Magnifying Glass",
         "type": "Non-Wearable",
         "img": "assets/images/rewards/detectives-magnifying-glass.png",
-        "bonus": "Mystery or crime books with puzzles grant +15 Ink Drops.",
-        "passiveBonus": "Mystery books grant +7 Ink Drops (passive).",
+        "bonus": "Mystery or crime books with puzzles grant +5 Paper Scraps.",
+        "passiveBonus": "Mystery books grant +2 Paper Scraps (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["mystery"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 15 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
                 "slot": "equipped"
             },
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "condition": { "tagMatch": [["mystery"]] },
-                "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 7 },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 2 },
                 "slot": "passive"
             }
         ]
