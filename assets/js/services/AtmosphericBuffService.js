@@ -11,7 +11,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
  * Calculate daily value for an atmospheric buff
  * @param {string} buffName - Name of the atmospheric buff
  * @param {Array<string>} associatedBuffs - Array of buff names associated with the current sanctum
- * @returns {number} Daily value (1 or 2)
+ * @returns {number} Daily value (GAME_CONFIG.atmospheric.baseValue, or sanctumBonus when associated)
  */
 export function calculateDailyValue(buffName, associatedBuffs = []) {
     const buff = data.getAtmosphericBuff(buffName);

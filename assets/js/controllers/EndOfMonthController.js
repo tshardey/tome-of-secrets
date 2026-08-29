@@ -106,7 +106,7 @@ export class EndOfMonthController extends BaseController {
                 stateAdapter.setAtmosphericBuffActive(buffKey, true);
             }
 
-            // Apply atmospheric buff ink drops
+            // Apply atmospheric buff paper scraps
             updateCurrency(atmosphericRewards);
 
             // Book completion XP is now awarded when marking a book complete in the Library (not at end of month).
