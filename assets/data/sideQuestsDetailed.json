@@ -699,7 +699,7 @@
                 "key": "C",
                 "roll": null,
                 "name": "The Regular",
-                "prompt": "Same stool, same story, every single time you come through. Read the book someone has recommended to you the most times and you have avoided the most successfully.",
+                "prompt": "Same stool, same story, every single time you come through. Read a book someone you know keeps recommending \u2014 the one they can't stop talking about.",
                 "reward": "Receive The Crossroads Fox. +30 XP.",
                 "rewards": {
                     "xp": 30,

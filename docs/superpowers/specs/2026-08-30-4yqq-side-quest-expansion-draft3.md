@@ -201,7 +201,7 @@ Waystation passive all fire on it. This is the one quest that deliberately doubl
 |---|---|---|---|
 | A | The Bartender | She asks what you usually drink, listens carefully, and pours something else. Ask a bookseller or librarian to pick for you — in person or by note — and read whatever they hand over. | The Crossroads Fox, +20 XP |
 | B | The Server | He brings what the kitchen sent out; nobody consulted you. Read a book pressed on you by a stranger whose taste you have no reason to trust — a shelf card, a note left inside a used copy, a list you stumbled into. | The Crossroads Fox, +20 XP, +5 Scraps |
-| C | The Regular | Same stool, same story, every single time you come through. Read the book someone has recommended to you the most times and you have avoided the most successfully. | The Crossroads Fox, +30 XP |
+| C | The Regular | Same stool, same story, every single time you come through. Read a book someone you know keeps recommending — the one they can't stop talking about. | The Crossroads Fox, +30 XP |
 
 **Design note.** Draft 1 spread "someone else chose it" across five prompts in three quests.
 It's now concentrated here: the Inn is the recommendation quest and nothing else touches
@@ -328,14 +328,14 @@ befriend and defeat condition, completion prompt, and item bonus.
 | memoir | 1 | **Collision.** The Philosophy Alcove takes memoir. The Field Practicum's primary-source branch now explicitly excludes it. |
 | non-fiction + notes | 2 | **Collision.** *Restore the Card Catalog* is near-identical to draft 1's primer branch. Replaced with *The lecture*, which is spoken rather than written. |
 | DNF, abandoned, set aside | 0 | **Collision found off-file.** Reading a DNF is a Worn Page penalty in `curseTableDetailed.json`. Permanently excluded. |
-| putting off, avoided | 1 | **Collision found (2026-08-30, implementation pass).** See below — the verification pass read only the first clause of Curse 1. |
+| putting off, avoided | 0 | **Collision found and resolved (2026-08-30, implementation pass).** The verification pass had read only the first clause of Curse 1. See below. |
 | poetry, verse, comic, graphic novel, novella, essay, audiobook | 0 | Clear. Format is unclaimed territory. |
 | letter, epistolary, diary | 0 | Clear. |
 | borrowed, thrift, used, inherited | 0 | Clear. Provenance is entirely unclaimed. |
 | read aloud, buddy read | 0 | Clear. Nothing in the game involves a second person. |
 | glossary, appendix | 0 | Clear. |
 
-### Open collision — The Crossroads Inn, branch C
+### Resolved collision — The Crossroads Inn, branch C
 
 The Worn Page table was finally read in full during implementation. **Curse 1, The Unread Tome**,
 assigns: *"read a book from your DNF list **or one you have been putting off**."* The original
@@ -349,13 +349,15 @@ action the penalty assigns, phrased differently — so it violates the rule this
 an action that means "you failed" cannot also mean "you won." No regex catches it, because the
 overlap is semantic rather than lexical.
 
-**This needs a decision and is not resolved in code.** Two options:
+**Resolved by rewording, 2026-08-30.** The Regular now reads:
 
-1. **Reword off the avoidance axis**, keeping The Regular's character — the person who keeps
-   pressing the same book on you — and dropping the half about your having dodged it. The
-   recommendation axis is what this quest owns; the avoidance is incidental colour.
-2. **Accept the overlap deliberately** and amend the "Penalty actions" row above, which currently
-   claims a clean sheet it does not have.
+> Same stool, same story, every single time you come through. Read a book someone you know keeps
+> recommending — the one they can't stop talking about.
+
+The avoidance half is gone. The Inn owns the *recommendation* axis and nothing else, so the branch
+now sits squarely on it: the regular who repeats himself, and the friend who repeats themselves.
+Nothing here names a book you have been deferring, so Curse 1 and this branch no longer reach for
+the same act.
 
 A weaker, related case was judged acceptable and left alone: SQ 11 branch A asks for *"a genre you
 actively avoid."* That is avoidance of a **genre**, not of a specific deferred book, so it does not
