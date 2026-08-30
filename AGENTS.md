@@ -79,6 +79,14 @@ Use **[Beads](https://github.com/gastownhall/beads)** (`bd`) for task tracking a
 
 **Concurrency:** Embedded Dolt is effectively **single-writer**. Avoid multiple terminals or parallel agents issuing `bd` writes at the same time; serialize Beads updates or you risk hangs and locks. If you need concurrent writers long-term, plan a Beads **server** mode setup (see upstream docs).
 
+**Session start — verify Beads is healthy before any `bd` write.** A dev-container rebuild can upgrade the `bd` CLI underneath an older `.beads/` database, leaving the stored schema behind the binary. In that state reads fail with `column "..." could not be found in any table in scope` and **all writes are blocked**. Always run a read command before touching issue state:
+
+```bash
+bd list          # or: bd ready
+```
+
+If it errors, or warns about **pending schema migrations** (`v<old> -> v<new>`), stop and follow [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md). Do **not** run `bd init`, do **not** hand-edit `.beads/issues.jsonl`, and do **not** force any push to work around it — each of those forks the tracker instead of repairing it.
+
 **Required workflow:**
 
 1.  **Before starting work:** Create tasks in Beads *before* you begin implementation. Do not start coding (or content changes) until the work is represented as one or more tasks. Use `bd create "Title" -p <priority>` for each discrete piece of work and `bd dep add <child> <parent>` to link dependencies. For multi-step requests, break the work into tasks first, then pick from `bd ready` to see what is unblocked.
@@ -89,7 +97,7 @@ Use **[Beads](https://github.com/gastownhall/beads)** (`bd`) for task tracking a
 
 **Setup and reference:**
 
-*   **Initialization:** If the project does not yet use Beads, run `bd init` in the project root. (Install the `bd` CLI once per environment; do not clone the Beads repo into this project.)
+*   **Initialization:** This repo **already uses Beads — never run `bd init` here.** `bd init` creates a *new* Dolt history with no common ancestor with the remote, forking the tracker so `bd dolt push` fails with `no common ancestor`; recovering from that fork risks losing issues that exist only on one side. This has already happened once (see [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md)). To set up a fresh clone, or to repair a missing/broken database, run **`bd bootstrap`** — it clones the existing history from the remote and preserves the shared ancestry. (Install the `bd` CLI once per environment; do not clone the Beads repo into this project.)
 *   **Common commands:** `bd ready` — unblocked work; `bd list` / `bd show <id>` — inspect; `bd create`, `bd update`, `bd dep add`, `bd close` — mutate; `bd export --no-memories -o .beads/issues.jsonl` — refresh the git-tracked export after changes (see below).
 *   **Git-tracked export:** The maintainer commits [`.beads/issues.jsonl`](.beads/issues.jsonl). After you change issue state, run `bd export --no-memories -o .beads/issues.jsonl` so that file matches the database, then stage it with `git add`. Older docs may mention `bd sync`; current `bd` uses **`bd export`** for this JSONL snapshot.
 *   **Docs:** [Beads upstream](https://github.com/gastownhall/beads), [`.beads/README.md`](.beads/README.md), and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md) for recovery and troubleshooting.
