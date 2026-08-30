@@ -57,6 +57,19 @@ function loadJSON(filename) {
 /**
  * Validate items
  */
+/**
+ * Mirror of slugifyId() in assets/js/utils/slug.js.
+ * rewardsRenderer and linkifyItems both derive Rewards-page anchors from the item NAME,
+ * so an id that disagrees with the slug means every rewards.html#<id> link is dead.
+ */
+function slugifyName(name) {
+    return String(name || '')
+        .toLowerCase()
+        .replace(/['\u2019]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
 function validateItems(items) {
     const ids = new Set();
     const names = new Map(); // name -> [ids with that name]
@@ -82,6 +95,14 @@ function validateItems(items) {
         if (!item.name) {
             results.push({ type: 'error', message: `Item "${key}" missing name field` });
         } else {
+            // Anchors are derived from the name, never the id; a mismatch breaks every link.
+            const expectedId = slugifyName(item.name);
+            if (item.id && item.id !== expectedId) {
+                results.push({
+                    type: 'error',
+                    message: `Item "${key}" has id "${item.id}" but its name slugifies to "${expectedId}" — rewards.html anchors are built from the name, so links to "#${item.id}" will not resolve`
+                });
+            }
             // Track names for duplicate check
             if (!names.has(item.name)) {
                 names.set(item.name, []);
