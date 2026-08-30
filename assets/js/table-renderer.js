@@ -135,7 +135,7 @@ function checkDungeonRoomCompletion(roomNumber) {
 
 /**
  * Check if a side quest is completed
- * @param {string} sideQuestNumber - Side quest number (1-8)
+ * @param {string} sideQuestNumber - Side quest key
  * @returns {boolean} True if the side quest is completed
  */
 function checkSideQuestCompletion(sideQuestNumber) {
@@ -515,26 +515,40 @@ export function renderSideQuestsTable() {
   </thead>
   <tbody>`;
 
-    for (let i = 1; i <= 8; i++) {
-        const quest = sideQuestsDetailed[i.toString()];
-        const isCompleted = checkSideQuestCompletion(i.toString());
+    // Iterate the catalog rather than a fixed range — the pool grows, the loop shouldn't.
+    for (const key of Object.keys(sideQuestsDetailed)) {
+        const quest = sideQuestsDetailed[key];
+        if (!quest) continue;
+
+        const isCompleted = checkSideQuestCompletion(key);
         const rowClass = isCompleted ? 'class="completed-quest"' : '';
         const rowStyle = isCompleted ? 'style="opacity: 0.6; color: #999;"' : '';
         const checkmark = isCompleted ? ' ✓' : '';
-        
+
         let rewardText = quest.reward;
-        
         if (quest.hasLink && quest.link) {
             rewardText = rewardText.replace(
                 quest.link.text,
                 `<a href="${quest.link.url}">${quest.link.text}</a>`
             );
         }
-        
+
+        let body;
+        if (Array.isArray(quest.branches) && quest.branches.length > 0) {
+            const lead = quest.rollInstruction || 'Choose one:';
+            const branchItems = quest.branches.map((branch) => {
+                const label = quest.branchType === 'roll' ? (branch.roll || branch.key) : branch.key;
+                return `<li><strong>${label} · ${branch.name}:</strong> ${branch.prompt} <em>${branch.reward}</em></li>`;
+            }).join('');
+            body = `<strong>${quest.name}:</strong>${checkmark} ${quest.description} <strong>${lead}</strong><ul class="side-quest-branches">${branchItems}</ul>`;
+        } else {
+            body = `<strong>${quest.name}:</strong>${checkmark} ${quest.description} <strong>Prompt:</strong> ${quest.prompt} <strong>Reward:</strong> ${rewardText}`;
+        }
+
         html += `
     <tr ${rowClass} ${rowStyle}>
-      <td><strong>${i}</strong></td>
-      <td><strong>${quest.name}:</strong>${checkmark} ${quest.description} <strong>Prompt:</strong> ${quest.prompt} <strong>Reward:</strong> ${rewardText}</td>
+      <td><strong>${key}</strong></td>
+      <td>${body}</td>
     </tr>`;
     }
 

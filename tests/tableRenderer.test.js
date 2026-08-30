@@ -12,6 +12,7 @@ import {
     renderLevelingRewardsTable,
     initializeTables
 } from '../assets/js/table-renderer.js';
+import { sideQuestsDetailed } from '../assets/js/character-sheet/data.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeSetJSON } from '../assets/js/utils/storage.js';
 
@@ -241,6 +242,26 @@ describe('Table Renderer', () => {
             expect(html).toContain('Scatter Brain Scarab');
             expect(html).toContain('Librarian\'s Compass');
             expect(html).toContain('rewards.html#scatter-brain-scarab');
+        });
+
+        test('renders a row for every side quest in the catalog, not just the first eight', () => {
+            const html = renderSideQuestsTable();
+            const keys = Object.keys(sideQuestsDetailed);
+
+            for (const key of keys) {
+                expect(html).toContain(sideQuestsDetailed[key].name);
+            }
+            // One <tr> per quest, plus the header row.
+            expect(html.match(/<tr/g).length).toBe(keys.length + 1);
+        });
+
+        test('a branching quest lists all of its branch prompts', () => {
+            const html = renderSideQuestsTable();
+            const hagglers = sideQuestsDetailed['9'];
+
+            for (const branch of hagglers.branches) {
+                expect(html).toContain(branch.name);
+            }
         });
 
         test('renderCurseTable should render all 4 curses as ordered list', () => {

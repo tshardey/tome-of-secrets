@@ -3350,8 +3350,10 @@ describe('Character Sheet', () => {
             const header = drawer.querySelector('.info-drawer-header h2');
             expect(header).toBeTruthy();
             expect(header.textContent).toContain('Side Quests');
-            expect(header.textContent).toContain('Roll a d8');
-            
+            // The die notation was deliberately dropped: eighteen quests do not fit a d8,
+            // and the draw is now a locale roll followed by a quest roll (core-mechanics.md).
+            expect(header.textContent).not.toContain('Roll a d8');
+
             // Check content
             const content = drawer.querySelector('.info-drawer-content');
             expect(content).toBeTruthy();

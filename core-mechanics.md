@@ -32,7 +32,7 @@ Each card suit corresponds to a specific type of challenge or quest.
 
 * **Hearts ♥ (d6):** Roll a d6 for an Organize the Stacks quest.
 * **Diamonds ♦ (d8):** Roll a d8 for an Atmospheric Buff.
-* **Clubs ♣ (d8):** Roll a d8 for a Side Quest.
+* **Clubs ♣ (d8 + d4/d4):** Roll a d8 for a Side Quest inside the Library. To leave the Library, roll a d4 for a locale — the Ninefold Bazaar, the Festival of Turning, the Exchange, or the Open Road — then a coin or d4 for which quest at that locale. Most quests outside the Library then branch again; the quest tells you whether you choose or roll.
 * **Spades ♠ (d12):** Roll a d12 for a Dungeon Crawl.
 
 *Optional Rule: At the start of each month, before drawing cards, you may always roll once for an Atmospheric Buff. This ensures that you always have the option to include at least one immersive effect in your reading journey, even if you do not draw any Diamonds.*
@@ -70,6 +70,7 @@ There are three primary currencies that define your progress, plus a fourth for 
     **Earn Dusty Blueprints for:**
     * Completing **Genre Quests**
     * Completing **Extra Credit** challenges
+    * Completing certain **Side Quests** — the Bazaar, the Exchange, and the Open Road pay in Blueprints.
 
     **Spend Dusty Blueprints on:**
     * Restoration Projects in [Library Restoration]({{ site.baseurl }}/library.html)
