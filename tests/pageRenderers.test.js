@@ -305,6 +305,48 @@ describe('Page Renderers Hydration', () => {
       confirmSpy.mockRestore();
     });
 
+    test('cancelling the overdraft confirm on redeem leaves balance and log untouched', async () => {
+      safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+      // Set up insufficient resources
+      const inkDropsEl = document.getElementById('inkDrops');
+      const paperScrapsEl = document.getElementById('paperScraps');
+      inkDropsEl.value = '10'; // Not enough for Bookish Item (25)
+      paperScrapsEl.value = '0';
+
+      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {
+        inkDrops: '10',
+        paperScraps: '0'
+      });
+
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+
+      const bookishItemOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'Bookish Item'
+      );
+
+      const redeemButton = bookishItemOption.querySelector('.redeem-button');
+
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+      // Click redeem, but cancel the overdraft confirm
+      redeemButton.click();
+      await flushPromises();
+
+      expect(confirmSpy).toHaveBeenCalledWith('This will put you at -15 Ink Drops. Log anyway?');
+
+      // Balance must be completely unchanged (the abort branch actually ran)
+      expect(parseInt(inkDropsEl.value, 10)).toBe(10);
+      expect(parseInt(paperScrapsEl.value, 10)).toBe(0);
+
+      // No log entry was recorded
+      const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+      expect(log.length).toBe(0);
+
+      confirmSpy.mockRestore();
+    });
+
     test('confirms and allows a negative paper scraps balance on redeem', async () => {
       // Set up insufficient resources
       const inkDropsEl = document.getElementById('inkDrops');
@@ -458,6 +500,55 @@ describe('Page Renderers Hydration', () => {
       expect(logButton.textContent).toContain('Logged');
 
       confirmSpy.mockRestore();
+      } finally {
+        global.indexedDB = originalIdb;
+      }
+    });
+
+    test('cancelling the overdraft confirm on book box month log leaves balance and history untouched', async () => {
+      resetStateLoadedForTests();
+      const originalIdb = global.indexedDB;
+      global.indexedDB = undefined;
+      try {
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, {
+          sub1: { id: 'sub1', company: 'Test Co', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
+        });
+        safeSetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+        safeSetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+        const inkDropsEl = document.getElementById('inkDrops');
+        const paperScrapsEl = document.getElementById('paperScraps');
+        inkDropsEl.value = '10'; // Not enough for 25 ink + 25 paper
+        paperScrapsEl.value = '10';
+        safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { inkDrops: '10', paperScraps: '10' });
+
+        await initializeShoppingPage();
+        const container = document.getElementById('shopping-options-container');
+        const options = Array.from(container.querySelectorAll('.shopping-option'));
+        const bookBoxOption = options.find(opt =>
+          opt.querySelector('h3')?.textContent === 'One Month of a Book Box Subscription'
+        );
+        const logButton = bookBoxOption.querySelector('.shopping-sub-log-btn');
+
+        const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+        // Click log, but cancel the overdraft confirm
+        logButton.click();
+        await flushPromises();
+
+        expect(confirmSpy).toHaveBeenCalledWith('This will put you at -15 Ink Drops and -15 Paper Scraps. Log anyway?');
+
+        // Balance must be completely unchanged (the abort branch actually ran)
+        expect(parseInt(inkDropsEl.value, 10)).toBe(10);
+        expect(parseInt(paperScrapsEl.value, 10)).toBe(10);
+        expect(logButton.textContent).not.toContain('Logged');
+
+        // No history entry / log entry was recorded
+        const history = safeGetJSON(STORAGE_KEYS.BOOK_BOX_HISTORY, []);
+        expect(history.length).toBe(0);
+        const log = safeGetJSON(STORAGE_KEYS.SHOPPING_LOG, []);
+        expect(log.length).toBe(0);
+
+        confirmSpy.mockRestore();
       } finally {
         global.indexedDB = originalIdb;
       }

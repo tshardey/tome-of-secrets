@@ -1691,8 +1691,10 @@ describe('Character Sheet', () => {
 
       // Get initial values
       const xpInput = document.getElementById('xp-current');
+      const inkDropsInput = document.getElementById('inkDrops');
       const paperScrapsInput = document.getElementById('paperScraps');
       const initialXP = parseInt(xpInput.value, 10) || 0;
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
       const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
 
       // Click End of Month button
@@ -1707,11 +1709,47 @@ describe('Character Sheet', () => {
       const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
       expect(finalPaperScraps).toBe(initialPaperScraps + 20);
 
+      // Atmospheric buffs must never pay Ink Drops (R2)
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      expect(finalInkDrops).toBe(initialInkDrops);
+
       // Verify books completed counter was reset
       expect(parseInt(booksCompletedInput.value, 10)).toBe(0);
 
       // Verify atmospheric buff days were reset
       expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
+    });
+
+    it('should apply the Tome-Bound Cat multiplier to a trackable item and a regular buff at end of month', () => {
+      // Regression guard for R3a/R3b: EndOfMonthController.js is the only production
+      // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real multiplier
+      // and trackableItemValues. Equip Garden Gnome (trackable, 2 Paper Scraps/day) and
+      // Tome-Bound Cat (x2 atmospheric multiplier when equipped).
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      characterState.equippedItems = [
+        { name: 'Garden Gnome' },
+        { name: 'Tome-Bound Cat' }
+      ];
+      characterState.atmosphericBuffs = {
+        'The Candlight Study': { daysUsed: 10, isActive: true },
+        'Garden Gnome': { daysUsed: 5, isActive: false }
+      };
+
+      const inkDropsInput = document.getElementById('inkDrops');
+      const paperScrapsInput = document.getElementById('paperScraps');
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+
+      const endOfMonthButton = document.querySelector('.end-of-month-button');
+      endOfMonthButton.click();
+
+      // ((10 days x 2 base) + (5 days x 2 from item)) x 2 (Tome-Bound Cat) = 60
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      expect(finalPaperScraps).toBe(initialPaperScraps + 60);
+
+      // Atmospheric buffs must never pay Ink Drops (R2).
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      expect(finalInkDrops).toBe(initialInkDrops);
     });
   });
 

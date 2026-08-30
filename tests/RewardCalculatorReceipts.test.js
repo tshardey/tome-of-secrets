@@ -109,6 +109,7 @@ describe('RewardCalculator Receipt System', () => {
             expect(receipt.modifiers[0].value).toBe(2);
             expect(receipt.modifiers[0].currency).toBe('paperScraps');
             expect(receipt.final.paperScraps).toBe(2); // 0 base + 2 modifier
+            expect(receipt.final.inkDrops).toBe(10); // unaffected by Gilded Painting (paper-only, R1)
         });
 
         test('should track multiple modifiers in receipt', () => {
@@ -236,6 +237,7 @@ describe('RewardCalculator Receipt System', () => {
             expect(receipt.modifiers).toHaveLength(1);
             expect(receipt.modifiers[0].value).toBe(1); // Passive bonus (half of 2)
             expect(receipt.final.paperScraps).toBe(1); // 0 base + 1 passive
+            expect(receipt.final.inkDrops).toBe(10); // unaffected by Gilded Painting (paper-only, R1)
         });
 
         test('should prioritize active modifier when item is both equipped and in passive slot', () => {
@@ -253,6 +255,7 @@ describe('RewardCalculator Receipt System', () => {
 
             expect(receipt.modifiers[0].value).toBe(2); // Active bonus (not passive)
             expect(receipt.final.paperScraps).toBe(2); // 0 base + 2 active
+            expect(receipt.final.inkDrops).toBe(10); // unaffected by Gilded Painting (paper-only, R1)
         });
     });
 

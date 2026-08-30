@@ -827,14 +827,17 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'The Candlight Study': { daysUsed: 5, isActive: true }
             };
 
+            // Use a sanctum-associated buff so the base (15) is odd and the
+            // multiplied total (22.5) is genuinely fractional — Math.floor at
+            // RewardCalculator.js:928 is untested otherwise.
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
                 atmosphericBuffs,
-                [],
+                ['The Candlight Study'],
                 [],
                 { multiplier: 1.5, multiplierSource: 'Tome-Bound Cat' }
             );
 
-            expect(rewards.paperScraps).toBe(15); // 5 × 2 = 10, × 1.5 = 15
+            expect(rewards.paperScraps).toBe(22); // 5 × 3 (sanctum) = 15, × 1.5 = 22.5, floored to 22
         });
 
         test('should leave the total alone when there is no multiplier', () => {

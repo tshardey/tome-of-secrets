@@ -83,6 +83,10 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         // Calculate total; apply multiplier from item data (e.g. Tome-Bound Cat x2 equipped or x1.5 adopted)
         let total = calculateBuffTotal(buffState.daysUsed, dailyValue);
         if (atmosphericMultiplier !== 1 && isActive && total > 0) {
+            // NOTE: floors per-row here, while RewardCalculator.js floors the aggregate
+            // month-end total. With a fractional multiplier (e.g. Tome-Bound Cat's x1.5)
+            // these can diverge from the displayed total — a deliberately deferred
+            // balance decision, not a bug. See RewardCalculator.calculateAtmosphericBuffRewards().
             total = Math.floor(total * atmosphericMultiplier);
         }
 
@@ -114,6 +118,11 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             const dailyValue = trackableItemValues[name] ?? 0;
             let total = calculateBuffTotal(daysUsed, dailyValue);
             if (atmosphericMultiplier !== 1 && total > 0) {
+                // NOTE: floors per-row here, while RewardCalculator.js floors the aggregate
+                // month-end total (across all rows, buffs and trackable items combined).
+                // With a fractional multiplier these can diverge from the displayed total —
+                // a deliberately deferred balance decision, not a bug. See
+                // RewardCalculator.calculateAtmosphericBuffRewards().
                 total = Math.floor(total * atmosphericMultiplier);
             }
             buffViewModels.push({
