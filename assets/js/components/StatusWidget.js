@@ -99,8 +99,8 @@ function renderCollapsedState(button, charData) {
     button.innerHTML = `
         <span class="status-widget__level-badge">Lv ${charData.level}</span>
         <span class="status-widget__currency-icons">
-            <span class="status-widget__icon" title="Ink Drops">💧 ${charData.inkDrops}</span>
-            <span class="status-widget__icon" title="Paper Scraps">📄 ${charData.paperScraps}</span>
+            <span class="status-widget__icon${charData.inkDrops < 0 ? ' currency-negative' : ''}" title="Ink Drops">💧 ${charData.inkDrops}</span>
+            <span class="status-widget__icon${charData.paperScraps < 0 ? ' currency-negative' : ''}" title="Paper Scraps">📄 ${charData.paperScraps}</span>
             <span class="status-widget__icon" title="Dusty Blueprints">📜 ${charData.dustyBlueprints}</span>
             <span class="status-widget__icon" title="SMP">🎓 ${charData.smp}</span>
         </span>
@@ -144,12 +144,12 @@ function renderExpandedState(panel, charData) {
                 <div class="status-widget__currency">
                     <span class="status-widget__currency-icon">💧</span>
                     <span class="status-widget__currency-label">Ink Drops</span>
-                    <span class="status-widget__currency-value">${charData.inkDrops}</span>
+                    <span class="status-widget__currency-value${charData.inkDrops < 0 ? ' currency-negative' : ''}">${charData.inkDrops}</span>
                 </div>
                 <div class="status-widget__currency">
                     <span class="status-widget__currency-icon">📄</span>
                     <span class="status-widget__currency-label">Paper Scraps</span>
-                    <span class="status-widget__currency-value">${charData.paperScraps}</span>
+                    <span class="status-widget__currency-value${charData.paperScraps < 0 ? ' currency-negative' : ''}">${charData.paperScraps}</span>
                 </div>
                 <div class="status-widget__currency">
                     <span class="status-widget__currency-icon">📜</span>

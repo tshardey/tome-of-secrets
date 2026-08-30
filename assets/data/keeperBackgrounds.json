@@ -102,7 +102,7 @@
     "groveTender": {
         "name": "The Grove Tender",
         "description": "You tended one of the last living gardens, cultivating stories from seeds and roots. You understand the natural, creeping decay of the Shroud and how life persists.",
-        "benefit": "Your connection to the natural world is constant. You always have The Soaking in Nature atmospheric buff active, earning +1 Ink Drop per day you read (or +2 Ink Drops per day if you chose The Verdant Athenaeum as your sanctum).",
+        "benefit": "Your connection to the natural world is constant. You always have The Soaking in Nature atmospheric buff active, earning +2 Paper Scraps per day you read (or +3 Paper Scraps per day if you chose The Verdant Athenaeum as your sanctum).",
         "effects": [
             {
                 "trigger": "ON_MONTH_START",

@@ -5,19 +5,20 @@
 import * as data from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { EffectRegistry } from './EffectRegistry.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 
 /**
  * Calculate daily value for an atmospheric buff
  * @param {string} buffName - Name of the atmospheric buff
  * @param {Array<string>} associatedBuffs - Array of buff names associated with the current sanctum
- * @returns {number} Daily value (1 or 2)
+ * @returns {number} Daily value (GAME_CONFIG.atmospheric.baseValue, or sanctumBonus when associated)
  */
 export function calculateDailyValue(buffName, associatedBuffs = []) {
     const buff = data.getAtmosphericBuff(buffName);
     const key = buff?.id || buffName;
     return (associatedBuffs.includes(key) || associatedBuffs.includes(buff?.name) || associatedBuffs.includes(buffName))
-        ? 2
-        : 1;
+        ? GAME_CONFIG.atmospheric.sanctumBonus
+        : GAME_CONFIG.atmospheric.baseValue;
 }
 
 /**
@@ -41,13 +42,54 @@ export function isGroveTenderBuff(buffName, background) {
 }
 
 /**
- * Calculate total ink drops for an atmospheric buff
- * @param {number} daysUsed - Number of days the buff was used
- * @param {number} dailyValue - Daily value (1 or 2)
- * @returns {number} Total ink drops
+ * Calculate the total reward for an atmospheric buff.
+ * Currency-agnostic: the resource is GAME_CONFIG.atmospheric.resource.
+ * @param {number} daysUsed
+ * @param {number} dailyValue
+ * @returns {number}
  */
-export function calculateTotalInkDrops(daysUsed, dailyValue) {
+export function calculateBuffTotal(daysUsed, dailyValue) {
     return daysUsed * dailyValue;
+}
+
+/**
+ * Get the atmospheric buff multiplier from equipped/displayed items (e.g. Tome-Bound Cat).
+ * Reads atmosphericBuffMultiplier when item is equipped, passiveAtmosphericMultiplier when adopted (passive slot).
+ * Equipped takes precedence if the same item could appear in both.
+ * @param {Object} state - Character state object
+ * @returns {{ multiplier: number, modifierItemName: string|null }} Multiplier to apply (1 if none) and name of item providing it (for modifier row)
+ */
+export function getAtmosphericBuffMultiplier(state) {
+    let multiplier = 1;
+    let modifierItemName = null;
+    const allItems = data.allItems || {};
+
+    const checkSlot = (itemName, isEquipped) => {
+        const itemData = allItems[itemName];
+        if (!itemData?.atmosphericReward) return;
+        const value = isEquipped
+            ? itemData.atmosphericBuffMultiplier
+            : itemData.passiveAtmosphericMultiplier;
+        if (typeof value === 'number' && value > 0 && value !== 1) {
+            multiplier = value;
+            modifierItemName = itemName;
+        }
+    };
+
+    const equipped = state?.[STORAGE_KEYS.EQUIPPED_ITEMS];
+    if (Array.isArray(equipped)) {
+        equipped.forEach((item) => { checkSlot(item?.name, true); });
+    }
+    if (modifierItemName) return { multiplier, modifierItemName };
+
+    const passiveItems = state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
+    passiveItems.forEach((slot) => { checkSlot(slot?.itemName, false); });
+    if (modifierItemName) return { multiplier, modifierItemName };
+
+    const passiveFamiliars = state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
+    passiveFamiliars.forEach((slot) => { checkSlot(slot?.itemName, false); });
+
+    return { multiplier, modifierItemName };
 }
 
 /**
@@ -116,3 +158,39 @@ export function shouldExcludeFromQuestBonuses(itemData) {
     return bonus.includes('atmospheric') || passiveBonus.includes('atmospheric');
 }
 
+/**
+ * Per-day reward value for each equipped or displayed trackable atmospheric item
+ * (Gilded Painting, Garden Gnome, Mystical Moth).
+ *
+ * Equipped items use `rewardModifier`, display/adoption slots use `passiveRewardModifier`,
+ * both keyed by GAME_CONFIG.atmospheric.resource. Equipped wins when an item appears in both.
+ *
+ * @param {Object} state - Character state object
+ * @param {Object} [dataModule]
+ * @returns {Object<string, number>} Map of item name to per-day value
+ */
+export function getTrackableAtmosphericItemValues(state, dataModule = data) {
+    const values = {};
+    const allItems = dataModule.allItems || {};
+    const resource = GAME_CONFIG.atmospheric.resource;
+
+    const add = (itemName, isEquipped) => {
+        if (!itemName || values[itemName] !== undefined) return;
+        const itemData = allItems[itemName];
+        if (!itemData?.atmosphericReward || !itemData?.atmosphericRewardTrackable) return;
+        const modifier = isEquipped ? itemData.rewardModifier : itemData.passiveRewardModifier;
+        const value = modifier?.[resource];
+        if (typeof value === 'number' && value > 0) {
+            values[itemName] = value;
+        }
+    };
+
+    const equipped = state?.[STORAGE_KEYS.EQUIPPED_ITEMS];
+    if (Array.isArray(equipped)) {
+        equipped.forEach((item) => { add(item?.name, true); });
+    }
+    (state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || []).forEach((slot) => { add(slot?.itemName, false); });
+    (state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || []).forEach((slot) => { add(slot?.itemName, false); });
+
+    return values;
+}

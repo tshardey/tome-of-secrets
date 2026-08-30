@@ -162,6 +162,28 @@ describe('Character Sheet', () => {
       expect(bonusList.innerHTML).toContain(permanentBonuses[6]);
       expect(bonusList.textContent).not.toContain('-- No bonuses unlocked at this level --');
     });
+
+    it('should clamp a negative Blueprints entry to zero', () => {
+      const blueprintsInput = document.getElementById('dustyBlueprints');
+
+      blueprintsInput.value = '-7';
+      blueprintsInput.dispatchEvent(new Event('change'));
+
+      expect(blueprintsInput.value).toBe('0');
+      expect(characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(0);
+      expect(safeGetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, null)).toBe(0);
+    });
+
+    it('should keep a positive Blueprints entry unchanged', () => {
+      const blueprintsInput = document.getElementById('dustyBlueprints');
+
+      blueprintsInput.value = '3';
+      blueprintsInput.dispatchEvent(new Event('change'));
+
+      expect(blueprintsInput.value).toBe('3');
+      expect(characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(3);
+      expect(safeGetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, null)).toBe(3);
+    });
   });
 
   describe('RPG-Styled Character Tab UI', () => {
@@ -1470,7 +1492,7 @@ describe('Character Sheet', () => {
       expect(highlightedBuffNames).toContain('The Excavation');
     });
 
-    it('should show daily buff value of 2 for highlighted buffs', () => {
+    it('should show daily buff value of 3 for highlighted buffs', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       librarySanctumSelect.value = 'The Spire of Whispers';
       librarySanctumSelect.dispatchEvent(new Event('change'));
@@ -1478,14 +1500,14 @@ describe('Character Sheet', () => {
       const tbody = document.getElementById('atmospheric-buffs-body');
       const highlightedRows = tbody.querySelectorAll('tr.highlight');
 
-      // Check that all highlighted rows have a daily buff value of 2
+      // Check that all highlighted rows have a daily buff value of 3 (sanctum bonus)
       highlightedRows.forEach(row => {
         const dailyBuffValue = row.cells[1].textContent;
-        expect(dailyBuffValue).toBe('2');
+        expect(dailyBuffValue).toBe('3');
       });
     });
 
-    it('should show daily buff value of 1 for non-highlighted buffs', () => {
+    it('should show daily buff value of 2 for non-highlighted buffs', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       librarySanctumSelect.value = 'The Spire of Whispers';
       librarySanctumSelect.dispatchEvent(new Event('change'));
@@ -1493,10 +1515,10 @@ describe('Character Sheet', () => {
       const tbody = document.getElementById('atmospheric-buffs-body');
       const nonHighlightedRows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('highlight'));
 
-      // Check that all non-highlighted rows have a daily buff value of 1
+      // Check that all non-highlighted rows have a daily buff value of 2 (base value)
       nonHighlightedRows.forEach(row => {
         const dailyBuffValue = row.cells[1].textContent;
-        expect(dailyBuffValue).toBe('1');
+        expect(dailyBuffValue).toBe('2');
       });
     });
 
@@ -1506,16 +1528,16 @@ describe('Character Sheet', () => {
       librarySanctumSelect.dispatchEvent(new Event('change'));
 
       const tbody = document.getElementById('atmospheric-buffs-body');
-      
+
       // Find "The Herbalist's Nook" row (should be highlighted)
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const herbalistRow = rows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
 
-      // The daily buff value for highlighted buffs should be 2
-      expect(herbalistRow.cells[1].textContent).toBe('2');
+      // The daily buff value for highlighted buffs should be 3 (sanctum bonus)
+      expect(herbalistRow.cells[1].textContent).toBe('3');
 
-      // If we set days to 5, the monthly total calculation should use the multiplier of 2
-      // The rendered monthly total is initially 0 * 2 = 0
+      // If we set days to 5, the monthly total calculation should use the multiplier of 3
+      // The rendered monthly total is initially 0 * 3 = 0
       expect(herbalistRow.cells[4].textContent).toBe('0');
     });
 
@@ -1525,15 +1547,15 @@ describe('Character Sheet', () => {
       librarySanctumSelect.dispatchEvent(new Event('change'));
 
       const tbody = document.getElementById('atmospheric-buffs-body');
-      
+
       // Find "The Candlight Study" row (should NOT be highlighted for Verdant Athenaeum)
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const candlightRow = rows.find(row => row.cells[0].textContent === 'The Candlight Study');
 
-      // The daily buff value for non-highlighted buffs should be 1
-      expect(candlightRow.cells[1].textContent).toBe('1');
+      // The daily buff value for non-highlighted buffs should be 2 (base value)
+      expect(candlightRow.cells[1].textContent).toBe('2');
 
-      // The rendered monthly total is initially 0 * 1 = 0
+      // The rendered monthly total is initially 0 * 2 = 0
       expect(candlightRow.cells[4].textContent).toBe('0');
     });
 
@@ -1598,26 +1620,26 @@ describe('Character Sheet', () => {
       expect(highlightedRows.length).toBe(0);
     });
 
-    it('should maintain daily buff value of 1 when sanctum is deselected', () => {
+    it('should maintain daily buff value of 2 when sanctum is deselected', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       const tbody = document.getElementById('atmospheric-buffs-body');
 
-      // First select a sanctum to get daily buff value of 2
+      // First select a sanctum to get daily buff value of 3
       librarySanctumSelect.value = 'The Verdant Athenaeum';
       librarySanctumSelect.dispatchEvent(new Event('change'));
 
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const herbalistRow = rows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
-      expect(herbalistRow.cells[1].textContent).toBe('2');
+      expect(herbalistRow.cells[1].textContent).toBe('3');
 
       // Deselect sanctum
       librarySanctumSelect.value = '';
       librarySanctumSelect.dispatchEvent(new Event('change'));
 
-      // Check that daily buff value returns to 1
+      // Check that daily buff value returns to 2 (base value)
       const updatedRows = Array.from(tbody.querySelectorAll('tr'));
       const updatedHerbalistRow = updatedRows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
-      expect(updatedHerbalistRow.cells[1].textContent).toBe('1');
+      expect(updatedHerbalistRow.cells[1].textContent).toBe('2');
     });
 
     it('should correctly highlight all three buffs for each sanctum', () => {
@@ -1658,10 +1680,10 @@ describe('Character Sheet', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       const tbody = document.getElementById('atmospheric-buffs-body');
 
-      // Initially without sanctum, The Soundscape Spire should have daily buff of 1
+      // Initially without sanctum, The Soundscape Spire should have daily buff of 2 (base value)
       let rows = Array.from(tbody.querySelectorAll('tr'));
       let soundscapeRow = rows.find(row => row.cells[0].textContent === 'The Soundscape Spire');
-      expect(soundscapeRow.cells[1].textContent).toBe('1');
+      expect(soundscapeRow.cells[1].textContent).toBe('2');
 
       // Select a sanctum that includes Soundscape Spire
       librarySanctumSelect.value = 'The Verdant Athenaeum';
@@ -1670,10 +1692,10 @@ describe('Character Sheet', () => {
       // Find the row again after re-render
       rows = Array.from(tbody.querySelectorAll('tr'));
       soundscapeRow = rows.find(row => row.cells[0].textContent === 'The Soundscape Spire');
-      
-      // Daily buff value should now be 2 for the associated buff
-      expect(soundscapeRow.cells[1].textContent).toBe('2');
-      
+
+      // Daily buff value should now be 3 (sanctum bonus) for the associated buff
+      expect(soundscapeRow.cells[1].textContent).toBe('3');
+
       // And the row should be highlighted
       expect(soundscapeRow.classList.contains('highlight')).toBe(true);
     });
@@ -1692,8 +1714,10 @@ describe('Character Sheet', () => {
       // Get initial values
       const xpInput = document.getElementById('xp-current');
       const inkDropsInput = document.getElementById('inkDrops');
+      const paperScrapsInput = document.getElementById('paperScraps');
       const initialXP = parseInt(xpInput.value, 10) || 0;
       const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
 
       // Click End of Month button
       const endOfMonthButton = document.querySelector('.end-of-month-button');
@@ -1703,15 +1727,51 @@ describe('Character Sheet', () => {
       const finalXP = parseInt(xpInput.value, 10) || 0;
       expect(finalXP).toBe(initialXP);
 
-      // Verify ink drops were added (10 days * 1 ink drop per day = 10 ink drops)
+      // Verify paper scraps were added (10 days * 2 paper scraps per day = 20 paper scraps)
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      expect(finalPaperScraps).toBe(initialPaperScraps + 20);
+
+      // Atmospheric buffs must never pay Ink Drops (R2)
       const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      expect(finalInkDrops).toBe(initialInkDrops + 10);
+      expect(finalInkDrops).toBe(initialInkDrops);
 
       // Verify books completed counter was reset
       expect(parseInt(booksCompletedInput.value, 10)).toBe(0);
 
       // Verify atmospheric buff days were reset
       expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
+    });
+
+    it('should apply the Tome-Bound Cat multiplier to a trackable item and a regular buff at end of month', () => {
+      // Regression guard for R3a/R3b: EndOfMonthController.js is the only production
+      // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real multiplier
+      // and trackableItemValues. Equip Garden Gnome (trackable, 2 Paper Scraps/day) and
+      // Tome-Bound Cat (x2 atmospheric multiplier when equipped).
+      const { characterState } = require('../assets/js/character-sheet/state.js');
+      characterState.equippedItems = [
+        { name: 'Garden Gnome' },
+        { name: 'Tome-Bound Cat' }
+      ];
+      characterState.atmosphericBuffs = {
+        'The Candlight Study': { daysUsed: 10, isActive: true },
+        'Garden Gnome': { daysUsed: 5, isActive: false }
+      };
+
+      const inkDropsInput = document.getElementById('inkDrops');
+      const paperScrapsInput = document.getElementById('paperScraps');
+      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+
+      const endOfMonthButton = document.querySelector('.end-of-month-button');
+      endOfMonthButton.click();
+
+      // ((10 days x 2 base) + (5 days x 2 from item)) x 2 (Tome-Bound Cat) = 60
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      expect(finalPaperScraps).toBe(initialPaperScraps + 60);
+
+      // Atmospheric buffs must never pay Ink Drops (R2).
+      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      expect(finalInkDrops).toBe(initialInkDrops);
     });
   });
 
@@ -2761,24 +2821,24 @@ describe('Character Sheet', () => {
 
     it('should only process active atmospheric buffs at end of month', () => {
       const { characterState } = require('../assets/js/character-sheet/state.js');
-      const inkDropsInput = document.getElementById('inkDrops');
-      
+      const paperScrapsInput = document.getElementById('paperScraps');
+
       // Set up mixed active/inactive buffs
       characterState.atmosphericBuffs = {
         'The Candlight Study': { daysUsed: 10, isActive: true },
         'The Herbalist\'s Nook': { daysUsed: 5, isActive: false }, // Not active
         'The Cozy Hearth': { daysUsed: 8, isActive: true }
       };
-      
-      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      
+
+      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+
       // Click End of Month
       const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
-      
-      // Should only get ink drops from active buffs: 10 + 8 = 18
-      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      expect(finalInkDrops).toBe(initialInkDrops + 18);
+
+      // Should only get paper scraps from active buffs: (10 + 8) × 2 = 36
+      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      expect(finalPaperScraps).toBe(initialPaperScraps + 36);
     });
   });
 

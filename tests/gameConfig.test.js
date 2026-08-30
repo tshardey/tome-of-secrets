@@ -63,8 +63,9 @@ describe('Game Configuration', () => {
 
   it('should have atmospheric configuration', () => {
     expect(GAME_CONFIG.atmospheric).toBeDefined();
-    expect(GAME_CONFIG.atmospheric.baseValue).toBe(1);
-    expect(GAME_CONFIG.atmospheric.sanctumBonus).toBe(2);
+    expect(GAME_CONFIG.atmospheric.resource).toBe('paperScraps');
+    expect(GAME_CONFIG.atmospheric.baseValue).toBe(2);
+    expect(GAME_CONFIG.atmospheric.sanctumBonus).toBe(3);
   });
 });
 

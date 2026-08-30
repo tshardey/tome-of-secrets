@@ -17,6 +17,7 @@ import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
 import { EffectRegistry } from '../services/EffectRegistry.js';
 import { buildEffectContext } from '../services/effectContext.js';
+import { getAtmosphericBuffMultiplier, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -86,11 +87,15 @@ export class EndOfMonthController extends BaseController {
                 })
             );
 
+            const { multiplier, modifierItemName } = getAtmosphericBuffMultiplier(stateAdapter.state);
+            const trackableItemValues = getTrackableAtmosphericItemValues(stateAdapter.state);
+
             // Calculate atmospheric buff rewards using RewardCalculator
             const atmosphericRewards = RewardCalculator.calculateAtmosphericBuffRewards(
                 atmosphericBuffs,
                 associatedBuffs,
-                forcedBuffNames
+                forcedBuffNames,
+                { multiplier, multiplierSource: modifierItemName, trackableItemValues }
             );
 
             // Reset atmospheric buffs (re-activate pipeline-forced buffs after reset)
@@ -106,7 +111,7 @@ export class EndOfMonthController extends BaseController {
                 stateAdapter.setAtmosphericBuffActive(buffKey, true);
             }
 
-            // Apply atmospheric buff ink drops
+            // Apply atmospheric buff paper scraps
             updateCurrency(atmosphericRewards);
 
             // Book completion XP is now awarded when marking a book complete in the Library (not at end of month).

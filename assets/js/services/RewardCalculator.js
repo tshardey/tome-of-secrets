@@ -843,29 +843,31 @@ export class RewardCalculator {
     }
 
     /**
-     * Calculate atmospheric buff ink drop rewards for end of month
+     * Calculate atmospheric buff paper scrap rewards for end of month
      * Formula: Sum of (daysUsed × dailyValue) for each active buff
-     * - Associated buffs (from selected sanctum): dailyValue = 2
-     * - Other buffs: dailyValue = 1
-     * 
+     * - Associated buffs (from selected sanctum): dailyValue = GAME_CONFIG.atmospheric.sanctumBonus
+     * - Other buffs: dailyValue = GAME_CONFIG.atmospheric.baseValue
+     *
      * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
-     * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM ink (e.g. Grove Tender pipeline)
-     * @returns {Reward} Reward with ink drops only
+     * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM reward (e.g. Grove Tender pipeline)
+     * @returns {Reward} Reward with paper scraps only
      */
     static calculateAtmosphericBuffRewards(
         atmosphericBuffs = {},
         associatedBuffs = [],
-        forcedActiveBuffNames = []
+        forcedActiveBuffNames = [],
+        options = {}
     ) {
-        let totalInkDrops = 0;
+        const { multiplier = 1, multiplierSource = null, trackableItemValues = {} } = options;
+        let total = 0;
         const processedBuffs = [];
-        const reward = new Reward({ 
-            xp: 0, 
-            inkDrops: 0, 
-            paperScraps: 0, 
+        const reward = new Reward({
+            xp: 0,
+            inkDrops: 0,
+            paperScraps: 0,
             items: [],
-            modifiedBy: [] 
+            modifiedBy: []
         });
         const forcedActive = new Set();
         if (Array.isArray(forcedActiveBuffNames)) {
@@ -883,32 +885,60 @@ export class RewardCalculator {
 
         for (const buffName in atmosphericBuffs) {
             const buff = atmosphericBuffs[buffName];
-            const countsForInk =
-                buff.daysUsed > 0 && (buff.isActive === true || forcedActive.has(buffName));
-            if (countsForInk) {
+            const trackableValue = trackableItemValues[buffName];
+            const isTrackableItem = typeof trackableValue === 'number';
+            const countsForReward =
+                buff.daysUsed > 0 &&
+                (isTrackableItem || buff.isActive === true || forcedActive.has(buffName));
+            if (!countsForReward) continue;
+
+            let dailyValue;
+            let descriptionSuffix;
+            if (isTrackableItem) {
+                // Equipped/displayed atmospheric items are always active; their per-day
+                // value comes from the item, not the sanctum table.
+                dailyValue = trackableValue;
+                descriptionSuffix = ' (from item)';
+            } else {
                 const buffId = data.getAtmosphericBuff(buffName)?.id || buffName;
                 const isAssociated = associatedSet.has(buffId);
-                const dailyValue = isAssociated ? GAME_CONFIG.atmospheric.sanctumBonus : GAME_CONFIG.atmospheric.baseValue;
-                const buffTotal = buff.daysUsed * dailyValue;
-                totalInkDrops += buffTotal;
-                
-                if (buffTotal > 0) {
-                    processedBuffs.push(buffName);
-                    reward.receipt.modifiers.push({
-                        source: buffName,
-                        type: 'atmospheric',
-                        value: buffTotal,
-                        description: `${buff.daysUsed} days × ${dailyValue} Ink Drops${isAssociated ? ' (Sanctum bonus)' : ''}`,
-                        currency: 'inkDrops'
-                    });
-                }
+                dailyValue = isAssociated
+                    ? GAME_CONFIG.atmospheric.sanctumBonus
+                    : GAME_CONFIG.atmospheric.baseValue;
+                descriptionSuffix = isAssociated ? ' (Sanctum bonus)' : '';
+            }
+
+            const buffTotal = buff.daysUsed * dailyValue;
+            total += buffTotal;
+
+            if (buffTotal > 0) {
+                processedBuffs.push(buffName);
+                reward.receipt.modifiers.push({
+                    source: buffName,
+                    type: 'atmospheric',
+                    value: buffTotal,
+                    description: `${buff.daysUsed} days × ${dailyValue} Paper Scraps${descriptionSuffix}`,
+                    currency: GAME_CONFIG.atmospheric.resource
+                });
             }
         }
 
-        reward.inkDrops = totalInkDrops;
+        if (multiplier !== 1 && total > 0) {
+            const beforeMultiplier = total;
+            total = Math.floor(total * multiplier);
+            reward.receipt.modifiers.push({
+                source: multiplierSource || 'Atmospheric multiplier',
+                type: 'atmospheric-multiplier',
+                value: total - beforeMultiplier,
+                description: `x${multiplier} to atmospheric buff total`,
+                currency: GAME_CONFIG.atmospheric.resource
+            });
+        }
+
+        reward.paperScraps = total;
         reward.modifiedBy = processedBuffs;
-        reward.receipt.base.inkDrops = 0; // No base, all from modifiers
-        reward.receipt.final.inkDrops = totalInkDrops;
+        reward.receipt.base.paperScraps = 0; // No base, all from modifiers
+        reward.receipt.final.paperScraps = total;
 
         return reward;
     }

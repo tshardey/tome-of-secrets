@@ -53,7 +53,6 @@ There are three primary currencies that define your progress, plus a fourth for 
     **Earn Ink Drops by:**
     *  Completing any book (base of 10 *Ink Drops*)
     *  Completing an *Organize the Stacks* quest (+10 *Ink Drops*)
-    *  Triggering *Atmospheric Buffs*
     *  Completing *Side Quests*
     *  Coming across *Friendly Creatures* in a *Dungeon Room*
 * **Paper Scraps:** Earned from specific quests and activities, such as journaling about a book or your adventures in the library. Use them, in conjunction with Ink Drops, to "create" a new book to add to your collection.
@@ -62,6 +61,7 @@ There are three primary currencies that define your progress, plus a fourth for 
     *  Reading books outside of your quest pool (+10 *Paper Scraps*)
     *  Completing adventure journal entries (+5 *Paper Scraps*)
     *  Taming a *Familiar* in a *Dungeon Room* (+5 *Paper Scraps*)
+    *  Triggering *Atmospheric Buffs* (+2 *Paper Scraps* per day, or +3 per day if the buff matches your Sanctum)
 
 *Note: See the [Shopping Episode]({{ site.baseurl }}/shopping.html) section for more details on creating books.*
 

@@ -94,29 +94,30 @@ import {
     calculateDailyValue,
     isGroveTenderBuff,
     isForcedAtmosphericBuff,
-    calculateTotalInkDrops,
+    calculateBuffTotal,
     getAssociatedBuffs,
     getBuffState,
-    shouldExcludeFromQuestBonuses
+    shouldExcludeFromQuestBonuses,
+    getTrackableAtmosphericItemValues
 } from '../../assets/js/services/AtmosphericBuffService.js';
 import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';
 
 describe('AtmosphericBuffService', () => {
 
     describe('calculateDailyValue', () => {
-        test('should return 1 for non-associated buff', () => {
+        test('should return base value for non-associated buff', () => {
             const value = calculateDailyValue('Buff1', []);
-            expect(value).toBe(1);
-        });
-
-        test('should return 2 for associated buff', () => {
-            const value = calculateDailyValue('Buff1', ['Buff1', 'Buff2']);
             expect(value).toBe(2);
         });
 
-        test('should return 1 when associatedBuffs is undefined', () => {
+        test('should return sanctum bonus for associated buff', () => {
+            const value = calculateDailyValue('Buff1', ['Buff1', 'Buff2']);
+            expect(value).toBe(3);
+        });
+
+        test('should return base value when associatedBuffs is undefined', () => {
             const value = calculateDailyValue('Buff1', undefined);
-            expect(value).toBe(1);
+            expect(value).toBe(2);
         });
     });
 
@@ -145,11 +146,11 @@ describe('AtmosphericBuffService', () => {
         });
     });
 
-    describe('calculateTotalInkDrops', () => {
+    describe('calculateBuffTotal', () => {
         test('should calculate total correctly', () => {
-            expect(calculateTotalInkDrops(5, 1)).toBe(5);
-            expect(calculateTotalInkDrops(3, 2)).toBe(6);
-            expect(calculateTotalInkDrops(0, 2)).toBe(0);
+            expect(calculateBuffTotal(5, 1)).toBe(5);
+            expect(calculateBuffTotal(3, 2)).toBe(6);
+            expect(calculateBuffTotal(0, 2)).toBe(0);
         });
     });
 
@@ -297,6 +298,72 @@ describe('AtmosphericBuffService', () => {
                 bonus: 'Atmospheric buff bonus'
             };
             expect(shouldExcludeFromQuestBonuses(itemData)).toBe(false);
+        });
+    });
+
+    describe('getTrackableAtmosphericItemValues', () => {
+        const dataModule = {
+            allItems: {
+                'Garden Gnome': {
+                    atmosphericReward: true,
+                    atmosphericRewardTrackable: true,
+                    rewardModifier: { paperScraps: 2 },
+                    passiveRewardModifier: { paperScraps: 1 }
+                },
+                'Mystical Moth': {
+                    atmosphericReward: true,
+                    atmosphericRewardTrackable: true,
+                    rewardModifier: { paperScraps: 2 },
+                    passiveRewardModifier: { paperScraps: 1 }
+                },
+                'Tome-Bound Cat': {
+                    atmosphericReward: true,
+                    atmosphericBuffMultiplier: 2
+                    // Not atmosphericRewardTrackable: modifier item, not a trackable item
+                }
+            }
+        };
+
+        test('equipped item present in both equipped and a passive slot resolves to its equipped value', () => {
+            const state = {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Garden Gnome' }],
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [{ itemName: 'Garden Gnome' }]
+            };
+
+            const values = getTrackableAtmosphericItemValues(state, dataModule);
+
+            expect(values['Garden Gnome']).toBe(2);
+        });
+
+        test('item only in a passive item slot resolves to its passive value', () => {
+            const state = {
+                [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [{ itemName: 'Garden Gnome' }]
+            };
+
+            const values = getTrackableAtmosphericItemValues(state, dataModule);
+
+            expect(values['Garden Gnome']).toBe(1);
+        });
+
+        test('item only in a passive familiar slot resolves to its passive value', () => {
+            const state = {
+                [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [{ itemName: 'Mystical Moth' }]
+            };
+
+            const values = getTrackableAtmosphericItemValues(state, dataModule);
+
+            expect(values['Mystical Moth']).toBe(1);
+        });
+
+        test('item with atmosphericReward but without atmosphericRewardTrackable is absent from the map', () => {
+            const state = {
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Tome-Bound Cat' }]
+            };
+
+            const values = getTrackableAtmosphericItemValues(state, dataModule);
+
+            expect(values).not.toHaveProperty('Tome-Bound Cat');
+            expect(values).toEqual({});
         });
     });
 });

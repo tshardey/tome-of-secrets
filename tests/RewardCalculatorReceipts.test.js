@@ -107,8 +107,9 @@ describe('RewardCalculator Receipt System', () => {
             expect(receipt.modifiers[0].source).toBe("Gilded Painting");
             expect(receipt.modifiers[0].type).toBe('item');
             expect(receipt.modifiers[0].value).toBe(2);
-            expect(receipt.modifiers[0].currency).toBe('inkDrops');
-            expect(receipt.final.inkDrops).toBe(12); // 10 base + 2 modifier
+            expect(receipt.modifiers[0].currency).toBe('paperScraps');
+            expect(receipt.final.paperScraps).toBe(2); // 0 base + 2 modifier
+            expect(receipt.final.inkDrops).toBe(10); // unaffected by Gilded Painting (paper-only, R1)
         });
 
         test('should track multiple modifiers in receipt', () => {
@@ -125,7 +126,8 @@ describe('RewardCalculator Receipt System', () => {
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers).toHaveLength(2);
-            expect(receipt.final.inkDrops).toBe(36); // (10 + 2) * 3
+            expect(receipt.final.inkDrops).toBe(30); // 10 × 3 (Gilded Painting now adds Paper Scraps, not Ink Drops)
+            expect(receipt.final.paperScraps).toBe(2); // 2 from Gilded Painting (unaffected by ink multiplier)
         });
 
         test('should track multiplier modifiers correctly', () => {
@@ -234,7 +236,8 @@ describe('RewardCalculator Receipt System', () => {
 
             expect(receipt.modifiers).toHaveLength(1);
             expect(receipt.modifiers[0].value).toBe(1); // Passive bonus (half of 2)
-            expect(receipt.final.inkDrops).toBe(11); // 10 base + 1 passive
+            expect(receipt.final.paperScraps).toBe(1); // 0 base + 1 passive
+            expect(receipt.final.inkDrops).toBe(10); // unaffected by Gilded Painting (paper-only, R1)
         });
 
         test('should prioritize active modifier when item is both equipped and in passive slot', () => {
@@ -251,7 +254,8 @@ describe('RewardCalculator Receipt System', () => {
             const receipt = modified.getReceipt();
 
             expect(receipt.modifiers[0].value).toBe(2); // Active bonus (not passive)
-            expect(receipt.final.inkDrops).toBe(12); // 10 base + 2 active
+            expect(receipt.final.paperScraps).toBe(2); // 0 base + 2 active
+            expect(receipt.final.inkDrops).toBe(10); // unaffected by Gilded Painting (paper-only, R1)
         });
     });
 
@@ -316,8 +320,8 @@ describe('RewardCalculator Receipt System', () => {
             const receipt = reward.getReceipt();
 
             expect(receipt.modifiers.length).toBe(2);
-            expect(receipt.final.inkDrops).toBe(11); // 5 × 1 + 3 × 2
-            
+            expect(receipt.final.paperScraps).toBe(19); // 5 × 2 + 3 × 3
+
             const nookModifier = receipt.modifiers.find(m => m.source === 'The Herbalist\'s Nook');
             expect(nookModifier.description).toContain('Sanctum bonus');
         });
@@ -352,7 +356,8 @@ describe('RewardCalculator Receipt System', () => {
             // Verify step-by-step
             expect(modified.receipt.base.inkDrops).toBe(10);
             expect(modified.receipt.modifiers[0].value).toBe(2);
-            expect(modified.receipt.final.inkDrops).toBe(12);
+            expect(modified.receipt.final.inkDrops).toBe(10);
+            expect(modified.receipt.final.paperScraps).toBe(2);
         });
 
         test('receipt should handle zero values correctly', () => {

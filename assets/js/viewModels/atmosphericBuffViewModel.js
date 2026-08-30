@@ -10,50 +10,12 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import {
     calculateDailyValue,
     isForcedAtmosphericBuff,
-    calculateTotalInkDrops,
+    calculateBuffTotal,
     getAssociatedBuffs,
-    getBuffState
+    getBuffState,
+    getAtmosphericBuffMultiplier,
+    getTrackableAtmosphericItemValues
 } from '../services/AtmosphericBuffService.js';
-
-/**
- * Get the atmospheric buff multiplier from equipped/displayed items (e.g. Tome-Bound Cat).
- * Reads atmosphericBuffMultiplier when item is equipped, passiveAtmosphericMultiplier when adopted (passive slot).
- * Equipped takes precedence if the same item could appear in both.
- * @param {Object} state - Character state object
- * @returns {{ multiplier: number, modifierItemName: string|null }} Multiplier to apply (1 if none) and name of item providing it (for modifier row)
- */
-function getAtmosphericBuffMultiplier(state) {
-    let multiplier = 1;
-    let modifierItemName = null;
-    const allItems = data.allItems || {};
-
-    const checkSlot = (itemName, isEquipped) => {
-        const itemData = allItems[itemName];
-        if (!itemData?.atmosphericReward) return;
-        const value = isEquipped
-            ? itemData.atmosphericBuffMultiplier
-            : itemData.passiveAtmosphericMultiplier;
-        if (typeof value === 'number' && value > 0 && value !== 1) {
-            multiplier = value;
-            modifierItemName = itemName;
-        }
-    };
-
-    const equipped = state?.[STORAGE_KEYS.EQUIPPED_ITEMS];
-    if (Array.isArray(equipped)) {
-        equipped.forEach((item) => { checkSlot(item?.name, true); });
-    }
-    if (modifierItemName) return { multiplier, modifierItemName };
-
-    const passiveItems = state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
-    passiveItems.forEach((slot) => { checkSlot(slot?.itemName, false); });
-    if (modifierItemName) return { multiplier, modifierItemName };
-
-    const passiveFamiliars = state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
-    passiveFamiliars.forEach((slot) => { checkSlot(slot?.itemName, false); });
-
-    return { multiplier, modifierItemName };
-}
 
 /**
  * Get item names that are equipped or in display (passive) slots and are atmospheric rewards.
@@ -94,6 +56,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
     const associatedBuffs = getAssociatedBuffs(selectedSanctum);
     const atmosphericBuffsState = state.atmosphericBuffs || {};
     const { multiplier: atmosphericMultiplier } = getAtmosphericBuffMultiplier(state);
+    const trackableItemValues = getTrackableAtmosphericItemValues(state);
 
     const buffViewModels = [];
 
@@ -118,8 +81,12 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         }
 
         // Calculate total; apply multiplier from item data (e.g. Tome-Bound Cat x2 equipped or x1.5 adopted)
-        let total = calculateTotalInkDrops(buffState.daysUsed, dailyValue);
+        let total = calculateBuffTotal(buffState.daysUsed, dailyValue);
         if (atmosphericMultiplier !== 1 && isActive && total > 0) {
+            // NOTE: floors per-row here, while RewardCalculator.js floors the aggregate
+            // month-end total. With a fractional multiplier (e.g. Tome-Bound Cat's x1.5)
+            // these can diverge from the displayed total — a deliberately deferred
+            // balance decision, not a bug. See RewardCalculator.calculateAtmosphericBuffRewards().
             total = Math.floor(total * atmosphericMultiplier);
         }
 
@@ -148,9 +115,14 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             // Always active when equipped/displayed (user wants to use the ability).
             const itemState = atmosphericBuffsState[name] || {};
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
-            const dailyValue = 1;
-            let total = calculateTotalInkDrops(daysUsed, dailyValue);
+            const dailyValue = trackableItemValues[name] ?? 0;
+            let total = calculateBuffTotal(daysUsed, dailyValue);
             if (atmosphericMultiplier !== 1 && total > 0) {
+                // NOTE: floors per-row here, while RewardCalculator.js floors the aggregate
+                // month-end total (across all rows, buffs and trackable items combined).
+                // With a fractional multiplier these can diverge from the displayed total —
+                // a deliberately deferred balance decision, not a bug. See
+                // RewardCalculator.calculateAtmosphericBuffRewards().
                 total = Math.floor(total * atmosphericMultiplier);
             }
             buffViewModels.push({
