@@ -146,5 +146,799 @@
                 "Tome of Potential"
             ]
         }
+    },
+    "9": {
+        "id": "side-quest-hagglers-row",
+        "name": "Haggler's Row",
+        "locale": "the-ninefold-bazaar",
+        "description": "The stallkeepers know your face by now, and not one of them will take full price from a Keeper.",
+        "prompt": "Read a book you borrowed — a library copy, a friend's shelf, an app hold, an interlibrary request.",
+        "reward": "Receive The Haggler's Ledger. +10 Dusty Blueprints.",
+        "hasLink": true,
+        "link": {
+            "text": "The Haggler's Ledger",
+            "url": "{{ site.baseurl }}/rewards.html#hagglers-ledger"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "blueprints": 10,
+            "items": [
+                "The Haggler's Ledger"
+            ]
+        },
+        "branchType": "choice",
+        "rollInstruction": null,
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "The Loan",
+                "prompt": "Read a book you borrowed — a library copy, a friend's shelf, an app hold, an interlibrary request.",
+                "reward": "Receive The Haggler's Ledger. +10 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 10,
+                    "items": [
+                        "The Haggler's Ledger"
+                    ]
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "The Second Hand",
+                "prompt": "Read a book you bought used — thrift store, used bookshop, library sale, a reseller.",
+                "reward": "Receive The Haggler's Ledger. +15 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 15,
+                    "items": [
+                        "The Haggler's Ledger"
+                    ]
+                }
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "The Gift",
+                "prompt": "Read a book you neither chose nor paid for — given to you, a Little Free Library find, a subscription box pick you'd never have bought. (Books that came with the house belong to the Lending Cart, not here.)",
+                "reward": "Receive The Haggler's Ledger. +20 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 20,
+                    "items": [
+                        "The Haggler's Ledger"
+                    ]
+                }
+            }
+        ],
+        "stake": {
+            "name": "Haggle",
+            "declareBefore": true,
+            "condition": "rating >= 4",
+            "onSuccess": {
+                "multiply": {
+                    "blueprints": 2
+                }
+            },
+            "onFailure": {
+                "blueprints": -10,
+                "floorAtZero": true
+            }
+        }
+    },
+    "10": {
+        "id": "side-quest-the-blind-stall",
+        "name": "The Blind Stall",
+        "locale": "the-ninefold-bazaar",
+        "description": "The merchant at the end of the ninth row sells her books wrapped in butcher's paper and string.",
+        "prompt": "Pick a book from its title only. No blurb, no cover, no reviews, no one's opinion. Commit before you look at anything else.",
+        "reward": "+40 XP, +10 Paper Scraps.",
+        "rewards": {
+            "xp": 40,
+            "inkDrops": 0,
+            "paperScraps": 10,
+            "blueprints": 0,
+            "items": []
+        },
+        "branchType": "roll",
+        "rollInstruction": "Roll a d6 to see which parcel she puts in your hands:",
+        "branches": [
+            {
+                "key": "1",
+                "roll": "1-2",
+                "name": "Sold by title alone",
+                "prompt": "Pick a book from its title only. No blurb, no cover, no reviews, no one's opinion. Commit before you look at anything else.",
+                "reward": "+40 XP, +10 Paper Scraps.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 10,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "3",
+                "roll": "3",
+                "name": "Sold by the spine",
+                "prompt": "Stand at a shelf — yours, a store's, a library's — and choose a book touching nothing but spines. No pulling it out to read the back first.",
+                "reward": "+45 XP, +15 Paper Scraps.",
+                "rewards": {
+                    "xp": 45,
+                    "inkDrops": 0,
+                    "paperScraps": 15,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "4",
+                "roll": "4-5",
+                "name": "Sold by the first line",
+                "prompt": "Read the opening sentence of a book and nothing else — not the blurb, not the cover copy, not the second sentence. Commit or walk away on that one line.",
+                "reward": "+50 XP, +10 Paper Scraps.",
+                "rewards": {
+                    "xp": 50,
+                    "inkDrops": 0,
+                    "paperScraps": 10,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "6",
+                "roll": "6",
+                "name": "Sold in a lot",
+                "prompt": "She won't split the bundle. Read two short works by the same author, or a book plus its companion novella.",
+                "reward": "+80 XP, +20 Paper Scraps.",
+                "rewards": {
+                    "xp": 80,
+                    "inkDrops": 0,
+                    "paperScraps": 20,
+                    "blueprints": 0,
+                    "items": []
+                }
+            }
+        ],
+        "stake": {
+            "name": "The wrapper's terms",
+            "declareBefore": true,
+            "condition": "finished",
+            "onSuccess": {
+                "blueprints": 15
+            },
+            "onFailure": {
+                "forfeit": [
+                    "xp"
+                ],
+                "floorAtZero": true
+            }
+        }
+    },
+    "11": {
+        "id": "side-quest-the-masked-procession",
+        "name": "The Masked Procession",
+        "locale": "the-festival-of-turning",
+        "description": "At the gate they hand you a mask and take your name for the evening. Until the lanterns burn out you are permitted to be someone you are not, and expected to try.",
+        "prompt": "Read in a genre you actively avoid or have simply never tried. Not a genre you read rarely — one you've decided isn't for you.",
+        "reward": "Receive The Reveler's Mask. +25 XP.",
+        "hasLink": true,
+        "link": {
+            "text": "The Reveler's Mask",
+            "url": "{{ site.baseurl }}/rewards.html#revelers-mask"
+        },
+        "rewards": {
+            "xp": 25,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "blueprints": 0,
+            "items": [
+                "The Reveler's Mask"
+            ]
+        },
+        "branchType": "choice",
+        "rollInstruction": null,
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "The Stranger's Face",
+                "prompt": "Read in a genre you actively avoid or have simply never tried. Not a genre you read rarely — one you've decided isn't for you.",
+                "reward": "Receive The Reveler's Mask. +25 XP.",
+                "rewards": {
+                    "xp": 25,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 0,
+                    "items": [
+                        "The Reveler's Mask"
+                    ]
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "The Other Life",
+                "prompt": "Read a book whose narrator's ordinary day has nothing in common with yours — different work, different body, different century, different belief about what a day is for.",
+                "reward": "Receive The Reveler's Mask. +20 XP, +5 Paper Scraps.",
+                "rewards": {
+                    "xp": 20,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "blueprints": 0,
+                    "items": [
+                        "The Reveler's Mask"
+                    ]
+                }
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "The Opposing Voice",
+                "prompt": "Read a book that argues for something you're inclined to disagree with — fiction or non-fiction — and log one thing it got right.",
+                "reward": "Receive The Reveler's Mask. +30 XP.",
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 0,
+                    "items": [
+                        "The Reveler's Mask"
+                    ]
+                }
+            }
+        ],
+        "stake": {
+            "name": "Unmasking",
+            "declareBefore": false,
+            "condition": "journal >= 3 sentences",
+            "onSuccess": {
+                "paperScraps": 10
+            },
+            "onFailure": {}
+        }
+    },
+    "12": {
+        "id": "side-quest-the-communal-table",
+        "name": "The Communal Table",
+        "locale": "the-festival-of-turning",
+        "description": "One table runs the length of the square, end to end. Nobody eats alone at the Festival of Turning — that is the entire body of festival law, and it is enforced by grandmothers.",
+        "prompt": "Buddy read: read a book at the same time as someone else and talk to them about it at least once before either of you finishes.",
+        "reward": "+60 XP, +20 Paper Scraps.",
+        "rewards": {
+            "xp": 60,
+            "inkDrops": 0,
+            "paperScraps": 20,
+            "blueprints": 0,
+            "items": []
+        },
+        "branchType": "choice",
+        "rollInstruction": "Choose your seat, or roll a d3 and let the table seat you:",
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "The shared plate",
+                "prompt": "Buddy read: read a book at the same time as someone else and talk to them about it at least once before either of you finishes.",
+                "reward": "+60 XP, +20 Paper Scraps.",
+                "rewards": {
+                    "xp": 60,
+                    "inkDrops": 0,
+                    "paperScraps": 20,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "The long meal",
+                "prompt": "Read a book aloud to someone, or be read to — a partner, a child, a friend on a call. Any length counts; a picture book counts.",
+                "reward": "+50 XP, +15 Paper Scraps.",
+                "rewards": {
+                    "xp": 50,
+                    "inkDrops": 0,
+                    "paperScraps": 15,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "The recipe",
+                "prompt": "Read a book with a meal at its center, then cook or make something that actually appears in it.",
+                "reward": "+40 XP, +10 Paper Scraps, +10 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 10,
+                    "blueprints": 10,
+                    "items": []
+                }
+            }
+        ],
+        "stake": {
+            "name": "Half a table",
+            "declareBefore": false,
+            "condition": "partner did not follow through",
+            "onSuccess": {},
+            "onFailure": {
+                "halve": [
+                    "xp"
+                ],
+                "floorAtZero": true
+            }
+        }
+    },
+    "13": {
+        "id": "side-quest-the-visiting-scholar",
+        "name": "The Visiting Scholar",
+        "locale": "the-exchange",
+        "description": "You are enrolled under a name nobody here can pronounce, in a hall where your expertise counts for nothing. Your first assignment is to stop being the most knowledgeable person in the room.",
+        "prompt": "Read a book translated into your language, and name the translator in your log. They wrote every word you actually read.",
+        "reward": "Receive the Visiting Scholar's Sigil. +20 XP.",
+        "hasLink": true,
+        "link": {
+            "text": "Visiting Scholar's Sigil",
+            "url": "{{ site.baseurl }}/rewards.html#visiting-scholars-sigil"
+        },
+        "rewards": {
+            "xp": 20,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "blueprints": 0,
+            "items": [
+                "Visiting Scholar's Sigil"
+            ]
+        },
+        "branchType": "choice",
+        "rollInstruction": null,
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "In translation",
+                "prompt": "Read a book translated into your language, and name the translator in your log. They wrote every word you actually read.",
+                "reward": "Receive the Visiting Scholar's Sigil. +20 XP.",
+                "rewards": {
+                    "xp": 20,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 0,
+                    "items": [
+                        "Visiting Scholar's Sigil"
+                    ]
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "Enrollment record",
+                "prompt": "Read a book by an author from a country you have never read a book from — and strike that country off the Exchange's register. Each country can be claimed once, ever.",
+                "reward": "Receive the Visiting Scholar's Sigil. +25 XP, +5 Paper Scraps.",
+                "rewards": {
+                    "xp": 25,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "blueprints": 0,
+                    "items": [
+                        "Visiting Scholar's Sigil"
+                    ]
+                },
+                "requiresCountry": true
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "The untranslated",
+                "prompt": "Read a book that leaves words from another language standing in the text — italicised terms, a glossary, an untranslated song, dialect the author refuses to gloss. Log three words you learned.",
+                "reward": "Receive the Visiting Scholar's Sigil. +20 XP, +10 Paper Scraps.",
+                "rewards": {
+                    "xp": 20,
+                    "inkDrops": 0,
+                    "paperScraps": 10,
+                    "blueprints": 0,
+                    "items": [
+                        "Visiting Scholar's Sigil"
+                    ]
+                }
+            }
+        ]
+    },
+    "14": {
+        "id": "side-quest-the-field-practicum",
+        "name": "The Field Practicum",
+        "locale": "the-exchange",
+        "description": "The Exchange grades on output, not on hours. Reading is the prerequisite for the coursework here, not the coursework itself.",
+        "prompt": "Read anything, then teach one idea out of it to another person, out loud, for five minutes. They're allowed to ask questions. You're not allowed to read from the book.",
+        "reward": "+80 XP, +15 Paper Scraps.",
+        "rewards": {
+            "xp": 80,
+            "inkDrops": 0,
+            "paperScraps": 15,
+            "blueprints": 0,
+            "items": []
+        },
+        "branchType": "roll",
+        "rollInstruction": "Roll a d4 for your assignment, or petition the registrar and choose:",
+        "branches": [
+            {
+                "key": "1",
+                "roll": "1",
+                "name": "The lecture",
+                "prompt": "Read anything, then teach one idea out of it to another person, out loud, for five minutes. They're allowed to ask questions. You're not allowed to read from the book.",
+                "reward": "+80 XP, +15 Paper Scraps.",
+                "rewards": {
+                    "xp": 80,
+                    "inkDrops": 0,
+                    "paperScraps": 15,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "2",
+                "roll": "2",
+                "name": "The practicum",
+                "prompt": "Read something and then do it — cook the dish, walk the route, try the craft, run the drill, plant the thing.",
+                "reward": "+70 XP, +20 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 70,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 20,
+                    "items": []
+                }
+            },
+            {
+                "key": "3",
+                "roll": "3",
+                "name": "The seminar",
+                "prompt": "Read two books that disagree about the same subject, and write a paragraph on exactly where they part ways.",
+                "reward": "+120 XP, +20 Paper Scraps.",
+                "rewards": {
+                    "xp": 120,
+                    "inkDrops": 0,
+                    "paperScraps": 20,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "4",
+                "roll": "4",
+                "name": "The primary source",
+                "prompt": "Read a diary, collected letters, an oral history, or first-hand testimony from someone who was there. Not memoir — the Philosophy Alcove already takes memoir. This is unshaped material: documents rather than a narrative built out of them.",
+                "reward": "+90 XP, +10 Paper Scraps.",
+                "rewards": {
+                    "xp": 90,
+                    "inkDrops": 0,
+                    "paperScraps": 10,
+                    "blueprints": 0,
+                    "items": []
+                }
+            }
+        ],
+        "stake": {
+            "name": "Credit transfer",
+            "declareBefore": false,
+            "condition": "assignment output logged as a journal entry",
+            "onSuccess": {
+                "countsAsJournalEntry": true
+            },
+            "onFailure": {}
+        }
+    },
+    "15": {
+        "id": "side-quest-the-crossroads-inn",
+        "name": "The Crossroads Inn",
+        "locale": "the-open-road",
+        "description": "Four roads, one hearth, and a house rule the innkeeper enforces with a broom: you eat what you're served and you read what you're handed.",
+        "prompt": "She asks what you usually drink, listens carefully, and pours something else. Ask a bookseller or librarian to pick for you — in person or by note — and read whatever they hand over.",
+        "reward": "Receive The Crossroads Fox. +20 XP.",
+        "hasLink": true,
+        "link": {
+            "text": "The Crossroads Fox",
+            "url": "{{ site.baseurl }}/rewards.html#crossroads-fox"
+        },
+        "rewards": {
+            "xp": 20,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "blueprints": 0,
+            "items": [
+                "The Crossroads Fox"
+            ]
+        },
+        "branchType": "choice",
+        "rollInstruction": null,
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "The Bartender",
+                "prompt": "She asks what you usually drink, listens carefully, and pours something else. Ask a bookseller or librarian to pick for you — in person or by note — and read whatever they hand over.",
+                "reward": "Receive The Crossroads Fox. +20 XP.",
+                "rewards": {
+                    "xp": 20,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 0,
+                    "items": [
+                        "The Crossroads Fox"
+                    ]
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "The Server",
+                "prompt": "He brings what the kitchen sent out; nobody consulted you. Read a book pressed on you by a stranger whose taste you have no reason to trust — a shelf card, a note left inside a used copy, a list you stumbled into.",
+                "reward": "Receive The Crossroads Fox. +20 XP, +5 Paper Scraps.",
+                "rewards": {
+                    "xp": 20,
+                    "inkDrops": 0,
+                    "paperScraps": 5,
+                    "blueprints": 0,
+                    "items": [
+                        "The Crossroads Fox"
+                    ]
+                }
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "The Regular",
+                "prompt": "Same stool, same story, every single time you come through. Read the book someone has recommended to you the most times and you have avoided the most successfully.",
+                "reward": "Receive The Crossroads Fox. +30 XP.",
+                "rewards": {
+                    "xp": 30,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 0,
+                    "items": [
+                        "The Crossroads Fox"
+                    ]
+                }
+            }
+        ]
+    },
+    "16": {
+        "id": "side-quest-the-short-crossing",
+        "name": "The Short Crossing",
+        "locale": "the-open-road",
+        "description": "The ferry runs the narrows in well under an hour. Whatever you brought needs to be finished before the far bank.",
+        "prompt": "A collection, a chapbook, or a novel in verse.",
+        "reward": "+40 XP, +25 Paper Scraps.",
+        "rewards": {
+            "xp": 40,
+            "inkDrops": 0,
+            "paperScraps": 25,
+            "blueprints": 0,
+            "items": []
+        },
+        "branchType": "roll",
+        "rollInstruction": "Roll a d4 for what's in your coat pocket:",
+        "branches": [
+            {
+                "key": "1",
+                "roll": "1",
+                "name": "Poetry",
+                "prompt": "A collection, a chapbook, or a novel in verse.",
+                "reward": "+40 XP, +25 Paper Scraps.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 25,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "2",
+                "roll": "2",
+                "name": "Illustrated",
+                "prompt": "A graphic novel, comic, manga, or an illustrated edition where the pictures are doing real work.",
+                "reward": "+40 XP, +20 Paper Scraps, +10 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 20,
+                    "blueprints": 10,
+                    "items": []
+                }
+            },
+            {
+                "key": "3",
+                "roll": "3",
+                "name": "Short form",
+                "prompt": "A short story collection, an essay collection, or a novella.",
+                "reward": "+50 XP, +20 Paper Scraps.",
+                "rewards": {
+                    "xp": 50,
+                    "inkDrops": 0,
+                    "paperScraps": 20,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "4",
+                "roll": "4",
+                "name": "Spoken",
+                "prompt": "A full-cast audiobook, or one read by the author.",
+                "reward": "+40 XP, +15 Paper Scraps, +10 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 15,
+                    "blueprints": 10,
+                    "items": []
+                }
+            }
+        ],
+        "stake": {
+            "name": "Crossing twice",
+            "declareBefore": false,
+            "condition": "two different rolls in the same month",
+            "onSuccess": {
+                "blueprints": 30
+            },
+            "onFailure": {}
+        }
+    },
+    "17": {
+        "id": "side-quest-the-lending-cart",
+        "name": "The Lending Cart",
+        "locale": "the-open-road",
+        "description": "A cart pulled between towns by a man who will not say where he got any of it. Every copy on it has somebody else's fingerprints somewhere in the pages.",
+        "prompt": "Read a copy that is physically damaged, ex-library, or heavily marked by a previous reader — and log one thing that reader left behind. A note, a receipt, a name, an underline you disagree with.",
+        "reward": "Receive The Mender's Thread. +25 Dusty Blueprints.",
+        "hasLink": true,
+        "link": {
+            "text": "The Mender's Thread",
+            "url": "{{ site.baseurl }}/rewards.html#menders-thread"
+        },
+        "rewards": {
+            "xp": 0,
+            "inkDrops": 0,
+            "paperScraps": 0,
+            "blueprints": 25,
+            "items": [
+                "The Mender's Thread"
+            ]
+        },
+        "branchType": "choice",
+        "rollInstruction": null,
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "The mender's fee",
+                "prompt": "Read a copy that is physically damaged, ex-library, or heavily marked by a previous reader — and log one thing that reader left behind. A note, a receipt, a name, an underline you disagree with.",
+                "reward": "Receive The Mender's Thread. +25 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 25,
+                    "items": [
+                        "The Mender's Thread"
+                    ]
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "The re-read",
+                "prompt": "Re-read a book you loved at least five years ago, and log one thing you noticed this time that you missed then. The previous reader is you.",
+                "reward": "Receive The Mender's Thread. +15 Dusty Blueprints, +10 Paper Scraps.",
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 10,
+                    "blueprints": 15,
+                    "items": [
+                        "The Mender's Thread"
+                    ]
+                }
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "The inheritance",
+                "prompt": "Read a book that came into your home attached to someone else — a partner's, a parent's, a housemate's, or one that was already on the shelf when you moved in.",
+                "reward": "Receive The Mender's Thread. +20 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 0,
+                    "inkDrops": 0,
+                    "paperScraps": 0,
+                    "blueprints": 20,
+                    "items": [
+                        "The Mender's Thread"
+                    ]
+                }
+            }
+        ]
+    },
+    "18": {
+        "id": "side-quest-the-relay-house",
+        "name": "The Relay House",
+        "locale": "the-open-road",
+        "description": "A staging post where letters wait for riders. The postmaster will carry absolutely anything, provided it is addressed to somebody.",
+        "prompt": "Read an epistolary novel, or a book told through documents, transcripts, case files, or found records.",
+        "reward": "+50 XP, +25 Paper Scraps.",
+        "rewards": {
+            "xp": 50,
+            "inkDrops": 0,
+            "paperScraps": 25,
+            "blueprints": 0,
+            "items": []
+        },
+        "branchType": "choice",
+        "rollInstruction": null,
+        "branches": [
+            {
+                "key": "A",
+                "roll": null,
+                "name": "Letters received",
+                "prompt": "Read an epistolary novel, or a book told through documents, transcripts, case files, or found records.",
+                "reward": "+50 XP, +25 Paper Scraps.",
+                "rewards": {
+                    "xp": 50,
+                    "inkDrops": 0,
+                    "paperScraps": 25,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "B",
+                "roll": null,
+                "name": "Letters sent",
+                "prompt": "Read anything, then write to someone about it — an actual letter, a long message, a review posted where strangers can read it.",
+                "reward": "+40 XP, +30 Paper Scraps.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 30,
+                    "blueprints": 0,
+                    "items": []
+                }
+            },
+            {
+                "key": "C",
+                "roll": null,
+                "name": "Letters left",
+                "prompt": "Read a book and leave something in it for whoever reads it next — an annotation, a pressed note, a copy handed on with a message tucked inside.",
+                "reward": "+40 XP, +25 Paper Scraps, +10 Dusty Blueprints.",
+                "rewards": {
+                    "xp": 40,
+                    "inkDrops": 0,
+                    "paperScraps": 25,
+                    "blueprints": 10,
+                    "items": []
+                }
+            }
+        ],
+        "stake": {
+            "name": "Franking",
+            "declareBefore": false,
+            "condition": "the letter gets an answer",
+            "onSuccess": {
+                "xp": 20
+            },
+            "onFailure": {}
+        }
     }
 }

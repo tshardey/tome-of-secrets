@@ -81,3 +81,67 @@ describe('branch-aware side quest rewards', () => {
         expect(reward.xp).toBe(10);
     });
 });
+
+describe('the ten Beyond the Library Doors quests', () => {
+    // Read the catalog directly: the mocked data module above only carries the fixture.
+    const catalog = JSON.parse(
+        require('fs').readFileSync(
+            require('path').join(__dirname, '../assets/data/sideQuestsDetailed.json'),
+            'utf8'
+        )
+    );
+    const NEW_KEYS = ['9', '10', '11', '12', '13', '14', '15', '16', '17', '18'];
+
+    test('all ten exist and carry a locale and branches', () => {
+        for (const key of NEW_KEYS) {
+            const quest = catalog[key];
+            expect(quest).toBeDefined();
+            expect(typeof quest.locale).toBe('string');
+            expect(quest.locale.length).toBeGreaterThan(0);
+            expect(Array.isArray(quest.branches)).toBe(true);
+            expect(quest.branches.length).toBeGreaterThanOrEqual(2);
+        }
+    });
+
+    test('thirty-three branch prompts across the ten quests', () => {
+        const total = NEW_KEYS.reduce((sum, key) => sum + catalog[key].branches.length, 0);
+        expect(total).toBe(33);
+    });
+
+    test('no new quest or branch grants Ink Drops', () => {
+        for (const key of NEW_KEYS) {
+            const quest = catalog[key];
+            expect(quest.rewards.inkDrops).toBe(0);
+            for (const branch of quest.branches) {
+                expect(branch.rewards.inkDrops).toBe(0);
+            }
+        }
+    });
+
+    test('the flat fields mirror the first branch', () => {
+        for (const key of NEW_KEYS) {
+            const quest = catalog[key];
+            const first = quest.branches[0];
+            expect(quest.prompt).toBe(first.prompt);
+            expect(quest.reward).toBe(first.reward);
+            expect(quest.rewards).toEqual(first.rewards);
+        }
+    });
+
+    test('branch keys are unique within each quest', () => {
+        for (const key of NEW_KEYS) {
+            const keys = catalog[key].branches.map(b => b.key);
+            expect(new Set(keys).size).toBe(keys.length);
+        }
+    });
+
+    test('the four locales are the ones the design names', () => {
+        const locales = new Set(NEW_KEYS.map(key => catalog[key].locale));
+        expect(locales).toEqual(new Set([
+            'the-ninefold-bazaar',
+            'the-festival-of-turning',
+            'the-exchange',
+            'the-open-road'
+        ]));
+    });
+});
