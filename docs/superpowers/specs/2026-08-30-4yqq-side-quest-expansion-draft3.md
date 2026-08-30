@@ -328,11 +328,42 @@ befriend and defeat condition, completion prompt, and item bonus.
 | memoir | 1 | **Collision.** The Philosophy Alcove takes memoir. The Field Practicum's primary-source branch now explicitly excludes it. |
 | non-fiction + notes | 2 | **Collision.** *Restore the Card Catalog* is near-identical to draft 1's primer branch. Replaced with *The lecture*, which is spoken rather than written. |
 | DNF, abandoned, set aside | 0 | **Collision found off-file.** Reading a DNF is a Worn Page penalty in `curseTableDetailed.json`. Permanently excluded. |
+| putting off, avoided | 1 | **Collision found (2026-08-30, implementation pass).** See below — the verification pass read only the first clause of Curse 1. |
 | poetry, verse, comic, graphic novel, novella, essay, audiobook | 0 | Clear. Format is unclaimed territory. |
 | letter, epistolary, diary | 0 | Clear. |
 | borrowed, thrift, used, inherited | 0 | Clear. Provenance is entirely unclaimed. |
 | read aloud, buddy read | 0 | Clear. Nothing in the game involves a second person. |
 | glossary, appendix | 0 | Clear. |
+
+### Open collision — The Crossroads Inn, branch C
+
+The Worn Page table was finally read in full during implementation. **Curse 1, The Unread Tome**,
+assigns: *"read a book from your DNF list **or one you have been putting off**."* The original
+verification pass grepped for `DNF, abandoned, set aside` and so never saw the second clause.
+
+**SQ 15 branch C, The Regular** reads: *"Read the book someone has recommended to you the most
+times and **you have avoided the most successfully**."*
+
+A book you have avoided most successfully is a book you have been putting off. That is the same
+action the penalty assigns, phrased differently — so it violates the rule this spec states twice:
+an action that means "you failed" cannot also mean "you won." No regex catches it, because the
+overlap is semantic rather than lexical.
+
+**This needs a decision and is not resolved in code.** Two options:
+
+1. **Reword off the avoidance axis**, keeping The Regular's character — the person who keeps
+   pressing the same book on you — and dropping the half about your having dodged it. The
+   recommendation axis is what this quest owns; the avoidance is incidental colour.
+2. **Accept the overlap deliberately** and amend the "Penalty actions" row above, which currently
+   claims a clean sheet it does not have.
+
+A weaker, related case was judged acceptable and left alone: SQ 11 branch A asks for *"a genre you
+actively avoid."* That is avoidance of a **genre**, not of a specific deferred book, so it does not
+land on the same object as Curse 1.
+
+Three penalty-phrase regexes were added to the contract test as a result — `putting off`,
+`podcast`, `reorgani[sz]` — extending coverage from one curse to three. All pass against current
+data.
 
 **Still unchecked:** `genreQuests.json`, `extraCreditRewards.json`, `masteryAbilities.json`,
 `curseTableDetailed.json`, `schoolBenefits.json`, `sanctumBenefits.json`, `levelRewards.json`,
