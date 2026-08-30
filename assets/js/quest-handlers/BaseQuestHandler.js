@@ -220,7 +220,11 @@ export class BaseQuestHandler {
                 isEncounter: quest.isEncounter || false,
                 roomNumber: quest.roomNumber || null,
                 encounterName: quest.encounterName || null,
-                isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true
+                isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
+                // Without these a branching side quest recomputes to its flat (branch A)
+                // rewards here, silently paying the wrong branch on every completion.
+                sideQuestId: quest.sideQuestId || null,
+                branchKey: quest.branchKey || null
             }
         );
         

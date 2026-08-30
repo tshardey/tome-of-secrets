@@ -987,7 +987,7 @@
         "type": "Familiar",
         "img": "assets/images/rewards/crossroads-fox.png",
         "bonus": "Books recommended by another person grant +20 XP and +10 Paper Scraps. Once a month the Fox may choose for you: pick from your TBR at random and take +30 XP for accepting.",
-        "passiveBonus": "Books recommended by another person grant +10 XP (passive). Once every 2 months the Fox may choose for you.",
+        "passiveBonus": "Books recommended by another person grant +10 XP (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "effects": [
@@ -1012,7 +1012,8 @@
             {
                 "trigger": "ON_ACTIVATE",
                 "modifier": { "type": "ACTIVATE", "action": "fox_chooses_from_tbr" },
-                "cooldown": "monthly"
+                "cooldown": "monthly",
+                "slot": "equipped"
             }
         ]
     },

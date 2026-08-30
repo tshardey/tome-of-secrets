@@ -145,6 +145,7 @@ function validateRewards(rewards, context = 'rewards') {
             xp: 0,
             inkDrops: 0,
             paperScraps: 0,
+            blueprints: 0,
             items: [],
             modifiedBy: []
         };
@@ -154,6 +155,10 @@ function validateRewards(rewards, context = 'rewards') {
         xp: typeof rewards.xp === 'number' && !isNaN(rewards.xp) ? Math.max(0, rewards.xp) : 0,
         inkDrops: typeof rewards.inkDrops === 'number' && !isNaN(rewards.inkDrops) ? Math.max(0, rewards.inkDrops) : 0,
         paperScraps: typeof rewards.paperScraps === 'number' && !isNaN(rewards.paperScraps) ? Math.max(0, rewards.paperScraps) : 0,
+        // Side quests are the first quest type to carry authored Blueprints on the quest
+        // itself. Omitting this key stripped them on every load, so the reward rendered
+        // on the card and was never paid.
+        blueprints: typeof rewards.blueprints === 'number' && !isNaN(rewards.blueprints) ? Math.max(0, rewards.blueprints) : 0,
         items: Array.isArray(rewards.items) ? rewards.items.filter(item => typeof item === 'string') : [],
         modifiedBy: Array.isArray(rewards.modifiedBy) ? rewards.modifiedBy.filter(mod => typeof mod === 'string') : []
     };
