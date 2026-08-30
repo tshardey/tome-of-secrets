@@ -13,6 +13,7 @@ import {
     wings
 } from './character-sheet/data.js';
 import { slugifyId } from './utils/slug.js';
+import { escapeHtml } from './utils/sanitize.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { characterState, loadState } from './character-sheet/state.js';
 import { safeGetJSON } from './utils/storage.js';
@@ -502,6 +503,25 @@ export function renderAtmosphericBuffsTable() {
 }
 
 /**
+ * Renders the Exchange's register of claimed countries.
+ * Each country is struck off once, ever, by The Visiting Scholar's enrollment branch.
+ * @returns {string} HTML
+ */
+export function renderExchangeRegister() {
+    const claimed = characterState[STORAGE_KEYS.CLAIMED_COUNTRIES] || [];
+
+    if (!Array.isArray(claimed) || claimed.length === 0) {
+        return '<p><em>No countries struck off yet. The register is empty.</em></p>';
+    }
+
+    const items = claimed
+        .map((country) => `<li>${escapeHtml(String(country))}</li>`)
+        .join('');
+
+    return `<ol class="exchange-register">${items}</ol>`;
+}
+
+/**
  * Renders side quests table
  */
 export function renderSideQuestsTable() {
@@ -722,6 +742,11 @@ async function initializeTablesAsync() {
     const sideQuestsEl = document.getElementById('side-quests-table');
     if (sideQuestsEl) {
         sideQuestsEl.innerHTML = processLinks(renderSideQuestsTable());
+    }
+
+    const registerEl = document.getElementById('exchange-register-container');
+    if (registerEl) {
+        registerEl.innerHTML = renderExchangeRegister();
     }
     
     // Shroud page

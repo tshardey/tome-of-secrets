@@ -30,6 +30,8 @@ const EVENTS = Object.freeze({
     SERIES_CHANGED: 'seriesChanged',
     CLAIMED_SERIES_REWARDS_CHANGED: 'claimedSeriesRewardsChanged',
     SERIES_EXPEDITION_PROGRESS_CHANGED: 'seriesExpeditionProgressChanged',
+    // The Exchange's register – countries struck off once, ever
+    CLAIMED_COUNTRIES_CHANGED: 'claimedCountriesChanged',
     // Book box subscriptions (rewards overhaul)
     BOOK_BOX_SUBSCRIPTIONS_CHANGED: 'bookBoxSubscriptionsChanged',
     BOOK_BOX_HISTORY_CHANGED: 'bookBoxHistoryChanged'
@@ -1772,6 +1774,47 @@ export class StateAdapter {
 
     hasClaimedSeriesReward(seriesId) {
         return this.getClaimedSeriesRewards().includes(seriesId);
+    }
+
+    /**
+     * The Exchange's register: countries already struck off, in claim order.
+     * @returns {string[]}
+     */
+    getClaimedCountries() {
+        const raw = this.state[STORAGE_KEYS.CLAIMED_COUNTRIES];
+        return Array.isArray(raw) ? [...raw] : [];
+    }
+
+    /**
+     * Compare countries case- and whitespace-insensitively so "japan" cannot
+     * re-claim "Japan", while the display keeps whatever the player typed.
+     * @param {string} country
+     * @returns {boolean}
+     */
+    hasClaimedCountry(country) {
+        if (!country || typeof country !== 'string') return false;
+        const needle = country.trim().toLowerCase();
+        if (!needle) return false;
+        return this.getClaimedCountries().some((entry) => String(entry).trim().toLowerCase() === needle);
+    }
+
+    /**
+     * Strike a country off the register. Once ever — a repeat claim is a no-op.
+     * @param {string} country
+     * @returns {boolean} true if the register now contains it
+     */
+    addClaimedCountry(country) {
+        if (!country || typeof country !== 'string') return false;
+        const trimmed = country.trim();
+        if (!trimmed) return false;
+        if (this.hasClaimedCountry(trimmed)) return true;
+
+        const list = this.getClaimedCountries();
+        list.push(trimmed);
+        this.state[STORAGE_KEYS.CLAIMED_COUNTRIES] = list;
+        void setStateKey(STORAGE_KEYS.CLAIMED_COUNTRIES, list);
+        this.emit(EVENTS.CLAIMED_COUNTRIES_CHANGED, [...list]);
+        return true;
     }
 
     /**

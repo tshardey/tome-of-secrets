@@ -427,6 +427,18 @@ function migrateToVersion16(state) {
 }
 
 /**
+ * Migration from schema version 16 to version 17
+ * - Adds claimedCountries: the Exchange's once-ever register (side quest 13, branch B)
+ */
+function migrateToVersion17(state) {
+    const migrated = { ...state };
+    if (!Array.isArray(migrated[STORAGE_KEYS.CLAIMED_COUNTRIES])) {
+        migrated[STORAGE_KEYS.CLAIMED_COUNTRIES] = [];
+    }
+    return migrated;
+}
+
+/**
  * Migration from schema version 7 to version 8
  * - Adds publication metadata to each series: releasedCount, expectedCount, isCompletedSeries
  * - Existing series get defaults: releasedCount 0, expectedCount 0, isCompletedSeries false
@@ -720,6 +732,9 @@ export function migrateState(state) {
                 break;
             case 16:
                 migratedState = migrateToVersion16(migratedState);
+                break;
+            case 17:
+                migratedState = migrateToVersion17(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

@@ -7,7 +7,7 @@
 import { DrawerManager } from '../ui/DrawerManager.js';
 
 export async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainStateAdapter) {
-    const { renderGenreQuestsTable, renderAtmosphericBuffsTable, renderSideQuestsTable, renderDungeonRewardsTable, renderDungeonRoomsTable, renderDungeonCompletionRewardsTable, processLinks } = await import('../table-renderer.js');
+    const { renderGenreQuestsTable, renderAtmosphericBuffsTable, renderSideQuestsTable, renderExchangeRegister, renderDungeonRewardsTable, renderDungeonRoomsTable, renderDungeonCompletionRewardsTable, processLinks } = await import('../table-renderer.js');
     const { characterState } = await import('./state.js');
     const { safeGetJSON, safeSetJSON } = await import('../utils/storage.js');
     const { STORAGE_KEYS } = await import('./storageKeys.js');
@@ -212,7 +212,10 @@ export async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainS
             drawer: 'side-quests-info-drawer',
             closeBtn: 'close-side-quests-info',
             container: 'side-quests-table-container',
-            renderTable: () => processLinksHelper(renderSideQuestsTable())
+            renderTable: () => processLinksHelper(renderSideQuestsTable()),
+            // The Exchange's register renders above the table, in its own container.
+            extraContainer: 'exchange-register-container',
+            renderExtra: () => renderExchangeRegister()
         },
         'keeper-backgrounds': {
             backdrop: 'keeper-backgrounds-backdrop',
@@ -295,6 +298,10 @@ export async function initializeQuestInfoDrawers(updateCurrency, uiModule, mainS
                 } else {
                     const container = document.getElementById(cfg.container);
                     if (container) container.innerHTML = cfg.renderTable();
+                    if (cfg.extraContainer && cfg.renderExtra) {
+                        const extra = document.getElementById(cfg.extraContainer);
+                        if (extra) extra.innerHTML = cfg.renderExtra();
+                    }
                 }
             },
             onAfterClose: drawerId === 'genre-quests'

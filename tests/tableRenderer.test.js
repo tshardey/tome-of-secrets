@@ -9,10 +9,12 @@ import {
     renderAtmosphericBuffsTable,
     renderSideQuestsTable,
     renderCurseTable,
+    renderExchangeRegister,
     renderLevelingRewardsTable,
     initializeTables
 } from '../assets/js/table-renderer.js';
 import { sideQuestsDetailed } from '../assets/js/character-sheet/data.js';
+import { characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeSetJSON } from '../assets/js/utils/storage.js';
 
@@ -376,6 +378,47 @@ describe('Table Renderer', () => {
             expect(html).toContain('<ol>');
             expect(html).toContain('<li>');
             expect(html).not.toContain('<table');
+        });
+    });
+
+    describe("The Exchange's Register", () => {
+        beforeEach(() => {
+            localStorage.clear();
+            delete characterState[STORAGE_KEYS.CLAIMED_COUNTRIES];
+        });
+
+        afterEach(() => {
+            delete characterState[STORAGE_KEYS.CLAIMED_COUNTRIES];
+        });
+
+        test('renders an empty-register message when nothing is struck off', () => {
+            expect(renderExchangeRegister()).toContain('The register is empty');
+        });
+
+        test('renders one list entry per claimed country, in claim order', () => {
+            characterState[STORAGE_KEYS.CLAIMED_COUNTRIES] = ['Japan', 'Nigeria'];
+
+            const html = renderExchangeRegister();
+
+            expect(html).toContain('<ol class="exchange-register">');
+            expect(html).toContain('<li>Japan</li>');
+            expect(html).toContain('<li>Nigeria</li>');
+            expect(html.indexOf('Japan')).toBeLessThan(html.indexOf('Nigeria'));
+        });
+
+        test('escapes country names', () => {
+            characterState[STORAGE_KEYS.CLAIMED_COUNTRIES] = ['<script>alert(1)</script>'];
+
+            const html = renderExchangeRegister();
+
+            expect(html).not.toContain('<script>');
+            expect(html).toContain('&lt;script&gt;');
+        });
+
+        test('treats a non-array register as empty', () => {
+            characterState[STORAGE_KEYS.CLAIMED_COUNTRIES] = 'Japan';
+
+            expect(renderExchangeRegister()).toContain('The register is empty');
         });
     });
 

@@ -399,7 +399,26 @@ export function renderSideQuestCard(questCardData) {
         // The card wrapper handles selection clicks; don't let the dropdown toggle it.
         select.addEventListener('click', (event) => event.stopPropagation());
 
+        // The Exchange's register: branches flagged requiresCountry take the author's
+        // country here, so the deck controller can check it against the register.
+        const countryInput = createElement('input', {
+            class: 'card-branch-country',
+            type: 'text',
+            placeholder: 'Country (claimed once, ever)',
+            'aria-label': 'Author country to strike off the register'
+        });
+        countryInput.dataset.questKey = String(questCardData.key ?? '');
+        countryInput.addEventListener('click', (event) => event.stopPropagation());
+
+        const syncCountryInput = () => {
+            const chosen = branches.find((b) => b.key === select.value) || branches[0];
+            countryInput.hidden = !chosen?.requiresCountry;
+        };
+        select.addEventListener('change', syncCountryInput);
+        syncCountryInput();
+
         content.appendChild(select);
+        content.appendChild(countryInput);
     }
 
     if (promptText) {

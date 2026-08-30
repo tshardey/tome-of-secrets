@@ -544,6 +544,80 @@ describe('cardRenderer', () => {
       expect(card.querySelector('select.card-branch-select')).toBeNull();
       expect(card.querySelector('.card-roll-instruction')).toBeNull();
       expect(card.querySelector('.card-prompt').textContent).toContain('Read the book on your TBR the longest.');
+      expect(card.querySelector('input.card-branch-country')).toBeNull();
+    });
+  });
+
+  describe("the Exchange's register country input", () => {
+    const scholarCard = {
+      key: '13',
+      name: 'The Visiting Scholar',
+      description: 'A scholar from the visiting academy.',
+      prompt: 'Read a book set at a school.',
+      cardImage: null,
+      branchType: 'choice',
+      rollInstruction: null,
+      branches: [
+        { key: 'A', roll: null, name: 'Curriculum swap', prompt: 'Read a book set at a school.' },
+        {
+          key: 'B',
+          roll: null,
+          name: 'Enrollment record',
+          prompt: 'Read a book by an author from a country you have never read from.',
+          requiresCountry: true
+        }
+      ],
+      questData: {}
+    };
+
+    it('renders exactly one country input, hidden on a branch that does not need it', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      const inputs = card.querySelectorAll('input.card-branch-country');
+
+      expect(inputs.length).toBe(1);
+      expect(inputs[0].hidden).toBe(true);
+      expect(inputs[0].dataset.questKey).toBe('13');
+    });
+
+    it('the select is appended exactly once', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      expect(card.querySelectorAll('select.card-branch-select').length).toBe(1);
+    });
+
+    it('shows the country input when the requiresCountry branch is chosen', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      const select = card.querySelector('select.card-branch-select');
+      const input = card.querySelector('input.card-branch-country');
+
+      select.value = 'B';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(input.hidden).toBe(false);
+
+      select.value = 'A';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(input.hidden).toBe(true);
+    });
+
+    it('starts visible when the first branch itself requires a country', () => {
+      const countryFirst = {
+        ...scholarCard,
+        branches: [scholarCard.branches[1], scholarCard.branches[0]]
+      };
+      const card = cardRenderer.renderSideQuestCard(countryFirst);
+
+      expect(card.querySelector('input.card-branch-country').hidden).toBe(false);
+    });
+
+    it('does not let a click on the country input toggle card selection', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      const input = card.querySelector('input.card-branch-country');
+      const onCardClick = jest.fn();
+      const wrapper = cardRenderer.wrapCardSelectable(card, 0, false, onCardClick);
+      document.body.appendChild(wrapper);
+
+      input.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(onCardClick).not.toHaveBeenCalled();
     });
   });
 });

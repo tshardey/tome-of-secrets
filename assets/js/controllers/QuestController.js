@@ -722,6 +722,10 @@ export class QuestController extends BaseController {
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
+                    // The Exchange's register: strike the country off, once ever.
+                    if (quest.branchCountry) {
+                        stateAdapter.addClaimedCountry(quest.branchCountry);
+                    }
                     if (this.updateCurrency) this.updateCurrency(quest.rewards);
                 });
 
@@ -1186,6 +1190,10 @@ export class QuestController extends BaseController {
 
         // Award blueprints to state (currency)
         this.awardBlueprintsForQuest(completedQuest);
+        // The Exchange's register: strike the country off, once ever.
+        if (completedQuest.branchCountry) {
+            stateAdapter.addClaimedCountry(completedQuest.branchCountry);
+        }
         
         // Display calculation receipt if available
         if (completedQuest.receipt && uiModule.displayCalculationReceipt) {
@@ -1351,6 +1359,10 @@ export class QuestController extends BaseController {
         const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
         this.awardBlueprintsForQuest(completedQuest);
+        // The Exchange's register: strike the country off, once ever.
+        if (completedQuest.branchCountry) {
+            stateAdapter.addClaimedCountry(completedQuest.branchCountry);
+        }
 
         if (completedQuest.receipt && uiModule.displayCalculationReceipt) {
             uiModule.displayCalculationReceipt(
