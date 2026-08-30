@@ -123,6 +123,13 @@ export class SideQuestDeckController extends BaseController {
      * Render drawn cards with click/ctrl+click selection
      */
     renderDrawnCard() {
+        // Cards are re-rendered on every draw and every selection click, so remember which
+        // branch each drawn card was showing and restore it afterwards.
+        const branchSelections = new Map();
+        this.drawnCardDisplay.querySelectorAll('select.card-branch-select').forEach((select) => {
+            branchSelections.set(select.dataset.questKey, select.value);
+        });
+
         clearElement(this.drawnCardDisplay);
 
         if (this.drawnQuests.length === 0) {
@@ -148,6 +155,13 @@ export class SideQuestDeckController extends BaseController {
                 }
                 this.renderDrawnCard();
             });
+            const select = card.querySelector('select.card-branch-select');
+            const previous = select && branchSelections.get(select.dataset.questKey);
+            if (select && previous && previous !== select.value) {
+                select.value = previous;
+                // Re-sync the displayed prompt with the restored branch.
+                select.dispatchEvent(new Event('change'));
+            }
             this.drawnCardDisplay.appendChild(wrapper);
         });
         this.dependencies.updateDeckActionsLabel?.();
@@ -225,13 +239,29 @@ export class SideQuestDeckController extends BaseController {
         const questJSONs = [];
 
         for (const questData of toAdd) {
-            const prompt = `${questData.name}: ${questData.prompt}`;
+            const branches = Array.isArray(questData.branches) ? questData.branches : null;
+            let branch = null;
+
+            if (branches && branches.length > 0) {
+                const select = this.drawnCardDisplay?.querySelector(
+                    `select.card-branch-select[data-quest-key="${questData.key}"]`
+                );
+                const chosenKey = select?.value || branches[0].key;
+                branch = branches.find((b) => b.key === chosenKey) || branches[0];
+            }
+
+            // Keep the "<Name>: <prompt>" shape: extractNameFromPrompt() in the archive view
+            // model and checkSideQuestCompletion() in table-renderer both parse it.
+            const prompt = `${questData.name}: ${branch ? branch.prompt : questData.prompt}`;
             const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', prompt, {
-                sideQuestId: questData.id || null
+                sideQuestId: questData.id || null,
+                branchKey: branch ? branch.key : null
             });
             const quest = {
                 type: '♣ Side Quest',
                 sideQuestId: questData.id || null,
+                branchKey: branch ? branch.key : null,
+                branchName: branch ? branch.name : null,
                 prompt,
                 rewards: rewards.toJSON ? rewards.toJSON() : rewards,
                 buffs: [],

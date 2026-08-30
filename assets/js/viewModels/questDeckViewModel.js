@@ -105,6 +105,9 @@ export function createSideQuestDeckViewModel(state, drawnQuests = []) {
             description: q.description,
             prompt: q.prompt,
             cardImage: getSideQuestCardImage(q),
+            branchType: q.branchType ?? null,
+            rollInstruction: q.rollInstruction ?? null,
+            branches: Array.isArray(q.branches) ? q.branches : null,
             questData: q
         })),
         availableQuests

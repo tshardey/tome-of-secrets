@@ -355,10 +355,54 @@ export function renderSideQuestCard(questCardData) {
         content.appendChild(desc);
     }
     
-    // Quest prompt
-    if (questCardData.prompt) {
-        const prompt = createElement('div', { class: 'card-prompt' });
-        prompt.innerHTML = `<strong>Prompt:</strong> ${escapeHtml(questCardData.prompt)}`;
+    // Branch picker (branching quests only). The prompt element below is live-updated
+    // when the selection changes, so the card always shows the prompt you'd be taking.
+    const branches = Array.isArray(questCardData.branches) && questCardData.branches.length > 0
+        ? questCardData.branches
+        : null;
+
+    // Rendered whenever the quest carries one — a "choice" quest may still offer a roll
+    // as an alternative way to pick (e.g. The Communal Table), so this is not gated on
+    // branchType === 'roll'.
+    if (branches && questCardData.rollInstruction) {
+        const instruction = createElement('p', { class: 'card-roll-instruction' });
+        instruction.textContent = questCardData.rollInstruction;
+        content.appendChild(instruction);
+    }
+
+    const activeBranch = branches ? branches[0] : null;
+    const promptText = activeBranch ? activeBranch.prompt : (questCardData.prompt || '');
+    const prompt = createElement('div', { class: 'card-prompt' });
+    prompt.innerHTML = `<strong>Prompt:</strong> ${escapeHtml(promptText)}`;
+
+    if (branches) {
+        const select = createElement('select', {
+            class: 'card-branch-select',
+            'aria-label': `Choose a branch for ${questCardData.name || 'this side quest'}`
+        });
+        select.dataset.questKey = String(questCardData.key ?? '');
+
+        branches.forEach((branch) => {
+            const option = createElement('option');
+            option.value = branch.key;
+            // Roll quests label by their roll range; choice quests label by their key.
+            const lead = questCardData.branchType === 'roll' ? (branch.roll || branch.key) : branch.key;
+            option.textContent = `${lead} · ${branch.name}`;
+            select.appendChild(option);
+        });
+
+        select.value = branches[0].key;
+        select.addEventListener('change', () => {
+            const chosen = branches.find((b) => b.key === select.value) || branches[0];
+            prompt.innerHTML = `<strong>Prompt:</strong> ${escapeHtml(chosen.prompt)}`;
+        });
+        // The card wrapper handles selection clicks; don't let the dropdown toggle it.
+        select.addEventListener('click', (event) => event.stopPropagation());
+
+        content.appendChild(select);
+    }
+
+    if (promptText) {
         content.appendChild(prompt);
     }
     

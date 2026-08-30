@@ -893,3 +893,40 @@
         width: 100%;
     }
 }
+
+/* Side quest branch picker — sits inside the card content overlay */
+.card-roll-instruction {
+    font-size: 0.85rem;
+    font-style: italic;
+    line-height: 1.4;
+    margin: 8px 0 0 0;
+    color: #d4c8b0;
+}
+
+.card-branch-select {
+    display: block;
+    width: 100%;
+    margin: 8px 0 0 0;
+    padding: 6px 8px;
+    font-family: 'Lora', serif;
+    font-size: 0.85rem;
+    color: #d4c8b0;
+    background: rgba(42, 35, 29, 0.9);
+    border: 1px solid rgba(184, 159, 98, 0.6);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.card-branch-select:hover {
+    border-color: #b89f62;
+}
+
+.card-branch-select:focus-visible {
+    outline: 2px solid #b89f62;
+    outline-offset: 2px;
+}
+
+.card-branch-select option {
+    color: #d4c8b0;
+    background: #2a231d;
+}
