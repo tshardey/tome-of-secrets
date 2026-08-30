@@ -890,5 +890,154 @@
                 "cooldown": "monthly"
             }
         ]
+    },
+    "The Haggler's Ledger": {
+        "id": "hagglers-ledger",
+        "name": "The Haggler's Ledger",
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/hagglers-ledger.png",
+        "bonus": "Books you borrowed, bought used, or were given grant +20 Dusty Blueprints.",
+        "passiveBonus": "Books you borrowed, bought used, or were given grant +10 Dusty Blueprints (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["borrowed"], ["secondhand"], ["gifted"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "blueprints", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["borrowed"], ["secondhand"], ["gifted"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "blueprints", "value": 10 },
+                "slot": "passive"
+            }
+        ]
+    },
+    "The Reveler's Mask": {
+        "id": "revelers-mask",
+        "name": "The Reveler's Mask",
+        "type": "Wearable",
+        "img": "assets/images/rewards/revelers-mask.png",
+        "bonus": "Books outside your usual genres grant +25 XP and +10 Paper Scraps.",
+        "passiveBonus": "Books outside your usual genres grant +12 XP (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["genre-stretch"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 25 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["genre-stretch"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["genre-stretch"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 12 },
+                "slot": "passive"
+            }
+        ]
+    },
+    "Visiting Scholar's Sigil": {
+        "id": "visiting-scholars-sigil",
+        "name": "Visiting Scholar's Sigil",
+        "type": "Wearable",
+        "img": "assets/images/rewards/visiting-scholars-sigil.png",
+        "bonus": "Translated books, or books by an author from a country new to you, grant +25 XP and +10 Paper Scraps.",
+        "passiveBonus": "Translated books, or books by an author from a country new to you, grant +12 XP and +5 Paper Scraps (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["translated"], ["new-country"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 25 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["translated"], ["new-country"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["translated"], ["new-country"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 12 },
+                "slot": "passive"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["translated"], ["new-country"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 5 },
+                "slot": "passive"
+            }
+        ]
+    },
+    "The Crossroads Fox": {
+        "id": "crossroads-fox",
+        "name": "The Crossroads Fox",
+        "type": "Familiar",
+        "img": "assets/images/rewards/crossroads-fox.png",
+        "bonus": "Books recommended by another person grant +20 XP and +10 Paper Scraps. Once a month the Fox may choose for you: pick from your TBR at random and take +30 XP for accepting.",
+        "passiveBonus": "Books recommended by another person grant +10 XP (passive). Once every 2 months the Fox may choose for you.",
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["recommended"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 20 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["recommended"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "paperScraps", "value": 10 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["recommended"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "xp", "value": 10 },
+                "slot": "passive"
+            },
+            {
+                "trigger": "ON_ACTIVATE",
+                "modifier": { "type": "ACTIVATE", "action": "fox_chooses_from_tbr" },
+                "cooldown": "monthly"
+            }
+        ]
+    },
+    "The Mender's Thread": {
+        "id": "menders-thread",
+        "name": "The Mender's Thread",
+        "type": "Non-Wearable",
+        "img": "assets/images/rewards/menders-thread.png",
+        "bonus": "Re-reads, inherited books, and damaged or ex-library copies grant +25 Dusty Blueprints.",
+        "passiveBonus": "Re-reads, inherited books, and damaged or ex-library copies grant +12 Dusty Blueprints (passive).",
+        "rewardModifier": {},
+        "passiveRewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["mended"], ["re-read"], ["inherited"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "blueprints", "value": 25 },
+                "slot": "equipped"
+            },
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": { "tagMatch": [["mended"], ["re-read"], ["inherited"]] },
+                "modifier": { "type": "ADD_FLAT", "resource": "blueprints", "value": 12 },
+                "slot": "passive"
+            }
+        ]
     }
 }

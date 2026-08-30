@@ -524,7 +524,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expect(ids.has(tag.id)).toBe(false);
             ids.add(tag.id);
             expectString(tag.label);
-            expect(['genre', 'content']).toContain(tag.category);
+            expect(['genre', 'content', 'provenance', 'agency', 'form']).toContain(tag.category);
             expect(tag.id).toMatch(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
         });
     });
@@ -570,5 +570,50 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expectString(buff.stickerSlug);
             expect(stickerSlugs.has(buff.stickerSlug)).toBe(true);
         });
+    });
+});
+
+describe('4yqq expansion items', () => {
+    const EXPANSION_ITEMS = [
+        "The Haggler's Ledger",
+        "The Reveler's Mask",
+        "Visiting Scholar's Sigil",
+        "The Crossroads Fox",
+        "The Mender's Thread"
+    ];
+
+    test('all five exist with a kebab-case id, a type, and an effects array', () => {
+        const items = loadJson('allItems.json');
+        for (const name of EXPANSION_ITEMS) {
+            const item = items[name];
+            expect(item).toBeDefined();
+            expect(item.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+            expect(['Wearable', 'Non-Wearable', 'Familiar']).toContain(item.type);
+            expect(Array.isArray(item.effects)).toBe(true);
+            expect(item.effects.length).toBeGreaterThan(0);
+        }
+    });
+
+    test('no expansion item grants Ink Drops', () => {
+        const items = loadJson('allItems.json');
+        for (const name of EXPANSION_ITEMS) {
+            for (const effect of items[name].effects) {
+                expect(effect.modifier.resource).not.toBe('inkDrops');
+            }
+        }
+    });
+
+    test('every tag an expansion item matches on exists in bookTags.json', () => {
+        const items = loadJson('allItems.json');
+        const tagIds = new Set(loadJson('bookTags.json').map(tag => tag.id));
+        for (const name of EXPANSION_ITEMS) {
+            for (const effect of items[name].effects) {
+                for (const group of effect.condition?.tagMatch ?? []) {
+                    for (const tag of group) {
+                        expect(tagIds.has(tag)).toBe(true);
+                    }
+                }
+            }
+        }
     });
 });
