@@ -617,3 +617,71 @@ describe('4yqq expansion items', () => {
         }
     });
 });
+
+describe('4yqq currency and collision contracts', () => {
+    const NEW_QUEST_KEYS = ['9', '10', '11', '12', '13', '14', '15', '16', '17', '18'];
+
+    test('no new side quest, branch, or expansion item grants Ink Drops', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        for (const key of NEW_QUEST_KEYS) {
+            expect(quests[key].rewards.inkDrops).toBe(0);
+            for (const branch of quests[key].branches) {
+                expect(branch.rewards.inkDrops).toBe(0);
+            }
+        }
+    });
+
+    test('no new prompt reaches for a Worn Page penalty verb', () => {
+        // Reward tables and penalty tables must never name the same action: an action that
+        // means "you failed" cannot also mean "you won".
+        const quests = loadJson('sideQuestsDetailed.json');
+        const FORBIDDEN = [
+            /\bDNF\b/i,
+            /did not finish/i,
+            /\bset aside\b/i,
+            /\babandoned\b/i,
+            // Added from the hand cross-check of curseTableDetailed.json:
+            // "The Unread Tome" also assigns "a book you have been putting off",
+            // "The Lost Lore" assigns a podcast, and "The Forgotten Pages" assigns
+            // reorganising a shelf or library. None of the three may become a reward.
+            /\bput(?:ting)? off\b/i,
+            /\bpodcast\b/i,
+            /\breorgani[sz]/i
+        ];
+
+        for (const key of NEW_QUEST_KEYS) {
+            const texts = [quests[key].prompt, ...quests[key].branches.map(b => b.prompt)];
+            for (const text of texts) {
+                for (const pattern of FORBIDDEN) {
+                    expect(text).not.toMatch(pattern);
+                }
+            }
+        }
+    });
+
+    test('every item a new quest grants exists in allItems.json by exact name', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        const items = loadJson('allItems.json');
+        const names = new Set(Object.values(items).map(item => item.name));
+
+        for (const key of NEW_QUEST_KEYS) {
+            const granted = [
+                ...quests[key].rewards.items,
+                ...quests[key].branches.flatMap(b => b.rewards.items)
+            ];
+            for (const name of granted) {
+                expect(names.has(name)).toBe(true);
+            }
+        }
+    });
+
+    test('side quest ids are unique and kebab-case across the whole pool', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        const ids = Object.values(quests).map(q => q.id);
+
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const id of ids) {
+            expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+        }
+    });
+});
