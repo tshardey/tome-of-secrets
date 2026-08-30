@@ -204,6 +204,63 @@ function validateSideQuests(quests, itemsById, temporaryBuffs, temporaryBuffsFro
                 }
             }
         }
+
+        // Branch shape (optional, but if present it must be complete and consistent)
+        if (quest.branches !== undefined) {
+            if (!Array.isArray(quest.branches) || quest.branches.length === 0) {
+                results.push({ type: 'error', message: `Side quest "${key}" has a branches field that is not a non-empty array` });
+            } else {
+                if (quest.branchType !== 'choice' && quest.branchType !== 'roll') {
+                    results.push({ type: 'error', message: `Side quest "${key}" has branches but branchType is "${quest.branchType}" (expected "choice" or "roll")` });
+                }
+                if (quest.branchType === 'roll' && !quest.rollInstruction) {
+                    results.push({ type: 'error', message: `Side quest "${key}" is a roll quest with no rollInstruction` });
+                }
+
+                const branchKeys = new Set();
+                for (const branch of quest.branches) {
+                    if (!branch || typeof branch !== 'object') {
+                        results.push({ type: 'error', message: `Side quest "${key}" has a malformed branch entry` });
+                        continue;
+                    }
+                    if (!branch.key) {
+                        results.push({ type: 'error', message: `Side quest "${key}" has a branch with no key` });
+                    } else if (branchKeys.has(branch.key)) {
+                        results.push({ type: 'error', message: `Side quest "${key}" has duplicate branch key "${branch.key}"` });
+                    } else {
+                        branchKeys.add(branch.key);
+                    }
+                    for (const field of ['name', 'prompt', 'reward']) {
+                        if (typeof branch[field] !== 'string' || !branch[field].trim()) {
+                            results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" is missing ${field}` });
+                        }
+                    }
+                    if (!branch.rewards || typeof branch.rewards !== 'object') {
+                        results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" is missing a rewards object` });
+                        continue;
+                    }
+                    if (Number(branch.rewards.inkDrops) !== 0) {
+                        results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" grants Ink Drops; the expansion contract is zero` });
+                    }
+                    for (const itemName of branch.rewards.items ?? []) {
+                        const itemExists = itemsById.has(itemName) ||
+                            Array.from(itemsById.values()).some(item => item.name === itemName || item.id === itemName);
+                        if (!itemExists && !allTemporaryBuffs.has(itemName)) {
+                            results.push({
+                                type: 'warning',
+                                message: `Side quest "${key}" branch "${branch.key}" references "${itemName}", but neither item nor temporary buff found`
+                            });
+                        }
+                    }
+                }
+
+                // The flat fields must mirror the first branch so branch-unaware renderers work.
+                const first = quest.branches[0];
+                if (first && quest.prompt !== first.prompt) {
+                    results.push({ type: 'warning', message: `Side quest "${key}" flat prompt does not mirror branch "${first.key}"` });
+                }
+            }
+        }
     }
 
     return results;
