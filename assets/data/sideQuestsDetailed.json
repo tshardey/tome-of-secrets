@@ -157,7 +157,7 @@
         "hasLink": true,
         "link": {
             "text": "The Haggler's Ledger",
-            "url": "{{ site.baseurl }}/rewards.html#hagglers-ledger"
+            "url": "{{ site.baseurl }}/rewards.html#the-hagglers-ledger"
         },
         "rewards": {
             "xp": 0,
@@ -334,7 +334,7 @@
         "hasLink": true,
         "link": {
             "text": "The Reveler's Mask",
-            "url": "{{ site.baseurl }}/rewards.html#revelers-mask"
+            "url": "{{ site.baseurl }}/rewards.html#the-revelers-mask"
         },
         "rewards": {
             "xp": 25,
@@ -649,7 +649,7 @@
         "hasLink": true,
         "link": {
             "text": "The Crossroads Fox",
-            "url": "{{ site.baseurl }}/rewards.html#crossroads-fox"
+            "url": "{{ site.baseurl }}/rewards.html#the-crossroads-fox"
         },
         "rewards": {
             "xp": 20,
@@ -807,7 +807,7 @@
         "hasLink": true,
         "link": {
             "text": "The Mender's Thread",
-            "url": "{{ site.baseurl }}/rewards.html#menders-thread"
+            "url": "{{ site.baseurl }}/rewards.html#the-menders-thread"
         },
         "rewards": {
             "xp": 0,

@@ -813,6 +813,13 @@
     margin-top: 2px;
 }
 
+.tome-card-stat-branch {
+    font-size: 0.72rem;
+    font-style: italic;
+    color: #b89f62;
+    margin-bottom: 3px;
+}
+
 .tome-card-stat-prompt {
     font-size: 0.7rem;
     color: rgba(212, 200, 176, 0.9);

@@ -685,3 +685,48 @@ describe('4yqq currency and collision contracts', () => {
         }
     });
 });
+
+describe('4yqq reward link integrity', () => {
+    // A side quest's "Receive X" link points at an anchor on rewards.html that
+    // rewardsRenderer derives from the item NAME via slugifyId. Four of the five new
+    // items shipped with ids that had "The" stripped, so their links pointed at
+    // anchors that did not exist. validate-data only checks kebab-case and uniqueness,
+    // so nothing caught it.
+    const slugifyId = (name) => String(name || '')
+        .toLowerCase()
+        .replace(/['\u2019]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    test('every item id equals the slug of its name', () => {
+        const items = loadJson('allItems.json');
+        for (const item of Object.values(items)) {
+            expect(item.id).toBe(slugifyId(item.name));
+        }
+    });
+
+    test('every side quest reward link resolves to a real item anchor', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        const anchors = new Set(Object.values(loadJson('allItems.json')).map(i => slugifyId(i.name)));
+
+        for (const [key, quest] of Object.entries(quests)) {
+            if (!quest.link?.url) continue;
+            const anchor = quest.link.url.split('#')[1];
+            expect(anchor).toBeTruthy();
+            expect({ key, anchor, resolves: anchors.has(anchor) })
+                .toEqual({ key, anchor, resolves: true });
+        }
+    });
+
+    test('a linked quest grants the item its link names', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        for (const quest of Object.values(quests)) {
+            if (!quest.link?.text) continue;
+            const granted = [
+                ...(quest.rewards?.items ?? []),
+                ...(quest.branches ?? []).flatMap(b => b.rewards?.items ?? [])
+            ];
+            expect(granted).toContain(quest.link.text);
+        }
+    });
+});

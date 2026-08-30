@@ -959,7 +959,10 @@
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     align-items: start;
     gap: 16px 20px;
-    max-height: 300px;
+    /* The vocabulary went from 26 tags in 2 columns to 42 in 5, so the old 300px
+       cap hid roughly half the tags (and the whole Form column in the narrower
+       edit drawer) behind an internal scroll. */
+    max-height: 60vh;
     overflow-y: auto;
     padding: 10px 12px;
     background-color: #3e352f;

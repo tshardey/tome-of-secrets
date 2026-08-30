@@ -86,12 +86,18 @@ export function createSideQuestArchiveCardsViewModel(completedQuests) {
         
         const cardImage = getSideQuestCardImage(questName || questData);
         const title = questName || quest.prompt || 'Side Quest';
+        // Branching side quests store which branch was taken; without this the player
+        // has no way to see, months later, which fork of a quest they ran.
+        const branchName = typeof quest.branchName === 'string' && quest.branchName.trim()
+            ? quest.branchName.trim()
+            : null;
         
         return {
             quest,
             index,
             cardImage,
             title,
+            branchName,
             questData
         };
     });

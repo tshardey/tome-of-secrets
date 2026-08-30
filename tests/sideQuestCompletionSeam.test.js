@@ -145,3 +145,42 @@ describe('an active quest survives a page load with its Blueprints intact', () =
         expect(completed.rewards.blueprints).toBe(20);
     });
 });
+
+describe('the reward receipt survives a page load', () => {
+    // completeActiveQuest writes a receipt onto every completed quest, and
+    // renderComponents, QuestService and questViewModel all read it. validateQuest's
+    // allowlist dropped it, so the reward breakdown and the modified-indicator worked
+    // until the first reload and then vanished permanently, with no warning.
+    test('validateCharacterState preserves quest.receipt', () => {
+        const completed = BaseQuestHandler.completeActiveQuest(
+            activeQuestForBranch('9', 'C'), '', null, null
+        );
+        expect(completed.receipt).toBeDefined();
+
+        const state = {
+            ...createEmptyCharacterState(),
+            [STORAGE_KEYS.COMPLETED_QUESTS]: [completed]
+        };
+        const reloaded = validateCharacterState(state)[STORAGE_KEYS.COMPLETED_QUESTS][0];
+
+        expect(reloaded.receipt).toBeTruthy();
+        expect(reloaded.receipt.final.blueprints).toBe(20);
+    });
+
+    test('a quest with no receipt validates to null rather than undefined', () => {
+        const state = {
+            ...createEmptyCharacterState(),
+            [STORAGE_KEYS.COMPLETED_QUESTS]: [{
+                type: '\u2663 Side Quest',
+                prompt: 'No receipt here',
+                rewards: { xp: 1, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+                month: 'January',
+                year: '2026'
+            }]
+        };
+        const reloaded = validateCharacterState(state)[STORAGE_KEYS.COMPLETED_QUESTS][0];
+
+        expect('receipt' in reloaded).toBe(true);
+        expect(reloaded.receipt).toBeNull();
+    });
+});

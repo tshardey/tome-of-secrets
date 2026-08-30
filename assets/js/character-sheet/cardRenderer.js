@@ -399,26 +399,31 @@ export function renderSideQuestCard(questCardData) {
         // The card wrapper handles selection clicks; don't let the dropdown toggle it.
         select.addEventListener('click', (event) => event.stopPropagation());
 
+        content.appendChild(select);
+
         // The Exchange's register: branches flagged requiresCountry take the author's
         // country here, so the deck controller can check it against the register.
-        const countryInput = createElement('input', {
-            class: 'card-branch-country',
-            type: 'text',
-            placeholder: 'Country (claimed once, ever)',
-            'aria-label': 'Author country to strike off the register'
-        });
-        countryInput.dataset.questKey = String(questCardData.key ?? '');
-        countryInput.addEventListener('click', (event) => event.stopPropagation());
+        // Only one branch in the game carries the flag, so don't put a hidden input
+        // on every branching card.
+        if (branches.some((b) => b.requiresCountry)) {
+            const countryInput = createElement('input', {
+                class: 'card-branch-country',
+                type: 'text',
+                placeholder: 'Country (claimed once, ever)',
+                'aria-label': 'Author country to strike off the register'
+            });
+            countryInput.dataset.questKey = String(questCardData.key ?? '');
+            countryInput.addEventListener('click', (event) => event.stopPropagation());
 
-        const syncCountryInput = () => {
-            const chosen = branches.find((b) => b.key === select.value) || branches[0];
-            countryInput.hidden = !chosen?.requiresCountry;
-        };
-        select.addEventListener('change', syncCountryInput);
-        syncCountryInput();
+            const syncCountryInput = () => {
+                const chosen = branches.find((b) => b.key === select.value) || branches[0];
+                countryInput.hidden = !chosen?.requiresCountry;
+            };
+            select.addEventListener('change', syncCountryInput);
+            syncCountryInput();
 
-        content.appendChild(select);
-        content.appendChild(countryInput);
+            content.appendChild(countryInput);
+        }
     }
 
     if (promptText) {
@@ -672,6 +677,15 @@ export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle) {
     header.appendChild(dateEl);
     back.appendChild(header);
 
+    // Branching side quests: name the fork that was taken. The prompt below carries the
+    // branch's text, but not which branch it was, and the archive is where you look
+    // months later to remember what you did.
+    if (typeof quest.branchName === 'string' && quest.branchName.trim()) {
+        const branchEl = createElement('div', { class: 'tome-card-stat-branch' });
+        branchEl.textContent = quest.branchName.trim();
+        back.appendChild(branchEl);
+    }
+
     const promptEl = createElement('div', { class: 'tome-card-stat-prompt' });
     promptEl.textContent = quest.prompt || '—';
     back.appendChild(promptEl);
@@ -684,13 +698,17 @@ export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle) {
     }
 
     const rewards = quest.rewards && typeof quest.rewards === 'object' ? quest.rewards : {};
-    const hasRewards = (rewards.xp > 0) || (rewards.inkDrops > 0) || (rewards.paperScraps > 0);
+    const hasRewards = (rewards.xp > 0) || (rewards.inkDrops > 0) ||
+        (rewards.paperScraps > 0) || (rewards.blueprints > 0);
     if (hasRewards) {
         const rewardsRow = createElement('div', { class: 'tome-card-stat-rewards' });
         const parts = [];
         if (rewards.xp > 0) parts.push(`+${rewards.xp} XP`);
         if (rewards.inkDrops > 0) parts.push(`+${rewards.inkDrops} 💧`);
         if (rewards.paperScraps > 0) parts.push(`+${rewards.paperScraps} 📄`);
+        // Side quests are the first content to pay Blueprints, and the archive card
+        // silently omitted them while the active card showed them.
+        if (rewards.blueprints > 0) parts.push(`+${rewards.blueprints} 📜`);
         rewardsRow.textContent = parts.join(' ');
         back.appendChild(rewardsRow);
     }

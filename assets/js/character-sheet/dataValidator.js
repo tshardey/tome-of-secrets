@@ -113,7 +113,13 @@ function validateQuest(quest, context = 'quest') {
         // Exchange's register claims on completion. Without these the branch is lost on reload.
         branchKey: typeof quest.branchKey === 'string' && quest.branchKey.trim() ? quest.branchKey.trim() : null,
         branchName: typeof quest.branchName === 'string' && quest.branchName.trim() ? quest.branchName.trim() : null,
-        branchCountry: typeof quest.branchCountry === 'string' && quest.branchCountry.trim() ? quest.branchCountry.trim() : null
+        branchCountry: typeof quest.branchCountry === 'string' && quest.branchCountry.trim() ? quest.branchCountry.trim() : null,
+        // The reward receipt written by completeActiveQuest. renderComponents, QuestService
+        // and questViewModel all read it, so dropping it here made the reward breakdown and
+        // the modified-indicator vanish after the first reload.
+        receipt: quest.receipt && typeof quest.receipt === 'object' && !Array.isArray(quest.receipt)
+            ? quest.receipt
+            : null
     };
 
     // Normalize month/year if they're invalid but dates are available (Phase 2.2)

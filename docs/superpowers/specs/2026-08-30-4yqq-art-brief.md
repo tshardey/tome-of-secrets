@@ -27,7 +27,9 @@ whitespace to single hyphens, and appends `.png`:
 Path: `assets/images/side-quests/<filename>`
 
 **Item illustrations** — the path is written literally into each item's `img` field, following
-`assets/images/rewards/<kebab-id>.png`.
+`assets/images/rewards/<kebab-id>.png`. Every item's `id` equals the slug of its **full display
+name**, leading "The" included — that invariant is what `rewardsRenderer` uses to build the
+Rewards page anchors, so `The Haggler's Ledger` is `the-hagglers-ledger`, not `hagglers-ledger`.
 
 **Uploading to Supabase:** the CDN helper strips the `assets/` prefix, so a file the code requests as
 `assets/images/side-quests/hagglers-row.png` must exist in the bucket at
@@ -133,11 +135,11 @@ Match the existing reward art in `images/rewards/`.
 
 | # | File | Item | Type | Subject |
 |---|---|---|---|---|
-| 11 | `hagglers-ledger.png` | The Haggler's Ledger | Non-Wearable | A slim market ledger, soft leather covers curled from handling, a pencil stub tucked in the spine and a bookmark ribbon. Columns of figures visible on a half-open page — struck through and rewritten lower. Grants **Dusty Blueprints**, so work brass, paper and drafting tones rather than arcane glow. |
-| 12 | `revelers-mask.png` | The Reveler's Mask | Wearable | A festival half-mask on its ribbons — papier-mâché or thin painted wood, gilded at the brow, a little worn at the edges. Ambiguous features: not an animal, not quite a face. Should read as something you'd be handed at a gate, not a ceremonial artefact. |
+| 11 | `the-hagglers-ledger.png` | The Haggler's Ledger | Non-Wearable | A slim market ledger, soft leather covers curled from handling, a pencil stub tucked in the spine and a bookmark ribbon. Columns of figures visible on a half-open page — struck through and rewritten lower. Grants **Dusty Blueprints**, so work brass, paper and drafting tones rather than arcane glow. |
+| 12 | `the-revelers-mask.png` | The Reveler's Mask | Wearable | A festival half-mask on its ribbons — papier-mâché or thin painted wood, gilded at the brow, a little worn at the edges. Ambiguous features: not an animal, not quite a face. Should read as something you'd be handed at a gate, not a ceremonial artefact. |
 | 13 | `visiting-scholars-sigil.png` | Visiting Scholar's Sigil | Wearable | An enamelled enrolment pin or seal on a short chain — an academic device from an institution that is plainly not yours. Foreign lettering suggested but **unreadable**; the point is that you cannot pronounce it. Small, official, slightly bureaucratic. |
-| 14 | `crossroads-fox.png` | The Crossroads Fox | Familiar | A fox sitting at a signpost's base, alert, head tilted, one paw raised as if about to set off down a road it has already chosen. The only Familiar in the game with an activated ability — it should look like it is *about to do something*, not like a sleeping companion. |
-| 15 | `menders-thread.png` | The Mender's Thread | Non-Wearable | A bookbinder's needle and waxed linen thread on a spool, beside a damaged text block with visible stitching along the spine. Repair in progress. Grants **Dusty Blueprints** — pair it visually with the Ledger: brass, linen, workbench light. |
+| 14 | `the-crossroads-fox.png` | The Crossroads Fox | Familiar | A fox sitting at a signpost's base, alert, head tilted, one paw raised as if about to set off down a road it has already chosen. The only Familiar in the game with an activated ability — it should look like it is *about to do something*, not like a sleeping companion. |
+| 15 | `the-menders-thread.png` | The Mender's Thread | Non-Wearable | A bookbinder's needle and waxed linen thread on a spool, beside a damaged text block with visible stitching along the spine. Repair in progress. Grants **Dusty Blueprints** — pair it visually with the Ledger: brass, linen, workbench light. |
 
 ---
 
