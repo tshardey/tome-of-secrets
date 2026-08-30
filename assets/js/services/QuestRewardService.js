@@ -68,25 +68,33 @@ export function calculateBlueprintReward(quest) {
 }
 
 /**
- * Apply blueprint reward to a quest's reward object and receipt
- * @param {Object} quest - Quest object (will be mutated to add blueprints)
- * @returns {number} Blueprint reward amount that was applied
+ * Apply the blueprint reward to a quest's reward object and receipt.
+ *
+ * Additive by design: `calculateBlueprintReward()` returns the *catalog base* for quest
+ * types that carry one outside their rewards object (genre quests, extra credit), while
+ * `quest.rewards.blueprints` already holds whatever the ADR-003 pipeline resolved —
+ * the side quest's authored base plus any item ADD_FLAT bonuses. Overwriting instead of
+ * adding would discard the item bonus; adding a '♣ Side Quest' branch to
+ * calculateBlueprintReward() would double-count the authored base, which
+ * RewardCalculator._getSideQuestRewards() has already put into the Reward.
+ *
+ * @param {Object} quest - Quest object (mutated: rewards.blueprints and receipt totals)
+ * @returns {number} Total blueprints the quest pays
  */
 export function applyBlueprintRewardToQuest(quest) {
-    const blueprintReward = calculateBlueprintReward(quest);
-    
-    if (blueprintReward > 0) {
-        if (quest.rewards) {
-            quest.rewards.blueprints = blueprintReward;
-        }
-        
-        // Update receipt if it exists
-        if (quest.receipt) {
-            quest.receipt.base.blueprints = blueprintReward;
-            quest.receipt.final.blueprints = blueprintReward;
-        }
+    const catalogBase = calculateBlueprintReward(quest);
+    const resolved = Number(quest?.rewards?.blueprints) || 0;
+    const total = resolved + catalogBase;
+
+    if (quest.rewards) {
+        quest.rewards.blueprints = total;
     }
-    
-    return blueprintReward;
+
+    if (quest.receipt) {
+        quest.receipt.base.blueprints = (Number(quest.receipt.base.blueprints) || 0) + catalogBase;
+        quest.receipt.final.blueprints = total;
+    }
+
+    return total;
 }
 
