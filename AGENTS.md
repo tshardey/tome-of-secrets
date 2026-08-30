@@ -216,29 +216,34 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
 4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
 5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
-6.  **Git: `git add` only:** Agents may **`git add`** to stage the files that belong to the session’s work (including **`.beads/issues.jsonl`** after a `bd export` when Beads changed). Agents must **not** run **`git commit`** or **`git push`** — the maintainer commits and publishes. When issue state changed, run **`bd export --no-memories -o .beads/issues.jsonl`** so the export matches the database before staging.
+6.  **Git: feature branches only, never `main`:** Agents may **`git add`**, **`git commit`**, **`git push`**, and **open pull requests** — but only on a **feature branch**. Agents must **never** commit to, push to, or merge into **`main`**; the maintainer merges. If the session starts on `main`, create a branch before the first commit. When issue state changed, run **`bd export --no-memories -o .beads/issues.jsonl`** so the export matches the database, then stage it with the rest of the work.
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, complete ALL steps below. Work is complete when intended changes are **staged** with `git add` (or explicitly listed if something must stay unstaged), quality gates have run, and the handoff is clear.
+**When ending a work session**, complete ALL steps below. Work is complete when intended changes are **committed to a feature branch** (or explicitly listed if something must stay uncommitted), quality gates have run, and the handoff is clear.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds; complete **subagent pre-commit review** for code diffs
 3. **Update issue status** - Close finished work, update in-progress items
-4. **Stage for the maintainer (`git add` only)**:
+4. **Commit and push the feature branch**:
    ```bash
+   git rev-parse --abbrev-ref HEAD                  # confirm you are NOT on main
    bd export --no-memories -o .beads/issues.jsonl   # when Beads issue state changed; refreshes git-tracked export
    git add <paths>     # stage every file that is part of this deliverable (include .beads/issues.jsonl if updated)
    git status          # show staged vs unstaged; call out anything intentionally not added
+   git commit -m "<type>(<bead-id>): <summary>"
+   git push -u origin <feature-branch>
    ```
-   **Do not run `git commit` or `git push`.** The handoff should list what is **staged**, branch name, and suggested commit message (if helpful).
+   Open a PR against `main` when the work is ready for review, and **leave it unmerged**. Never commit or push to `main` directly. The handoff should list the branch, the commits, and the PR link.
 5. **Clean up** - Clear stashes if you created them; do not prune remotes unless asked
 6. **Verify** - Staged set matches intent; no stray generated artifacts in the index unless the task requires them
 7. **Hand off** - Summarize changes, remaining risks, and follow-ups for the next session
 
 **CRITICAL RULES:**
-- **Only `git add`** for git writes — **never `git commit`** or **`git push`** as an agent.
+- **Never commit to, push to, or merge into `main`.** Committing, pushing and opening PRs is allowed on **feature branches** only. Check the current branch before your first commit.
+- **Do not merge your own PR.** The maintainer reviews and merges.
 - Avoid **`git pull` / merge / rebase** unless the maintainer explicitly asked; those change history and can surprise a human mid-review.
+- **Parallel agents share one working tree and one git index.** When several agents work the same checkout at once, only one of them may run git commands — the coordinator commits on their behalf. `git add` from two agents at once cross-contaminates the index.
 - If the environment prevents staging, still run gates and leave an exact file list and diff summary for the maintainer.
