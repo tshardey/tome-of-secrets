@@ -235,6 +235,12 @@ export class EffectRegistry {
             return buff?.id || buffNameOrId;
         };
 
+        // These MULTIPLY/inkDrops effects in sanctumBenefits.json are a SELECTOR for which
+        // atmospheric buffs are sanctum-associated, not a reward — never applied as an ink
+        // multiplier. Atmospheric buffs actually pay Paper Scraps (GAME_CONFIG.atmospheric),
+        // so this reads as stale ink data but must NOT be "fixed" to paperScraps: that makes
+        // this filter match nothing and silently fall back to legacy associatedBuffs.
+        // Decoupling tracked as tome-of-secrets-qjbg.
         const fromEffects = (sanctum.effects || [])
             .filter((effect) => effect?.trigger === TRIGGERS.ON_MONTH_END)
             .filter((effect) => effect?.modifier?.type === MODIFIER_TYPES.MULTIPLY)
