@@ -20,6 +20,27 @@ import { buildEffectContext } from '../services/effectContext.js';
 const BOOK_SEARCH_DEBOUNCE_MS = 600;
 const BOOK_SEARCH_MIN_LENGTH = 2;
 
+// Stable display order for the tag picker columns. Any tag category not listed
+// here is still rendered, appended after these in the order it appears in the
+// tag data, so new categories can never be silently dropped from the picker.
+const TAG_CATEGORY_ORDER = ['genre', 'content', 'provenance', 'agency', 'form'];
+const TAG_CATEGORY_LABELS = {
+    genre: 'Genre',
+    content: 'Content',
+    provenance: 'Provenance',
+    agency: 'Agency',
+    form: 'Form'
+};
+
+function tagCategoryLabel(category) {
+    if (TAG_CATEGORY_LABELS[category]) return TAG_CATEGORY_LABELS[category];
+    return String(category)
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
 export class LibraryController extends BaseController {
     constructor(stateAdapter, form, dependencies) {
         super(stateAdapter, form, dependencies);
@@ -1129,20 +1150,30 @@ export class LibraryController extends BaseController {
         const tags = bookTags || [];
         container.innerHTML = '';
 
-        const categories = { genre: [], content: [] };
+        // Group by whatever categories the tag data actually carries, so a new
+        // category added to bookTags.json shows up in the picker automatically.
+        const categories = new Map();
         for (const tag of tags) {
-            if (categories[tag.category]) {
-                categories[tag.category].push(tag);
+            const category = tag.category || 'other';
+            if (!categories.has(category)) {
+                categories.set(category, []);
             }
+            categories.get(category).push(tag);
         }
 
-        for (const [category, categoryTags] of Object.entries(categories)) {
+        const orderedCategories = [
+            ...TAG_CATEGORY_ORDER.filter(category => categories.has(category)),
+            ...Array.from(categories.keys()).filter(category => !TAG_CATEGORY_ORDER.includes(category))
+        ];
+
+        for (const category of orderedCategories) {
+            const categoryTags = categories.get(category);
             const column = document.createElement('div');
             column.className = 'library-tag-column';
 
             const heading = document.createElement('div');
             heading.className = 'library-tag-category';
-            heading.textContent = category === 'genre' ? 'Genre' : 'Content';
+            heading.textContent = tagCategoryLabel(category);
             column.appendChild(heading);
 
             for (const tag of categoryTags) {

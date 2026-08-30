@@ -18,13 +18,13 @@ describe('bookTags.json vocabulary', () => {
         expect(new Set(ids).size).toBe(ids.length);
     });
 
-    test('every tag has id, label, and category (genre or content)', () => {
+    test('every tag has id, label, and a known category', () => {
         bookTags.forEach(tag => {
             expect(typeof tag.id).toBe('string');
             expect(tag.id.length).toBeGreaterThan(0);
             expect(typeof tag.label).toBe('string');
             expect(tag.label.length).toBeGreaterThan(0);
-            expect(['genre', 'content']).toContain(tag.category);
+            expect(['genre', 'content', 'provenance', 'agency', 'form']).toContain(tag.category);
         });
     });
 
@@ -34,12 +34,14 @@ describe('bookTags.json vocabulary', () => {
         });
     });
 
-    test('has expected counts: 10 genre tags and 16 content tags', () => {
-        const genre = bookTags.filter(t => t.category === 'genre');
-        const content = bookTags.filter(t => t.category === 'content');
-        expect(genre).toHaveLength(10);
-        expect(content).toHaveLength(16);
-        expect(bookTags).toHaveLength(26);
+    test('has expected counts per category', () => {
+        const countOf = (category) => bookTags.filter(t => t.category === category).length;
+        expect(countOf('genre')).toBe(10);
+        expect(countOf('content')).toBe(19);
+        expect(countOf('provenance')).toBe(6);
+        expect(countOf('agency')).toBe(2);
+        expect(countOf('form')).toBe(5);
+        expect(bookTags).toHaveLength(42);
     });
 });
 
@@ -133,5 +135,30 @@ describe('Schema migration v16 - book tags', () => {
         };
         const migrated = migrateState(state);
         expect(migrated[STORAGE_KEYS.BOOKS]['book-1'].tags).toEqual(['fantasy', 'dragons']);
+    });
+});
+
+describe('4yqq expansion tags', () => {
+    const EXPANSION_TAGS = [
+        'borrowed', 'secondhand', 'gifted', 'genre-stretch',
+        'translated', 'new-country', 'untranslated', 'recommended',
+        're-read', 'inherited', 'mended', 'epistolary',
+        'poetry', 'illustrated', 'short-form', 'audio'
+    ];
+
+    test('every expansion tag exists with a label and a category', () => {
+        const byId = new Map(bookTags.map(tag => [tag.id, tag]));
+        for (const id of EXPANSION_TAGS) {
+            const tag = byId.get(id);
+            expect(tag).toBeDefined();
+            expect(typeof tag.label).toBe('string');
+            expect(tag.label.length).toBeGreaterThan(0);
+            expect(['provenance', 'agency', 'form', 'content']).toContain(tag.category);
+        }
+    });
+
+    test('tag ids are unique across the whole vocabulary', () => {
+        const ids = bookTags.map(tag => tag.id);
+        expect(new Set(ids).size).toBe(ids.length);
     });
 });

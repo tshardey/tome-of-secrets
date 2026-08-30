@@ -123,6 +123,18 @@ export class SideQuestDeckController extends BaseController {
      * Render drawn cards with click/ctrl+click selection
      */
     renderDrawnCard() {
+        // Cards are re-rendered on every draw and every selection click, so remember which
+        // branch each drawn card was showing — and any country typed into the Exchange's
+        // register input — and restore both afterwards.
+        const branchSelections = new Map();
+        this.drawnCardDisplay.querySelectorAll('select.card-branch-select').forEach((select) => {
+            branchSelections.set(select.dataset.questKey, select.value);
+        });
+        const branchCountries = new Map();
+        this.drawnCardDisplay.querySelectorAll('input.card-branch-country').forEach((input) => {
+            if (input.value) branchCountries.set(input.dataset.questKey, input.value);
+        });
+
         clearElement(this.drawnCardDisplay);
 
         if (this.drawnQuests.length === 0) {
@@ -148,6 +160,19 @@ export class SideQuestDeckController extends BaseController {
                 }
                 this.renderDrawnCard();
             });
+            const select = card.querySelector('select.card-branch-select');
+            const previous = select && branchSelections.get(select.dataset.questKey);
+            if (select && previous && previous !== select.value) {
+                select.value = previous;
+                // Re-sync the displayed prompt (and the country input's visibility)
+                // with the restored branch.
+                select.dispatchEvent(new Event('change'));
+            }
+            const countryInput = card.querySelector('input.card-branch-country');
+            const previousCountry = countryInput && branchCountries.get(countryInput.dataset.questKey);
+            if (countryInput && previousCountry) {
+                countryInput.value = previousCountry;
+            }
             this.drawnCardDisplay.appendChild(wrapper);
         });
         this.dependencies.updateDeckActionsLabel?.();
@@ -225,13 +250,48 @@ export class SideQuestDeckController extends BaseController {
         const questJSONs = [];
 
         for (const questData of toAdd) {
-            const prompt = `${questData.name}: ${questData.prompt}`;
+            const branches = Array.isArray(questData.branches) ? questData.branches : null;
+            let branch = null;
+
+            if (branches && branches.length > 0) {
+                const select = this.drawnCardDisplay?.querySelector(
+                    `select.card-branch-select[data-quest-key="${questData.key}"]`
+                );
+                const chosenKey = select?.value || branches[0].key;
+                branch = branches.find((b) => b.key === chosenKey) || branches[0];
+            }
+
+            // The Exchange's register: a branch flagged requiresCountry needs a country
+            // that has never been struck off before. It's claimed on completion, not here.
+            let branchCountry = null;
+            if (branch?.requiresCountry) {
+                const input = this.drawnCardDisplay?.querySelector(
+                    `input.card-branch-country[data-quest-key="${questData.key}"]`
+                );
+                branchCountry = (input?.value || '').trim() || null;
+                if (!branchCountry) {
+                    toast.warning('Name the author\'s country before enrolling — the register needs an entry.');
+                    continue;
+                }
+                if (this.stateAdapter.hasClaimedCountry(branchCountry)) {
+                    toast.warning(`${branchCountry} is already struck off the Exchange's register.`);
+                    continue;
+                }
+            }
+
+            // Keep the "<Name>: <prompt>" shape: extractNameFromPrompt() in the archive view
+            // model and checkSideQuestCompletion() in table-renderer both parse it.
+            const prompt = `${questData.name}: ${branch ? branch.prompt : questData.prompt}`;
             const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', prompt, {
-                sideQuestId: questData.id || null
+                sideQuestId: questData.id || null,
+                branchKey: branch ? branch.key : null
             });
             const quest = {
                 type: '♣ Side Quest',
                 sideQuestId: questData.id || null,
+                branchKey: branch ? branch.key : null,
+                branchName: branch ? branch.name : null,
+                branchCountry,
                 prompt,
                 rewards: rewards.toJSON ? rewards.toJSON() : rewards,
                 buffs: [],

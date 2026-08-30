@@ -39,6 +39,8 @@ export const STORAGE_KEYS = Object.freeze({
     CLAIMED_SERIES_REWARDS: 'claimedSeriesRewards',
     /** Expedition progress: [{ seriesId, stopId, claimedAt }] — which series have advanced the shared track. */
     SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress',
+    /** The Exchange's register: country names claimed once, ever, by side quest 13 branch B. */
+    CLAIMED_COUNTRIES: 'claimedCountries',
     // Shopping & book box tracking (rewards overhaul)
     SHOPPING_LOG: 'shoppingLog',
     BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
@@ -83,6 +85,7 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.SERIES,
     STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
     STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
+    STORAGE_KEYS.CLAIMED_COUNTRIES,
     STORAGE_KEYS.SHOPPING_LOG,
     STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
     STORAGE_KEYS.BOOK_BOX_HISTORY,
@@ -121,6 +124,7 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.SERIES]: {},
         [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
         [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
+        [STORAGE_KEYS.CLAIMED_COUNTRIES]: [],
         [STORAGE_KEYS.SHOPPING_LOG]: [],
         [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
         [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],

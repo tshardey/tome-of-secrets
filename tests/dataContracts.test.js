@@ -524,7 +524,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expect(ids.has(tag.id)).toBe(false);
             ids.add(tag.id);
             expectString(tag.label);
-            expect(['genre', 'content']).toContain(tag.category);
+            expect(['genre', 'content', 'provenance', 'agency', 'form']).toContain(tag.category);
             expect(tag.id).toMatch(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
         });
     });
@@ -570,5 +570,163 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expectString(buff.stickerSlug);
             expect(stickerSlugs.has(buff.stickerSlug)).toBe(true);
         });
+    });
+});
+
+describe('4yqq expansion items', () => {
+    const EXPANSION_ITEMS = [
+        "The Haggler's Ledger",
+        "The Reveler's Mask",
+        "Visiting Scholar's Sigil",
+        "The Crossroads Fox",
+        "The Mender's Thread"
+    ];
+
+    test('all five exist with a kebab-case id, a type, and an effects array', () => {
+        const items = loadJson('allItems.json');
+        for (const name of EXPANSION_ITEMS) {
+            const item = items[name];
+            expect(item).toBeDefined();
+            expect(item.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+            expect(['Wearable', 'Non-Wearable', 'Familiar']).toContain(item.type);
+            expect(Array.isArray(item.effects)).toBe(true);
+            expect(item.effects.length).toBeGreaterThan(0);
+        }
+    });
+
+    test('no expansion item grants Ink Drops', () => {
+        const items = loadJson('allItems.json');
+        for (const name of EXPANSION_ITEMS) {
+            for (const effect of items[name].effects) {
+                expect(effect.modifier.resource).not.toBe('inkDrops');
+            }
+        }
+    });
+
+    test('every tag an expansion item matches on exists in bookTags.json', () => {
+        const items = loadJson('allItems.json');
+        const tagIds = new Set(loadJson('bookTags.json').map(tag => tag.id));
+        for (const name of EXPANSION_ITEMS) {
+            for (const effect of items[name].effects) {
+                for (const group of effect.condition?.tagMatch ?? []) {
+                    for (const tag of group) {
+                        expect(tagIds.has(tag)).toBe(true);
+                    }
+                }
+            }
+        }
+    });
+});
+
+describe('4yqq currency and collision contracts', () => {
+    const NEW_QUEST_KEYS = ['9', '10', '11', '12', '13', '14', '15', '16', '17', '18'];
+
+    test('no new side quest, branch, or expansion item grants Ink Drops', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        for (const key of NEW_QUEST_KEYS) {
+            expect(quests[key].rewards.inkDrops).toBe(0);
+            for (const branch of quests[key].branches) {
+                expect(branch.rewards.inkDrops).toBe(0);
+            }
+        }
+    });
+
+    test('no new prompt reaches for a Worn Page penalty verb', () => {
+        // Reward tables and penalty tables must never name the same action: an action that
+        // means "you failed" cannot also mean "you won".
+        const quests = loadJson('sideQuestsDetailed.json');
+        const FORBIDDEN = [
+            /\bDNF\b/i,
+            /did not finish/i,
+            /\bset aside\b/i,
+            /\babandoned\b/i,
+            // Added from the hand cross-check of curseTableDetailed.json:
+            // "The Unread Tome" also assigns "a book you have been putting off",
+            // "The Lost Lore" assigns a podcast, and "The Forgotten Pages" assigns
+            // reorganising a shelf or library. None of the three may become a reward.
+            /\bput(?:ting)? off\b/i,
+            /\bpodcast\b/i,
+            /\breorgani[sz]/i
+        ];
+
+        for (const key of NEW_QUEST_KEYS) {
+            const texts = [quests[key].prompt, ...quests[key].branches.map(b => b.prompt)];
+            for (const text of texts) {
+                for (const pattern of FORBIDDEN) {
+                    expect(text).not.toMatch(pattern);
+                }
+            }
+        }
+    });
+
+    test('every item a new quest grants exists in allItems.json by exact name', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        const items = loadJson('allItems.json');
+        const names = new Set(Object.values(items).map(item => item.name));
+
+        for (const key of NEW_QUEST_KEYS) {
+            const granted = [
+                ...quests[key].rewards.items,
+                ...quests[key].branches.flatMap(b => b.rewards.items)
+            ];
+            for (const name of granted) {
+                expect(names.has(name)).toBe(true);
+            }
+        }
+    });
+
+    test('side quest ids are unique and kebab-case across the whole pool', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        const ids = Object.values(quests).map(q => q.id);
+
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const id of ids) {
+            expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+        }
+    });
+});
+
+describe('4yqq reward link integrity', () => {
+    // A side quest's "Receive X" link points at an anchor on rewards.html that
+    // rewardsRenderer derives from the item NAME via slugifyId. Four of the five new
+    // items shipped with ids that had "The" stripped, so their links pointed at
+    // anchors that did not exist. validate-data only checks kebab-case and uniqueness,
+    // so nothing caught it.
+    const slugifyId = (name) => String(name || '')
+        .toLowerCase()
+        .replace(/['\u2019]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    test('every item id equals the slug of its name', () => {
+        const items = loadJson('allItems.json');
+        for (const item of Object.values(items)) {
+            expect(item.id).toBe(slugifyId(item.name));
+        }
+    });
+
+    test('every side quest reward link resolves to a real item anchor', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        const anchors = new Set(Object.values(loadJson('allItems.json')).map(i => slugifyId(i.name)));
+
+        for (const [key, quest] of Object.entries(quests)) {
+            if (!quest.link?.url) continue;
+            const anchor = quest.link.url.split('#')[1];
+            expect(anchor).toBeTruthy();
+            expect({ key, anchor, resolves: anchors.has(anchor) })
+                .toEqual({ key, anchor, resolves: true });
+        }
+    });
+
+    test('a linked quest grants the item its link names', () => {
+        const quests = loadJson('sideQuestsDetailed.json');
+        for (const quest of Object.values(quests)) {
+            if (!quest.link?.text) continue;
+            const granted = [
+                ...(quest.rewards?.items ?? []),
+                ...(quest.branches ?? []).flatMap(b => b.rewards?.items ?? [])
+            ];
+            expect(granted).toContain(quest.link.text);
+        }
     });
 });

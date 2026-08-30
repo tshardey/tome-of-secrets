@@ -24,5 +24,21 @@
   { "id": "celestial", "label": "Celestial Motifs", "category": "content" },
   { "id": "mythology", "label": "Mythology", "category": "content" },
   { "id": "unlocked", "label": "Unlocking / Discovery", "category": "content" },
-  { "id": "cozy", "label": "Cozy / Comfort Read", "category": "content" }
+  { "id": "cozy", "label": "Cozy / Comfort Read", "category": "content" },
+  { "id": "borrowed", "label": "Borrowed Copy", "category": "provenance" },
+  { "id": "secondhand", "label": "Bought Used", "category": "provenance" },
+  { "id": "gifted", "label": "Gifted / Given", "category": "provenance" },
+  { "id": "inherited", "label": "Inherited / Someone Else's", "category": "provenance" },
+  { "id": "mended", "label": "Damaged / Ex-Library / Marked", "category": "provenance" },
+  { "id": "re-read", "label": "Re-Read", "category": "provenance" },
+  { "id": "recommended", "label": "Chosen by Someone Else", "category": "agency" },
+  { "id": "genre-stretch", "label": "Outside Your Usual Genres", "category": "agency" },
+  { "id": "translated", "label": "Translated", "category": "content" },
+  { "id": "new-country", "label": "Author from a New-to-You Country", "category": "content" },
+  { "id": "untranslated", "label": "Untranslated Words in the Text", "category": "content" },
+  { "id": "epistolary", "label": "Letters / Documents / Found Records", "category": "form" },
+  { "id": "poetry", "label": "Poetry / Verse", "category": "form" },
+  { "id": "illustrated", "label": "Graphic Novel / Illustrated", "category": "form" },
+  { "id": "short-form", "label": "Short Stories / Essays / Novella", "category": "form" },
+  { "id": "audio", "label": "Audiobook", "category": "form" }
 ]

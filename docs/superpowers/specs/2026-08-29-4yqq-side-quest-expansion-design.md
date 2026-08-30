@@ -1,5 +1,12 @@
 # 4YQQ: Side Quest Expansion — Beyond the Library Doors
 
+> **SUPERSEDED (2026-08-30)** by
+> [`2026-08-30-4yqq-side-quest-expansion-draft3.md`](2026-08-30-4yqq-side-quest-expansion-draft3.md),
+> which specifies ten branching quests rather than twelve flat ones. The engineering findings
+> below — the blueprint payout gap (R4) and the hardcoded `1..8` render loop (R5) — were both
+> correct and were carried forward and implemented. The quest and item content below was **not**
+> implemented; none of these twelve quests, six items or six tags exist in the game.
+
 ## Summary
 
 The side quest deck is exhausted. Eight quests shipped, all eight are completed, and `SideQuestDeckService.getAvailableSideQuests()` now returns an empty array every month. This spec adds **twelve** new side quests set **outside** the Grand Library — a night bazaar, a town festival, a term abroad, and six road-and-harbour locales — bringing the pool to twenty.

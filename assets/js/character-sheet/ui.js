@@ -1156,7 +1156,8 @@ function actionDisplayName(action) {
         remove_all_worn_pages: 'Remove all Worn Pages',
         auto_complete_encounter: 'Auto-complete encounter',
         complete_adjacent_quest: 'Complete adjacent quest',
-        same_book_room_and_encounter: 'Same book for room + encounter'
+        same_book_room_and_encounter: 'Same book for room + encounter',
+        fox_chooses_from_tbr: 'Fox chooses from your TBR'
     };
     return names[action] || action || 'Activate ability';
 }

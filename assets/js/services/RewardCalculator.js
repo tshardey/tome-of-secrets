@@ -99,7 +99,8 @@ export class RewardCalculator {
             roomNumber = null,
             encounterName = null,
             isBefriend = true,
-            sideQuestId = null
+            sideQuestId = null,
+            branchKey = null
         } = options;
         let reward;
 
@@ -119,7 +120,7 @@ export class RewardCalculator {
         }
         // Side Quests
         else if (type === '♣ Side Quest') {
-            reward = this._getSideQuestRewards(prompt, sideQuestId);
+            reward = this._getSideQuestRewards(prompt, sideQuestId, branchKey);
         }
         // Dungeon Crawl
         else if (type === '♠ Dungeon Crawl') {
@@ -137,34 +138,46 @@ export class RewardCalculator {
     }
 
     /**
-     * Get rewards for a side quest
+     * Resolve the rewards for a side quest, honouring a chosen branch when there is one.
+     *
+     * Branching quests keep their flat prompt/reward/rewards fields populated with branch A's
+     * values, so a renderer or a stored quest that predates branches still resolves correctly.
+     *
+     * @param {string} prompt
+     * @param {string|null} sideQuestId
+     * @param {string|null} branchKey - 'A'..'D' or '1'..'4'; null resolves the flat rewards
      * @private
      */
-    static _getSideQuestRewards(prompt, sideQuestId = null) {
-        if (sideQuestId && data.sideQuestsById?.has(sideQuestId)) {
-            const sideQuest = data.sideQuestsById.get(sideQuestId);
-            const reward = new Reward(sideQuest.rewards);
+    static _getSideQuestRewards(prompt, sideQuestId = null, branchKey = null) {
+        const build = (rewards) => {
+            const reward = new Reward(rewards);
             reward.receipt.base.xp = reward.xp;
             reward.receipt.base.inkDrops = reward.inkDrops;
             reward.receipt.base.paperScraps = reward.paperScraps;
             reward.receipt.base.blueprints = reward.blueprints;
             reward.receipt.final = { ...reward.receipt.base };
             return reward;
+        };
+
+        const resolveFor = (sideQuest) => {
+            if (branchKey && Array.isArray(sideQuest.branches)) {
+                const branch = sideQuest.branches.find((b) => b?.key === branchKey);
+                if (branch?.rewards) return build(branch.rewards);
+            }
+            return build(sideQuest.rewards);
+        };
+
+        if (sideQuestId && data.sideQuestsById?.has(sideQuestId)) {
+            return resolveFor(data.sideQuestsById.get(sideQuestId));
         }
 
         for (const key in data.sideQuestsDetailed) {
             const sideQuest = data.sideQuestsDetailed[key];
             if (prompt.includes(sideQuest.prompt) || prompt.includes(sideQuest.name)) {
-                const reward = new Reward(sideQuest.rewards);
-                // Set receipt base values from the actual reward values (from constructor)
-                reward.receipt.base.xp = reward.xp;
-                reward.receipt.base.inkDrops = reward.inkDrops;
-                reward.receipt.base.paperScraps = reward.paperScraps;
-                reward.receipt.base.blueprints = reward.blueprints;
-                reward.receipt.final = { ...reward.receipt.base };
-                return reward;
+                return resolveFor(sideQuest);
             }
         }
+
         const reward = new Reward({ inkDrops: GAME_CONFIG.rewards.defaultFallback.inkDrops });
         reward.receipt.base.inkDrops = GAME_CONFIG.rewards.defaultFallback.inkDrops;
         reward.receipt.final = { ...reward.receipt.base };

@@ -856,14 +856,14 @@ export function renderQuestCard(quest, index, listType = 'active') {
                     src: toCdnImageUrlIfConfigured(itemImg),
                     loading: 'lazy',
                     decoding: 'async',
-                    alt: escapeHtml(itemName),
-                    title: escapeHtml(itemName)
+                    alt: itemName,
+                    title: itemName
                 });
                 itemReward.appendChild(itemImage);
             }
             
             const itemNameSpan = createElement('span', { class: 'reward-item-name' });
-            itemNameSpan.textContent = escapeHtml(itemName);
+            itemNameSpan.textContent = itemName;
             itemReward.appendChild(itemNameSpan);
             
             rewardsGrid.appendChild(itemReward);

@@ -74,6 +74,7 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.SERIES]: {},
             [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
             [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
+            [STORAGE_KEYS.CLAIMED_COUNTRIES]: [],
             [STORAGE_KEYS.SHOPPING_LOG]: [],
             [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
             [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],

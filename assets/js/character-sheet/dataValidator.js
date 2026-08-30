@@ -28,8 +28,9 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 14: Quest draw helper UI prefs (questDrawHelperSettings: { autoApplyOnDraw })
  * Version 15: Sanctum/buff ID stabilization and side quest ID backfill
  * Version 16: Book tags (tags: [] on each book)
+ * Version 17: The Exchange's register (claimedCountries: countries struck off once, ever)
  */
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 /**
  * Schema version key in localStorage
@@ -107,7 +108,18 @@ function validateQuest(quest, context = 'quest') {
         id: typeof quest.id === 'string' && quest.id.trim() ? quest.id.trim() : null,
         bookId: typeof quest.bookId === 'string' && quest.bookId.trim() ? quest.bookId.trim() : null,
         // Stable side-quest identifier (Schema v15)
-        sideQuestId: typeof quest.sideQuestId === 'string' && quest.sideQuestId.trim() ? quest.sideQuestId.trim() : null
+        sideQuestId: typeof quest.sideQuestId === 'string' && quest.sideQuestId.trim() ? quest.sideQuestId.trim() : null,
+        // Branching side quests: which branch was taken, and (Schema v17) the country the
+        // Exchange's register claims on completion. Without these the branch is lost on reload.
+        branchKey: typeof quest.branchKey === 'string' && quest.branchKey.trim() ? quest.branchKey.trim() : null,
+        branchName: typeof quest.branchName === 'string' && quest.branchName.trim() ? quest.branchName.trim() : null,
+        branchCountry: typeof quest.branchCountry === 'string' && quest.branchCountry.trim() ? quest.branchCountry.trim() : null,
+        // The reward receipt written by completeActiveQuest. renderComponents, QuestService
+        // and questViewModel all read it, so dropping it here made the reward breakdown and
+        // the modified-indicator vanish after the first reload.
+        receipt: quest.receipt && typeof quest.receipt === 'object' && !Array.isArray(quest.receipt)
+            ? quest.receipt
+            : null
     };
 
     // Normalize month/year if they're invalid but dates are available (Phase 2.2)
@@ -139,6 +151,7 @@ function validateRewards(rewards, context = 'rewards') {
             xp: 0,
             inkDrops: 0,
             paperScraps: 0,
+            blueprints: 0,
             items: [],
             modifiedBy: []
         };
@@ -148,6 +161,10 @@ function validateRewards(rewards, context = 'rewards') {
         xp: typeof rewards.xp === 'number' && !isNaN(rewards.xp) ? Math.max(0, rewards.xp) : 0,
         inkDrops: typeof rewards.inkDrops === 'number' && !isNaN(rewards.inkDrops) ? Math.max(0, rewards.inkDrops) : 0,
         paperScraps: typeof rewards.paperScraps === 'number' && !isNaN(rewards.paperScraps) ? Math.max(0, rewards.paperScraps) : 0,
+        // Side quests are the first quest type to carry authored Blueprints on the quest
+        // itself. Omitting this key stripped them on every load, so the reward rendered
+        // on the card and was never paid.
+        blueprints: typeof rewards.blueprints === 'number' && !isNaN(rewards.blueprints) ? Math.max(0, rewards.blueprints) : 0,
         items: Array.isArray(rewards.items) ? rewards.items.filter(item => typeof item === 'string') : [],
         modifiedBy: Array.isArray(rewards.modifiedBy) ? rewards.modifiedBy.filter(mod => typeof mod === 'string') : []
     };
@@ -1035,6 +1052,10 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS] = validateSeriesExpeditionProgress(
         state[STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS],
         STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS
+    );
+    validated[STORAGE_KEYS.CLAIMED_COUNTRIES] = validateStringArray(
+        state[STORAGE_KEYS.CLAIMED_COUNTRIES],
+        STORAGE_KEYS.CLAIMED_COUNTRIES
     );
     validated[STORAGE_KEYS.SHOPPING_LOG] = validateShoppingLog(state[STORAGE_KEYS.SHOPPING_LOG], STORAGE_KEYS.SHOPPING_LOG);
     validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);

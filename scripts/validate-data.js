@@ -57,6 +57,19 @@ function loadJSON(filename) {
 /**
  * Validate items
  */
+/**
+ * Mirror of slugifyId() in assets/js/utils/slug.js.
+ * rewardsRenderer and linkifyItems both derive Rewards-page anchors from the item NAME,
+ * so an id that disagrees with the slug means every rewards.html#<id> link is dead.
+ */
+function slugifyName(name) {
+    return String(name || '')
+        .toLowerCase()
+        .replace(/['\u2019]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
 function validateItems(items) {
     const ids = new Set();
     const names = new Map(); // name -> [ids with that name]
@@ -82,6 +95,14 @@ function validateItems(items) {
         if (!item.name) {
             results.push({ type: 'error', message: `Item "${key}" missing name field` });
         } else {
+            // Anchors are derived from the name, never the id; a mismatch breaks every link.
+            const expectedId = slugifyName(item.name);
+            if (item.id && item.id !== expectedId) {
+                results.push({
+                    type: 'error',
+                    message: `Item "${key}" has id "${item.id}" but its name slugifies to "${expectedId}" — rewards.html anchors are built from the name, so links to "#${item.id}" will not resolve`
+                });
+            }
             // Track names for duplicate check
             if (!names.has(item.name)) {
                 names.set(item.name, []);
@@ -201,6 +222,63 @@ function validateSideQuests(quests, itemsById, temporaryBuffs, temporaryBuffsFro
                             message: `Side quest "${key}" references "${itemName}" in rewards, but neither item nor temporary buff found` 
                         });
                     }
+                }
+            }
+        }
+
+        // Branch shape (optional, but if present it must be complete and consistent)
+        if (quest.branches !== undefined) {
+            if (!Array.isArray(quest.branches) || quest.branches.length === 0) {
+                results.push({ type: 'error', message: `Side quest "${key}" has a branches field that is not a non-empty array` });
+            } else {
+                if (quest.branchType !== 'choice' && quest.branchType !== 'roll') {
+                    results.push({ type: 'error', message: `Side quest "${key}" has branches but branchType is "${quest.branchType}" (expected "choice" or "roll")` });
+                }
+                if (quest.branchType === 'roll' && !quest.rollInstruction) {
+                    results.push({ type: 'error', message: `Side quest "${key}" is a roll quest with no rollInstruction` });
+                }
+
+                const branchKeys = new Set();
+                for (const branch of quest.branches) {
+                    if (!branch || typeof branch !== 'object') {
+                        results.push({ type: 'error', message: `Side quest "${key}" has a malformed branch entry` });
+                        continue;
+                    }
+                    if (!branch.key) {
+                        results.push({ type: 'error', message: `Side quest "${key}" has a branch with no key` });
+                    } else if (branchKeys.has(branch.key)) {
+                        results.push({ type: 'error', message: `Side quest "${key}" has duplicate branch key "${branch.key}"` });
+                    } else {
+                        branchKeys.add(branch.key);
+                    }
+                    for (const field of ['name', 'prompt', 'reward']) {
+                        if (typeof branch[field] !== 'string' || !branch[field].trim()) {
+                            results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" is missing ${field}` });
+                        }
+                    }
+                    if (!branch.rewards || typeof branch.rewards !== 'object') {
+                        results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" is missing a rewards object` });
+                        continue;
+                    }
+                    if (Number(branch.rewards.inkDrops) !== 0) {
+                        results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" grants Ink Drops; the expansion contract is zero` });
+                    }
+                    for (const itemName of branch.rewards.items ?? []) {
+                        const itemExists = itemsById.has(itemName) ||
+                            Array.from(itemsById.values()).some(item => item.name === itemName || item.id === itemName);
+                        if (!itemExists && !allTemporaryBuffs.has(itemName)) {
+                            results.push({
+                                type: 'warning',
+                                message: `Side quest "${key}" branch "${branch.key}" references "${itemName}", but neither item nor temporary buff found`
+                            });
+                        }
+                    }
+                }
+
+                // The flat fields must mirror the first branch so branch-unaware renderers work.
+                const first = quest.branches[0];
+                if (first && quest.prompt !== first.prompt) {
+                    results.push({ type: 'warning', message: `Side quest "${key}" flat prompt does not mirror branch "${first.key}"` });
                 }
             }
         }

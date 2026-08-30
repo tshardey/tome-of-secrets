@@ -34,7 +34,8 @@ Subjective mechanics (player decides if it applies) may correctly stay on legacy
 5. [View Model Pattern](#view-model-pattern)
 6. [Pure UI Renderer Pattern](#pure-ui-renderer-pattern)
 7. [Following Existing Patterns](#following-existing-patterns)
-8. [Testing Requirements](#testing-requirements)
+8. [Gotchas worth knowing before you hit them](#gotchas-worth-knowing-before-you-hit-them)
+9. [Testing Requirements](#testing-requirements)
 
 ---
 
@@ -90,6 +91,41 @@ node scripts/generate-data.js
 cd tests && npm run validate-data
 ```
 
+#### An item's `id` must equal the slug of its `name`
+
+`rewardsRenderer.js` builds the Rewards page anchors with `slugifyId(item.name)`, and
+`table-renderer.js` `linkifyItems()` builds cross-links the same way. Nothing derives an anchor
+from the `id`, so if the two disagree, every `rewards.html#<id>` link in the game points at an
+anchor that does not exist.
+
+`slugifyId()` lowercases, **deletes** apostrophes (it does not replace them), and collapses
+everything else non-alphanumeric to single hyphens. It keeps a leading "The":
+
+```
+"Librarian's Compass"   → librarians-compass
+"The Haggler's Ledger"  → the-hagglers-ledger    ← not hagglers-ledger
+```
+
+All items satisfy this invariant, and `validate-data` now enforces it. Quest `link.url` fields
+that point at `rewards.html#…` must use that same slug.
+
+#### Card and item image filenames are derived, not chosen
+
+`assets/js/utils/questCardImage.js` computes image paths from the entity **name**, so a rename
+silently breaks the image:
+
+| Content | Rule | Example |
+|---|---|---|
+| Side quests, genre quests | keeps a leading "The", strips apostrophes | `The Blind Stall` → `side-quests/the-blind-stall.png` |
+| Atmospheric buffs | **drops** a leading "The" | `The Candlelight Study` → `atmospheric-buffs/candlelight-study.png` |
+| Items | literal `img` field in `allItems.json`, conventionally `assets/images/rewards/<id>.png` | — |
+
+Art is hosted in Supabase Storage, **not committed** (`git ls-files assets/images` is empty).
+The CDN base strips the `assets/` prefix, so a file requested as
+`assets/images/side-quests/x.png` must exist in the bucket at `images/side-quests/x.png`.
+See the local-development notes in AGENTS.md — serving without `_config.supabase.yml` makes
+every image 404, which looks exactly like missing art.
+
 ### Stable IDs
 
 **All content must have stable kebab-case IDs** for reliable references across expansions and refactoring.
@@ -115,6 +151,43 @@ const item2 = data.getItem('New Item Name');  // By name (legacy)
 ---
 
 ## Adding New State/Data
+
+### ⚠️ Adding a field to a quest object
+
+**`validateQuest()` in `dataValidator.js` is an allowlist, not a filter.** It rebuilds every
+quest from an explicit object literal, so **any field it does not name is destroyed on the next
+page load** — silently, with no console warning. Quests round-trip through
+`validateCharacterState()` on every `loadState()`, and the validated result is saved back.
+
+This has bitten five times: `sideQuestId` (schema v15), `branchKey` / `branchName` /
+`branchCountry` (v17), and `receipt`. Fields still being dropped today are tracked in Beads.
+
+**If you add a field to a quest, you must add it to `validateQuest()` in the same change.**
+The symptom is nasty precisely because it does not show up in unit tests: the feature works
+perfectly until you refresh.
+
+The same is true of **`validateRewards()`** for anything inside `quest.rewards`. It shipped
+without a `blueprints` key for months, so authored Blueprints were stripped on load and quests
+displayed a reward they never paid.
+
+**Test it at the seam, not in the unit.** A test that calls your feature directly will pass
+either way. Write one that pushes a quest through `validateCharacterState()` and asserts the
+field survives — see `tests/sideQuestCompletionSeam.test.js`.
+
+### Where state actually lives: localStorage vs IndexedDB
+
+Persisted state is **split across two stores**, which is not obvious from `storageKeys.js`:
+
+- **IndexedDB** (database `tomeOfSecrets`, version 1, object store `state`) holds the 16 keys in
+  `LARGE_STATE_KEYS` in `persistence.js` — including `activeAssignments`, `completedQuests`,
+  `discardedQuests`, `books`, `equippedItems`, `inventoryItems` and the buff/curse lists.
+- **localStorage** holds everything else — currencies, `tomeOfSecrets_schemaVersion`,
+  `claimedCountries`, `series`, `completedRestorationProjects`.
+
+`persistence.js` calls `safeRemoveJSON(key)` on every IndexedDB write, so
+`localStorage.getItem('activeAssignments')` returns **`null`** on a live install. Reading or
+seeding the wrong store in a test or a debugging session produces confidently wrong results —
+it looks like the data was wiped when in fact it was never there.
 
 ### Persistent State (localStorage)
 
@@ -901,6 +974,69 @@ cd tests && npm run validate-data
 
 ---
 
+## Gotchas worth knowing before you hit them
+
+### `escapeHtml` belongs in `innerHTML` only
+
+`escapeHtml()` is for interpolating into an `innerHTML` template string. Applying it anywhere
+else double-escapes, because the destination already escapes:
+
+```javascript
+el.textContent = escapeHtml(name);              // ✗ renders: Scholar&#039;s Sigil
+el.textContent = name;                          // ✓
+
+createElement('img', { alt: escapeHtml(name) }) // ✗ setAttribute escapes again
+createElement('img', { alt: name })             // ✓
+
+el.innerHTML = `<strong>${escapeHtml(name)}</strong>`;  // ✓ the only correct use
+```
+
+Never escape a URL — `escapeHtml` turns `&` into `&amp;`, which breaks any query string.
+
+### Adding a book tag category
+
+`bookTags.json` entries carry a `category`, and `LibraryController._renderTagPicker()` builds
+one column per category from the data with an explicit order and label map
+(`TAG_CATEGORY_ORDER` / `TAG_CATEGORY_LABELS`). **Add your category to both constants**, or it
+falls through to a title-cased fallback heading and lands at the end. The picker previously
+hardcoded `{ genre, content }` and silently discarded everything else, which made 13 tags
+unselectable and every item bonus keyed to them unreachable — assert your new tags actually
+render, not just that they exist in the JSON.
+
+### Activated abilities support only two cadences
+
+`ModifierPipeline._isCooldownAvailable()` understands **`monthly`** and **`per-use`**. There is
+no bimonthly or seasonal cadence. An item whose `bonus` / `passiveBonus` string promises
+"once every 2 months" is making a claim nothing enforces — the ability is simply available
+monthly. If an `ON_ACTIVATE` effect has no `slot`, `EffectRegistry` offers it in **both**
+equipped and passive slots at the same rate.
+
+`ACTIVATE` effects do not compute anything: the pipeline owns the cooldown, and the player
+performs the action and adjusts their own currencies. That is the established pattern for all
+of them (`reroll_prompt_or_die`, `transmute_currency`, and the rest) — a self-reported number
+in the bonus text is normal, not a gap.
+
+### Which quest types pay Dusty Blueprints
+
+`applyBlueprintRewardToQuest()` is **additive**: it adds `calculateBlueprintReward()` (the
+catalog base for genre quests and extra credit) to whatever is already on
+`quest.rewards.blueprints` (the ADR-003 pipeline's resolved value, including item `ADD_FLAT`
+bonuses). `QuestController.awardBlueprintsForQuest()` then pays that total.
+
+So a quest type can grant Blueprints **either** by authoring `rewards.blueprints` in its
+catalog entry — which `RewardCalculator` feeds into the pipeline as the base — **or** through
+`calculateBlueprintReward()`. Doing both double-counts.
+
+### Reward changes must be checked in a browser
+
+`BaseQuestHandler.completeActiveQuest()` **recomputes** base rewards from scratch at completion
+rather than trusting what was stored at draw time. Anything the reward resolver needs must be
+forwarded in its options object, or completion silently pays a different amount than the card
+promised. Unit tests of the resolver and of the deck controller both pass while this is broken;
+only a draw → complete round trip catches it.
+
+---
+
 ## Testing Requirements
 
 ### Philosophy (pragmatic, not strict TDD)
@@ -949,6 +1085,7 @@ When adding a new feature:
 - [ ] Add storage keys to `storageKeys.js` (if persistent state)
 - [ ] Add default value to `createEmptyCharacterState()` (if persistent state)
 - [ ] **Add validation in `dataValidator.js`** (if persistent state - REQUIRED)
+- [ ] **Add any new field on a quest to `validateQuest()`, and any new field inside `quest.rewards` to `validateRewards()`** — both are allowlists that silently destroy unrecognised keys on the next page load ([details](#%EF%B8%8F-adding-a-field-to-a-quest-object))
 - [ ] Add StateAdapter methods (if state mutations needed)
 - [ ] Update `loadState()`/`saveState()` (if new persistent state - validation is automatic)
 - [ ] **Extract business logic to services** (if calculations needed)
@@ -970,12 +1107,16 @@ When adding a new feature:
 - [ ] Write tests for new functionality (including validation tests, controller tests if applicable)
 - [ ] Run data validation: `cd tests && npm run validate-data`
 - [ ] Run full test suite: `cd tests && npm test`
-- [ ] Verify manual testing in browser
+- [ ] **Verify in a browser, served with both configs and from the repo root:**
+      `bundle exec jekyll serve --config _config.yml,_config.supabase.yml`
+      (without `_config.supabase.yml` every image 404s; a `jekyll build` run from `tests/`
+      creates `tests/_site` and makes Jest discover the whole suite twice)
 
 When adding new game content:
 
 - [ ] Add stable `id` field (kebab-case) to content JSON
 - [ ] Add `name` field for display purposes
+- [ ] **For items: `id` must equal `slugifyId(name)`** — anchors are built from the name, so a mismatch breaks every `rewards.html#<id>` link. `validate-data` enforces this.
 - [ ] Prefer **`effects`** (ADR-003) for deterministic mechanics; use legacy fields only when appropriate
 - [ ] Run `node scripts/generate-data.js`
 - [ ] Run `cd tests && npm run validate-data` to check for errors

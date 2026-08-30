@@ -444,4 +444,180 @@ describe('cardRenderer', () => {
       expect(onCardClick).toHaveBeenCalledWith(2, expect.any(MouseEvent));
     });
   });
+
+  describe('side quest card branch picker', () => {
+    const branchingCard = {
+      key: '9',
+      name: "Haggler's Row",
+      description: 'The stallkeepers know your face by now.',
+      prompt: 'Read a book you borrowed.',
+      cardImage: null,
+      branchType: 'choice',
+      rollInstruction: null,
+      branches: [
+        { key: 'A', roll: null, name: 'The Loan', prompt: 'Read a book you borrowed.' },
+        { key: 'B', roll: null, name: 'The Second Hand', prompt: 'Read a book you bought used.' }
+      ],
+      questData: {}
+    };
+
+    it('renders a select with one option per branch', () => {
+      const card = cardRenderer.renderSideQuestCard(branchingCard);
+      const select = card.querySelector('select.card-branch-select');
+
+      expect(select).not.toBeNull();
+      expect(select.options.length).toBe(2);
+      expect(select.options[0].value).toBe('A');
+      expect(select.options[1].value).toBe('B');
+      expect(select.dataset.questKey).toBe('9');
+    });
+
+    it('the first branch is selected by default and its prompt is shown', () => {
+      const card = cardRenderer.renderSideQuestCard(branchingCard);
+
+      expect(card.querySelector('select.card-branch-select').value).toBe('A');
+      expect(card.querySelector('.card-prompt').textContent).toContain('Read a book you borrowed.');
+    });
+
+    it('changing the branch swaps the displayed prompt', () => {
+      const card = cardRenderer.renderSideQuestCard(branchingCard);
+      const select = card.querySelector('select.card-branch-select');
+
+      select.value = 'B';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+
+      expect(card.querySelector('.card-prompt').textContent).toContain('Read a book you bought used.');
+    });
+
+    it('a roll quest labels its options with the roll range', () => {
+      const rollCard = {
+        ...branchingCard,
+        key: '10',
+        name: 'The Blind Stall',
+        branchType: 'roll',
+        rollInstruction: 'Roll a d6:',
+        branches: [
+          { key: '1', roll: '1-2', name: 'Sold by title alone', prompt: 'Pick a book from its title only.' },
+          { key: '3', roll: '3', name: 'Sold by the spine', prompt: 'Choose a book touching nothing but spines.' }
+        ]
+      };
+      const card = cardRenderer.renderSideQuestCard(rollCard);
+
+      expect(card.textContent).toContain('Roll a d6:');
+      expect(card.querySelector('select.card-branch-select').options[0].textContent)
+        .toContain('1-2');
+    });
+
+    it('renders the roll instruction on a choice quest that carries one', () => {
+      const choiceWithInstruction = {
+        ...branchingCard,
+        key: '12',
+        name: 'The Communal Table',
+        branchType: 'choice',
+        rollInstruction: 'Choose your seat, or roll a d3 and let the table seat you:',
+        branches: [
+          { key: 'A', roll: null, name: 'The shared plate', prompt: 'Buddy read a book.' },
+          { key: 'B', roll: null, name: 'The long meal', prompt: 'Read a book aloud to someone.' }
+        ]
+      };
+      const card = cardRenderer.renderSideQuestCard(choiceWithInstruction);
+
+      const instruction = card.querySelector('.card-roll-instruction');
+      expect(instruction).not.toBeNull();
+      expect(instruction.textContent).toBe('Choose your seat, or roll a d3 and let the table seat you:');
+      // Option labels still use the branch key, not the (null) roll field.
+      expect(card.querySelector('select.card-branch-select').options[0].textContent)
+        .toContain('A');
+    });
+
+    it('a quest with no branches renders exactly as before', () => {
+      const flat = {
+        key: '1',
+        name: 'The Arcane Grimoire',
+        description: 'An ancient spellbook writes a new page.',
+        prompt: 'Read the book on your TBR the longest.',
+        cardImage: null,
+        questData: {}
+      };
+      const card = cardRenderer.renderSideQuestCard(flat);
+
+      expect(card.querySelector('select.card-branch-select')).toBeNull();
+      expect(card.querySelector('.card-roll-instruction')).toBeNull();
+      expect(card.querySelector('.card-prompt').textContent).toContain('Read the book on your TBR the longest.');
+      expect(card.querySelector('input.card-branch-country')).toBeNull();
+    });
+  });
+
+  describe("the Exchange's register country input", () => {
+    const scholarCard = {
+      key: '13',
+      name: 'The Visiting Scholar',
+      description: 'A scholar from the visiting academy.',
+      prompt: 'Read a book set at a school.',
+      cardImage: null,
+      branchType: 'choice',
+      rollInstruction: null,
+      branches: [
+        { key: 'A', roll: null, name: 'Curriculum swap', prompt: 'Read a book set at a school.' },
+        {
+          key: 'B',
+          roll: null,
+          name: 'Enrollment record',
+          prompt: 'Read a book by an author from a country you have never read from.',
+          requiresCountry: true
+        }
+      ],
+      questData: {}
+    };
+
+    it('renders exactly one country input, hidden on a branch that does not need it', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      const inputs = card.querySelectorAll('input.card-branch-country');
+
+      expect(inputs.length).toBe(1);
+      expect(inputs[0].hidden).toBe(true);
+      expect(inputs[0].dataset.questKey).toBe('13');
+    });
+
+    it('the select is appended exactly once', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      expect(card.querySelectorAll('select.card-branch-select').length).toBe(1);
+    });
+
+    it('shows the country input when the requiresCountry branch is chosen', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      const select = card.querySelector('select.card-branch-select');
+      const input = card.querySelector('input.card-branch-country');
+
+      select.value = 'B';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(input.hidden).toBe(false);
+
+      select.value = 'A';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(input.hidden).toBe(true);
+    });
+
+    it('starts visible when the first branch itself requires a country', () => {
+      const countryFirst = {
+        ...scholarCard,
+        branches: [scholarCard.branches[1], scholarCard.branches[0]]
+      };
+      const card = cardRenderer.renderSideQuestCard(countryFirst);
+
+      expect(card.querySelector('input.card-branch-country').hidden).toBe(false);
+    });
+
+    it('does not let a click on the country input toggle card selection', () => {
+      const card = cardRenderer.renderSideQuestCard(scholarCard);
+      const input = card.querySelector('input.card-branch-country');
+      const onCardClick = jest.fn();
+      const wrapper = cardRenderer.wrapCardSelectable(card, 0, false, onCardClick);
+      document.body.appendChild(wrapper);
+
+      input.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(onCardClick).not.toHaveBeenCalled();
+    });
+  });
 });

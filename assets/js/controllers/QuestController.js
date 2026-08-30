@@ -20,7 +20,7 @@ import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import * as data from '../character-sheet/data.js';
 import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
-import { calculateBlueprintReward, applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
+import { applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
 import { createBookSelector } from '../utils/bookSelector.js';
@@ -722,6 +722,10 @@ export class QuestController extends BaseController {
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
+                    // The Exchange's register: strike the country off, once ever.
+                    if (quest.branchCountry) {
+                        stateAdapter.addClaimedCountry(quest.branchCountry);
+                    }
                     if (this.updateCurrency) this.updateCurrency(quest.rewards);
                 });
 
@@ -1186,6 +1190,10 @@ export class QuestController extends BaseController {
 
         // Award blueprints to state (currency)
         this.awardBlueprintsForQuest(completedQuest);
+        // The Exchange's register: strike the country off, once ever.
+        if (completedQuest.branchCountry) {
+            stateAdapter.addClaimedCountry(completedQuest.branchCountry);
+        }
         
         // Display calculation receipt if available
         if (completedQuest.receipt && uiModule.displayCalculationReceipt) {
@@ -1235,19 +1243,24 @@ export class QuestController extends BaseController {
     }
     
     /**
-     * Award blueprints based on quest type
-     * @param {Object} quest - The completed quest
-     * @returns {number} Blueprint reward amount
+     * Award the quest's Dusty Blueprints to the wallet.
+     *
+     * Reads the resolved total off the quest rather than recomputing it: every call site
+     * runs applyBlueprintRewardToQuest() first, which folds the catalog base together with
+     * pipeline-granted Blueprints from equipped and passive items.
+     *
+     * @param {Object} quest - Quest already passed through applyBlueprintRewardToQuest()
+     * @returns {number} Amount awarded
      */
     awardBlueprintsForQuest(quest) {
         const { stateAdapter } = this;
-        const blueprintReward = calculateBlueprintReward(quest);
+        const amount = Number(quest?.rewards?.blueprints) || 0;
 
-        if (blueprintReward > 0) {
-            stateAdapter.addDustyBlueprints(blueprintReward);
+        if (amount > 0) {
+            stateAdapter.addDustyBlueprints(amount);
         }
 
-        return blueprintReward;
+        return amount;
     }
 
     /**
@@ -1346,6 +1359,10 @@ export class QuestController extends BaseController {
         const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
         this.awardBlueprintsForQuest(completedQuest);
+        // The Exchange's register: strike the country off, once ever.
+        if (completedQuest.branchCountry) {
+            stateAdapter.addClaimedCountry(completedQuest.branchCountry);
+        }
 
         if (completedQuest.receipt && uiModule.displayCalculationReceipt) {
             uiModule.displayCalculationReceipt(
