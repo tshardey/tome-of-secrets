@@ -33,3 +33,8 @@ _config.supabase.yml
 
 # Claude code allowlist
 .claude
+
+# Playwright e2e artifacts
+/tests/test-results/
+/tests/playwright-report/
+/tests/blob-report/
