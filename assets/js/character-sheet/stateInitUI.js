@@ -37,7 +37,14 @@ export function initializeStateDependentUI({ ui, dataModule, stateAdapter, compl
 
         // Sync characterState when input changes
         dustyBlueprintsInput.addEventListener('change', () => {
-            const newValue = parseIntOr(dustyBlueprintsInput.value, 0);
+            const parsed = parseIntOr(dustyBlueprintsInput.value, 0);
+            // Blueprints are earned through restoration and never spent in the shop,
+            // so unlike Ink Drops and Paper Scraps they have no overdraft to record.
+            // The input's min="0" only flags validity; clamp so nothing negative is stored.
+            const newValue = Math.max(0, parsed);
+            if (newValue !== parsed) {
+                dustyBlueprintsInput.value = newValue;
+            }
             characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
             stateAdapter.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
             safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);

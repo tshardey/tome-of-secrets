@@ -219,6 +219,43 @@ describe('Page Renderers Hydration', () => {
       expect(quantityInput).toBeNull();
     });
 
+    test('updates the displayed cost when the quantity changes', async () => {
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+
+      const bookCrawlOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'The Book Crawl'
+      );
+
+      const quantityInput = bookCrawlOption.querySelector('.shopping-quantity-input');
+      const costEl = bookCrawlOption.querySelector('.shopping-cost');
+      expect(costEl.textContent).toBe('Cost: 150 Ink Drops + 5 Paper Scraps');
+
+      quantityInput.value = '4';
+      quantityInput.dispatchEvent(new Event('input'));
+
+      expect(costEl.textContent).toBe('Cost: 600 Ink Drops + 20 Paper Scraps');
+    });
+
+    test('omits a zero-cost currency from the displayed cost at any quantity', async () => {
+      await initializeShoppingPage();
+      const container = document.getElementById('shopping-options-container');
+      const options = Array.from(container.querySelectorAll('.shopping-option'));
+
+      const bookSaleOption = options.find(opt =>
+        opt.querySelector('h3')?.textContent === 'Library Book Sale'
+      );
+
+      const quantityInput = bookSaleOption.querySelector('.shopping-quantity-input');
+      const costEl = bookSaleOption.querySelector('.shopping-cost');
+
+      quantityInput.value = '3';
+      quantityInput.dispatchEvent(new Event('input'));
+
+      expect(costEl.textContent).toBe('Cost: 150 Ink Drops');
+    });
+
     test('successfully redeems option with sufficient resources', async () => {
       // Set up resources
       const inkDropsEl = document.getElementById('inkDrops');

@@ -657,6 +657,29 @@ function createSubscriptionMonthCard(option) {
 }
 
 /**
+ * Read the quantity a card is currently set to, floored at 1.
+ * @param {HTMLInputElement|null} quantityInput
+ * @returns {number}
+ */
+function readQuantity(quantityInput) {
+    return quantityInput ? Math.max(1, parseIntOr(quantityInput.value, 1)) : 1;
+}
+
+/**
+ * Build the cost label for a shopping option at a given quantity.
+ * Currencies the option does not charge are omitted at every quantity.
+ * @param {ShoppingOption} option
+ * @param {number} quantity
+ * @returns {string}
+ */
+function formatOptionCost(option, quantity) {
+    const costs = [];
+    if (option.inkDrops > 0) costs.push(`${option.inkDrops * quantity} Ink Drops`);
+    if (option.paperScraps > 0) costs.push(`${option.paperScraps * quantity} Paper Scraps`);
+    return `Cost: ${costs.join(' + ')}`;
+}
+
+/**
  * @param {ShoppingOption} option
  * @returns {HTMLElement}
  */
@@ -678,10 +701,7 @@ function createShoppingOptionCard(option) {
 
     const costEl = document.createElement('div');
     costEl.className = 'shopping-cost';
-    const costs = [];
-    if (option.inkDrops > 0) costs.push(`${option.inkDrops} Ink Drops`);
-    if (option.paperScraps > 0) costs.push(`${option.paperScraps} Paper Scraps`);
-    costEl.textContent = `Cost: ${costs.join(' + ')}`;
+    costEl.textContent = formatOptionCost(option, 1);
     card.appendChild(costEl);
 
     let quantityInput = null;
@@ -700,6 +720,12 @@ function createShoppingOptionCard(option) {
         quantityContainer.appendChild(quantityLabel);
         quantityContainer.appendChild(quantityInput);
         card.appendChild(quantityContainer);
+
+        // Keep the displayed cost in step with the quantity, so the multiplied
+        // total is visible before redeeming rather than only in the confirm dialog.
+        quantityInput.addEventListener('input', () => {
+            costEl.textContent = formatOptionCost(option, readQuantity(quantityInput));
+        });
     }
 
     const errorContainer = document.createElement('div');
@@ -942,9 +968,7 @@ function createShoppingOptionCard(option) {
     }
 
     redeemButton.addEventListener('click', async () => {
-        const quantity = option.allowQuantity && quantityInput
-            ? Math.max(1, parseIntOr(quantityInput.value, 1))
-            : 1;
+        const quantity = option.allowQuantity ? readQuantity(quantityInput) : 1;
         const totalInkDrops = option.inkDrops * quantity;
         const totalPaperScraps = option.paperScraps * quantity;
         const current = getCurrentResources();

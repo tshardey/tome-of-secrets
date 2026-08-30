@@ -162,6 +162,28 @@ describe('Character Sheet', () => {
       expect(bonusList.innerHTML).toContain(permanentBonuses[6]);
       expect(bonusList.textContent).not.toContain('-- No bonuses unlocked at this level --');
     });
+
+    it('should clamp a negative Blueprints entry to zero', () => {
+      const blueprintsInput = document.getElementById('dustyBlueprints');
+
+      blueprintsInput.value = '-7';
+      blueprintsInput.dispatchEvent(new Event('change'));
+
+      expect(blueprintsInput.value).toBe('0');
+      expect(characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(0);
+      expect(safeGetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, null)).toBe(0);
+    });
+
+    it('should keep a positive Blueprints entry unchanged', () => {
+      const blueprintsInput = document.getElementById('dustyBlueprints');
+
+      blueprintsInput.value = '3';
+      blueprintsInput.dispatchEvent(new Event('change'));
+
+      expect(blueprintsInput.value).toBe('3');
+      expect(characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(3);
+      expect(safeGetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, null)).toBe(3);
+    });
   });
 
   describe('RPG-Styled Character Tab UI', () => {
