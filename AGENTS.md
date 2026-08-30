@@ -152,9 +152,12 @@ This project is configured to use VS Code Dev Containers. All development and te
 2.  Open a terminal in VS Code.
 3.  Run the command:
     ```bash
-    bundle exec jekyll serve
+    bundle exec jekyll serve --config _config.yml,_config.supabase.yml
     ```
+    **Always pass both config files.** `_config.yml` ships `images_cdn_base: ""`, `supabase_url: ""` and the other environment values blank so they are safe to commit; the real values live in `_config.supabase.yml`, which is git-ignored. Serving with `_config.yml` alone builds a site where **every image 404s** (they resolve to repo paths that do not exist — the art is hosted in Supabase Storage, not committed), and cloud sync and Gallery book search are disabled. If a fresh clone has no `_config.supabase.yml`, copy `_config.supabase.yml.example` to that name and fill it in.
 4.  The site will be available at `http://localhost:4000`. The server will auto-reload on file changes.
+
+**Run Jekyll from the repository root.** `bundle exec jekyll build` inherits the shell's working directory, so running it after a `cd tests` builds `tests/_site/` and copies every `*.test.js` into it — Jest then discovers the whole suite twice and reports a flood of duplicate failures. If you see the suite count double, delete the stray `_site` directory.
 
 ### 3. Testing
 

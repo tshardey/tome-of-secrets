@@ -149,7 +149,7 @@ Match the existing reward art in `images/rewards/`.
 - [ ] Quest cards are 2:3, subject in the top third, no baked-in lettering.
 - [ ] Item art is square with a transparent background and still legible at 32 px.
 - [ ] Uploaded to the bucket at `images/side-quests/…` or `images/rewards/…` (**no** `assets/` prefix).
-- [ ] `images_cdn_base` is set in `_config.yml` (currently `""`) or the site will look for these in the repo, where they do not exist.
+- [ ] Verified in a browser served with **both** configs: `bundle exec jekyll serve --config _config.yml,_config.supabase.yml`. `_config.yml` alone leaves `images_cdn_base` blank and every image 404s, which looks exactly like missing art.
 
 ## Optional, not required
 
