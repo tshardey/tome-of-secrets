@@ -370,4 +370,51 @@ describe('LibraryController', () => {
             expect(fantasyLabel.classList.contains('tag--applicable')).toBe(false);
         });
     });
+
+    describe('tag picker categories', () => {
+        it('should render a column for every tag category, including provenance', () => {
+            const controller = new LibraryController(stateAdapter, form, dependencies);
+            controller.initialize();
+
+            const tagContainer = document.getElementById('library-add-tags');
+            const headings = Array.from(
+                tagContainer.querySelectorAll('.library-tag-category')
+            ).map((el) => el.textContent);
+
+            expect(headings).toEqual(['Genre', 'Content', 'Provenance', 'Agency', 'Form']);
+        });
+
+        it('should render a checkbox for every tag in the tag data', () => {
+            const controller = new LibraryController(stateAdapter, form, dependencies);
+            controller.initialize();
+
+            const tagContainer = document.getElementById('library-add-tags');
+            const renderedIds = Array.from(
+                tagContainer.querySelectorAll('input[type="checkbox"]')
+            ).map((cb) => cb.value);
+
+            for (const tag of data.bookTags) {
+                expect(renderedIds).toContain(tag.id);
+            }
+            expect(renderedIds).toHaveLength(data.bookTags.length);
+        });
+
+        it('should render provenance tags as selectable options in the picker', () => {
+            const controller = new LibraryController(stateAdapter, form, dependencies);
+            controller.initialize();
+
+            const tagContainer = document.getElementById('library-add-tags');
+            const borrowedCheckbox = tagContainer.querySelector('input[value="borrowed"]');
+
+            expect(borrowedCheckbox).toBeTruthy();
+            expect(borrowedCheckbox.type).toBe('checkbox');
+            expect(borrowedCheckbox.checked).toBe(false);
+
+            const provenanceColumn = borrowedCheckbox.closest('.library-tag-column');
+            expect(provenanceColumn.querySelector('.library-tag-category').textContent).toBe('Provenance');
+
+            borrowedCheckbox.checked = true;
+            expect(controller._readTagPicker(tagContainer)).toContain('borrowed');
+        });
+    });
 });
