@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(20);
 
 -- Fixed test users (inserted as the superuser running the test).
 insert into auth.users (id, email, aud, role)
@@ -117,6 +117,24 @@ select throws_ok(
 );
 
 ---------------------------------------------------------------------------
+-- B creates their own household and book (used for cross-household moves).
+---------------------------------------------------------------------------
+insert into test_vals (k, v)
+select 'bhh', library.create_household('B Home', 'B')::text;
+
+insert into library.books (id, household_id, title)
+values ('bbbbbbbb-0000-0000-0000-000000000001',
+        (select v::uuid from test_vals where k = 'bhh'), 'B Book');
+
+select throws_ok(
+  $$ insert into library.copies (book_id, origin)
+     values ('aaaaaaaa-0000-0000-0000-000000000001', 'manual') $$,
+  '42501',
+  null,
+  'B (non-member): inserting a copy of A''s book violates RLS'
+);
+
+---------------------------------------------------------------------------
 -- B joins with A's invite code.
 ---------------------------------------------------------------------------
 select lives_ok(
@@ -125,15 +143,17 @@ select lives_ok(
 );
 
 select is(
-  (select count(*)::int from library.books),
+  (select count(*)::int from library.books
+    where household_id = (select v::uuid from test_vals where k = 'hh')),
   1,
-  'B (member): now sees 1 book'
+  'B (member): now sees 1 book in A''s household'
 );
 
 select is(
-  (select count(*)::int from library.copies),
+  (select count(*)::int from library.copies
+    where book_id = 'aaaaaaaa-0000-0000-0000-000000000001'),
   1,
-  'B (member): now sees 1 copy'
+  'B (member): now sees 1 copy of A''s book'
 );
 
 select lives_ok(
@@ -143,9 +163,33 @@ select lives_ok(
 
 select is(
   (select count(*)::int from library.household_members
-    where user_id = '22222222-2222-2222-2222-222222222222'),
+    where user_id = '22222222-2222-2222-2222-222222222222'
+      and household_id = (select v::uuid from test_vals where k = 'hh')),
   1,
-  'B: still exactly one membership row after re-joining'
+  'B: still exactly one membership row in A''s household after re-joining'
+);
+
+---------------------------------------------------------------------------
+-- A (member of Home only) cannot move rows into B's household.
+---------------------------------------------------------------------------
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+select throws_ok(
+  $$ update library.books
+        set household_id = (select v::uuid from test_vals where k = 'bhh')
+      where id = 'aaaaaaaa-0000-0000-0000-000000000001' $$,
+  '42501',
+  null,
+  'A: moving a book into a household A is not in violates RLS'
+);
+
+select throws_ok(
+  $$ update library.copies
+        set book_id = 'bbbbbbbb-0000-0000-0000-000000000001'
+      where id = 'cccccccc-0000-0000-0000-000000000001' $$,
+  '42501',
+  null,
+  'A: re-parenting a copy onto another household''s book violates RLS'
 );
 
 ---------------------------------------------------------------------------

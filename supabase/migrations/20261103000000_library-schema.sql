@@ -244,10 +244,16 @@ create policy copies_delete_member on library.copies
 
 revoke all on schema library from public, anon;
 revoke all on all tables in schema library from public, anon, authenticated;
-revoke all on all functions in schema library from public, anon, authenticated;
--- Guard against future objects in this schema picking up default grants.
-alter default privileges in schema library revoke all on tables from public, anon;
-alter default privileges in schema library revoke execute on functions from public, anon;
+-- Postgres grants EXECUTE on every new function to PUBLIC by default, and a
+-- per-schema `alter default privileges` cannot remove that global default
+-- (changing the global default would also affect ToS's `public` schema).
+-- So EVERY new function added to `library` must explicitly
+-- `revoke execute on function ... from public, anon;` and then
+-- `grant execute ... to authenticated` only if callers need it.
+revoke execute on function library.set_updated_at()             from public, anon, authenticated;
+revoke execute on function library.is_member(uuid)              from public, anon;
+revoke execute on function library.create_household(text, text) from public, anon;
+revoke execute on function library.join_household(text, text)   from public, anon;
 
 grant usage on schema library to authenticated;
 
