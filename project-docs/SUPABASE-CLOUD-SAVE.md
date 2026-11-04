@@ -126,6 +126,17 @@ All statements are idempotent (safe to re-run). Projection functions start as no
 
 All tables have RLS (users can only read their own rows). Projection tables are written by server-side trigger functions, not client inserts.
 
+## 6) Library schema (tos-personal-library)
+
+The separate household book-catalog app, tos-personal-library, shares this Supabase project. Its tables live in a dedicated `library` schema, created by `supabase/migrations/20261103000000_library-schema.sql` (households, household_members, books, copies, plus the `is_member`, `create_household` and `join_household` RPCs). Every ToS player can sign in, so RLS restricts all `library` data to household members, and `anon` has no access. RLS tests live in `supabase/tests/database/library_rls.test.sql` (run with `supabase test db`).
+
+`supabase db push` applies the migration, but two settings are not carried by migrations and must be set by hand on the remote project:
+
+1. **Dashboard → Project Settings → API → Exposed schemas:** add `library` (keep `public` and `graphql_public`). Without this, PostgREST rejects every `library` request.
+2. **Dashboard → Authentication → URL Configuration → Redirect URLs:** add the Pages URL `https://<user>.github.io/tos-personal-library/` so magic links from the library app can redirect back to it.
+
+Locally, `supabase/config.toml` already exposes `library` and allows `http://127.0.0.1:5173/tos-personal-library/` as a redirect URL.
+
 ## GitHub Pages (GitHub Actions) production setup
 
 This repo builds via `.github/workflows/jekyll.yml`. Configure these **repository secrets**:
