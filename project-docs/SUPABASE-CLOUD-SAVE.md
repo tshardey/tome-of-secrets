@@ -81,6 +81,8 @@ using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 ```
 
+> **CLI baseline:** the block above is also committed as `supabase/migrations/20260407000000_baseline-tos-saves.sql`, so `supabase start` can replay migrations on an empty local database. The remote project already has this table, so mark the baseline as applied before the next `db push`: `supabase migration repair --status applied 20260407000000`.
+
 ## 4) Use it
 
 Once configured, you’ll see a **Cloud Save** panel in the sidebar:
