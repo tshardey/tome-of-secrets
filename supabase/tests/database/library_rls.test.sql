@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(21);
 
 -- Fixed test users (inserted as the superuser running the test).
 insert into auth.users (id, email, aud, role)
@@ -159,6 +159,11 @@ select is(
 select lives_ok(
   $$ select library.join_household((select v from test_vals where k = 'code'), 'Partner') $$,
   'B: joining again with the same code does not error'
+);
+
+select lives_ok(
+  $$ select library.join_household('  ' || upper((select v from test_vals where k = 'code')) || '  ', 'Partner') $$,
+  'B: join_household accepts an upper-cased, space-padded invite code'
 );
 
 select is(

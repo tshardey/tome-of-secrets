@@ -135,6 +135,8 @@ The separate household book-catalog app, tos-personal-library, shares this Supab
 1. **Dashboard → Project Settings → API → Exposed schemas:** add `library` (keep `public` and `graphql_public`). Without this, PostgREST rejects every `library` request.
 2. **Dashboard → Authentication → URL Configuration → Redirect URLs:** add the Pages URL `https://<user>.github.io/tos-personal-library/` so magic links from the library app can redirect back to it.
 
+After changing `[api] schemas` in `config.toml`, restart the local stack (`supabase stop` / `supabase start`); `supabase db reset` alone does not reload it and requests fail with PGRST106.
+
 Locally, `supabase/config.toml` already exposes `library` and allows `http://127.0.0.1:5173/tos-personal-library/` as a redirect URL.
 
 ## GitHub Pages (GitHub Actions) production setup

@@ -154,7 +154,7 @@ begin
   select h.id
     into v_household
     from library.households h
-   where h.invite_code = p_invite_code;
+   where h.invite_code = lower(btrim(p_invite_code));
 
   if v_household is null then
     raise exception 'invalid_invite_code';
@@ -265,3 +265,8 @@ grant select, insert, update, delete on library.copies to authenticated;
 grant execute on function library.is_member(uuid)              to authenticated;
 grant execute on function library.create_household(text, text) to authenticated;
 grant execute on function library.join_household(text, text)   to authenticated;
+
+comment on column library.books.user_edited_fields is
+  'Fields the user edited in the app, as camelCase TypeScript keys (e.g. pageCount, editionNote). Importers must not overwrite these.';
+comment on column library.copies.user_edited_fields is
+  'Fields the user edited in the app, as camelCase TypeScript keys (e.g. pageCount, editionNote). Importers must not overwrite these.';
