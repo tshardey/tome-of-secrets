@@ -81,6 +81,8 @@ using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 ```
 
+> **CLI baseline:** the block above is also committed as `supabase/migrations/20260407000000_baseline-tos-saves.sql`, so `supabase start` can replay migrations on an empty local database. The remote project already has this table, so mark the baseline as applied before the next `db push`: `supabase migration repair --status applied 20260407000000`.
+
 ## 4) Use it
 
 Once configured, you’ll see a **Cloud Save** panel in the sidebar:
@@ -123,6 +125,19 @@ All statements are idempotent (safe to re-run). Projection functions start as no
 | `tos_quests` | Active, completed, discarded quests | N |
 
 All tables have RLS (users can only read their own rows). Projection tables are written by server-side trigger functions, not client inserts.
+
+## 6) Library schema (tos-personal-library)
+
+The separate household book-catalog app, tos-personal-library, shares this Supabase project. Its tables live in a dedicated `library` schema, created by `supabase/migrations/20261103000000_library-schema.sql` (households, household_members, books, copies, plus the `is_member`, `create_household` and `join_household` RPCs). Every ToS player can sign in, so RLS restricts all `library` data to household members, and `anon` has no access. RLS tests live in `supabase/tests/database/library_rls.test.sql` (run with `supabase test db`).
+
+`supabase db push` applies the migration, but two settings are not carried by migrations and must be set by hand on the remote project:
+
+1. **Dashboard → Project Settings → API → Exposed schemas:** add `library` (keep `public` and `graphql_public`). Without this, PostgREST rejects every `library` request.
+2. **Dashboard → Authentication → URL Configuration → Redirect URLs:** add the Pages URL `https://<user>.github.io/tos-personal-library/` so magic links from the library app can redirect back to it.
+
+After changing `[api] schemas` in `config.toml`, restart the local stack (`supabase stop` / `supabase start`); `supabase db reset` alone does not reload it and requests fail with PGRST106.
+
+Locally, `supabase/config.toml` already exposes `library` and allows `http://127.0.0.1:5173/tos-personal-library/` as a redirect URL.
 
 ## GitHub Pages (GitHub Actions) production setup
 
