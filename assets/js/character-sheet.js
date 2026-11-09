@@ -135,7 +135,6 @@ export async function initializeCharacterSheet() {
         if (result.book && result.book.title && completedBooksSet && !completedBooksSet.has(result.book.title)) {
             completedBooksSet.add(result.book.title);
             if (saveCompletedBooksSet) saveCompletedBooksSet();
-            stateAdapter.decrementUseCountBuffsOnBookComplete();
             const booksCompletedInput = document.getElementById('books-completed-month');
             if (booksCompletedInput) {
                 const current = parseIntOr(booksCompletedInput.value, 0);

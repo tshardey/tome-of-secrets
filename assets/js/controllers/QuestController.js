@@ -735,6 +735,7 @@ export class QuestController extends BaseController {
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
+                    this.spendUseCountBuffsForQuest(quest);
                     // The Exchange's register: strike the country off, once ever.
                     if (quest.branchCountry) {
                         stateAdapter.addClaimedCountry(quest.branchCountry);
@@ -1199,6 +1200,7 @@ export class QuestController extends BaseController {
 
         // Award blueprints to state (currency)
         this.awardBlueprintsForQuest(completedQuest);
+        this.spendUseCountBuffsForQuest(completedQuest);
         // The Exchange's register: strike the country off, once ever.
         if (completedQuest.branchCountry) {
             stateAdapter.addClaimedCountry(completedQuest.branchCountry);
@@ -1270,6 +1272,30 @@ export class QuestController extends BaseController {
         }
 
         return amount;
+    }
+
+    /**
+     * Spend one use of each use-count temporary buff (Enchanted Focus, Story Surge, ...) that
+     * paid on this completed quest. Call once per completed quest, after its rewards are final.
+     * @param {Object} quest - Completed quest with its bonus cards in `buffs`
+     */
+    spendUseCountBuffsForQuest(quest) {
+        const { stateAdapter } = this;
+        if (typeof stateAdapter.consumeUseCountBuffsForQuest !== 'function') return;
+        const { changed } = stateAdapter.consumeUseCountBuffsForQuest(
+            quest?.buffs || [],
+            name => data.getTemporaryBuffData(name)?.useCount || 0
+        );
+        if (!changed) return;
+        const { ui: uiModule } = this.dependencies;
+        if (uiModule.renderTemporaryBuffs) uiModule.renderTemporaryBuffs();
+        if (uiModule.updateQuestBuffsDropdown) {
+            uiModule.updateQuestBuffsDropdown(
+                document.getElementById('wearable-slots'),
+                document.getElementById('non-wearable-slots'),
+                document.getElementById('familiar-slots')
+            );
+        }
     }
 
     /**
@@ -1368,6 +1394,7 @@ export class QuestController extends BaseController {
         const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
         this.awardBlueprintsForQuest(completedQuest);
+        this.spendUseCountBuffsForQuest(completedQuest);
         // The Exchange's register: strike the country off, once ever.
         if (completedQuest.branchCountry) {
             stateAdapter.addClaimedCountry(completedQuest.branchCountry);

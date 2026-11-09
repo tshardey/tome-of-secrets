@@ -356,7 +356,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         });
     });
 
-    test('Enchanted Focus carries useCount:3 for per-book countdown tracking', () => {
+    test('Enchanted Focus carries useCount:3 for per-quest countdown tracking', () => {
         const enchanted = temporaryBuffs['Enchanted Focus'];
         expect(enchanted).toBeDefined();
         expect(enchanted.useCount).toBe(3);

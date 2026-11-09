@@ -12,6 +12,7 @@ import { EffectRegistry } from './EffectRegistry.js';
 import { TriggerPayload } from './TriggerPayload.js';
 import { TRIGGERS, MODIFIER_TYPES, RESOURCES } from './effectSchema.js';
 import { isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
+import { isUseCountBuffSpent } from '../utils/useCountBuffs.js';
 
 /**
  * Represents a reward package with XP, dollars (the real-money Fund), blueprints, and items.
@@ -341,14 +342,14 @@ export class RewardCalculator {
             }));
     }
 
-    static _appendBuffCardSkips(reward, appliedBuffs = [], quest = {}) {
+    static _appendBuffCardSkips(reward, appliedBuffs = [], quest = {}, temporaryBuffs = null) {
         if (!appliedBuffs.length) {
             return;
         }
         const pageCountEffective = quest.pageCountEffective ?? quest.pageCountRaw ?? null;
         appliedBuffs.forEach(buffName => {
             const { cleanName, isItem, isBackground } = this._parseBuffName(buffName);
-            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective });
+            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective, temporaryBuffs });
             if (!result.skipReason) {
                 return;
             }
@@ -362,7 +363,7 @@ export class RewardCalculator {
         });
     }
 
-    static _collectBuffCardPipelineEffects(appliedBuffs = [], quest = {}) {
+    static _collectBuffCardPipelineEffects(appliedBuffs = [], quest = {}, temporaryBuffs = null) {
         const entries = [];
         if (!appliedBuffs.length) {
             return entries;
@@ -375,7 +376,7 @@ export class RewardCalculator {
             if (isBackground) {
                 return;
             }
-            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective });
+            const result = this._getModifier(cleanName, isItem, isBackground, { pageCountEffective, temporaryBuffs });
             if (result.skipReason || !result.modifier) {
                 return;
             }
@@ -428,11 +429,16 @@ export class RewardCalculator {
         }
 
         // Temporary buff modifiers (check both new and legacy sources)
-        if (data.temporaryBuffs && data.temporaryBuffs[cleanName]) {
-            return { modifier: data.temporaryBuffs[cleanName].rewardModifier };
-        }
-        if (data.temporaryBuffsFromRewards && data.temporaryBuffsFromRewards[cleanName]) {
-            return { modifier: data.temporaryBuffsFromRewards[cleanName].rewardModifier };
+        const buffData = (data.temporaryBuffs && data.temporaryBuffs[cleanName]) ||
+            (data.temporaryBuffsFromRewards && data.temporaryBuffsFromRewards[cleanName]) ||
+            null;
+        if (buffData) {
+            // Use-count buffs (Enchanted Focus, Story Surge, ...) stop paying once their uses are spent.
+            const useCount = Number(buffData.useCount) || 0;
+            if (useCount > 0 && isUseCountBuffSpent(context.temporaryBuffs, cleanName, useCount)) {
+                return { modifier: null, skipReason: 'no uses left' };
+            }
+            return { modifier: buffData.rewardModifier };
         }
 
         return { modifier: null };
@@ -554,9 +560,10 @@ export class RewardCalculator {
             ? Object.create(stateAdapter, { formData: { value: formData, enumerable: true } })
             : { state: characterState, formData };
 
-        this._appendBuffCardSkips(rewards, appliedBuffs, quest);
-
         const pipelineState = this._pipelineStateFromAdapter(adapter);
+        const temporaryBuffs = pipelineState?.[STORAGE_KEYS.TEMPORARY_BUFFS] ?? null;
+        this._appendBuffCardSkips(rewards, appliedBuffs, quest, temporaryBuffs);
+
         const payload = this._buildQuestCompletedPayload(type, prompt, quest, {
             isEncounter,
             roomNumber,
@@ -570,7 +577,7 @@ export class RewardCalculator {
             EffectRegistry.getActiveEffects(TRIGGERS.ON_QUEST_COMPLETED, adapter, data),
             adapter
         );
-        const buffEffects = this._collectBuffCardPipelineEffects(appliedBuffs, quest);
+        const buffEffects = this._collectBuffCardPipelineEffects(appliedBuffs, quest, temporaryBuffs);
         const activeEffects = this._mergePipelineEffectOrder(registryEffects, buffEffects);
 
         const finalReward = ModifierPipeline.resolve(

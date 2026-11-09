@@ -5,6 +5,7 @@ import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
 import { evaluateQuestLink, isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
+import { buffNameFromCard, findPayingUseCountBuffIndex, remainingUses } from '../utils/useCountBuffs.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -786,39 +787,37 @@ export class StateAdapter {
     }
 
     /**
-     * Decrement `usesLeft` on all active buffs that carry a use-count, removing any that reach zero.
-     * Call this whenever a book is marked complete.
-     * @returns {{ changed: boolean, expired: string[] }} Names of buffs that were removed
+     * Spend one use of each use-count temporary buff (Enchanted Focus, Story Surge, ...) whose
+     * bonus card paid on a completed quest. A buff whose uses reach 0 is marked used
+     * (`status: 'used'`, `usesLeft: 0`), so RewardCalculator stops paying it on later quests.
+     * Call once per completed quest, after its rewards are calculated.
+     * @param {string[]} buffCards - The quest's bonus cards (e.g. "[Buff] Enchanted Focus")
+     * @param {(name: string) => number} getCatalogUseCount - Catalog `useCount` for a buff name (0 if none)
+     * @returns {{ changed: boolean, spent: string[] }} Names of buffs whose last use was spent
      */
-    decrementUseCountBuffsOnBookComplete() {
-        const expired = [];
+    consumeUseCountBuffsForQuest(buffCards, getCatalogUseCount) {
+        const spent = [];
+        if (!Array.isArray(buffCards) || buffCards.length === 0 || typeof getCatalogUseCount !== 'function') {
+            return { changed: false, spent };
+        }
+        const names = [...new Set(buffCards.map(buffNameFromCard).filter(Boolean))];
         const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
-            if (!Array.isArray(list) || list.length === 0) return { changed: false };
             let changed = false;
-            const next = [];
-            for (const buff of list) {
-                if (!buff || typeof buff !== 'object') {
-                    next.push(buff);
-                    continue;
-                }
-                if (typeof buff.usesLeft === 'number' && buff.usesLeft > 0) {
-                    const remaining = buff.usesLeft - 1;
-                    if (remaining <= 0) {
-                        expired.push(buff.name || '');
-                        changed = true;
-                        continue;
-                    }
-                    next.push({ ...buff, usesLeft: remaining });
-                    changed = true;
-                } else {
-                    next.push(buff);
-                }
+            for (const name of names) {
+                const useCount = Number(getCatalogUseCount(name)) || 0;
+                if (useCount <= 0) continue;
+                const index = findPayingUseCountBuffIndex(list, name, useCount);
+                if (index < 0) continue;
+                const usesLeft = remainingUses(list[index], useCount) - 1;
+                list[index] = usesLeft <= 0
+                    ? { ...list[index], usesLeft: 0, status: 'used' }
+                    : { ...list[index], usesLeft };
+                if (usesLeft <= 0) spent.push(name);
+                changed = true;
             }
-            if (!changed) return { changed: false };
-            list.splice(0, list.length, ...next);
-            return { changed: true };
+            return { changed };
         });
-        return { changed: result.changed, expired };
+        return { changed: result.changed, spent };
     }
 
     updateTemporaryBuff(index, updates) {
