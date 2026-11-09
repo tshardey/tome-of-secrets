@@ -5,7 +5,7 @@
 jest.mock('../assets/js/services/RewardCalculator.js', () => ({
     RewardCalculator: {
         getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 0, inkDrops: 0, paperScraps: 10, blueprints: 0, items: [] })
+            toJSON: () => ({ xp: 0, dollars: 0, blueprints: 0, items: [] })
         }))
     }
 }));
@@ -189,7 +189,7 @@ describe('createExtraCreditForBook', () => {
         expect(quest.coverUrl).toBe('https://example.com/dune.jpg');
         expect(quest.buffs).toEqual([]);
         expect(quest.notes).toBe('');
-        expect(quest.rewards).toEqual({ xp: 0, inkDrops: 0, paperScraps: 10, blueprints: 0, items: [] });
+        expect(quest.rewards).toEqual({ xp: 0, dollars: 0, blueprints: 0, items: [] });
         expect(typeof quest.id).toBe('string');
         expect(quest.id).toMatch(/^[0-9a-f-]{36}$/);
         expect(typeof quest.dateAdded).toBe('string');

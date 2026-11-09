@@ -17,7 +17,7 @@ jest.mock('../assets/js/services/BookMetadataService.js', () => ({
 jest.mock('../assets/js/services/RewardCalculator.js', () => ({
     RewardCalculator: {
         getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 0, inkDrops: 0, paperScraps: 10, blueprints: 0, items: [] })
+            toJSON: () => ({ xp: 0, dollars: 0, blueprints: 0, items: [] })
         }))
     }
 }));

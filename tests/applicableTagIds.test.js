@@ -21,7 +21,7 @@ describe('getApplicableTagIds', () => {
                         {
                             trigger: 'ON_QUEST_COMPLETED',
                             condition: { tagMatch: [['series']] },
-                            modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 },
+                            modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 },
                             slot: 'equipped'
                         }
                     ]
@@ -59,7 +59,7 @@ describe('getApplicableTagIds', () => {
                         {
                             trigger: 'ON_QUEST_COMPLETED',
                             condition: { tagMatch: [['non-fiction'], ['historical-fiction']] },
-                            modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                            modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                         }
                     ]
                 }
@@ -94,7 +94,7 @@ describe('getApplicableTagIds', () => {
                         {
                             trigger: 'ON_QUEST_COMPLETED',
                             condition: { hasTag: ['dragons', 'fae'] },
-                            modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 },
+                            modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 },
                             slot: 'equipped'
                         }
                     ]
@@ -161,7 +161,7 @@ describe('getApplicableTagIds', () => {
                         {
                             trigger: 'ON_QUEST_COMPLETED',
                             condition: { tagMatch: [['philosophical']] },
-                            modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 },
+                            modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 },
                             slot: 'equipped'
                         }
                     ]
@@ -174,7 +174,7 @@ describe('getApplicableTagIds', () => {
                         {
                             trigger: 'ON_QUEST_COMPLETED',
                             condition: { tagMatch: [['philosophical'], ['mythology'], ['celestial']] },
-                            modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 15 }
+                            modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 15 }
                         }
                     ]
                 }

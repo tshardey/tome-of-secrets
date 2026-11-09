@@ -907,7 +907,7 @@ describe('Controllers', () => {
                 bookAuthor: 'Author A',
                 month: 'March',
                 year: '2026',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             }];
             state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{
@@ -918,7 +918,7 @@ describe('Controllers', () => {
                 year: '2026',
                 book: '',
                 bookAuthor: '',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             }];
 
@@ -1018,7 +1018,7 @@ describe('Controllers', () => {
                 bookAuthor: 'Author A',
                 month: 'March',
                 year: '2026',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             }, {
                 id: 'quest-completed-b',
@@ -1041,7 +1041,7 @@ describe('Controllers', () => {
                     year: '2026',
                     book: '',
                     bookAuthor: '',
-                    rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                    rewards: { xp: 0, dollars: 10, items: [] },
                     buffs: []
                 },
                 {
@@ -1052,7 +1052,7 @@ describe('Controllers', () => {
                     year: '2026',
                     book: '',
                     bookAuthor: '',
-                    rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                    rewards: { xp: 0, dollars: 10, items: [] },
                     buffs: []
                 }
             ];
@@ -1293,7 +1293,7 @@ describe('Controllers', () => {
                 month: 'March',
                 year: '2026',
                 book: '',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             }];
 
@@ -1375,7 +1375,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book',
                 prompt: `${project.name}: ${project.completionPrompt}`,
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: String(project.wingId || ''),
@@ -1440,7 +1440,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
             };
 
@@ -1524,7 +1524,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: '', // Missing book title
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
             };
 
@@ -1578,7 +1578,7 @@ describe('Controllers', () => {
                 book: 'Test Book Title', // Has book title
                 bookId: 'book-1',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
             };
 
@@ -1642,7 +1642,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book',
                 prompt: 'Test Side Quest',
-                rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 5, items: [] },
                 buffs: []
             };
             
@@ -1667,7 +1667,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book Title',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: [],
                 dateAdded: '2024-01-15T10:00:00.000Z' // Pre-existing dateAdded
             };
@@ -1713,7 +1713,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book Title',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
                 // No dateAdded field (legacy quest)
             };
@@ -1841,7 +1841,7 @@ describe('Controllers', () => {
                 month: 'January',
                 year: '2024',
                 prompt: `${lastProject.name}: ${lastProject.completionPrompt}`,
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId,
@@ -1873,7 +1873,7 @@ describe('Controllers', () => {
                 year: '2026',
                 dateCompleted: '2026-03-10T00:00:00.000Z',
                 book: 'Book A',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             };
             const second = {
@@ -1884,7 +1884,7 @@ describe('Controllers', () => {
                 year: '2026',
                 dateCompleted: '2026-03-11T00:00:00.000Z',
                 book: 'Book B',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             };
             state[STORAGE_KEYS.COMPLETED_QUESTS] = [first, second];

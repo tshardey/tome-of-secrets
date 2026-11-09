@@ -64,7 +64,7 @@ describe('Data Validation', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                        rewards: { xp: 0, dollars: 0, items: [] },
                         restorationData: {
                             wingId: '1',
                             wingName: 'The Scholarly Archives',
@@ -124,7 +124,7 @@ describe('Data Validation', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] }
+                        rewards: { xp: 0, dollars: 0, items: [] }
                         // No restorationData
                     }
                 ]
@@ -137,10 +137,10 @@ describe('Data Validation', () => {
         test('should filter out invalid quests', () => {
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
-                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
+                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 10, items: [] } },
                     null, // Invalid
                     'not an object', // Invalid
-                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } }
+                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 10, items: [] } }
                 ]
             };
 
@@ -152,8 +152,8 @@ describe('Data Validation', () => {
             const duplicateId = 'quest-dup-1';
             const state = {
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [
-                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] } },
-                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] } }
+                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, dollars: 5, items: [] } },
+                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, dollars: 5, items: [] } }
                 ]
             };
 
@@ -174,7 +174,7 @@ describe('Data Validation', () => {
                         month: 'March',
                         year: '2026',
                         restorationData: { projectId: 'repair-front-desk' },
-                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        rewards: { xp: 10, dollars: 5, items: [] }
                     },
                     {
                         id: duplicateId,
@@ -184,7 +184,7 @@ describe('Data Validation', () => {
                         month: 'March',
                         year: '2026',
                         restorationData: { projectId: 'restore-grand-entrance' },
-                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        rewards: { xp: 10, dollars: 5, items: [] }
                     }
                 ]
             };
@@ -201,7 +201,7 @@ describe('Data Validation', () => {
                 month: 'March',
                 year: '2026',
                 dateCompleted: '2026-03-10T10:00:00.000Z',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                rewards: { xp: 10, dollars: 5, items: [] }
             };
             const state = {
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [quest, { ...quest }]
@@ -393,7 +393,7 @@ describe('Data Validation', () => {
                     year: '2024',
                     coverUrl: 'https://example.com/cover.jpg',
                     pageCountRaw: 350,
-                    rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 10, dollars: 5, items: [], modifiedBy: [] }
                 }
             ];
             const legacyCompletedQuests = [
@@ -406,7 +406,7 @@ describe('Data Validation', () => {
                     year: '2024',
                     coverUrl: 'https://example.com/cover.jpg',
                     pageCountEffective: 350,
-                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 15, dollars: 10, items: [], modifiedBy: [] }
                 }
             ];
 
@@ -612,7 +612,7 @@ describe('Data Migration', () => {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [{
                     type: '♣ Side Quest',
                     prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.',
-                    rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] }
+                    rewards: { xp: 0, dollars: 0, items: [] }
                 }],
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [],
                 [STORAGE_KEYS.DISCARDED_QUESTS]: []
@@ -648,7 +648,7 @@ describe('Data Migration', () => {
                         bookAuthor: 'Author',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        rewards: { xp: 15, dollars: 10, items: [] }
                     }
                 ],
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [],
@@ -684,7 +684,7 @@ describe('Data Migration', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        rewards: { xp: 15, dollars: 10, items: [] }
                     }
                 ],
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [],
@@ -833,9 +833,9 @@ describe('Integration: Load State with Validation and Migration', () => {
     test('should handle corrupted quest data gracefully', () => {
         // Set up corrupted data
         safeSetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, [
-            { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
+            { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 10, items: [] } },
             null, // Corrupted
-            { type: '♣ Side Quest', prompt: 'Test', book: 'Test2', month: 'Jan', year: '2024', rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [] } }
+            { type: '♣ Side Quest', prompt: 'Test', book: 'Test2', month: 'Jan', year: '2024', rewards: { xp: 0, dollars: 5, items: [] } }
         ]);
 
         const loaded = loadAndMigrateState();
@@ -856,7 +856,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                     year: '2024',
                     status: 'active',
                     notes: 'Test notes',
-                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 15, dollars: 10, items: [], modifiedBy: [] }
                 }
             ];
 
@@ -881,7 +881,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                     book: 'Test Book',
                     month: 12, // Numeric month (legacy)
                     year: 2024, // Numeric year (legacy)
-                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 15, dollars: 10, items: [], modifiedBy: [] }
                 },
                 {
                     type: '♣ Side Quest',
@@ -889,7 +889,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                     book: 'Test Book 2',
                     month: 3, // Numeric month
                     year: 2025, // Numeric year
-                    rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 0, dollars: 5, items: [], modifiedBy: [] }
                 }
             ];
             
@@ -934,7 +934,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        rewards: { xp: 10, dollars: 5, items: [] }
                         // No dateAdded or dateCompleted (Schema v2)
                     }
                 ],
@@ -945,7 +945,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                         book: 'Completed Book',
                         month: 'December',
                         year: '2023',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        rewards: { xp: 15, dollars: 10, items: [] }
                         // No dateAdded or dateCompleted (Schema v2)
                     }
                 ],

@@ -104,7 +104,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: 'Test notes',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             // Re-render to show the quest
@@ -134,7 +134,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: 'Test notes',
                 buffs: ['[Buff] Test Buff'],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -166,7 +166,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 20, inkDrops: 15, paperScraps: 0, items: [] }
+                rewards: { xp: 20, dollars: 15, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -197,7 +197,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                rewards: { xp: 10, dollars: 5, items: [] }
             }];
 
             ui.renderCompletedQuests();
@@ -223,7 +223,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 5, inkDrops: 0, paperScraps: 0, items: [] }
+                rewards: { xp: 5, dollars: 0, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -257,7 +257,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -280,7 +280,7 @@ describe('Quest Edit Drawer', () => {
             // Add equipped items
             characterState.equippedItems = [{
                 name: testItemName,
-                bonus: '+20 Ink Drops',
+                bonus: '+$5',
                 type: 'Familiar'
             }];
 
@@ -293,7 +293,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -326,7 +326,7 @@ describe('Quest Edit Drawer', () => {
             // Add equipped item
             characterState.equippedItems = [{
                 name: testItemName,
-                bonus: 'x3 Ink Drops',
+                bonus: '+$5',
                 type: 'Wearable'
             }];
 
@@ -343,7 +343,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: ['[Buff] Test Buff', `[Item] ${testItemName}`],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -380,7 +380,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -408,7 +408,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: 'Original notes',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -455,7 +455,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 20, inkDrops: 15, paperScraps: 0, items: [] }
+                rewards: { xp: 20, dollars: 15, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -501,7 +501,7 @@ describe('Quest Edit Drawer', () => {
                 notes: '',
                 buffs: [],
                 restorationData: restorationData,
-                rewards: { xp: 25, inkDrops: 0, paperScraps: 0, blueprints: 5, items: [] }
+                rewards: { xp: 25, dollars: 0, blueprints: 5, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -539,7 +539,7 @@ describe('Quest Edit Drawer', () => {
             // Add equipped item
             characterState.equippedItems = [{
                 name: testItemName,
-                bonus: 'x3 Ink Drops',
+                bonus: '+$5',
                 type: 'Wearable'
             }];
 
@@ -556,7 +556,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -595,7 +595,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -678,7 +678,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: 'Test notes',
                 buffs: ['[Buff] Test'],
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                rewards: { xp: 15, dollars: 10, items: [] }
             }];
 
             ui.renderActiveAssignments();
@@ -720,7 +720,7 @@ describe('Quest Edit Drawer', () => {
                 year: '2024',
                 notes: '',
                 buffs: [],
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                rewards: { xp: 10, dollars: 5, items: [] }
             }];
 
             ui.renderCompletedQuests();

@@ -203,7 +203,7 @@ describe('AtmosphericBuffService', () => {
             const itemData = {
                 atmosphericReward: true,
                 name: 'Garden Gnome',
-                bonus: 'Earn +2 Ink Drops on any day where you read outside.'
+                bonus: 'Earn +$1 on any day where you read outside.'
             };
             expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
         });
@@ -227,7 +227,7 @@ describe('AtmosphericBuffService', () => {
 
         test('should return true for item with atmospheric mention in bonus (backward compatibility)', () => {
             const itemData = {
-                bonus: 'When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus.',
+                bonus: 'When you choose an Atmospheric Buff for your reading session, earn +$1 per atmospheric buff day.',
                 passiveBonus: ''
             };
             expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
@@ -236,15 +236,15 @@ describe('AtmosphericBuffService', () => {
         test('should return true for item with atmospheric mention in passiveBonus (backward compatibility)', () => {
             const itemData = {
                 bonus: '',
-                passiveBonus: 'Atmospheric Buffs grant +3 Ink Drops (passive, not multiplied).'
+                passiveBonus: 'Atmospheric Buffs grant +$1 (passive).'
             };
             expect(shouldExcludeFromQuestBonuses(itemData)).toBe(true);
         });
 
         test('should return false for item without exclusion flag or atmospheric mention', () => {
             const itemData = {
-                bonus: 'Earn a +20 Ink Drop bonus for books in a fantasy series.',
-                passiveBonus: 'Fantasy series books grant +10 Ink Drops (passive).'
+                bonus: 'Earn +$4 for books in a fantasy series.',
+                passiveBonus: 'Fantasy series books grant +$2 (passive).'
             };
             expect(shouldExcludeFromQuestBonuses(itemData)).toBe(false);
         });

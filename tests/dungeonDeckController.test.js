@@ -158,7 +158,7 @@ describe('DungeonDeckController', () => {
       jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
         RewardCalculator: {
           getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+            toJSON: () => ({ xp: 1, dollars: 0, items: [] }),
           })),
         },
       }));
@@ -255,7 +255,7 @@ describe('DungeonDeckController', () => {
       jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
         RewardCalculator: {
           getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+            toJSON: () => ({ xp: 1, dollars: 0, items: [] }),
           })),
         },
       }));
@@ -353,7 +353,7 @@ describe('DungeonDeckController', () => {
       jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
         RewardCalculator: {
           getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+            toJSON: () => ({ xp: 1, dollars: 0, items: [] }),
           })),
         },
       }));
@@ -457,7 +457,7 @@ describe('DungeonDeckController', () => {
       jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
         RewardCalculator: {
           getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+            toJSON: () => ({ xp: 1, dollars: 0, items: [] }),
           })),
         },
       }));
@@ -557,7 +557,7 @@ describe('DungeonDeckController', () => {
       jest.doMock('../assets/js/services/RewardCalculator.js', () => ({
         RewardCalculator: {
           getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 1, inkDrops: 0, paperScraps: 0, items: [] }),
+            toJSON: () => ({ xp: 1, dollars: 0, items: [] }),
           })),
         },
       }));

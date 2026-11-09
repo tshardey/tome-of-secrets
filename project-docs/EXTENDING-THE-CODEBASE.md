@@ -8,7 +8,7 @@ This guide provides straightforward instructions for adding new features to the 
 
 **Authoritative spec:** [`ADR-003: TCG Modifier Pipeline`](ADR-003-tcg-modifier-pipeline.md)
 
-New **catalog-driven, deterministic** mechanics (numeric rewards, multipliers, prevention, monthly activations, slot unlocks tied to data) should be expressed as JSON **`effects`** on the entity in `assets/data/*.json`, validated by the effect schema, and resolved through **`EffectRegistry`** + **`ModifierPipeline`** — not as one-off branches in `RewardCalculator.js`, services, or controllers.
+New **catalog-driven, deterministic** mechanics (flat numeric rewards, prevention, monthly activations, slot unlocks tied to data) should be expressed as JSON **`effects`** on the entity in `assets/data/*.json`, validated by the effect schema, and resolved through **`EffectRegistry`** + **`ModifierPipeline`** — not as one-off branches in `RewardCalculator.js`, services, or controllers.
 
 **Setup pattern for a new item, background perk, school benefit, mastery ability, or sanctum rule:**
 
@@ -45,7 +45,7 @@ Subjective mechanics (player decides if it applies) may correctly stay on legacy
 
 **Current Location (JSON source of truth):** `/assets/data/*.json`
 
-`scripts/generate-data.js` converts JSON → JS exports consumed by the site (`assets/js/character-sheet/data.json-exports.js`) and re-exported via `assets/js/character-sheet/data.js`. Use detailed JSON as the single source of truth (e.g., `sideQuestsDetailed.json`, `curseTableDetailed.json`); legacy shapes are derived programmatically inside `data.js` for backward compatibility.
+`scripts/generate-data.js` converts JSON → JS exports consumed by the site (`assets/js/character-sheet/data.json-exports.js`) and re-exported via `assets/js/character-sheet/data.js`. Use detailed JSON as the single source of truth (e.g., `sideQuestsDetailed.json`); legacy shapes are derived programmatically inside `data.js` for backward compatibility.
 
 **Mechanics on catalog entities:** Prefer **`effects`** arrays per [ADR-003](ADR-003-tcg-modifier-pipeline.md) for anything the pipeline can resolve. Use **`rewardModifier`** / special controller logic only for subjective or not-yet-pipeline mechanics — and avoid implementing the same rule twice.
 
@@ -68,7 +68,7 @@ Subjective mechanics (player decides if it applies) may correctly stay on legacy
    - Rewards page: `/assets/js/page-renderers/rewardsRenderer.js`
    - Sanctum page: `/assets/js/page-renderers/sanctumRenderer.js`
    - Keeper page: `/assets/js/page-renderers/keeperRenderer.js`
-   - Tables (Dungeons/Quests/Shroud): `/assets/js/table-renderer.js`
+   - Tables (Dungeons/Quests): `/assets/js/table-renderer.js`
 5. Add tests in `/tests/*.test.js` as needed
 
 **Example - Adding a New Item:**
@@ -137,7 +137,7 @@ every image 404, which looks exactly like missing art.
 
 **Lookup Pattern:**
 - Use `getItem(idOrName)` from `data.js` - supports both ID and name lookup for backward compatibility
-- Similar helpers exist: `getGenreQuest()`, `getSideQuest()`, `getCurse()`, `getAbility()`, etc.
+- Similar helpers exist: `getGenreQuest()`, `getSideQuest()`, `getAbility()`, etc.
 
 **Example:**
 ```javascript
@@ -178,9 +178,10 @@ field survives — see `tests/sideQuestCompletionSeam.test.js`.
 
 Persisted state is **split across two stores**, which is not obvious from `storageKeys.js`:
 
-- **IndexedDB** (database `tomeOfSecrets`, version 1, object store `state`) holds the 16 keys in
+- **IndexedDB** (database `tomeOfSecrets`, version 1, object store `state`) holds the keys in
   `LARGE_STATE_KEYS` in `persistence.js` — including `activeAssignments`, `completedQuests`,
-  `discardedQuests`, `books`, `equippedItems`, `inventoryItems` and the buff/curse lists.
+  `discardedQuests`, `books`, `equippedItems`, `inventoryItems`, the buff lists and the Fund
+  deduction ledger.
 - **localStorage** holds everything else — currencies, `tomeOfSecrets_schemaVersion`,
   `claimedCountries`, `series`, `completedRestorationProjects`.
 
@@ -250,7 +251,7 @@ validated[STORAGE_KEYS.NEW_FEATURE_DATA] = validateStringArray(
    );
    ```
 
-2. **For arrays of objects** (e.g., quests, items, curses):
+2. **For arrays of objects** (e.g., quests, items, buffs):
    ```javascript
    // Use existing validators or create new ones
    validated[STORAGE_KEYS.NEW_QUEST_ARRAY] = validateQuestArray(
@@ -437,7 +438,7 @@ The character sheet now uses a **controller-based architecture** for better main
 - `AbilityController` - Ability learning/forgetting
 - `InventoryController` - Inventory/equipment management
 - `QuestController` - Quest management (adding, editing, completing, discarding)
-- `CurseController` - Curse functionality
+- `FundController` - Fund balance, deduct form, and deduction receipt log
 - `BuffController` - Temporary and atmospheric buffs
 - `EndOfMonthController` - End of month processing
 - `DungeonDeckController` - Dungeon room/encounter card draw
@@ -753,7 +754,7 @@ uiModule.renderNewFeature(viewModel);
 - `questViewModel.js` - Quest list UI data
 - `abilityViewModel.js` - Abilities UI data
 - `atmosphericBuffViewModel.js` - Atmospheric buffs UI data
-- `curseViewModel.js` - Curses UI data
+- `fundLedgerViewModel.js` - Fund deduction log grouped by month
 - `generalInfoViewModel.js` - Character info UI data
 - `dungeonDeckViewModel.js` - Dungeon card deck UI data
 - `dungeonArchiveCardsViewModel.js` - Archived dungeon quest cards
@@ -837,12 +838,12 @@ function renderNewFeaturePure(viewModel) {
 ✅ **Do:**
 ```javascript
 import { GAME_CONFIG } from './config/gameConfig.js';
-const reward = GAME_CONFIG.rewards.extraCredit.paperScraps;
+const reward = GAME_CONFIG.rewards.questBase.dollars;
 ```
 
 ❌ **Don't:**
 ```javascript
-const reward = 10; // Magic number
+const reward = 15; // Magic number
 ```
 
 **Adding new config values:**
@@ -852,12 +853,11 @@ const reward = 10; // Magic number
 
 ### Data Shapes and Derivations
 
-- Keep detailed JSON as the source of truth (e.g., `sideQuestsDetailed.json`, `curseTableDetailed.json`).
+- Keep detailed JSON as the source of truth (e.g., `sideQuestsDetailed.json`).
 - **All content must have stable IDs** - See [Stable IDs](#stable-ids) section
 - If legacy/flattened shapes are needed by existing code, derive them in `assets/js/character-sheet/data.js` rather than duplicating JSON files.
 - Example derivations implemented:
   - `sideQuests`: built from `sideQuestsDetailed` for dropdown labels
-  - `curseTable`: built from `curseTableDetailed` with normalized `requirement` values (strips "You must " prefix and trailing period)
 
 ### Calculation Receipts
 
@@ -866,14 +866,14 @@ const reward = 10; // Magic number
 **Receipt Structure:**
 ```javascript
 {
-  base: { xp: 30, inkDrops: 10, paperScraps: 0, blueprints: 0 },
+  base: { xp: 30, dollars: 15, blueprints: 0 },
   modifiers: [
-    { source: 'Cartographer Bonus', type: 'background', value: 15, description: '+15 Ink Drops', currency: 'inkDrops' },
-    { source: 'Page Sprite', type: 'item', value: 15, description: '×2 (+15 Ink Drops)', currency: 'inkDrops' }
+    { source: 'The Biblioslinker', type: 'background', value: 3, description: '+$3', currency: 'dollars' },
+    { source: 'Page Sprite', type: 'item', value: 3, description: '+$3', currency: 'dollars' }
   ],
-  final: { xp: 30, inkDrops: 40, paperScraps: 0, blueprints: 0 },
+  final: { xp: 30, dollars: 21, blueprints: 0 },
   items: ['Item Name'],
-  modifiedBy: ['Cartographer Bonus', 'Page Sprite']
+  modifiedBy: ['The Biblioslinker', 'Page Sprite']
 }
 ```
 

@@ -90,8 +90,8 @@ describe('Quest Handlers', () => {
                 const quest = {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
-                    rewards: { xp: 10, inkDrops: 5, paperScraps: 5, items: [], modifiedBy: [] },
-                    buffs: ['Long Read Focus'], // +10 Ink Drops
+                    rewards: { xp: 10, dollars: 0, items: [], modifiedBy: [] },
+                    buffs: ['Long Read Focus'], // +$3
                     month: 'January',
                     year: '2024',
                     book: 'Test Book',
@@ -102,7 +102,7 @@ describe('Quest Handlers', () => {
 
                 // Should have buff modifier applied
                 expect(completedQuest.rewards.modifiedBy).toContain('Long Read Focus');
-                // Should have Biblioslinker bonus (+10 Paper Scraps for dungeons)
+                // Should have Biblioslinker bonus (+$3 for dungeons)
                 expect(completedQuest.rewards.modifiedBy).toContain('The Biblioslinker');
                 expect(completedQuest.rewards.dollars).toBe(21); // $15 base + $3 Long Read Focus + $3 Biblioslinker
             });
@@ -111,7 +111,7 @@ describe('Quest Handlers', () => {
                 const quest = {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
-                    rewards: { xp: 10, inkDrops: 5, paperScraps: 5, items: [] },
+                    rewards: { xp: 10, dollars: 0, items: [] },
                     buffs: [],
                     month: 'January',
                     year: '2024',

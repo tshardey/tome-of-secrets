@@ -1,6 +1,6 @@
 # Tome of Secrets
 
-A solo TBR journaling game inspired by an assortment of role playing games.
+A solo TBR reading game inspired by an assortment of role playing games.
 
 This project is built as a static website using Jekyll and is hosted on GitHub Pages. This allows the game's rules, which are written in Markdown, to be automatically converted into a navigable website.
 

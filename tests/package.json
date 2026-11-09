@@ -1,7 +1,7 @@
 {
   "name": "tome-of-secrets",
   "version": "1.0.0",
-  "description": "A solo TBR journaling game inspired by an assortment of role playing games.",
+  "description": "A solo TBR reading game inspired by an assortment of role playing games.",
   "main": "index.js",
   "scripts": {
     "test": "jest",

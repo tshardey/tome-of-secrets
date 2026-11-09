@@ -1,6 +1,8 @@
 # ADR-001: Character Sheet Architecture Refactoring
 
 **Date:** 2025-11-05  
+> **Update 2026-11-09 (dollar economy):** The Curses tab, the curse state, and journaling described below were later removed, and Ink Drops/Paper Scraps were replaced by a single dollar Fund (see ADR-003). Code snippets here are historical.
+
 **Technical Story:** Refactor monolithic character sheet into modular, maintainable architecture
 
 ## Context and Problem Statement
@@ -70,7 +72,7 @@ The codebase violated DRY (Don't Repeat Yourself) principles and made adding new
 **Decision:** Implement tabbed interface for character sheet
 
 **Implementation:**
-- Created 7 logical tabs: Character, Abilities, Inventory, Environment, Quests, Archived, Curses
+- Created 7 logical tabs: Character, Abilities, Inventory, Environment, Quests, Archived, Curses (Curses tab later removed)
 - New `tabs.js` module handles tab switching with localStorage persistence
 - New `tabs.css` for mobile-responsive tab styling
 - Moved buffs to dedicated "Environment" tab for future room decorator feature
@@ -96,7 +98,7 @@ class RewardCalculator {
 }
 
 class Reward {
-    constructor({ xp, inkDrops, paperScraps, items, modifiedBy }) { ... }
+    constructor({ xp, dollars, blueprints, items, modifiedBy }) { ... }
     clone() { ... }
     toJSON() { ... }
 }
@@ -183,7 +185,6 @@ class Character {
 const handleEndOfMonth = () => {
     // Process atmospheric buffs
     // Award book completion XP
-    // Award journal entry rewards
     // Clear completed books set
     // Process temporary buff expiration
     // Re-render UI

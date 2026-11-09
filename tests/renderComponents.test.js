@@ -25,7 +25,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test notes',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -43,7 +43,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test "notes"',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -63,7 +63,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: ['[Item] Librarian\'s Compass']
             };
 
@@ -81,8 +81,7 @@ describe('Render Components', () => {
                 year: '2024',
                 rewards: { 
                     xp: 15, 
-                    inkDrops: 10, 
-                    paperScraps: 0, 
+                    dollars: 10,
                     items: [],
                     modifiedBy: ['Librarian\'s Compass']
                 },
@@ -101,7 +100,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -135,7 +134,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test notes',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 5, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -154,7 +153,7 @@ describe('Render Components', () => {
                 bookAuthor: 'Jane Doe',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -177,7 +176,7 @@ describe('Render Components', () => {
                 isEncounter: true,
                 roomNumber: '1',
                 encounterName: 'Librarian\'s Spirit',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -195,7 +194,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '1',
@@ -222,7 +221,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, blueprints: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '2',
@@ -250,7 +249,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '2',
@@ -278,7 +277,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '3',
@@ -309,8 +308,7 @@ describe('Render Components', () => {
                 year: '2024',
                 rewards: { 
                     xp: 15, 
-                    inkDrops: 10, 
-                    paperScraps: 0, 
+                    dollars: 10,
                     items: ['Some Item'] 
                 },
                 buffs: []
@@ -336,7 +334,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test "notes"',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -360,7 +358,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: ['[Item] Librarian\'s Compass']
             };
 
@@ -376,7 +374,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -395,7 +393,7 @@ describe('Render Components', () => {
                 book: 'This is a very long book title that should wrap properly within the card container without bleeding out',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -427,7 +425,7 @@ describe('Render Components', () => {
                     year: '2024',
                     isEncounter: false,
                     roomNumber: '1',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -460,7 +458,7 @@ describe('Render Components', () => {
                     isEncounter: true,
                     roomNumber: '1',
                     encounterName: 'Mischievous Pixie',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -480,7 +478,7 @@ describe('Render Components', () => {
                 month: 'Jan',
                 year: '2024',
                 notes: 'Lots of notes',
-                rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 1, dollars: 0, items: [] },
                 buffs: []
             };
 
@@ -505,7 +503,7 @@ describe('Render Components', () => {
                     book: 'Test Book',
                     month: 'January',
                     year: '2024',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -534,7 +532,7 @@ describe('Render Components', () => {
                     book: 'Test Book',
                     month: 'January',
                     year: '2024',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -561,7 +559,7 @@ describe('Render Components', () => {
                     book: 'Test Book',
                     month: 'January',
                     year: '2024',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 

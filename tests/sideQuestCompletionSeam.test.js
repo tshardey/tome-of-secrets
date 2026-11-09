@@ -121,7 +121,7 @@ describe('an active quest survives a page load with its Blueprints intact', () =
             [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [{
                 type: '♠ Dungeon Crawl',
                 prompt: 'Room 3',
-                rewards: { xp: 50, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 50, dollars: 0, items: [] },
                 month: 'January',
                 year: '2026'
             }]
@@ -173,7 +173,7 @@ describe('the reward receipt survives a page load', () => {
             [STORAGE_KEYS.COMPLETED_QUESTS]: [{
                 type: '\u2663 Side Quest',
                 prompt: 'No receipt here',
-                rewards: { xp: 1, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+                rewards: { xp: 1, dollars: 0, blueprints: 0, items: [] },
                 month: 'January',
                 year: '2026'
             }]

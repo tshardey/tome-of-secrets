@@ -220,7 +220,7 @@ describe('Book migration (v5)', () => {
           bookAuthor: 'Migrated Author',
           month: 'January',
           year: '2024',
-          rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+          rewards: { xp: 15, dollars: 10, items: [] }
         }
       ],
       [STORAGE_KEYS.COMPLETED_QUESTS]: [
@@ -231,7 +231,7 @@ describe('Book migration (v5)', () => {
           bookAuthor: 'Done Author',
           month: 'February',
           year: '2024',
-          rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+          rewards: { xp: 15, dollars: 10, items: [] }
         }
       ],
       [STORAGE_KEYS.DISCARDED_QUESTS]: []

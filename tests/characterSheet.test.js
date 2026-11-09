@@ -70,7 +70,7 @@ describe('Character Sheet', () => {
       dateAdded: now.toISOString(),
       book: '',
       bookId: null,
-      rewards: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+      rewards: { xp: 0, dollars: 0, blueprints: 0, items: [] },
       buffs: [],
       ...overrides
     };
@@ -1744,9 +1744,9 @@ describe('Character Sheet', () => {
 
     it('should apply the Tome-Bound Cat bonus to a trackable item and a regular buff at end of month', () => {
       // Regression guard for R3a/R3b: EndOfMonthController.js is the only production
-      // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real multiplier
-      // and trackableItemValues. Equip Garden Gnome (trackable, 2 Paper Scraps/day) and
-      // Tome-Bound Cat (x2 atmospheric multiplier when equipped).
+      // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real sanctum rate
+      // and trackableItemValues. Equip Garden Gnome (trackable, $1/day) and
+      // Tome-Bound Cat (+$1 per atmospheric buff day when equipped).
       const { characterState } = require('../assets/js/character-sheet/state.js');
       characterState.equippedItems = [
         { name: 'Garden Gnome' },
@@ -1810,8 +1810,7 @@ describe('Character Sheet', () => {
       const addedQuest = characterState.activeAssignments[0];
       expect(addedQuest).toHaveProperty('rewards');
       expect(addedQuest.rewards).toHaveProperty('xp');
-      expect(addedQuest.rewards).toHaveProperty('inkDrops');
-      expect(addedQuest.rewards).toHaveProperty('paperScraps');
+      expect(addedQuest.rewards).toHaveProperty('dollars');
       expect(addedQuest.rewards).toHaveProperty('items');
     });
 
@@ -2757,7 +2756,7 @@ describe('Character Sheet', () => {
             const content = drawer.querySelector('.info-drawer-content');
             expect(content).toBeTruthy();
             expect(content.textContent).toContain('+15 XP');
-            expect(content.textContent).toContain('+10 Ink Drops');
+            expect(content.textContent).toContain('$15 for your Fund');
             
             // Check table container exists
             const tableContainer = content.querySelector('#genre-quests-table-container');

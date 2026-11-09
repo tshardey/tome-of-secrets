@@ -9,10 +9,10 @@ Your journey through the Grand Library unfolds in a steady rhythm of discovery, 
 1.  **Draw All Cards:** Begin by drawing the cards for your Monthly Quest Pool.
 2.  **Roll for Challenges:** For each card, roll the appropriate dice to reveal the challenges and quests that await.
 3.  **Determine Your Loadout:** Select the magical items and companions you will equip for this cycle to best meet the quests ahead.
-4.  **Pick Your Books:** Choose the books you will read for each prompt. You may use the same book to satisfy multiple prompts unless a prompt specifically forbids it.
-5.  **Read and Earn:** Read the books to complete your quests, earning Ink Drops, Paper Scraps, XP, magical rewards, and Dusty Blueprints.
+4.  **Pick Your Books:** Choose the books you will read for each prompt. Each book counts toward **one** quest. A few mastery abilities (Quick Shot, Irresistible Charm, and Concussive Blast) let a single book clear a second quest.
+5.  **Read and Earn:** Read the books to complete your quests, earning real dollars for your Fund, XP, magical rewards, and Dusty Blueprints.
 6.  **Restore the Library (Optional but Recommended):** Spend Dusty Blueprints on **Restoration Projects** in the [Library Restoration]({{ site.baseurl }}/library.html) page to unlock Display/Adoption slots and permanent wing bonuses.
-7.  **Face the Shroud if Needed:** If you do not complete all quests, consult The Shroud's Curse to resolve any consequences.
+7.  **Spend Your Fund:** When you buy a book (or anything else for your reading life), deduct it from your Fund in the Character Sheet's Resources panel.
 
 This loop forms the beating heart of your adventure, carrying you from month to month as you preserve the magic of the Grand Library.
 
@@ -40,7 +40,7 @@ Each card suit corresponds to a specific type of challenge or quest.
 **Re-rolling Completed Quests:** If you roll a number for a dungeon room or side quest that you have already completed (marked with a checkmark in the tables), you may roll again. For dungeon rooms, you may also opt to complete the other encounter if you have only completed one of the room's encounters.
 
 ## Currencies and Progression
-There are three primary currencies that define your progress, plus a fourth for character advancement.
+Your progress is measured in XP and Dusty Blueprints, but the currency you spend is real money: **the Fund**. It works like a book budget. Completing quests pays dollars into the Fund, and when you buy a book you deduct what you spent. The aim is to earn roughly one book's worth of money for every book you read.
 
 * **XP (Experience Points):** Your XP is for character progression and leveling up.
 
@@ -48,26 +48,26 @@ There are three primary currencies that define your progress, plus a fourth for 
     *  Completing any book (+15 XP, calculated at end of month)
     *  Completing an *Organize the Stacks* quest (+15 XP, awarded immediately)
     *  Completing monsters in a *Dungeon Room* (+30 XP, awarded immediately) 
-* **Ink Drops:** The primary currency for in-game rewards and essential for creating books.  Use them to purchase in-game items, buffs, and to help create new books.
+* **The Fund (dollars):** Real dollars you can spend on books. The Fund starts at $0. Every bonus is a flat dollar amount; nothing multiplies.
 
-    **Earn Ink Drops by:**
-    *  Completing any book (base of 10 *Ink Drops*)
-    *  Completing an *Organize the Stacks* quest (+10 *Ink Drops*)
-    *  Completing *Side Quests*
-    *  Coming across *Friendly Creatures* in a *Dungeon Room*
-* **Paper Scraps:** Earned from specific quests and activities. Use them, in conjunction with Ink Drops, to "create" a new book to add to your collection.
+    **Earn dollars by:**
+    *  Completing any quest (**$15** base): Organize the Stacks, Side Quests, Dungeon Rooms and their encounters, Extra Credit, and Restoration Projects
+    *  Clearing a second quest with the same book through an ability (**$10** base for that second quest)
+    *  Triggering *Atmospheric Buffs* (**$1** per buff per active day, or **$2** per day if the buff matches your Sanctum)
+    *  Equipped items, your background, your school, and mastery abilities whose conditions the book meets (flat bonuses, usually $1 to $5, up to $10 for rare ones)
+    *  Leveling up ($10 to $50 per level; see the Leveling Rewards table in the Character Sheet)
+    *  Completing a library wing (+$25)
 
-    **Earn Paper Scraps for the following:**
-    *  Reading books outside of your quest pool (+10 *Paper Scraps*)
-    *  Taming a *Familiar* in a *Dungeon Room* (+5 *Paper Scraps*)
-    *  Triggering *Atmospheric Buffs* (+2 *Paper Scraps* per day, or +3 per day if the buff matches your Sanctum)
+    Marking a library book complete earns XP but no dollars. The money comes from the quest the book completes.
+
+    **Spend dollars by:** deducting a purchase in the Character Sheet's **Resources** panel. Enter the amount, an optional note, and the date. Your deductions are kept as receipts grouped by month, and deleting a receipt refunds its amount. You can also edit the balance directly to correct it.
 
 * **Dusty Blueprints:** A special currency used for **Library Restoration**. Spend Dusty Blueprints to complete Restoration Projects, which unlock **Display Slots** (passive item slots), **Adoption Slots** (passive familiar slots), and wing completion bonuses.
 
     **Earn Dusty Blueprints for:**
     * Completing **Genre Quests**
     * Completing **Extra Credit** challenges
-    * Completing certain **Side Quests** — the Bazaar, the Exchange, and the Open Road pay in Blueprints.
+    * Completing certain **Side Quests** outside the Library (at the Bazaar, the Festival, the Exchange, and the Open Road)
 
     **Spend Dusty Blueprints on:**
     * Restoration Projects in [Library Restoration]({{ site.baseurl }}/library.html)
