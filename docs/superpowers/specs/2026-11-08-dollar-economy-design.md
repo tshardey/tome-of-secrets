@@ -206,7 +206,19 @@ Convert Ink and Paper with the item rule (no clamp): 50 ink + 10 paper → $15; 
 
 ### Sanity check against the target
 
-A typical quest pays $15 base plus one or two matching items at $2–5. That is about **$18–25 per book** before atmospheric days. At ~10 atmospheric days a month, that adds ~$10–20 a month. This lands near "one book's worth of money per book read", with level-ups making it easier over time.
+The maintainer reads **4–6 books a month**. They buy mostly **hardcovers and special editions (~$32; paperbacks ~$19)**, and would be happy spending **under ~$200 in most months**.
+
+A typical quest pays $15 base plus one or two matching items at $2–5, which is about **$18–25 per book**. At ~10 atmospheric days a month, atmospheric buffs add ~$10–20. Here is a typical month at 5 books:
+
+| Source | Amount |
+|---|---|
+| Quests | $75 |
+| Items | ~$20 |
+| Atmospheric | ~$15 |
+| Occasional level-up / long-book bonus | ~$10–20 |
+| **Total** | **≈ $120–130** |
+
+That buys about **4 hardcovers**, close to one per book read. At 6 books with good item matches and a level-up, the total reaches ~$170–180, still under the ~$200 comfort line. Higher levels, more inventory slots, and the $10 long-book bonuses are what push the earn rate up over time.
 
 ---
 
