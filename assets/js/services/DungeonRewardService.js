@@ -125,7 +125,7 @@ export function getDungeonCompletionRewardCardImage(reward) {
 
 /**
  * Apply a dungeon completion reward (from d20 roll) to character state.
- * Handles items (inventory), temporary buffs, and currency (XP, ink, paper, blueprints).
+ * Handles items (inventory), temporary buffs, and currency (XP, dollars, blueprints).
  * Skips adding items already in inventory.
  * @param {number} roll - d20 roll result (1-20)
  * @param {Object} deps - { stateAdapter, updateCurrency }

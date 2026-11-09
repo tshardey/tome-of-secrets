@@ -87,7 +87,7 @@ function resourceToastLabel(resource) {
 }
 
 /**
- * Apply ON_QUEST_DRAFTED effects (e.g. Cartographer's Guild ink) when quests enter the active pool.
+ * Apply ON_QUEST_DRAFTED effects (e.g. Cartographer's Guild +$3) when quests enter the active pool.
  * @param {{ state: Object }} stateAdapter
  * @param {Object[]} quests
  * @param {{ updateCurrency?: Function, dataModule?: Object, toast?: { info: Function }, form?: HTMLFormElement|null, formData?: { keeperBackground?: string, wizardSchool?: string }, month?: string, year?: string }} options
