@@ -137,7 +137,7 @@ Items with no currency part (Celestial Koi Fish, Reading Glasses, Lantern, Scept
 | Librarian's Quill (item) | +$2 equipped / $1 passive for books with a writer, scholar, or librarian protagonist |
 | Golden Pen (item) | +$3 equipped / $1 passive for award-winning books |
 | Ward Against the Shroud (1 SMP) | Once per month, +$5 at month end if you completed your full monthly quest pool |
-| Grand Dispelling (2 SMP) | Once per month, +$5 on a completed book over 500 pages |
+| Grand Dispelling (2 SMP) | Once per month, **+$10** on a completed book over 500 pages (maintainer: "it's almost reading 2 books") |
 | Abjuration (school) | +$3 on books that have been on your TBR for over a year |
 | The Scribe's Acolyte (background) | +$3 on illustrated, illuminated, or special-edition books, or books with maps |
 | Librarian's Blessing (temp buff) | +$5 on your next two completed quests |
