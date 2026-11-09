@@ -2,11 +2,12 @@
     "Long Read Focus": {
         "id": "long-read-focus",
         "name": "Long Read Focus",
-        "description": "Gain +10 Ink Drops on your next completed book.",
+        "description": "Gain +$3 on your next completed quest.",
         "duration": "one-time",
+        "useCount": 1,
         "source": "Side Quest: The Arcane Grimoire",
         "rewardModifier": {
-            "inkDrops": 10
+            "dollars": 3
         }
     }
 }

@@ -309,7 +309,6 @@ export class RewardCalculator {
         return (
             t === MODIFIER_TYPES.ADD_FLAT ||
             t === MODIFIER_TYPES.GRANT_RESOURCE ||
-            t === MODIFIER_TYPES.MULTIPLY ||
             t === MODIFIER_TYPES.PREVENT
         );
     }
@@ -322,8 +321,6 @@ export class RewardCalculator {
             ...bucket(registryEffects, MODIFIER_TYPES.ADD_FLAT),
             ...bucket(buffEffects, MODIFIER_TYPES.GRANT_RESOURCE),
             ...bucket(registryEffects, MODIFIER_TYPES.GRANT_RESOURCE),
-            ...bucket(buffEffects, MODIFIER_TYPES.MULTIPLY),
-            ...bucket(registryEffects, MODIFIER_TYPES.MULTIPLY),
             ...bucket(buffEffects, MODIFIER_TYPES.PREVENT),
             ...bucket(registryEffects, MODIFIER_TYPES.PREVENT),
             ...regOther
@@ -426,7 +423,7 @@ export class RewardCalculator {
             const baseModifier = forPassive && item.passiveRewardModifier
                 ? item.passiveRewardModifier
                 : item.rewardModifier;
-            return { modifier: this._applyFamiliarStateLoadModifiers(item, baseModifier) };
+            return { modifier: baseModifier };
         }
 
         // Temporary buff modifiers (check both new and legacy sources)
@@ -440,75 +437,55 @@ export class RewardCalculator {
         return { modifier: null };
     }
 
-    static _getStateLoadEffectsForCharacter() {
-        const wizardSchool =
-            typeof document !== 'undefined' ? document.getElementById('wizardSchool')?.value || '' : '';
-        const keeperBackground =
-            typeof document !== 'undefined' ? document.getElementById('keeperBackground')?.value || '' : '';
-        return EffectRegistry.getActiveEffects(
-            TRIGGERS.ON_STATE_LOAD,
-            {
-                state: characterState,
-                formData: {
-                    wizardSchool,
-                    keeperBackground
-                }
-            },
-            data
-        );
+    /**
+     * Total familiar dollar boost from ON_STATE_LOAD `familiar_bonus` effects
+     * (Empowered Bond +$1, Echo Chamber +$3; they stack).
+     * @private
+     */
+    static _familiarDollarBonus(adapter) {
+        return EffectRegistry.getActiveEffects(TRIGGERS.ON_STATE_LOAD, adapter, data).reduce((sum, { effect }) => {
+            const modifier = effect?.modifier;
+            const isFamiliarBonus =
+                modifier?.type === MODIFIER_TYPES.ADD_FLAT &&
+                modifier.target === 'familiar_bonus' &&
+                typeof modifier.value === 'number';
+            return isFamiliarBonus ? sum + modifier.value : sum;
+        }, 0);
     }
 
-    static _applyFamiliarStateLoadModifiers(item, modifier) {
-        if (!item || item.type !== 'Familiar' || !modifier || typeof modifier !== 'object') {
-            return modifier;
+    /**
+     * Raise each equipped familiar's dollar bonus by the familiar boost. The boost is folded into
+     * the familiar's own equipped dollar effect (once per familiar), so it applies only when that
+     * bonus fires and the receipt shows a single boosted line.
+     * @private
+     */
+    static _boostEquippedFamiliarDollars(registryEffects, adapter) {
+        const bonus = this._familiarDollarBonus(adapter);
+        if (!bonus) {
+            return registryEffects;
         }
-
-        const activeStateLoadEffects = this._getStateLoadEffectsForCharacter();
-        let familiarMultiplier = 1;
-        let familiarFlatBonus = 0;
-
-        for (const entry of activeStateLoadEffects) {
-            const effectModifier = entry?.effect?.modifier;
-            if (!effectModifier || typeof effectModifier !== 'object') {
-                continue;
-            }
+        const boosted = new Set();
+        return registryEffects.map((entry) => {
+            const { effect, source } = entry;
+            const modifier = effect?.modifier;
             if (
-                effectModifier.type === MODIFIER_TYPES.MULTIPLY &&
-                effectModifier.target === 'familiar_bonuses' &&
-                typeof effectModifier.value === 'number'
+                source?.sourceType !== 'item' ||
+                effect?.slot !== 'equipped' ||
+                modifier?.type !== MODIFIER_TYPES.ADD_FLAT ||
+                modifier.resource !== 'dollars' ||
+                boosted.has(source.id)
             ) {
-                familiarMultiplier *= effectModifier.value;
+                return entry;
             }
-            if (
-                effectModifier.type === MODIFIER_TYPES.ADD_FLAT &&
-                effectModifier.target === 'familiar_bonus' &&
-                typeof effectModifier.value === 'number'
-            ) {
-                familiarFlatBonus += effectModifier.value;
+            const item =
+                data.allItems?.[source.name] ||
+                Object.values(data.allItems || {}).find((row) => row?.id === source.id);
+            if (item?.type !== 'Familiar') {
+                return entry;
             }
-        }
-
-        if (familiarMultiplier === 1 && familiarFlatBonus === 0) {
-            return modifier;
-        }
-
-        const adjusted = { ...modifier };
-        const resourceKeys = ['dollars', 'xp', 'blueprints'];
-
-        resourceKeys.forEach((key) => {
-            if (typeof adjusted[key] === 'number') {
-                adjusted[key] = Math.floor(adjusted[key] * familiarMultiplier);
-            }
+            boosted.add(source.id);
+            return { ...entry, effect: { ...effect, modifier: { ...modifier, value: modifier.value + bonus } } };
         });
-
-        if (familiarFlatBonus !== 0) {
-            const primaryResource = resourceKeys.find(key => typeof adjusted[key] === 'number');
-            if (primaryResource) {
-                adjusted[primaryResource] += familiarFlatBonus;
-            }
-        }
-
-        return adjusted;
     }
 
     /**
@@ -558,10 +535,9 @@ export class RewardCalculator {
             state: pipelineState
         });
 
-        const registryEffects = EffectRegistry.getActiveEffects(
-            TRIGGERS.ON_QUEST_COMPLETED,
-            adapter,
-            data
+        const registryEffects = this._boostEquippedFamiliarDollars(
+            EffectRegistry.getActiveEffects(TRIGGERS.ON_QUEST_COMPLETED, adapter, data),
+            adapter
         );
         const buffEffects = this._collectBuffCardPipelineEffects(appliedBuffs, quest);
         const activeEffects = this._mergePipelineEffectOrder(registryEffects, buffEffects);
@@ -607,6 +583,8 @@ export class RewardCalculator {
      * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
      * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM reward (e.g. Grove Tender pipeline)
+     * @param {{ dailyBonus?: number, dailyBonusSource?: string|null, trackableItemValues?: Object<string, number> }} [options]
+     *   dailyBonus: flat dollars added for every paying day (buff and trackable-item days), e.g. Tome-Bound Cat.
      * @returns {Reward} Reward with dollars only
      */
     static calculateAtmosphericBuffRewards(
@@ -615,8 +593,9 @@ export class RewardCalculator {
         forcedActiveBuffNames = [],
         options = {}
     ) {
-        const { multiplier = 1, multiplierSource = null, trackableItemValues = {} } = options;
+        const { dailyBonus = 0, dailyBonusSource = null, trackableItemValues = {} } = options;
         let total = 0;
+        let bonusDays = 0;
         const processedBuffs = [];
         const reward = new Reward();
         const forcedActive = new Set();
@@ -662,6 +641,7 @@ export class RewardCalculator {
             total += buffTotal;
 
             if (buffTotal > 0) {
+                bonusDays += buff.daysUsed;
                 processedBuffs.push(buffName);
                 reward.receipt.modifiers.push({
                     source: buffName,
@@ -673,14 +653,15 @@ export class RewardCalculator {
             }
         }
 
-        if (multiplier !== 1 && total > 0) {
-            const beforeMultiplier = total;
-            total = Math.floor(total * multiplier);
+        // Flat per-day item bonus (e.g. Tome-Bound Cat +$1 on every paying atmospheric day).
+        if (dailyBonus > 0 && bonusDays > 0) {
+            const bonusTotal = bonusDays * dailyBonus;
+            total += bonusTotal;
             reward.receipt.modifiers.push({
-                source: multiplierSource || 'Atmospheric multiplier',
-                type: 'atmospheric-multiplier',
-                value: total - beforeMultiplier,
-                description: `x${multiplier} to atmospheric buff total`,
+                source: dailyBonusSource || 'Atmospheric bonus',
+                type: 'atmospheric-bonus',
+                value: bonusTotal,
+                description: `${bonusDays} days × +$${dailyBonus}`,
                 currency: GAME_CONFIG.atmospheric.resource
             });
         }

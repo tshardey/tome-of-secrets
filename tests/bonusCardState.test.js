@@ -42,11 +42,11 @@ jest.mock('../assets/js/character-sheet/data.js', () => {
             },
             'Page Sprite': {
                 name: 'Page Sprite',
-                bonus: 'x2 Ink Drops for short books',
+                bonus: 'Books under 300 pages grant +$3.',
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { max: 299 } },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 },
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 3 },
                     slot: 'equipped'
                 }]
             }
@@ -244,7 +244,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { max: 299 } },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 3 }
                 }]
             }
         };
@@ -258,7 +258,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { max: 299 } },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 3 }
                 }]
             }
         };

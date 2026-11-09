@@ -26,8 +26,8 @@ describe('Game Data Integrity', () => {
         Object.values(genreQuests).forEach(quest => {
             expect(quest).toHaveProperty('rewards');
             expect(quest.rewards).toHaveProperty('xp');
-            expect(quest.rewards).toHaveProperty('inkDrops');
-            expect(quest.rewards).toHaveProperty('paperScraps');
+            expect(quest.rewards).not.toHaveProperty('inkDrops');
+            expect(quest.rewards).not.toHaveProperty('paperScraps');
             expect(quest.rewards).toHaveProperty('items');
             expect(Array.isArray(quest.rewards.items)).toBe(true);
         });
@@ -37,8 +37,8 @@ describe('Game Data Integrity', () => {
         Object.values(sideQuestsDetailed).forEach(quest => {
             expect(quest).toHaveProperty('rewards');
             expect(quest.rewards).toHaveProperty('xp');
-            expect(quest.rewards).toHaveProperty('inkDrops');
-            expect(quest.rewards).toHaveProperty('paperScraps');
+            expect(quest.rewards).not.toHaveProperty('inkDrops');
+            expect(quest.rewards).not.toHaveProperty('paperScraps');
             expect(quest.rewards).toHaveProperty('items');
             expect(Array.isArray(quest.rewards.items)).toBe(true);
         });
@@ -57,8 +57,8 @@ describe('Game Data Integrity', () => {
                 room.encountersDetailed.forEach(encounter => {
                     expect(encounter).toHaveProperty('rewards');
                     expect(encounter.rewards).toHaveProperty('xp');
-                    expect(encounter.rewards).toHaveProperty('inkDrops');
-                    expect(encounter.rewards).toHaveProperty('paperScraps');
+                    expect(encounter.rewards).not.toHaveProperty('inkDrops');
+                    expect(encounter.rewards).not.toHaveProperty('paperScraps');
                     expect(encounter.rewards).toHaveProperty('items');
                     expect(Array.isArray(encounter.rewards.items)).toBe(true);
                 });

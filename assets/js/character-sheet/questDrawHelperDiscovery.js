@@ -51,10 +51,6 @@ export function stripSimpleHtml(html) {
     return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function isExcludedWornPageAlternateDraw(lowered) {
-    return lowered.includes('worn page') && lowered.includes('instead') && lowered.includes('draw a card');
-}
-
 /**
  * @param {string} text - Plain text (strip HTML for permanent bonuses first)
  * @returns {boolean}
@@ -62,7 +58,7 @@ function isExcludedWornPageAlternateDraw(lowered) {
 export function isQuestDrawHelperText(text) {
     if (!text || typeof text !== 'string') return false;
     const t = text.trim().toLowerCase();
-    if (!t || isExcludedWornPageAlternateDraw(t)) return false;
+    if (!t) return false;
     return QUEST_DRAW_HELPER_PHRASES_LC.some(phrase => t.includes(phrase));
 }
 

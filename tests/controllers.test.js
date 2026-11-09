@@ -609,8 +609,7 @@ describe('Controllers', () => {
             }
         });
 
-        // TODO(Task 5): re-enable once temporaryBuffs.json gives Disjointed Perception rewardModifier { dollars: 3 }.
-        it.skip('should handle marking buff as used', () => {
+        it('should handle marking buff as used', () => {
             const updateCurrency = jest.fn();
             const controller = new BuffController(stateAdapter, form, dependencies);
             controller.initialize(updateCurrency);
@@ -638,6 +637,28 @@ describe('Controllers', () => {
                     items: []
                 });
             }
+        });
+
+        it('should not pay a use-count buff when it is marked used (it pays per quest instead)', () => {
+            const updateCurrency = jest.fn();
+            const controller = new BuffController(stateAdapter, form, dependencies);
+            controller.initialize(updateCurrency);
+
+            stateAdapter.getTemporaryBuffs = jest.fn(() => [{
+                name: 'Story Surge',
+                status: 'active',
+                duration: 'one-time',
+                usesLeft: 5
+            }]);
+            stateAdapter.updateTemporaryBuff = jest.fn();
+
+            const target = document.createElement('button');
+            target.classList.add('mark-buff-used-btn');
+            target.dataset.index = '0';
+
+            expect(controller.handleClick(target)).toBe(true);
+            expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+            expect(updateCurrency).not.toHaveBeenCalled();
         });
 
         it('should not apply currency for non-one-time buffs', () => {
@@ -1118,6 +1139,39 @@ describe('Controllers', () => {
                 expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('need 20'));
 
                 promptSpy.mockRestore();
+                errorSpy.mockRestore();
+            });
+
+            it('Grand Dispelling claims its $10 once per month', () => {
+                const state = createEmptyCharacterState();
+                const { controller, realStateAdapter, monthInput } = setupActivation(state);
+                const button = activationButton('claim_dollar_bonus', 'ability', 'grand-dispelling', 'Grand Dispelling');
+                button.dataset.dollars = '10';
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(1000);
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(1000);
+
+                monthInput.value = 'April';
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(2000);
+            });
+
+            it('a claim_dollar_bonus button with no amount pays nothing and keeps the cooldown', () => {
+                const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+                const state = createEmptyCharacterState();
+                const { controller, realStateAdapter } = setupActivation(state);
+                const button = activationButton('claim_dollar_bonus', 'ability', 'ward-against-the-shroud', 'Ward Against the Shroud');
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(0);
+                expect(errorSpy).toHaveBeenCalled();
+
+                button.dataset.dollars = '5';
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(500);
                 errorSpy.mockRestore();
             });
 

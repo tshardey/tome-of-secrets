@@ -1732,9 +1732,7 @@ describe('Character Sheet', () => {
       expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
     });
 
-    // TODO(Task 5): re-express for the flat Tome-Bound Cat (+$1 per atmospheric buff day) and
-    // re-enable once Garden Gnome's rewardModifier pays `dollars` ($1/day).
-    it.skip('should apply the Tome-Bound Cat bonus to a trackable item and a regular buff at end of month', () => {
+    it('should apply the Tome-Bound Cat bonus to a trackable item and a regular buff at end of month', () => {
       // Regression guard for R3a/R3b: EndOfMonthController.js is the only production
       // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real multiplier
       // and trackableItemValues. Equip Garden Gnome (trackable, 2 Paper Scraps/day) and
@@ -2250,8 +2248,8 @@ describe('Character Sheet', () => {
       backgroundSelect.value = 'scribe';
       backgroundSelect.dispatchEvent(new Event('change'));
       
-      expect(benefitDisplay.textContent).toContain('+3 Paper Scrap bonus');
-      expect(benefitDisplay.textContent).toContain('Adventure Journal entry');
+      expect(benefitDisplay.textContent).toContain('+$3 bonus');
+      expect(benefitDisplay.textContent).toContain('special-edition');
     });
 
     it.skip('should show background bonuses in quest buffs dropdown for Archivist (Add Quest form removed)', () => {

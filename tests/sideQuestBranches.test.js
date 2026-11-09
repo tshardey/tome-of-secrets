@@ -13,7 +13,7 @@ const mockBranchingQuest = {
     description: 'A stall that exists only in tests.',
     prompt: 'Branch A prompt.',
     reward: 'Branch A reward.',
-    rewards: { xp: 10, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+    rewards: { xp: 10, blueprints: 0, items: [] },
     branchType: 'choice',
     rollInstruction: null,
     branches: [
@@ -23,7 +23,7 @@ const mockBranchingQuest = {
             name: 'First',
             prompt: 'Branch A prompt.',
             reward: 'Branch A reward.',
-            rewards: { xp: 10, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] }
+            rewards: { xp: 10, blueprints: 0, items: [] }
         },
         {
             key: 'B',
@@ -31,7 +31,7 @@ const mockBranchingQuest = {
             name: 'Second',
             prompt: 'Branch B prompt.',
             reward: 'Branch B reward.',
-            rewards: { xp: 0, inkDrops: 0, paperScraps: 5, blueprints: 15, items: [] }
+            rewards: { xp: 0, blueprints: 15, items: [] }
         }
     ]
 };
@@ -108,14 +108,49 @@ describe('the ten Beyond the Library Doors quests', () => {
         expect(total).toBe(33);
     });
 
-    test('no new quest or branch grants Ink Drops', () => {
+    test('no new quest or branch carries Ink/Paper rewards', () => {
         for (const key of NEW_KEYS) {
             const quest = catalog[key];
-            expect(quest.rewards.inkDrops).toBe(0);
+            expect(quest.rewards).not.toHaveProperty('inkDrops');
+            expect(quest.rewards).not.toHaveProperty('paperScraps');
             for (const branch of quest.branches) {
-                expect(branch.rewards.inkDrops).toBe(0);
+                expect(branch.rewards).not.toHaveProperty('inkDrops');
+                expect(branch.rewards).not.toHaveProperty('paperScraps');
             }
         }
+    });
+
+    describe('stakes are flat amounts that never touch the $15 base', () => {
+        const stakeOf = (name) => Object.values(catalog).find((quest) => quest.name === name).stake;
+
+        test("Haggler's Row win adds the quest's blueprint reward again as a flat number", () => {
+            const hagglers = Object.values(catalog).find((quest) => quest.name === "Haggler's Row");
+            expect(hagglers.stake.onSuccess).toEqual({ blueprints: hagglers.rewards.blueprints });
+        });
+
+        test('The Communal Table failure removes half the authored XP as a flat number', () => {
+            const table = Object.values(catalog).find((quest) => quest.name === 'The Communal Table');
+            expect(table.stake.onFailure.xp).toBe(-table.rewards.xp / 2);
+        });
+
+        test('The Blind Stall still forfeits XP (a removal, not a multiplier)', () => {
+            expect(stakeOf('The Blind Stall').onFailure.forfeit).toEqual(['xp']);
+        });
+
+        test('The Masked Procession stake has a non-journaling condition worth $3', () => {
+            const stake = stakeOf('The Masked Procession');
+            expect(stake.condition).not.toMatch(/journal/i);
+            expect(stake.onSuccess).toEqual({ dollars: 3 });
+        });
+
+        test('no stake changes dollars on failure, so a failed stake leaves the $15 base', () => {
+            for (const quest of Object.values(catalog)) {
+                if (!quest.stake) continue;
+                expect(quest.stake.onFailure).not.toHaveProperty('dollars');
+                expect(quest.stake.onSuccess).not.toHaveProperty('multiply');
+                expect(quest.stake.onFailure).not.toHaveProperty('halve');
+            }
+        });
     });
 
     test('the flat fields mirror the first branch', () => {

@@ -15,7 +15,7 @@ import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
 import { EffectRegistry } from '../services/EffectRegistry.js';
 import { buildEffectContext } from '../services/effectContext.js';
-import { getAtmosphericBuffMultiplier, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
+import { getAtmosphericDailyBonus, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -85,7 +85,7 @@ export class EndOfMonthController extends BaseController {
                 })
             );
 
-            const { multiplier, modifierItemName } = getAtmosphericBuffMultiplier(stateAdapter.state);
+            const { bonusPerDay, modifierItemName } = getAtmosphericDailyBonus(stateAdapter.state);
             const trackableItemValues = getTrackableAtmosphericItemValues(stateAdapter.state);
 
             // Calculate atmospheric buff rewards using RewardCalculator
@@ -93,7 +93,7 @@ export class EndOfMonthController extends BaseController {
                 atmosphericBuffs,
                 associatedBuffs,
                 forcedBuffNames,
-                { multiplier, multiplierSource: modifierItemName, trackableItemValues }
+                { dailyBonus: bonusPerDay, dailyBonusSource: modifierItemName, trackableItemValues }
             );
 
             // Reset atmospheric buffs (re-activate pipeline-forced buffs after reset)

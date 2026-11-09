@@ -4,16 +4,36 @@
         "name": "Ward Against the Shroud",
         "school": "Abjuration",
         "cost": 1,
-        "benefit": "Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it.",
-        "effects": []
+        "benefit": "Once per month, earn +$5 at the end of the month if you completed your full monthly quest pool.",
+        "effects": [
+            {
+                "trigger": "ON_ACTIVATE",
+                "modifier": {
+                    "type": "ACTIVATE",
+                    "action": "claim_dollar_bonus",
+                    "dollars": 5
+                },
+                "cooldown": "monthly"
+            }
+        ]
     },
     "Grand Dispelling": {
         "id": "grand-dispelling",
         "name": "Grand Dispelling",
         "school": "Abjuration",
         "cost": 2,
-        "benefit": "Once per month, you may perform a powerful cleansing ritual. Remove all active Worn Page penalties you currently have.",
-        "effects": []
+        "benefit": "Once per month, earn +$10 when you complete a book over 500 pages.",
+        "effects": [
+            {
+                "trigger": "ON_ACTIVATE",
+                "modifier": {
+                    "type": "ACTIVATE",
+                    "action": "claim_dollar_bonus",
+                    "dollars": 10
+                },
+                "cooldown": "monthly"
+            }
+        ]
     },
     "Flicker of Prophecy": {
         "id": "flicker-of-prophecy",
@@ -93,14 +113,14 @@
         "name": "Silver Tongue",
         "school": "Enchantment",
         "cost": 1,
-        "benefit": "When you complete any quest, you gain an additional +5 Paper Scraps, representing your knack for getting a little extra out of every interaction.",
+        "benefit": "When you complete any quest, you gain an additional +$1, representing your knack for getting a little extra out of every interaction.",
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
                 "modifier": {
                     "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 5
+                    "resource": "dollars",
+                    "value": 1
                 }
             }
         ]
@@ -130,16 +150,16 @@
         "name": "Empowered Bond",
         "school": "Conjuration",
         "cost": 1,
-        "benefit": "Your connection to your companions intensifies. The Ink Drop or Paper Scrap bonus granted by your equipped Familiar is permanently increased by +5.",
+        "benefit": "Your connection to your companions intensifies. The dollar bonus granted by each equipped Familiar is permanently increased by +$1.",
         "effects": [
             {
                 "trigger": "ON_STATE_LOAD",
                 "modifier": {
                     "type": "ADD_FLAT",
                     "target": "familiar_bonus",
-                    "value": 5
+                    "value": 1
                 },
-                "description": "Familiar equipped bonuses increased by +5"
+                "description": "Equipped familiar dollar bonuses increased by +$1"
             }
         ]
     },
@@ -148,16 +168,16 @@
         "name": "Echo Chamber",
         "school": "Conjuration",
         "cost": 2,
-        "benefit": "You have mastered the art of magical connection. The bonuses granted by each familiar you have equipped are doubled",
+        "benefit": "You have mastered the art of magical connection. The dollar bonus granted by each familiar you have equipped is increased by +$3.",
         "effects": [
             {
                 "trigger": "ON_STATE_LOAD",
                 "modifier": {
-                    "type": "MULTIPLY",
-                    "target": "familiar_bonuses",
-                    "value": 2
+                    "type": "ADD_FLAT",
+                    "target": "familiar_bonus",
+                    "value": 3
                 },
-                "description": "Double bonuses from equipped familiars"
+                "description": "Equipped familiar dollar bonuses increased by +$3"
             }
         ]
     },
@@ -186,7 +206,7 @@
         "name": "Philosopher's Stone",
         "school": "Transmutation",
         "cost": 2,
-        "benefit": "Once per month, you may sacrifice 50 XP to instantly gain 50 Ink Drops and 10 Paper Scraps.",
+        "benefit": "Once per month, you may sacrifice 50 XP to instantly gain +$5.",
         "effects": [
             {
                 "trigger": "ON_ACTIVATE",

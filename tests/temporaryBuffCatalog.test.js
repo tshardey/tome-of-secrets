@@ -71,9 +71,9 @@ describe('Temporary buff catalog behavior', () => {
         expect(resolved.xp).toBe(7);
     });
 
-    test('Long Read Focus runtime remains flat +10 Ink Drops', () => {
+    test('Long Read Focus pays a flat +$3', () => {
         const modifier = RewardCalculator._getModifier('Long Read Focus', false, false).modifier;
-        expect(modifier).toEqual(expect.objectContaining({ inkDrops: 10 }));
+        expect(modifier).toEqual({ dollars: 3 });
     });
 });
 
@@ -96,7 +96,7 @@ describe('Temporary buff end-of-month lifecycle', () => {
         state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
             {
                 name: 'Unwavering Resolve',
-                description: 'For the next month, you are immune to Worn Page penalties.',
+                description: 'For the next month, gain +$3 on every completed quest with a book over 400 pages.',
                 duration: 'until-end-month',
                 monthsRemaining: 1,
                 status: 'active'

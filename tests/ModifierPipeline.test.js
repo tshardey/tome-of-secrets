@@ -58,24 +58,24 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.modifiedBy).toContain('Bonus Source');
     });
 
-    test('applies MULTIPLY effects', () => {
-        const base = new Reward({ xp: 10 });
-        const effects = [
-            {
-                source: { name: 'Multiplier Source' },
-                effect: {
-                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                    modifier: {
-                        type: MODIFIER_TYPES.MULTIPLY,
-                        resource: 'xp',
-                        value: 1.5
-                    }
-                }
-            }
-        ];
+    test('MULTIPLY is not a modifier type: it is rejected and changes nothing', () => {
+        expect(MODIFIER_TYPES).not.toHaveProperty('MULTIPLY');
+        const multiply = {
+            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+            modifier: { type: 'MULTIPLY', resource: 'xp', value: 2 }
+        };
+        expect(validateEffect(multiply).valid).toBe(false);
 
-        const result = ModifierPipeline.resolve(TRIGGERS.ON_QUEST_COMPLETED, {}, effects, base);
-        expect(result.xp).toBe(15);
+        const base = new Reward({ xp: 10, dollars: 15 });
+        const result = ModifierPipeline.resolve(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            {},
+            [{ source: { name: 'Multiplier Source' }, effect: multiply }],
+            base
+        );
+        expect(result.xp).toBe(10);
+        expect(result.dollars).toBe(15);
+        expect(result.receipt.modifiers).toEqual([]);
     });
 
     test('applies GRANT_RESOURCE like an additive currency grant', () => {
@@ -106,35 +106,19 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.modifiedBy).toContain('Cartographer');
     });
 
-    test('applies flat before multiplier', () => {
-        const base = new Reward({ xp: 10 });
-        const effects = [
-            {
-                source: { name: 'Flat' },
-                effect: {
-                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                    modifier: {
-                        type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'xp',
-                        value: 10
-                    }
-                }
-            },
-            {
-                source: { name: 'Multiply' },
-                effect: {
-                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                    modifier: {
-                        type: MODIFIER_TYPES.MULTIPLY,
-                        resource: 'xp',
-                        value: 2
-                    }
-                }
+    test('flat dollar bonuses stack additively', () => {
+        const base = new Reward({ dollars: 15 });
+        const effects = [3, 2].map((value, index) => ({
+            source: { name: `Flat ${index}` },
+            effect: {
+                trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value }
             }
-        ];
+        }));
 
         const result = ModifierPipeline.resolve(TRIGGERS.ON_QUEST_COMPLETED, {}, effects, base);
-        expect(result.xp).toBe(40);
+        expect(result.dollars).toBe(20);
+        expect(result.receipt.modifiers.map(m => m.description)).toEqual(['+$3', '+$2']);
     });
 
     test('skips effects with unmet condition', () => {
@@ -408,9 +392,9 @@ describe('EffectRegistry.getActiveEffects', () => {
                         {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
-                                type: MODIFIER_TYPES.MULTIPLY,
+                                type: MODIFIER_TYPES.ADD_FLAT,
                                 resource: 'xp',
-                                value: 1.5
+                                value: 10
                             }
                         }
                     ]
@@ -508,9 +492,9 @@ describe('EffectRegistry.getActiveEffects', () => {
                         {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
-                                type: MODIFIER_TYPES.MULTIPLY,
+                                type: MODIFIER_TYPES.ADD_FLAT,
                                 resource: 'xp',
-                                value: 1.5
+                                value: 10
                             }
                         }
                     ]

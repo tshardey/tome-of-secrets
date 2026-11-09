@@ -175,7 +175,9 @@ export class BuffController extends BaseController {
                 if (this.updateCurrency && buff.duration === 'one-time') {
                     // Get buff data to check for rewardModifier (check both new and legacy sources)
                     const buffData = dataModule.temporaryBuffs?.[buff.name] || dataModule.temporaryBuffsFromRewards?.[buff.name];
-                    if (buffData && buffData.rewardModifier) {
+                    // Use-count buffs (Enchanted Focus, Story Surge, ...) pay per quest through their
+                    // bonus card, so marking one used must not pay its per-quest amount again.
+                    if (buffData && buffData.rewardModifier && !(buffData.useCount > 0)) {
                         const dollars = Number(buffData.rewardModifier.dollars) || 0;
 
                         // Only apply currency if there are actual rewards (not just an empty rewardModifier object)

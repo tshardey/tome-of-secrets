@@ -15,6 +15,9 @@ import {
 } from '../assets/js/character-sheet/dataMigrator.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { findCatalogBanViolations, BAN_EXEMPT_FILES } from '../scripts/catalogBans.js';
 
 describe('Data Validation', () => {
     beforeEach(() => {
@@ -906,3 +909,72 @@ describe('Integration: Load State with Validation and Migration', () => {
         });
     });
 
+describe('Catalog bans (dollar economy)', () => {
+    const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
+    const catalogFiles = fs.readdirSync(dataDir)
+        .filter((name) => name.endsWith('.json') && !BAN_EXEMPT_FILES.has(name));
+    const violationsFor = (predicate) => catalogFiles.flatMap((name) => {
+        const json = JSON.parse(fs.readFileSync(path.join(dataDir, name), 'utf8'));
+        return findCatalogBanViolations(name, json).filter(predicate);
+    });
+
+    test('catalog has no MULTIPLY, inkDrops or paperScraps', () => {
+        expect(catalogFiles.length).toBeGreaterThan(10);
+        expect(violationsFor((message) => !message.includes('retired wording'))).toEqual([]);
+    });
+
+    test('catalog text has no Ink Drop / Paper Scrap / Worn Page / journal wording', () => {
+        expect(violationsFor((message) => message.includes('retired wording'))).toEqual([]);
+    });
+
+    test('the ban flags each banned construct', () => {
+        const violations = findCatalogBanViolations('fixture.json', {
+            item: {
+                bonus: 'Earn +10 Ink Drops.',
+                passiveBonus: 'Remove a Worn Page penalty.',
+                note: 'Write in your Journal.',
+                effects: [
+                    { modifier: { type: 'MULTIPLY', resource: 'xp', value: 2 } },
+                    { modifier: { type: 'ADD_FLAT', resource: 'paperScraps', value: 5 } }
+                ],
+                rewards: { inkDrops: 10 },
+                atmosphericBuffMultiplier: 2
+            },
+            stake: { onSuccess: { multiply: { blueprints: 2 } }, onFailure: { halve: ['xp'] } }
+        });
+        expect(violations).toHaveLength(9);
+    });
+
+    test('the wording ban does not flag journalists, journalism, or ink/paper in ordinary prose', () => {
+        expect(findCatalogBanViolations('fixture.json', {
+            a: 'Read a book with a journalist protagonist.',
+            b: 'A history of journalism.',
+            c: 'Ink-stained desks and paper lanterns.'
+        })).toEqual([]);
+    });
+
+    test('flat dollar content passes the ban', () => {
+        expect(findCatalogBanViolations('fixture.json', {
+            item: {
+                bonus: 'Books over 400 pages grant +$10.',
+                effects: [{ modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 } }],
+                rewards: { xp: 15, blueprints: 10 }
+            }
+        })).toEqual([]);
+    });
+
+    test('every tag an effect matches on exists in bookTags.json', () => {
+        const tagIds = new Set(JSON.parse(fs.readFileSync(path.join(dataDir, 'bookTags.json'), 'utf8')).map((t) => t.id));
+        const missing = [];
+        const visit = (value, where) => {
+            if (Array.isArray(value)) return value.forEach((entry) => visit(entry, where));
+            if (!value || typeof value !== 'object') return;
+            for (const group of value.condition?.tagMatch ?? []) {
+                for (const tag of group) if (!tagIds.has(tag)) missing.push(`${where}: ${tag}`);
+            }
+            Object.values(value).forEach((child) => visit(child, where));
+        };
+        catalogFiles.forEach((name) => visit(JSON.parse(fs.readFileSync(path.join(dataDir, name), 'utf8')), name));
+        expect(missing).toEqual([]);
+    });
+});

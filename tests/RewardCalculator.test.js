@@ -238,9 +238,7 @@ describe('RewardCalculator - buff card modifiers', () => {
 });
 
 describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
-    // TODO(Task 5): re-enable with dollar values once keeperBackgrounds.json effects use resource "dollars"
-    // (Archivist +$2, Biblioslinker +$3). Until then their inkDrops/paperScraps effects are inert.
-    test.skip('should not double-apply Archivist when legacy background card is selected', () => {
+    test('should not double-apply Archivist when legacy background card is selected', () => {
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
             appliedBuffs: ['[Background] Archivist Bonus'],
             background: 'archivist',
@@ -252,8 +250,7 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
         expect(modified.modifiedBy).not.toContain('Archivist Bonus');
     });
 
-    // TODO(Task 5): re-enable with dollar values (Archivist +$2, Coffee Elemental +$2 equipped).
-    test.skip('should still apply non-background buff cards with pipeline backgrounds', () => {
+    test('should still apply non-background buff cards with pipeline backgrounds', () => {
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
             appliedBuffs: ['[Background] Archivist Bonus', '[Item] Coffee Elemental'],
@@ -268,8 +265,7 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
         expect(modified.modifiedBy).not.toContain('Archivist Bonus');
     });
 
-    // TODO(Task 5): re-enable once Biblioslinker pays +$3 on dungeon crawls.
-    test.skip('should apply Biblioslinker bonus to dungeon crawls', () => {
+    test('should apply Biblioslinker bonus to dungeon crawls', () => {
         const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
             background: 'biblioslinker',
             quest: { type: '♠ Dungeon Crawl' }
@@ -301,8 +297,7 @@ describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
 });
 
 describe('RewardCalculator - Calculate Final Rewards', () => {
-    // TODO(Task 5): re-enable once Coffee Elemental's effect pays +$2 equipped.
-    test.skip('should calculate final rewards with all modifiers', () => {
+    test('should calculate final rewards with all modifiers', () => {
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
         const final = RewardCalculator.calculateFinalRewards(
             '♥ Organize the Stacks',
@@ -364,7 +359,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             characterState[STORAGE_KEYS.LEARNED_ABILITIES] = [...prevLearned];
         });
 
-        test('School of Enchantment multiplies XP on monster dungeon encounters without buff cards', () => {
+        test('School of Enchantment adds a flat +10 XP on monster dungeon encounters without buff cards', () => {
             const final = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
                 appliedBuffs: [],
                 wizardSchool: 'Enchantment',
@@ -375,12 +370,11 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
                 isBefriend: false
             });
 
-            expect(final.xp).toBe(45);
+            expect(final.xp).toBe(40); // 30 monster base + 10 flat (no multiplier)
             expect(final.modifiedBy).toContain('School of Enchantment');
         });
 
-        // TODO(Task 5): re-enable once Silver Tongue pays +$1 per quest (dollars 16 on a genre quest).
-        test.skip('Silver Tongue adds dollars on any quest type when learned', () => {
+        test('Silver Tongue adds dollars on any quest type when learned', () => {
             characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
             const genre = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
                 quest: { type: '♥ Organize the Stacks' }
@@ -605,45 +599,44 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.modifiedBy).toContain('The Soaking in Nature');
         });
 
-        // The atmospheric multiplier (Tome-Bound Cat ×2) is removed in Task 5; until then it still applies.
-        test('should apply an atmospheric multiplier to the total', () => {
+        test('Tome-Bound Cat adds +$1 per atmospheric buff day (4 days -> +$4)', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                { 'The Candlight Study': { daysUsed: 10, isActive: true } },
+                { 'The Candlight Study': { daysUsed: 4, isActive: true } },
                 [],
                 [],
-                { multiplier: 2, multiplierSource: 'Tome-Bound Cat' }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
             );
 
-            expect(rewards.dollars).toBe(20); // 10 × $1, then × 2
+            expect(rewards.dollars).toBe(8); // 4 × $1 base + 4 × $1 cat
         });
 
-        test('should record the multiplier as its own receipt line', () => {
+        test('should record the daily bonus as its own receipt line', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
                 { 'The Candlight Study': { daysUsed: 10, isActive: true } },
                 [],
                 [],
-                { multiplier: 2, multiplierSource: 'Tome-Bound Cat' }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
             );
             const receipt = rewards.getReceipt();
 
             const catLine = receipt.modifiers.find((m) => m.source === 'Tome-Bound Cat');
-            expect(catLine).toBeDefined();
-            expect(catLine.value).toBe(10); // the added half
+            expect(catLine).toMatchObject({ type: 'atmospheric-bonus', value: 10, currency: 'dollars' });
             expect(receipt.final.dollars).toBe(20);
         });
 
-        test('should floor a fractional multiplied total', () => {
+        test('the daily bonus pays nothing when no atmospheric day paid out', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                { 'The Candlight Study': { daysUsed: 5, isActive: true } },
+                { 'The Candlight Study': { daysUsed: 5, isActive: false } },
                 [],
                 [],
-                { multiplier: 1.5, multiplierSource: 'Tome-Bound Cat' }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
             );
 
-            expect(rewards.dollars).toBe(7); // 5 × $1 = 5, × 1.5 = 7.5, floored to 7
+            expect(rewards.dollars).toBe(0);
+            expect(rewards.getReceipt().modifiers).toEqual([]);
         });
 
-        test('should leave the total alone when there is no multiplier', () => {
+        test('should leave the total alone when there is no daily bonus', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
                 { 'The Candlight Study': { daysUsed: 10, isActive: true } },
                 [],
@@ -667,7 +660,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.modifiedBy).toContain('Garden Gnome');
         });
 
-        test('should multiply trackable item totals alongside buff totals', () => {
+        test('the daily bonus counts trackable item days alongside buff days', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
                 {
                     'The Candlight Study': { daysUsed: 5, isActive: true },
@@ -675,10 +668,10 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 },
                 [],
                 [],
-                { multiplier: 2, multiplierSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 1 } }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 1 } }
             );
 
-            expect(rewards.dollars).toBe(20); // (5×1 buff + 5×1 gnome) = 10, × 2 = 20
+            expect(rewards.dollars).toBe(20); // (5×$1 buff + 5×$1 gnome) + 10 days × $1 cat
         });
 
         test('should not pay a trackable item with zero days used', () => {

@@ -142,13 +142,12 @@ describe('RewardCalculator Receipt System', () => {
 
             expect(receipt.modifiers).toHaveLength(1);
             expect(receipt.modifiers[0].source).toBe('School of Enchantment');
-            expect(receipt.modifiers[0].type).toBe('effect:multiply');
-            expect(receipt.modifiers[0].value).toBe(15);
-            expect(receipt.final.xp).toBe(45);
+            expect(receipt.modifiers[0].type).toBe('effect:add_flat');
+            expect(receipt.modifiers[0].value).toBe(10);
+            expect(receipt.final.xp).toBe(40);
         });
 
-        // TODO(Task 5): re-enable once Biblioslinker pays +$3 on dungeon crawls (final dollars 18).
-        test.skip('should track background bonus in receipt', () => {
+        test('should track background bonus in receipt', () => {
             const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
                 background: 'biblioslinker',
                 quest: { type: '♠ Dungeon Crawl' },
@@ -167,8 +166,7 @@ describe('RewardCalculator Receipt System', () => {
     });
 
     describe('Complete Calculation Receipt Tracking', () => {
-        // TODO(Task 5): re-enable once Coffee Elemental pays +$2 equipped (final dollars 17).
-        test.skip('should track complete calculation with all modifiers', () => {
+        test('should track complete calculation with all modifiers', () => {
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
                 { name: 'Coffee Elemental', type: 'Familiar' }
             ];

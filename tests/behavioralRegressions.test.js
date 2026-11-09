@@ -122,7 +122,7 @@ describe('Behavioral regressions - named game entities', () => {
             expect(updateCurrency).not.toHaveBeenCalled();
         });
 
-        test('stop 5 is a passive-rule-modifier (no direct state mutation)', () => {
+        test('stop 5 (Midnight Waystation) pays a flat +$10', () => {
             const stop5 = getStopByOrder(5);
             const updateCurrency = jest.fn();
             const result = applyTypedReward(stop5.reward, {
@@ -130,9 +130,9 @@ describe('Behavioral regressions - named game entities', () => {
                 updateCurrency
             });
 
-            expect(stop5.reward.type).toBe('passive-rule-modifier');
+            expect(stop5.reward.type).toBe('currency');
             expect(result.applied).toBe(true);
-            expect(updateCurrency).not.toHaveBeenCalled();
+            expect(updateCurrency).toHaveBeenCalledWith({ xp: 0, dollars: 10 });
         });
 
         test('stop 7 is a passive-rule-modifier (no direct state mutation)', () => {

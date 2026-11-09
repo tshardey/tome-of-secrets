@@ -54,12 +54,6 @@ describe('questDrawHelperDiscovery', () => {
             ).toBe(true);
         });
 
-        it('excludes Abjuration worn-page alternate draw (curse mitigation)', () => {
-            const abjuration =
-                'Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.';
-            expect(isQuestDrawHelperText(abjuration)).toBe(false);
-        });
-
         it('returns false for unrelated monthly wording', () => {
             expect(isQuestDrawHelperText('Once per month, transmute your currency.')).toBe(false);
             expect(isQuestDrawHelperText('')).toBe(false);
@@ -111,7 +105,7 @@ describe('questDrawHelperDiscovery', () => {
             [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: []
         };
 
-        it('includes Divination school benefit and excludes Abjuration alternate draw', () => {
+        it('includes Divination school benefit and not the Abjuration dollar bonus', () => {
             const catalogs = {
                 ...baseCatalogs,
                 schoolBenefits: {
@@ -121,7 +115,7 @@ describe('questDrawHelperDiscovery', () => {
                     },
                     Abjuration: {
                         benefit:
-                            'Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.'
+                            'Earn +$3 when you complete a quest with a book that has been on your TBR for over a year.'
                     }
                 }
             };

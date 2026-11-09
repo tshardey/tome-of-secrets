@@ -394,8 +394,8 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         if (isModifierRow) {
             const label = document.createElement('span');
             label.className = 'atmospheric-reward-item-label';
-            const mult = buffVM.modifierMultiplier;
-            label.textContent = typeof mult === 'number' && mult !== 1 ? ` (x${mult} modifier)` : ' (modifier)';
+            const perDay = buffVM.modifierBonusPerDay;
+            label.textContent = typeof perDay === 'number' && perDay > 0 ? ` (+$${perDay}/day bonus)` : ' (modifier)';
             label.title = buffVM.bonus || '';
             nameCell.appendChild(label);
         }
@@ -422,12 +422,12 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
         checkbox.checked = buffVM.isActive;
         if (buffVM.isDisabled) {
             checkbox.disabled = true;
-            const mult = buffVM.modifierMultiplier;
+            const perDay = buffVM.modifierBonusPerDay;
             let title = 'Always active (Grove Tender)';
-            if (isModifierRow && typeof mult === 'number' && mult !== 1) {
-                title = `x${mult} to active atmospheric buffs`;
+            if (isModifierRow && typeof perDay === 'number' && perDay > 0) {
+                title = `+$${perDay} on every paying atmospheric day`;
             } else if (isModifierRow) {
-                title = 'Multiplier to active atmospheric buffs';
+                title = 'Bonus to active atmospheric buffs';
             } else if (buffVM.isTrackableItem) {
                 title = 'Active while equipped or displayed';
             }
@@ -448,6 +448,7 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
             daysInput.min = 0;
             daysInput.dataset.buffName = buffKey;
             daysInput.dataset.dailyValue = typeof buffVM.dailyValue === 'number' ? buffVM.dailyValue : 1;
+            daysInput.dataset.dailyBonus = String(buffVM.dailyBonus || 0);
             daysInput.dataset.totalKey = buffKey;
             daysCell.appendChild(daysInput);
         }
@@ -467,7 +468,8 @@ export function updateBuffTotal(inputElement) {
     const buffName = inputElement.dataset.totalKey || inputElement.dataset.buffName;
     const daysUsed = parseIntOr(inputElement.value, 0);
     const dailyValue = parseIntOr(inputElement.dataset.dailyValue, 0);
-    document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * dailyValue;
+    const dailyBonus = parseIntOr(inputElement.dataset.dailyBonus, 0);
+    document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * (dailyValue + dailyBonus);
 }
 
 export function renderActiveAssignments() {
@@ -1062,6 +1064,7 @@ function actionDisplayName(action) {
         reroll_prompt_or_die: 'Reroll prompt or die',
         transmute_currency: 'Transmute currency',
         sacrifice_xp_for_currency: "Sacrifice XP for currency",
+        claim_dollar_bonus: 'Claim dollar bonus',
         auto_complete_encounter: 'Auto-complete encounter',
         complete_adjacent_quest: 'Complete adjacent quest',
         same_book_room_and_encounter: 'Same book for room + encounter',
@@ -1096,7 +1099,8 @@ function getActiveActivatedEffects() {
             action,
             cooldown: effect?.cooldown || null,
             effectText: sourceBenefitText(source),
-            dedupeKey: dedupe
+            dedupeKey: dedupe,
+            dollars: Number(effect?.modifier?.dollars) || 0
         });
     });
 
@@ -1200,6 +1204,7 @@ export function renderActivatedAbilities() {
         btn.dataset.sourceId = entry.sourceId;
         btn.dataset.cooldown = entry.cooldown || '';
         btn.dataset.abilityName = entry.sourceName;
+        if (entry.dollars > 0) btn.dataset.dollars = String(entry.dollars);
         btn.textContent = used ? 'On cooldown' : 'Activate';
         btn.disabled = used || (entry.cooldown === 'monthly' && !hasExplicitPeriod);
         actions.appendChild(btn);
@@ -1437,7 +1442,7 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookT
             bonuses.push({
                 value: '[Background] Archivist Bonus',
                 name: 'Archivist Bonus',
-                description: '+10 Ink Drops (Non-Fiction/Historical Fiction)',
+                description: '+$2 (Non-Fiction/Historical Fiction)',
                 type: 'background',
                 typeLabel: 'Background Bonus',
                 backgroundData: keeperBackgrounds.archivist
@@ -1448,7 +1453,7 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookT
             bonuses.push({
                 value: '[Background] Prophet Bonus',
                 name: 'Prophet Bonus',
-                description: '+10 Ink Drops (Religious/Spiritual/Mythological)',
+                description: '+$3 (Spiritual/Mythological/Celestial)',
                 type: 'background',
                 typeLabel: 'Background Bonus',
                 backgroundData: keeperBackgrounds.prophet
@@ -1459,7 +1464,7 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookT
             bonuses.push({
                 value: '[Background] Cartographer Bonus',
                 name: 'Cartographer Bonus',
-                description: '+10 Ink Drops (First Dungeon Crawl this month)',
+                description: '+$3 (each Dungeon Crawl drafted)',
                 type: 'background',
                 typeLabel: 'Background Bonus',
                 backgroundData: keeperBackgrounds.cartographer
@@ -1472,7 +1477,8 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookT
         "The Librarian's Hoard",
         "Unwavering Resolve",
         "The Archivist's Favor",
-        "Librarian's Blessing"
+        // Pays its +$3 once, when marked used (BuffController), so it is not also a quest bonus card.
+        "Disjointed Perception"
     ]);
     const activeBuffs = characterState.temporaryBuffs.filter(buff => buff.status === 'active');
     activeBuffs.forEach((buff) => {

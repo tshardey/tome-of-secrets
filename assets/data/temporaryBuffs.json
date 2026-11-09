@@ -2,7 +2,7 @@
     "The Archivist's Favor": {
         "id": "the-archivists-favor",
         "name": "The Archivist's Favor",
-        "description": "Choose one: reroll a prompt, gain +100 XP, or buy a merchant item at 50% off.",
+        "description": "Choose one: reroll a prompt, gain +100 XP, or gain +$10.",
         "duration": "one-time",
         "source": "Dungeon Completion Reward",
         "rewardModifier": {}
@@ -10,60 +10,88 @@
     "The Librarian's Hoard": {
         "id": "the-librarians-hoard",
         "name": "The Librarian's Hoard",
-        "description": "Gain +150 Ink Drops and +20 Paper Scraps.",
+        "description": "Gain +$20.",
         "duration": "one-time",
         "source": "Dungeon Completion Reward",
         "rewardModifier": {
-            "inkDrops": 150,
-            "paperScraps": 20
+            "dollars": 20
         }
     },
     "Long Read Focus": {
         "id": "long-read-focus",
         "name": "Long Read Focus",
-        "description": "Gain +10 Ink Drops on your next completed book.",
+        "description": "Gain +$3 on your next completed quest.",
         "duration": "one-time",
+        "useCount": 1,
         "source": "Side Quest: The Arcane Grimoire",
         "rewardModifier": {
-            "inkDrops": 10
+            "dollars": 3
         }
     },
     "Disjointed Perception": {
         "id": "disjointed-perception",
         "name": "Disjointed Perception",
-        "description": "+10 Ink Drops, +5 Paper Scraps",
+        "description": "+$3",
         "duration": "one-time",
         "source": "Side Quest: The Scarecrow's Cornfield",
         "rewardModifier": {
-            "inkDrops": 10,
-            "paperScraps": 5
+            "dollars": 3
         }
     },
     "Librarian's Blessing": {
         "id": "librarians-blessing",
         "name": "Librarian's Blessing",
-        "description": "You may remove up to two Worn Page penalties.",
+        "description": "Gain +$5 on each of your next two completed quests.",
         "duration": "one-time",
+        "useCount": 2,
         "source": "Dungeon Completion Reward",
-        "rewardModifier": {}
+        "rewardModifier": {
+            "dollars": 5
+        }
     },
     "Enchanted Focus": {
         "id": "enchanted-focus",
         "name": "Enchanted Focus",
-        "description": "The next three books you complete grant a x1.5 Ink Drop bonus.",
+        "description": "Gain +$2 on each of the next three quests you complete.",
         "duration": "one-time",
         "useCount": 3,
         "source": "Dungeon Completion Reward",
         "rewardModifier": {
-            "inkDropsMultiplier": 1.5
+            "dollars": 2
         }
     },
     "Unwavering Resolve": {
         "id": "unwavering-resolve",
         "name": "Unwavering Resolve",
-        "description": "For the next month, you are immune to Worn Page penalties.",
+        "description": "For the next month, gain +$3 on every completed quest with a book over 400 pages.",
         "duration": "until-end-month",
         "source": "Dungeon Completion Reward",
-        "rewardModifier": {}
+        "rewardModifier": {},
+        "effects": [
+            {
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": {
+                    "pageCount": {
+                        "min": 400
+                    }
+                },
+                "modifier": {
+                    "type": "ADD_FLAT",
+                    "resource": "dollars",
+                    "value": 3
+                }
+            }
+        ]
+    },
+    "Story Surge": {
+        "id": "story-surge",
+        "name": "Story Surge",
+        "description": "Gain +$2 on each of the next five quests you complete.",
+        "duration": "one-time",
+        "useCount": 5,
+        "source": "Dungeon Completion Reward",
+        "rewardModifier": {
+            "dollars": 2
+        }
     }
 }

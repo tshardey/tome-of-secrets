@@ -1049,6 +1049,17 @@ export class QuestController extends BaseController {
             if (uiModule.updateXpProgressBar) uiModule.updateXpProgressBar();
             toast.success(`Philosopher's Stone activated: -${xpCost} XP, +$${dollars}.`);
             success = true;
+        } else if (action === 'claim_dollar_bonus') {
+            // Player-judged monthly bonus (e.g. Grand Dispelling: a completed book over 500 pages).
+            // The amount comes from the ability's effect JSON via the button's data-dollars.
+            const dollars = Number(target.dataset.dollars) || 0;
+            if (dollars <= 0) {
+                toast.error(`${abilityName} has no dollar amount configured.`);
+                return;
+            }
+            stateAdapter.addFunds(dollars);
+            toast.success(`${abilityName} claimed: +$${dollars}.`);
+            success = true;
         } else {
             toast.success(`${abilityName} activated. Apply its effect to the relevant quest flow now.`);
             success = true;

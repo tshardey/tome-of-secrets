@@ -2,7 +2,7 @@ import { ModifierPipeline } from '../assets/js/services/ModifierPipeline.js';
 import { Reward } from '../assets/js/services/RewardCalculator.js';
 
 describe('ModifierPipeline resource isolation', () => {
-    test('an xp MULTIPLY must not scale dollars', () => {
+    test('an xp bonus never changes dollars, and a stray MULTIPLY is ignored', () => {
         const base = new Reward({ xp: 10, dollars: 15, items: [] });
         const effects = [
             {
@@ -12,14 +12,19 @@ describe('ModifierPipeline resource isolation', () => {
             },
             {
                 trigger: 'ON_QUEST_COMPLETED',
-                modifier: { type: 'MULTIPLY', resource: 'xp', value: 3 },
-                source: 'Tome of Potential'
+                modifier: { type: 'ADD_FLAT', resource: 'xp', value: 10 },
+                source: 'School of Enchantment'
+            },
+            {
+                trigger: 'ON_QUEST_COMPLETED',
+                modifier: { type: 'MULTIPLY', resource: 'dollars', value: 3 },
+                source: 'Legacy multiplier'
             }
         ];
 
         const resolved = ModifierPipeline.resolve('ON_QUEST_COMPLETED', {}, effects, base);
 
-        expect(resolved.xp).toBe(30);
+        expect(resolved.xp).toBe(20);
         expect(resolved.dollars).toBe(18);
     });
 

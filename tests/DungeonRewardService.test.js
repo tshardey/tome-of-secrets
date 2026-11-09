@@ -137,8 +137,7 @@ describe('DungeonRewardService', () => {
         });
 
         // The Hoard is drawn as a one-time temporary buff that pays its rewardModifier when used.
-        // TODO(Task 5): re-enable once temporaryBuffs.json gives the Hoard rewardModifier { dollars: 20 }.
-        test.skip("The Librarian's Hoard pays $20 into the Fund", () => {
+        test("The Librarian's Hoard pays $20 into the Fund", () => {
             expect(data.temporaryBuffs["The Librarian's Hoard"].rewardModifier).toEqual({ dollars: 20 });
         });
     });

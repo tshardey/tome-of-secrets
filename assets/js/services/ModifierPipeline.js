@@ -124,9 +124,6 @@ export class ModifierPipeline {
         for (const entry of byType[MODIFIER_TYPES.GRANT_RESOURCE] || []) {
             this._applyGrantResource(resolved, entry);
         }
-        for (const entry of byType[MODIFIER_TYPES.MULTIPLY] || []) {
-            this._applyMultiply(resolved, entry);
-        }
         for (const entry of byType[MODIFIER_TYPES.PREVENT] || []) {
             this._applyPrevent(resolved, entry);
         }
@@ -180,28 +177,6 @@ export class ModifierPipeline {
             type: 'effect:grant_resource',
             value,
             description: `Granted ${formatResourceDelta(resource, value)}`,
-            currency: resource
-        });
-    }
-
-    static _applyMultiply(reward, entry) {
-        const { resource, value } = entry.effect.modifier;
-        if (!resource || typeof value !== 'number') {
-            return;
-        }
-        if (typeof reward[resource] !== 'number') {
-            return;
-        }
-
-        const previous = reward[resource];
-        reward[resource] = Math.floor(previous * value);
-        const delta = reward[resource] - previous;
-        reward.modifiedBy.push(this._sourceName(entry));
-        reward.receipt.modifiers.push({
-            source: this._sourceName(entry),
-            type: 'effect:multiply',
-            value: delta,
-            description: `x${value} ${resource} (${delta >= 0 ? '+' : ''}${delta})`,
             currency: resource
         });
     }

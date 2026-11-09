@@ -127,8 +127,7 @@ describe('Table Renderer', () => {
             expect(html).toContain('Familiar');
             expect(html).toContain('+15 XP');
             expect(html).toContain('+30 XP');
-            expect(html).toContain('+10 Ink Drops');
-            expect(html).toContain('+5 Paper Scraps');
+            expect(html).not.toMatch(/Ink Drop|Paper Scrap/);
         });
 
         test('renderDungeonRoomsTable should render all 12 rooms', () => {

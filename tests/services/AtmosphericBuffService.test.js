@@ -8,18 +8,7 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
         'sanctum1': {
             id: 'sanctum1',
             name: 'sanctum1',
-            effects: [
-                {
-                    trigger: 'ON_MONTH_END',
-                    condition: { hasAtmosphericBuff: 'Buff1' },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
-                },
-                {
-                    trigger: 'ON_MONTH_END',
-                    condition: { hasAtmosphericBuff: 'Buff2' },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
-                }
-            ],
+            effects: [],
             associatedBuffs: ['Buff1', 'Buff2']
         },
         'sanctum2': {
@@ -51,25 +40,17 @@ jest.mock('../../assets/js/character-sheet/data.js', () => ({
     },
     schoolBenefits: {},
     masteryAbilities: {},
-    allItems: {},
+    allItems: {
+        'Tome-Bound Cat': { atmosphericReward: true, atmosphericBonusPerDay: 1, passiveAtmosphericBonusPerDay: 1 },
+        'Plain Charm': { atmosphericReward: false, atmosphericBonusPerDay: 5 }
+    },
     temporaryBuffs: {},
     temporaryBuffsFromRewards: {},
     getSanctumBenefit: (idOrName) => {
         const sanctums = {
             sanctum1: {
                 id: 'sanctum1',
-                effects: [
-                    {
-                        trigger: 'ON_MONTH_END',
-                        condition: { hasAtmosphericBuff: 'Buff1' },
-                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
-                    },
-                    {
-                        trigger: 'ON_MONTH_END',
-                        condition: { hasAtmosphericBuff: 'Buff2' },
-                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
-                    }
-                ],
+                effects: [],
                 associatedBuffs: ['Buff1', 'Buff2']
             },
             sanctum2: { id: 'sanctum2', associatedBuffs: ['Buff3'] }
@@ -98,7 +79,8 @@ import {
     getAssociatedBuffs,
     getBuffState,
     shouldExcludeFromQuestBonuses,
-    getTrackableAtmosphericItemValues
+    getTrackableAtmosphericItemValues,
+    getAtmosphericDailyBonus
 } from '../../assets/js/services/AtmosphericBuffService.js';
 import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';
 
@@ -155,12 +137,12 @@ describe('AtmosphericBuffService', () => {
     });
 
     describe('getAssociatedBuffs', () => {
-        test('should return associated buff ids from sanctum effects for valid sanctum', () => {
+        test('should return associated buff ids from the sanctum associatedBuffs list', () => {
             const buffs = getAssociatedBuffs('sanctum1');
             expect(buffs).toEqual(['buff-1', 'buff-2']);
         });
 
-        test('should fallback to legacy associatedBuffs when effects are absent', () => {
+        test('should resolve associatedBuffs when the sanctum has no effects field', () => {
             const buffs = getAssociatedBuffs('sanctum2');
             expect(buffs).toEqual(['buff-3']);
         });
@@ -301,6 +283,24 @@ describe('AtmosphericBuffService', () => {
         });
     });
 
+    describe('getAtmosphericDailyBonus', () => {
+        test('equipped Tome-Bound Cat adds a flat +$1 per day', () => {
+            const state = { [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Tome-Bound Cat' }] };
+            expect(getAtmosphericDailyBonus(state)).toEqual({ bonusPerDay: 1, modifierItemName: 'Tome-Bound Cat' });
+        });
+
+        test('an adopted (passive) Tome-Bound Cat uses its passive per-day bonus', () => {
+            const state = { [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [{ itemName: 'Tome-Bound Cat' }] };
+            expect(getAtmosphericDailyBonus(state)).toEqual({ bonusPerDay: 1, modifierItemName: 'Tome-Bound Cat' });
+        });
+
+        test('non-atmospheric items and empty state give no bonus', () => {
+            expect(getAtmosphericDailyBonus({ [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Plain Charm' }] }))
+                .toEqual({ bonusPerDay: 0, modifierItemName: null });
+            expect(getAtmosphericDailyBonus({})).toEqual({ bonusPerDay: 0, modifierItemName: null });
+        });
+    });
+
     describe('getTrackableAtmosphericItemValues', () => {
         const dataModule = {
             allItems: {
@@ -318,7 +318,7 @@ describe('AtmosphericBuffService', () => {
                 },
                 'Tome-Bound Cat': {
                     atmosphericReward: true,
-                    atmosphericBuffMultiplier: 2
+                    atmosphericBonusPerDay: 1
                     // Not atmosphericRewardTrackable: modifier item, not a trackable item
                 }
             }

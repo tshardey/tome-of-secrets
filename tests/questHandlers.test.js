@@ -86,8 +86,7 @@ describe('Quest Handlers', () => {
                 expect(completedQuest.receipt.base.dollars).toBe(15);
             });
 
-            // TODO(Task 5): re-enable once Long Read Focus pays +$3 and Biblioslinker +$3 (dollars 21).
-            it.skip('should apply modifiers and background bonuses to quest rewards', () => {
+            it('should apply modifiers and background bonuses to quest rewards', () => {
                 const quest = {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
@@ -108,8 +107,7 @@ describe('Quest Handlers', () => {
                 expect(completedQuest.rewards.dollars).toBe(21); // $15 base + $3 Long Read Focus + $3 Biblioslinker
             });
 
-            // TODO(Task 5): re-enable once Biblioslinker pays +$3 on dungeon crawls (dollars 18).
-            it.skip('should apply background bonuses even without buffs', () => {
+            it('should apply background bonuses even without buffs', () => {
                 const quest = {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',

@@ -9,11 +9,13 @@
  * - Required fields
  * - Type validation
  * - Duplicate display names
+ * - Dollar-economy catalog bans (no MULTIPLY, no Ink/Paper, no retired wording; see catalogBans.js)
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { findCatalogBanViolations, BAN_EXEMPT_FILES } from './catalogBans.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -259,9 +261,6 @@ function validateSideQuests(quests, itemsById, temporaryBuffs, temporaryBuffsFro
                     if (!branch.rewards || typeof branch.rewards !== 'object') {
                         results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" is missing a rewards object` });
                         continue;
-                    }
-                    if (Number(branch.rewards.inkDrops) !== 0) {
-                        results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" grants Ink Drops; the expansion contract is zero` });
                     }
                     for (const itemName of branch.rewards.items ?? []) {
                         const itemExists = itemsById.has(itemName) ||
@@ -636,6 +635,17 @@ function validateAll() {
         else results.warnings.push(r.message);
     });
     results.validated.push({ category: 'Expansions', count: Object.keys(expansions.expansions || {}).length + 1 });
+
+    console.log(`${BLUE}Checking catalog bans (multipliers, Ink/Paper, retired wording)...${RESET}`);
+    const catalogFiles = fs.readdirSync(DATA_DIR)
+        .filter((name) => name.endsWith('.json') && !BAN_EXEMPT_FILES.has(name));
+    for (const filename of catalogFiles) {
+        const json = loadJSON(filename);
+        if (json) {
+            results.errors.push(...findCatalogBanViolations(filename, json));
+        }
+    }
+    results.validated.push({ category: 'Catalog bans', count: catalogFiles.length });
 
     // Print results
     console.log(`\n${BLUE}=== Validation Results ===${RESET}\n`);

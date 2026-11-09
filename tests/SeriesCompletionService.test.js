@@ -359,8 +359,7 @@ describe('SeriesCompletionService', () => {
   });
 
   describe('rewards from stop advancement (integration)', () => {
-    // TODO(Task 5): re-enable once seriesCompletionRewards.json stops carry `dollars` (stop 1: 50 ink + 10 paper → $15).
-    it.skip('first advance applies first stop reward: currency with exact payload from data', () => {
+    it('first advance applies first stop reward: currency with exact payload from data', () => {
       const expedition = getSeriesExpedition();
       const stop1 = expedition.stops[0];
       expect(stop1.reward.type).toBe('currency');
@@ -397,8 +396,7 @@ describe('SeriesCompletionService', () => {
       expect(updateCurrency).not.toHaveBeenCalled();
     });
 
-    // TODO(Task 5): re-enable once stop 1 pays $15 (first call { xp: 0, dollars: 15 }).
-    it.skip('third advance applies third stop reward: XP currency', () => {
+    it('third advance applies third stop reward: XP currency', () => {
       const seriesList = createCompletedSeriesList(adapter, 3);
       const expedition = getSeriesExpedition();
       const stop3 = expedition.stops[2];
@@ -572,8 +570,7 @@ describe('SeriesCompletionService', () => {
       expect(second.claimed).toBe(false);
     });
 
-    // TODO(Task 5): re-enable once stop 1 pays $15 in seriesCompletionRewards.json.
-    it.skip('applySeriesCompletionReward applies typed currency from first stop', () => {
+    it('applySeriesCompletionReward applies typed currency from first stop', () => {
       const reward = getSeriesCompletionRewardByRoll(1);
       applySeriesCompletionReward(reward, { stateAdapter: adapter, updateCurrency });
       expect(updateCurrency).toHaveBeenCalledWith(
