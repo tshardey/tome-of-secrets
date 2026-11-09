@@ -8,6 +8,7 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { safeSetJSON } from '../utils/storage.js';
 import { debounce } from '../utils/helpers.js';
+import { RETIRED_FORM_FIELDS } from './dataMigrator.js';
 
 /**
  * Checks if a form element should be persisted
@@ -34,6 +35,11 @@ function shouldPersistElement(element) {
     // Exclude the Fund widget: its balance and ledger live in character state (StateAdapter),
     // and the deduct form fields are transient.
     if (element.id.startsWith('fund-')) {
+        return false;
+    }
+
+    // Retired by the dollar economy (schema v18); never write them back into the form blob
+    if (RETIRED_FORM_FIELDS.includes(element.id)) {
         return false;
     }
     

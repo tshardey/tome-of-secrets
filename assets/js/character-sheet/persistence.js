@@ -161,6 +161,24 @@ export async function removeStateKey(key) {
 }
 
 /**
+ * Delete a key from every store it may have been written to: IndexedDB (whatever
+ * LARGE_STATE_KEYS says today, since a retired key may have been IndexedDB-backed in an
+ * older release) and localStorage. Used to clean up retired state keys.
+ * @param {string} key - The storage key
+ * @returns {Promise<void>}
+ */
+export async function purgeStateKey(key) {
+    if (isIndexedDBAvailable()) {
+        try {
+            await idbDelete(key);
+        } catch (error) {
+            console.warn(`Failed to delete "${key}" from IndexedDB.`, error);
+        }
+    }
+    safeRemoveJSON(key);
+}
+
+/**
  * Best-effort cleanup: after we successfully migrate a "large" key to IndexedDB,
  * we delete its localStorage copy to reclaim quota.
  */

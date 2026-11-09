@@ -7,9 +7,6 @@ export const STORAGE_KEYS = Object.freeze({
     INVENTORY_ITEMS: 'inventoryItems',
     LEARNED_ABILITIES: 'learnedAbilities',
     ATMOSPHERIC_BUFFS: 'atmosphericBuffs',
-    /** Retired (Shroud removed). Kept only so the v18 migration can delete them from old saves. */
-    ACTIVE_CURSES: 'activeCurses',
-    COMPLETED_CURSES: 'completedCurses',
     TEMPORARY_BUFFS: 'temporaryBuffs',
     BUFF_MONTH_COUNTER: 'buffMonthCounter',
     MONTHLY_COMPLETED_BOOKS: 'monthlyCompletedBooks',
@@ -42,16 +39,10 @@ export const STORAGE_KEYS = Object.freeze({
     SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress',
     /** The Exchange's register: country names claimed once, ever, by side quest 13 branch B. */
     CLAIMED_COUNTRIES: 'claimedCountries',
-    // Retired with the shopping page; kept only so the v18 migration can strip them from old saves.
-    SHOPPING_LOG: 'shoppingLog',
-    BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
-    BOOK_BOX_HISTORY: 'bookBoxHistory',
     // Real-dollar Fund (dollar economy): balance in integer cents, plus the deduction ledger
     FUND_BALANCE_CENTS: 'fundBalanceCents',
     /** Deductions: [{ id, date: 'YYYY-MM-DD', amountCents, note }] */
     FUND_LEDGER: 'fundLedger',
-    /** Retired (Shroud removed). Kept only so the v18 migration can delete it from old saves. */
-    CURSE_HELPER_STATE: 'curseHelperState',
     // Quest tab – monthly draw / dice helpers (usage and cooldown per source)
     QUEST_DRAW_HELPER_STATE: 'questDrawHelperState',
     /** UI preference: auto-consume first eligible helper on deck click (one helper per click). */

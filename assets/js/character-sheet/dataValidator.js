@@ -30,8 +30,9 @@ import { validateHelperState } from './helperDiscoveryShared.js';
  * Version 15: Sanctum/buff ID stabilization and side quest ID backfill
  * Version 16: Book tags (tags: [] on each book)
  * Version 17: The Exchange's register (claimedCountries: countries struck off once, ever)
+ * Version 18: Dollar economy (retired curse/shopping/book-box keys and the inkDrops, paperScraps and journal-entries-completed form fields are removed; Fund starts at $0)
  */
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 /**
  * Schema version key in localStorage

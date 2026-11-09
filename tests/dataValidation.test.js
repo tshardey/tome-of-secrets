@@ -10,8 +10,11 @@ import {
     saveSchemaVersion
 } from '../assets/js/character-sheet/dataValidator.js';
 import { 
-    migrateState, 
-    loadAndMigrateState 
+    migrateState,
+    loadAndMigrateState,
+    stripRetiredFormFields,
+    RETIRED_STATE_KEYS,
+    RETIRED_FORM_FIELDS
 } from '../assets/js/character-sheet/dataMigrator.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
@@ -84,14 +87,14 @@ describe('Data Validation', () => {
 
         test('should drop retired shopping/subscription state', () => {
             const state = {
-                [STORAGE_KEYS.SHOPPING_LOG]: [{ optionId: 'opt1', logDate: '2024-01-15' }],
-                [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: { sub1: { id: 'sub1', company: 'Acme' } },
-                [STORAGE_KEYS.BOOK_BOX_HISTORY]: [{ subscriptionId: 'sub1', month: 'January', year: '2024', type: 'purchased' }]
+                shoppingLog: [{ optionId: 'opt1', logDate: '2024-01-15' }],
+                bookBoxSubscriptions: { sub1: { id: 'sub1', company: 'Acme' } },
+                bookBoxHistory: [{ subscriptionId: 'sub1', month: 'January', year: '2024', type: 'purchased' }]
             };
             const validated = validateCharacterState(state);
-            expect(validated).not.toHaveProperty(STORAGE_KEYS.SHOPPING_LOG);
-            expect(validated).not.toHaveProperty(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
-            expect(validated).not.toHaveProperty(STORAGE_KEYS.BOOK_BOX_HISTORY);
+            expect(validated).not.toHaveProperty('shoppingLog');
+            expect(validated).not.toHaveProperty('bookBoxSubscriptions');
+            expect(validated).not.toHaveProperty('bookBoxHistory');
         });
 
         test('should add shelfCategory to validated books (v10)', () => {
@@ -514,8 +517,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 17', () => {
-            expect(SCHEMA_VERSION).toBe(17);
+        test('schema version should be 18', () => {
+            expect(SCHEMA_VERSION).toBe(18);
         });
     });
 });
@@ -566,7 +569,7 @@ describe('Data Migration', () => {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: []
             };
             const migrated = migrateState(state);
-            expect(migrated).not.toHaveProperty(STORAGE_KEYS.CURSE_HELPER_STATE);
+            expect(migrated).not.toHaveProperty('curseHelperState');
             expect(migrated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]).toEqual({});
             expect(getStoredSchemaVersion()).toBe(SCHEMA_VERSION);
         });
@@ -700,7 +703,57 @@ describe('Data Migration', () => {
             expect(activeQuest.prompt).not.toContain(legacyGenre);
         });
 
-        test('v10: should add shopping/subscription state and book shelfCategory', () => {
+        test('v18: deletes retired keys and starts the Fund at $0 when absent', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '17');
+            const state = {
+                [STORAGE_KEYS.DUSTY_BLUEPRINTS]: 42,
+                [STORAGE_KEYS.LEARNED_ABILITIES]: ['Quick Shot'],
+                activeCurses: [{ name: 'The Unread Tome' }],
+                completedCurses: [],
+                curseHelperState: {},
+                shoppingLog: [{ optionId: 'opt1' }],
+                bookBoxSubscriptions: {},
+                bookBoxHistory: []
+            };
+            const migrated = migrateState(state);
+            RETIRED_STATE_KEYS.forEach((key) => expect(migrated).not.toHaveProperty(key));
+            expect(migrated[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(migrated[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
+            expect(migrated[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(42);
+            expect(migrated[STORAGE_KEYS.LEARNED_ABILITIES]).toEqual(['Quick Shot']);
+            expect(state).toHaveProperty('activeCurses'); // input is not mutated
+        });
+
+        test('v18: refreshes stale temporary-buff descriptions from the catalog', () => {
+            const stale = { name: 'Long Read Focus', description: 'Gain +10 Ink Drops on your next completed book.', duration: 'one-time', monthsRemaining: 0, status: 'active' };
+            const unknown = { name: 'Homebrew Buff', description: 'Keeper-authored', duration: 'two-months', monthsRemaining: 2, status: 'active' };
+            const migrated = migrateState({ [STORAGE_KEYS.TEMPORARY_BUFFS]: [stale, unknown] }, { fromVersion: 17 });
+            const [refreshed, kept] = migrated[STORAGE_KEYS.TEMPORARY_BUFFS];
+            expect(refreshed).toEqual({ ...stale, description: 'Gain +$3 on your next completed quest.' });
+            expect(kept).toEqual(unknown);
+        });
+
+        test('v18: keeps a Fund that is already present', () => {
+            const ledger = [{ id: 'f1', date: '2026-11-02', amountCents: 3200, note: '' }];
+            const migrated = migrateState(
+                { [STORAGE_KEYS.FUND_BALANCE_CENTS]: 4250, [STORAGE_KEYS.FUND_LEDGER]: ledger },
+                { fromVersion: 17 }
+            );
+            expect(migrated[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(4250);
+            expect(migrated[STORAGE_KEYS.FUND_LEDGER]).toEqual(ledger);
+        });
+
+        test('stripRetiredFormFields is pure and idempotent', () => {
+            const form = { inkDrops: '300', paperScraps: '40', 'journal-entries-completed': '3', level: '6', smp: '2' };
+            const once = stripRetiredFormFields(form);
+            expect(once).toEqual({ level: '6', smp: '2' });
+            expect(stripRetiredFormFields(once)).toEqual(once);
+            expect(form.inkDrops).toBe('300');
+            expect(stripRetiredFormFields(null)).toEqual({});
+            RETIRED_FORM_FIELDS.forEach((field) => expect(once).not.toHaveProperty(field));
+        });
+
+        test('v10: adds book shelfCategory; the retired shopping state does not survive to v18', () => {
             localStorage.setItem('tomeOfSecrets_schemaVersion', '9');
             const state = {
                 [STORAGE_KEYS.BOOKS]: {
@@ -721,12 +774,9 @@ describe('Data Migration', () => {
 
             const migrated = migrateState(state);
 
-            expect(Array.isArray(migrated[STORAGE_KEYS.SHOPPING_LOG])).toBe(true);
-            expect(migrated[STORAGE_KEYS.SHOPPING_LOG]).toHaveLength(0);
-            expect(typeof migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]).toBe('object');
-            expect(Object.keys(migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS])).toHaveLength(0);
-            expect(Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY])).toBe(true);
-            expect(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY]).toHaveLength(0);
+            expect(migrated).not.toHaveProperty('shoppingLog');
+            expect(migrated).not.toHaveProperty('bookBoxSubscriptions');
+            expect(migrated).not.toHaveProperty('bookBoxHistory');
             const book = migrated[STORAGE_KEYS.BOOKS].bid1;
             expect(book.shelfCategory).toBe('general');
         });
@@ -749,6 +799,20 @@ describe('Data Migration', () => {
             const loaded = loadAndMigrateState();
             expect(loaded[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards).toBeDefined();
             expect(loaded[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe(15);
+        });
+
+        test('removes retired keys from localStorage after migrating', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '17');
+            localStorage.setItem('activeCurses', JSON.stringify([{ name: 'The Unread Tome' }]));
+            localStorage.setItem('shoppingLog', JSON.stringify([{ optionId: 'opt1' }]));
+            safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, 42);
+
+            const loaded = loadAndMigrateState();
+
+            expect(localStorage.getItem('activeCurses')).toBeNull();
+            expect(localStorage.getItem('shoppingLog')).toBeNull();
+            expect(loaded[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(42);
+            expect(loaded[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
         });
 
         test('should handle missing localStorage keys', () => {

@@ -2,6 +2,8 @@ import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../character-sheet/storageKeys.js';
 import { getStateKey, setStateKey } from '../character-sheet/persistence.js';
 import { characterState } from '../character-sheet/state.js';
+import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys } from '../character-sheet/dataMigrator.js';
+import { saveSchemaVersion } from '../character-sheet/dataValidator.js';
 
 const SYNC_TABLE = 'tos_saves';
 const SYNC_EVENTS_TABLE = 'tos_sync_events';
@@ -146,20 +148,31 @@ export async function applySnapshot(snapshot) {
   }
 
   const { data } = snapshot;
-
-  if (snapshot.version !== null && snapshot.version !== undefined) {
-    localStorage.setItem('tomeOfSecrets_schemaVersion', String(snapshot.version));
-  }
+  const snapshotVersion = Number.isInteger(snapshot.version) ? snapshot.version : null;
 
   // Back-compat: older cloud saves may include activeCharacterTab; ignore it.
 
-  // Suppress events when applying cloud snapshots to prevent sync loops
-  safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, data.formData || {}, true);
+  // Suppress events when applying cloud snapshots to prevent sync loops.
+  // Retired form fields (Ink Drops, Paper Scraps, journaling) are dropped on the way in.
+  safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, stripRetiredFormFields(data.formData || {}), true);
   safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, Array.isArray(data.monthlyCompletedBooks) ? data.monthlyCompletedBooks : [], true);
 
-  const state = data.characterState || {};
+  // Bring the snapshot's state up to the current schema from the snapshot's own version
+  // (e.g. a v17 snapshot loses its retired keys and starts the Fund at $0). A snapshot with
+  // no version falls back to the locally stored one, as before.
+  const state = migrateState(
+    data.characterState || {},
+    snapshotVersion !== null ? { fromVersion: snapshotVersion } : {}
+  );
+  if (snapshotVersion !== null) {
+    // The applied state is now at the current schema; record that so the next load does not
+    // migrate it a second time from the snapshot's older version.
+    saveSchemaVersion();
+  }
+  await purgeRetiredStateKeys();
+
   for (const key of CHARACTER_STATE_KEYS) {
-    if (key in state) {
+    if (key in state && state[key] !== undefined) {
       await setStateKey(key, state[key], true); // suppressEvents = true
       // Keep in-memory characterState aligned with persistence. Otherwise the next
       // saveState() (or any full persist) can overwrite IndexedDB / localStorage

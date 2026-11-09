@@ -1,7 +1,7 @@
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from './storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
-import { validateCharacterState, validateFormDataSafe, saveSchemaVersion } from './dataValidator.js';
-import { migrateState } from './dataMigrator.js';
+import { validateCharacterState, validateFormDataSafe, saveSchemaVersion, getStoredSchemaVersion } from './dataValidator.js';
+import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys, RETIREMENT_SCHEMA_VERSION } from './dataMigrator.js';
 import { LARGE_STATE_KEYS, getStateKey, setStateKey } from './persistence.js';
 
 export const characterState = createEmptyCharacterState();
@@ -21,8 +21,13 @@ export function resetStateLoadedForTests() {
 export async function loadState(form = null) {
     // Load and validate form data only if a form is provided
     if (form) {
-        const characterData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
-        if (characterData) {
+        const storedFormData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
+        if (storedFormData) {
+            // Drop retired fields (Ink Drops, Paper Scraps, journaling) and write the cleaned blob back
+            const characterData = stripRetiredFormFields(storedFormData);
+            if (Object.keys(characterData).length !== Object.keys(storedFormData).length) {
+                safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData);
+            }
             const validatedFormData = validateFormDataSafe(characterData);
             for (const key in validatedFormData) {
                 const el = form.elements[key];
@@ -43,7 +48,14 @@ export async function loadState(form = null) {
         loadedState[key] = await getStateKey(key, defaultValue);
     }
 
+    // Read before migrateState(), which bumps the stored version
+    const storedVersion = getStoredSchemaVersion();
     const migratedState = migrateState(loadedState);
+    if (storedVersion === null || storedVersion < RETIREMENT_SCHEMA_VERSION) {
+        // v18 retired some keys; they are not in CHARACTER_STATE_KEYS so they were never loaded,
+        // but old copies may still sit in localStorage or IndexedDB.
+        await purgeRetiredStateKeys();
+    }
     const validatedState = validateCharacterState(migratedState);
     
     // Copy validated state to characterState
@@ -92,7 +104,7 @@ export async function saveState(form) {
     if (keeperBackgroundElement) {
         characterData.keeperBackground = keeperBackgroundElement.value;
     }
-    safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData);
+    safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, stripRetiredFormFields(characterData));
     for (const key of CHARACTER_STATE_KEYS) {
         await setStateKey(key, characterState[key]);
     }

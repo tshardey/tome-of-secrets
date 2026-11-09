@@ -80,9 +80,11 @@ describe('Cloud Sync - Loop Prevention', () => {
             expect(formData.keeperName).toBe('Test Keeper');
             expect(formData.keeperBackground).toBe('Grove Tender');
             expect(formData.wizardSchool).toBe('Divination');
-            expect(formData.librarySanctum).toBe('The Spire of Whispers');
-            expect(formData.inkDrops).toBe('50');
-            expect(formData.paperScraps).toBe('25');
+            // A v1 snapshot is migrated on apply; v15 stores the sanctum by its stable ID
+            expect(formData.librarySanctum).toBe('the-spire-of-whispers');
+            // Retired form fields are stripped on apply
+            expect(formData.inkDrops).toBeUndefined();
+            expect(formData.paperScraps).toBeUndefined();
 
             // Verify character state
             const genres = await getStateKey(STORAGE_KEYS.SELECTED_GENRES, []);
@@ -95,9 +97,9 @@ describe('Cloud Sync - Loop Prevention', () => {
             const monthlyBooks = safeGetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, []);
             expect(monthlyBooks).toEqual(['Book A', 'Book B', 'Book C']);
 
-            // Verify schema version
+            // The snapshot is migrated on apply, so the stored version is the current one
             const schemaVersion = localStorage.getItem('tomeOfSecrets_schemaVersion');
-            expect(schemaVersion).toBe('1');
+            expect(schemaVersion).toBe('18');
         });
 
         it('should handle partial snapshot data', async () => {
@@ -195,6 +197,74 @@ describe('Cloud Sync - Loop Prevention', () => {
             // Snapshot payload must not share references with live state (mutate source → RAM unchanged)
             cloudSubs[0].note = 'mutated';
             expect(characterState[subKey][0].note).toBe('From cloud');
+        });
+
+        it('applying a v17 snapshot strips retired keys and form fields', async () => {
+            characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 999;
+            characterState[STORAGE_KEYS.FUND_LEDGER] = [{ id: 'local', date: '2026-10-01', amountCents: 100, note: '' }];
+
+            await applySnapshot({
+                version: 17,
+                data: {
+                    formData: {
+                        level: '6',
+                        'xp-current': '1234',
+                        smp: '2',
+                        inkDrops: '300',
+                        paperScraps: '40',
+                        'journal-entries-completed': '3'
+                    },
+                    characterState: {
+                        [STORAGE_KEYS.DUSTY_BLUEPRINTS]: 42,
+                        [STORAGE_KEYS.SELECTED_GENRES]: ['Fantasy'],
+                        activeCurses: [{ name: 'The Unread Tome' }],
+                        completedCurses: [],
+                        shoppingLog: [{ optionId: 'opt1', logDate: '2026-10-15' }],
+                        bookBoxSubscriptions: { sub1: { id: 'sub1' } }
+                    },
+                    monthlyCompletedBooks: []
+                }
+            });
+
+            const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            expect(formData).toEqual({ level: '6', 'xp-current': '1234', smp: '2' });
+
+            ['activeCurses', 'completedCurses', 'shoppingLog', 'bookBoxSubscriptions'].forEach((key) => {
+                expect(localStorage.getItem(key)).toBeNull();
+                expect(characterState).not.toHaveProperty(key);
+            });
+
+            expect(await getStateKey(STORAGE_KEYS.DUSTY_BLUEPRINTS, 0)).toBe(42);
+            // A v17 snapshot has no Fund, so the migration starts it at $0 (stale local values are replaced)
+            expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(characterState[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
+            expect(await getStateKey(STORAGE_KEYS.FUND_BALANCE_CENTS, null)).toBe(0);
+            expect(await getStateKey(STORAGE_KEYS.FUND_LEDGER, null)).toEqual([]);
+
+            // The applied snapshot is now at the current schema, so the next load does not re-migrate it
+            expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe('18');
+        });
+
+        it('applying a v18 snapshot keeps its fund balance and ledger', async () => {
+            const ledger = [{ id: 'f1', date: '2026-11-02', amountCents: 3200, note: 'Hardcover' }];
+
+            await applySnapshot({
+                version: 18,
+                data: {
+                    formData: { level: '6' },
+                    characterState: {
+                        [STORAGE_KEYS.FUND_BALANCE_CENTS]: 4250,
+                        [STORAGE_KEYS.FUND_LEDGER]: ledger
+                    },
+                    monthlyCompletedBooks: []
+                }
+            });
+
+            expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(4250);
+            expect(characterState[STORAGE_KEYS.FUND_LEDGER]).toEqual(ledger);
+            expect(await getStateKey(STORAGE_KEYS.FUND_BALANCE_CENTS, null)).toBe(4250);
+            expect(await getStateKey(STORAGE_KEYS.FUND_LEDGER, null)).toEqual(ledger);
+            expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe('18');
         });
     });
 
