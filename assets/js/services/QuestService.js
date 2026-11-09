@@ -151,6 +151,21 @@ export function getQuestRewardIndicator(quest, listType, receipt = null) {
     return { indicator, tooltip };
 }
 
+const RETIRED_CURRENCIES = new Set(['inkDrops', 'paperScraps']);
+const RETIRED_CURRENCY_TEXT = /ink\s*drops?|paper\s*scraps?/i;
+
+/**
+ * True for a receipt line stored before v18 that paid Ink Drops or Paper Scraps.
+ * Old completed quests keep their stored receipts; these lines are hidden, never shown.
+ * @param {Object} mod - Receipt modifier entry
+ * @returns {boolean}
+ */
+export function isRetiredCurrencyReceiptLine(mod) {
+    if (!mod || typeof mod !== 'object') return false;
+    if (RETIRED_CURRENCIES.has(mod.currency)) return true;
+    return RETIRED_CURRENCY_TEXT.test(String(mod.description ?? ''));
+}
+
 /**
  * Format receipt as text for tooltip display
  * @param {Object} receipt - Receipt object from Reward.getReceipt()
@@ -175,9 +190,12 @@ export function formatReceiptTooltip(receipt, listType = 'active') {
     }
     
     // Modifiers
-    if (receipt.modifiers && receipt.modifiers.length > 0) {
+    const modifiers = Array.isArray(receipt.modifiers)
+        ? receipt.modifiers.filter(mod => !isRetiredCurrencyReceiptLine(mod))
+        : [];
+    if (modifiers.length > 0) {
         lines.push('Modifiers:');
-        receipt.modifiers.forEach(mod => {
+        modifiers.forEach(mod => {
             lines.push(`  • ${mod.source}: ${mod.description}`);
         });
     }
