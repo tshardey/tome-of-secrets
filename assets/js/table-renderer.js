@@ -6,7 +6,6 @@ import {
     allGenres,
     atmosphericBuffs,
     sideQuestsDetailed,
-    curseTableDetailed,
     allItems,
     levelRewards,
     xpLevels,
@@ -580,22 +579,6 @@ export function renderSideQuestsTable() {
 }
 
 /**
- * Renders curse table as a numbered list
- */
-export function renderCurseTable() {
-    let html = '<ol>';
-    
-    curseTableDetailed.forEach(curse => {
-        html += `
-  <li><strong>${curse.name}:</strong> ${curse.description}</li>`;
-    });
-    
-    html += '\n</ol>';
-    
-    return html;
-}
-
-/**
  * Renders leveling rewards table
  */
 export function renderLevelingRewardsTable() {
@@ -747,12 +730,6 @@ async function initializeTablesAsync() {
     const registerEl = document.getElementById('exchange-register-container');
     if (registerEl) {
         registerEl.innerHTML = renderExchangeRegister();
-    }
-    
-    // Shroud page
-    const curseTableEl = document.getElementById('curse-table');
-    if (curseTableEl) {
-        curseTableEl.innerHTML = processLinks(renderCurseTable());
     }
     
     // Leveling page

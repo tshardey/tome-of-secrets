@@ -222,16 +222,7 @@
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "excludeFromQuestBonuses": true,
-        "effects": [
-            {
-                "trigger": "ON_MONTH_END",
-                "modifier": {
-                    "type": "PREVENT",
-                    "target": "worn_page"
-                },
-                "cooldown": "monthly"
-            }
-        ]
+        "effects": []
     },
     "Lantern of Foresight": {
         "id": "lantern-of-foresight",
@@ -880,16 +871,7 @@
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "excludeFromQuestBonuses": true,
-        "effects": [
-            {
-                "trigger": "ON_MONTH_END",
-                "modifier": {
-                    "type": "PREVENT",
-                    "target": "worn_page"
-                },
-                "cooldown": "monthly"
-            }
-        ]
+        "effects": []
     },
     "The Haggler's Ledger": {
         "id": "the-hagglers-ledger",

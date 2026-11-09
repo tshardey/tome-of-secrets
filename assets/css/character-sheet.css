@@ -2623,7 +2623,7 @@
     margin-bottom: 0;
 }
 
-/* Quest draw helpers: auto-use switch (same pattern as Worn Page curse toggle) */
+/* Quest draw helpers: auto-use switch */
 .quest-draw-helpers-auto-toggle-wrap {
     margin-top: 0;
     margin-bottom: 12px;
@@ -3887,14 +3887,8 @@
     color: #f0c8c8 !important;
 }
 
-/* Add Curse: Worn Page auto-prevent toggle (matches encounter Befriend/Defeat switch from card-draw.css) */
-.add-curse-form .curse-worn-page-toggle-wrap {
-    margin-top: 0.35rem;
-    margin-bottom: 0.85rem;
-}
-
-/* Worn Page Mitigation Helpers (Curse tab tiles) */
-.worn-page-helpers-grid {
+/* Helper tiles (Quest tab draw / dice helpers, activated abilities) */
+.helper-tiles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
@@ -3903,7 +3897,7 @@
     margin: 0;
 }
 
-.curse-helper-tile {
+.helper-tile {
     background: linear-gradient(135deg, rgba(42, 35, 29, 0.7) 0%, rgba(30, 26, 20, 0.8) 100%);
     border: 2px solid #54483b;
     border-radius: 8px;
@@ -3912,14 +3906,14 @@
     transition: all 0.3s ease;
 }
 
-.curse-helper-tile__media {
+.helper-tile__media {
     display: flex;
     justify-content: center;
     align-items: center;
     margin: 0 0 12px 0;
 }
 
-.curse-helper-tile__image {
+.helper-tile__image {
     max-width: 100%;
     max-height: 120px;
     width: auto;
@@ -3930,13 +3924,13 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.curse-helper-tile:hover {
+.helper-tile:hover {
     border-color: #8b7355;
     box-shadow: 0 4px 12px rgba(184, 159, 98, 0.25);
     transform: translateY(-2px);
 }
 
-.curse-helper-tile__title {
+.helper-tile__title {
     margin: 0 0 8px 0;
     font-family: 'Lora', serif;
     font-size: 1.1em;
@@ -3944,7 +3938,7 @@
     font-weight: 600;
 }
 
-.curse-helper-tile__cadence {
+.helper-tile__cadence {
     display: inline-block;
     padding: 4px 10px;
     margin-bottom: 10px;
@@ -3957,28 +3951,28 @@
     letter-spacing: 0.5px;
 }
 
-.curse-helper-tile__effect {
+.helper-tile__effect {
     margin: 0 0 10px 0;
     color: #d4c8b0;
     font-size: 0.9em;
     line-height: 1.5;
 }
 
-.curse-helper-tile__status {
+.helper-tile__status {
     margin: 0 0 12px 0;
     font-size: 0.85em;
     color: #8a7a61;
     font-style: italic;
 }
 
-.curse-helper-tile__actions {
+.helper-tile__actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
 }
 
-.curse-helper-tile__actions button {
+.helper-tile__actions button {
     padding: 6px 12px;
     font-size: 0.85em;
     background-color: rgba(74, 62, 62, 0.6);
@@ -3990,13 +3984,13 @@
     transition: all 0.2s ease;
 }
 
-.curse-helper-tile__actions button:hover {
+.helper-tile__actions button:hover {
     background-color: rgba(74, 62, 62, 0.8);
     border-color: #b89f62;
     color: #f0c8c8;
 }
 
-.curse-helper-empty {
+.helper-tile-empty {
     text-align: center;
     color: #8a7a61;
     font-style: italic;

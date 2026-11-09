@@ -5,16 +5,7 @@
         "school": "Abjuration",
         "cost": 1,
         "benefit": "Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it.",
-        "effects": [
-            {
-                "trigger": "ON_MONTH_END",
-                "modifier": {
-                    "type": "PREVENT",
-                    "target": "worn_page"
-                },
-                "cooldown": "monthly"
-            }
-        ]
+        "effects": []
     },
     "Grand Dispelling": {
         "id": "grand-dispelling",
@@ -22,16 +13,7 @@
         "school": "Abjuration",
         "cost": 2,
         "benefit": "Once per month, you may perform a powerful cleansing ritual. Remove all active Worn Page penalties you currently have.",
-        "effects": [
-            {
-                "trigger": "ON_ACTIVATE",
-                "modifier": {
-                    "type": "ACTIVATE",
-                    "action": "remove_all_worn_pages"
-                },
-                "cooldown": "monthly"
-            }
-        ]
+        "effects": []
     },
     "Flicker of Prophecy": {
         "id": "flicker-of-prophecy",

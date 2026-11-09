@@ -6,7 +6,6 @@
       "quests",
       "items",
       "dungeons",
-      "curses",
       "abilities",
       "atmosphericBuffs",
       "shopping"
@@ -26,7 +25,6 @@
       "genreQuests.json",
       "extraCreditRewards.json",
       "sideQuestsDetailed.json",
-      "curseTableDetailed.json",
       "temporaryBuffs.json",
       "temporaryBuffsFromRewards.json",
       "levelRewards.json",

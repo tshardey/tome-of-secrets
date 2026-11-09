@@ -111,8 +111,6 @@ describe('Library Restoration - State Migration', () => {
             [STORAGE_KEYS.COMPLETED_QUESTS]: [],
             [STORAGE_KEYS.DISCARDED_QUESTS]: [],
             [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
-            [STORAGE_KEYS.ACTIVE_CURSES]: [],
-            [STORAGE_KEYS.COMPLETED_CURSES]: [],
             [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
             [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
             [STORAGE_KEYS.SELECTED_GENRES]: [],

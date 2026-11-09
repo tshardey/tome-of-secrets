@@ -1,10 +1,10 @@
 /**
  * Monthly quest-draw / dice helper discovery: allowlist matching and cadence classification.
- * Mirrors curse helper inventory scans; uses stable IDs from curseHelperDiscovery.
+ * Uses stable source IDs and cadence detection from helperDiscoveryShared.
  */
 
 import { STORAGE_KEYS } from './storageKeys.js';
-import { buildSourceId, getCadenceFromText } from './curseHelperDiscovery.js';
+import { buildSourceId, getCadenceFromText } from './helperDiscoveryShared.js';
 import { TRIGGERS, effectTriggerIs } from '../services/effectSchema.js';
 
 /** True when ability has ON_MONTH_START pool-card draw actions (Flicker / Master), regardless of trigger string casing. */
@@ -99,7 +99,7 @@ export function classifyQuestDrawCadence(plainText, meta = {}) {
 }
 
 /**
- * Normalize expedition stops (same shape as curseHelperDiscovery).
+ * Normalize expedition stops (raw seriesCompletionRewards shape).
  * @param {{ stops?: unknown }} raw
  * @returns {Array<{ id: string, name: string, reward: { type?: string, text?: string } }>}
  */

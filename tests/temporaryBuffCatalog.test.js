@@ -104,9 +104,6 @@ describe('Temporary buff end-of-month lifecycle', () => {
             }
         ];
         const stateAdapter = new StateAdapter(state);
-        jest.spyOn(stateAdapter, 'getCurseHelpers').mockReturnValue([]);
-        jest.spyOn(stateAdapter, 'refreshCurseHelpersAtEndOfMonth').mockReturnValue(false);
-        jest.spyOn(stateAdapter, 'removeUsedOneTimeWornPageTempBuffsAtEOM').mockReturnValue(false);
         jest.spyOn(stateAdapter, 'getQuestDrawHelpers').mockReturnValue([]);
         jest.spyOn(stateAdapter, 'refreshQuestDrawHelpersAtEndOfMonth').mockReturnValue(false);
         jest.spyOn(stateAdapter, 'removeUsedOneTimeQuestDrawTempBuffsAtEOM').mockReturnValue(false);
@@ -116,7 +113,6 @@ describe('Temporary buff end-of-month lifecycle', () => {
                 renderAtmosphericBuffs: jest.fn(),
                 renderTemporaryBuffs: jest.fn(),
                 updateQuestBuffsDropdown: jest.fn(),
-                renderWornPageHelpers: jest.fn(),
                 renderQuestDrawHelpers: jest.fn(),
                 renderActivatedAbilities: jest.fn(),
                 renderShelfBooks: jest.fn()

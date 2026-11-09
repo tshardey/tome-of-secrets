@@ -34,7 +34,6 @@ import { CharacterController } from './controllers/CharacterController.js';
 import { AbilityController } from './controllers/AbilityController.js';
 import { InventoryController } from './controllers/InventoryController.js';
 import { QuestController } from './controllers/QuestController.js';
-import { CurseController } from './controllers/CurseController.js';
 import { BuffController } from './controllers/BuffController.js';
 import { EndOfMonthController } from './controllers/EndOfMonthController.js';
 import { DungeonDeckController } from './controllers/DungeonDeckController.js';
@@ -112,7 +111,6 @@ export async function initializeCharacterSheet() {
     const abilityController = new AbilityController(stateAdapter, form, dependencies);
     const inventoryController = new InventoryController(stateAdapter, form, dependencies);
     const questController = new QuestController(stateAdapter, form, dependencies);
-    const curseController = new CurseController(stateAdapter, form, dependencies);
     const buffController = new BuffController(stateAdapter, form, dependencies);
     const endOfMonthController = new EndOfMonthController(stateAdapter, form, dependencies);
     const dungeonDeckController = new DungeonDeckController(stateAdapter, form, dependencies);
@@ -163,7 +161,6 @@ export async function initializeCharacterSheet() {
     abilityController.initialize();
     inventoryController.initialize();
     questController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, () => updateGenreQuestDropdown(stateAdapter, dataModule));
-    curseController.initialize();
     buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
     dungeonDeckController.initialize();
@@ -198,7 +195,6 @@ export async function initializeCharacterSheet() {
         ability: abilityController,
         inventory: inventoryController,
         quest: questController,
-        curse: curseController,
         buff: buffController
     }, ui);
 

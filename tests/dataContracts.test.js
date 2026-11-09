@@ -2,12 +2,38 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { MODIFIER_TYPES, TRIGGERS, validateEffect } from '../assets/js/services/effectSchema.js';
 import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
+import * as dataModule from '../assets/js/character-sheet/data.js';
 
 function loadJson(filename) {
     const repoRoot = path.resolve(process.cwd(), '..');
     const fullPath = path.join(repoRoot, 'assets', 'data', filename);
     return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
 }
+
+/** Collect every `effects` entry found anywhere inside a parsed catalog JSON value. */
+function collectEffects(node, out = []) {
+    if (Array.isArray(node)) {
+        node.forEach((child) => collectEffects(child, out));
+    } else if (node && typeof node === 'object') {
+        for (const [key, value] of Object.entries(node)) {
+            if (key === 'effects' && Array.isArray(value)) {
+                out.push(...value);
+            }
+            collectEffects(value, out);
+        }
+    }
+    return out;
+}
+
+/**
+ * Entities whose only effect was a Worn Page PREVENT. Those effects were removed with the Shroud
+ * and the dollar-economy work gives them new effects; until then they legitimately have `effects: []`.
+ * Remove entries from here as each one is retargeted.
+ */
+const AWAITING_RETARGET_AFTER_SHROUD_REMOVAL = Object.freeze({
+    items: new Set(['chalice-of-restoration', 'raven-familiar']),
+    schools: new Set(['Abjuration'])
+});
 
 function expectString(value) {
     expect(typeof value).toBe('string');
@@ -38,7 +64,6 @@ function parseDisplayRewardValue(displayText, resourceLabel) {
 describe('Data contracts for assets/data JSON catalogs', () => {
     const allItems = loadJson('allItems.json');
     const atmosphericBuffs = loadJson('atmosphericBuffs.json');
-    const curseTableDetailed = loadJson('curseTableDetailed.json');
     const dungeonCompletionRewards = loadJson('dungeonCompletionRewards.json');
     const dungeonRewards = loadJson('dungeonRewards.json');
     const dungeonRooms = loadJson('dungeonRooms.json');
@@ -100,11 +125,13 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     });
 
     test('schoolBenefits.json contract', () => {
-        Object.values(schoolBenefits).forEach((school) => {
+        Object.entries(schoolBenefits).forEach(([schoolName, school]) => {
             expectString(school.description);
             expectString(school.benefit);
             expect(Array.isArray(school.effects)).toBe(true);
-            expect(school.effects.length).toBeGreaterThan(0);
+            if (!AWAITING_RETARGET_AFTER_SHROUD_REMOVAL.schools.has(schoolName)) {
+                expect(school.effects.length).toBeGreaterThan(0);
+            }
             school.effects.forEach((effect) => {
                 expect(validateEffect(effect).valid).toBe(true);
             });
@@ -131,18 +158,20 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         });
     });
 
-    test('curseTableDetailed.json has unique contiguous numbers and required strings', () => {
-        expect(Array.isArray(curseTableDetailed)).toBe(true);
-        const numbers = curseTableDetailed.map(entry => entry.number).sort((a, b) => a - b);
-        const uniqueNumbers = new Set(numbers);
-        expect(uniqueNumbers.size).toBe(numbers.length);
-        numbers.forEach((n, idx) => {
-            expect(n).toBe(idx + 1);
-        });
-        curseTableDetailed.forEach((entry) => {
-            expectString(entry.id);
-            expectString(entry.name);
-            expectString(entry.description);
+    test('no catalog effect targets worn_page and no curse data export exists', () => {
+        expect(dataModule.curseTable).toBeUndefined();
+        expect(dataModule.cursesById).toBeUndefined();
+        expect(dataModule.getCurse).toBeUndefined();
+
+        const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
+        const catalogFiles = fs.readdirSync(dataDir).filter((name) => name.endsWith('.json'));
+        expect(catalogFiles.length).toBeGreaterThan(0);
+        expect(catalogFiles).not.toContain('curseTableDetailed.json');
+
+        catalogFiles.forEach((filename) => {
+            const wornPageEffects = collectEffects(loadJson(filename))
+                .filter((effect) => effect?.modifier?.target === 'worn_page');
+            expect({ filename, wornPageEffects }).toEqual({ filename, wornPageEffects: [] });
         });
     });
 
@@ -540,6 +569,10 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             const missing = [];
             Object.values(allItems).forEach((item) => {
                 if (LEGACY_MODIFIER_EXCLUSIONS.has(item.id)) return;
+                if (AWAITING_RETARGET_AFTER_SHROUD_REMOVAL.items.has(item.id)) {
+                    expect(item.effects).toEqual([]);
+                    return;
+                }
                 if (!Array.isArray(item.effects) || item.effects.length === 0) {
                     missing.push(item.name || item.id);
                 }

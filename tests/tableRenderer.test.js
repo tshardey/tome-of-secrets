@@ -8,7 +8,6 @@ import {
     renderGenreQuestsTable,
     renderAtmosphericBuffsTable,
     renderSideQuestsTable,
-    renderCurseTable,
     renderExchangeRegister,
     renderLevelingRewardsTable,
     initializeTables
@@ -266,14 +265,6 @@ describe('Table Renderer', () => {
             }
         });
 
-        test('renderCurseTable should render all 4 curses as ordered list', () => {
-            const html = renderCurseTable();
-            
-            expect(html).toContain('<ol>');
-            expect(html).toContain('</ol>');
-            expect(html).toContain('The Unread Tome');
-        });
-
         test('renderLevelingRewardsTable should render all 20 levels with correct data', () => {
             const html = renderLevelingRewardsTable();
             
@@ -322,7 +313,7 @@ describe('Table Renderer', () => {
             // Only create some of the table containers
             document.body.innerHTML = `
                 <div id="genre-quests-table"></div>
-                <div id="curse-table"></div>
+                <div id="leveling-rewards-table"></div>
             `;
 
             // Should not throw error for missing containers
@@ -332,7 +323,7 @@ describe('Table Renderer', () => {
 
             // Should populate the tables that exist
             expect(document.getElementById('genre-quests-table').innerHTML).not.toBe('');
-            expect(document.getElementById('curse-table').innerHTML).not.toBe('');
+            expect(document.getElementById('leveling-rewards-table').innerHTML).not.toBe('');
         });
 
         test('should handle empty body gracefully', () => {
@@ -372,13 +363,6 @@ describe('Table Renderer', () => {
             expect(html).toMatch(/<table[^>]*class="nested-table"[^>]*>/);
         });
 
-        test('curse table should render as ordered list, not table', () => {
-            const html = renderCurseTable();
-            
-            expect(html).toContain('<ol>');
-            expect(html).toContain('<li>');
-            expect(html).not.toContain('<table');
-        });
     });
 
     describe("The Exchange's Register", () => {

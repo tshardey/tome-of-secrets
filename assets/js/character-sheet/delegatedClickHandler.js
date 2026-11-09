@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from './storageKeys.js';
  * Attaches the consolidated delegated click handler to the form element.
  *
  * @param {HTMLElement} form - The form element to attach the click handler to
- * @param {{ ability, inventory, quest, curse, buff }} controllers - Controller instances
+ * @param {{ ability, inventory, quest, buff }} controllers - Controller instances
  * @param {object} ui - The ui module (for renderCompletedQuests)
  */
 export function initializeDelegatedClickHandler(form, controllers, ui) {
@@ -83,13 +83,11 @@ export function initializeDelegatedClickHandler(form, controllers, ui) {
             }
         }
 
-        // Allow buttons without index if they're special buttons (delete-ability-btn, remove-passive-item-btn, equip-from-passive-btn, curse helper actions)
+        // Allow buttons without index if they're special buttons (delete-ability-btn, remove-passive-item-btn, equip-from-passive-btn, quest draw helper and ability activation actions)
         if (!target.dataset.index &&
             !target.classList.contains('delete-ability-btn') &&
             !target.classList.contains('remove-passive-item-btn') &&
             !target.classList.contains('equip-from-passive-btn') &&
-            !target.classList.contains('mark-helper-used-btn') &&
-            !target.classList.contains('undo-helper-used-btn') &&
             !target.classList.contains('mark-quest-draw-helper-used-btn') &&
             !target.classList.contains('undo-quest-draw-helper-used-btn') &&
             !target.classList.contains('activate-ability-btn')) {
@@ -104,9 +102,6 @@ export function initializeDelegatedClickHandler(form, controllers, ui) {
             return;
         }
         if (controllers.quest.handleClick && controllers.quest.handleClick(target)) {
-            return;
-        }
-        if (controllers.curse.handleClick && controllers.curse.handleClick(target)) {
             return;
         }
         if (controllers.buff.handleClick && controllers.buff.handleClick(target)) {

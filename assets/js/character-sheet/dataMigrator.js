@@ -282,15 +282,11 @@ function migrateToVersion10(state) {
 
 /**
  * Migration from schema version 10 to version 11
- * - Adds curseHelperState ({}) for Worn Page mitigation helper usage / cooldown tracking
+ * - Originally added curseHelperState for Worn Page helpers. The Shroud/curse system has been
+ *   removed, so this step is now a pass-through (the retired key is no longer created).
  */
 function migrateToVersion11(state) {
-    const migrated = { ...state };
-    const key = STORAGE_KEYS.CURSE_HELPER_STATE;
-    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
-        migrated[key] = {};
-    }
-    return migrated;
+    return { ...state };
 }
 
 /**
@@ -607,8 +603,6 @@ function migrateToVersion1(state) {
         [STORAGE_KEYS.INVENTORY_ITEMS]: [],
         [STORAGE_KEYS.LEARNED_ABILITIES]: [],
         [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
-        [STORAGE_KEYS.ACTIVE_CURSES]: [],
-        [STORAGE_KEYS.COMPLETED_CURSES]: [],
         [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
         [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
         [STORAGE_KEYS.SELECTED_GENRES]: [],
@@ -768,8 +762,6 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.INVENTORY_ITEMS,
         STORAGE_KEYS.LEARNED_ABILITIES,
         STORAGE_KEYS.ATMOSPHERIC_BUFFS,
-        STORAGE_KEYS.ACTIVE_CURSES,
-        STORAGE_KEYS.COMPLETED_CURSES,
         STORAGE_KEYS.TEMPORARY_BUFFS,
         STORAGE_KEYS.BUFF_MONTH_COUNTER,
         STORAGE_KEYS.SELECTED_GENRES,

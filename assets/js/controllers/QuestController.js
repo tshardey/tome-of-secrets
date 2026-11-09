@@ -1066,19 +1066,6 @@ export class QuestController extends BaseController {
             if (uiModule.updateXpProgressBar) uiModule.updateXpProgressBar();
             toast.success("Philosopher's Stone activated: -50 XP, +50 Ink Drops, +10 Paper Scraps.");
             success = true;
-        } else if (action === 'remove_all_worn_pages') {
-            const activeCount = (stateAdapter.getActiveCurses() || []).length;
-            if (activeCount === 0) {
-                toast.info('No active Worn Page penalties to remove.');
-                return;
-            }
-            for (let i = activeCount - 1; i >= 0; i -= 1) {
-                stateAdapter.moveCurseToCompleted(i);
-            }
-            if (uiModule.renderActiveCurses) uiModule.renderActiveCurses();
-            if (uiModule.renderCompletedCurses) uiModule.renderCompletedCurses();
-            toast.success(`Removed ${activeCount} active Worn Page penalt${activeCount === 1 ? 'y' : 'ies'}.`);
-            success = true;
         } else {
             toast.success(`${abilityName} activated. Apply its effect to the relevant quest flow now.`);
             success = true;

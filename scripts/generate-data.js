@@ -35,7 +35,6 @@ const JSON_EXPORTS = {
     'genreQuests.json': 'genreQuests',
     'extraCreditRewards.json': 'extraCreditRewards',
     'sideQuestsDetailed.json': 'sideQuestsDetailed',
-    'curseTableDetailed.json': 'curseTableDetailed',
     'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards',
     'temporaryBuffs.json': 'temporaryBuffs',
     'levelRewards.json': 'levelRewards',

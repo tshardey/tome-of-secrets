@@ -360,29 +360,6 @@ describe('SeriesCompletionService', () => {
       expect(result.rewardText).toBe('You feel inspired.');
     });
 
-    it('curse-removal moves one active curse to completed when present', () => {
-      const moveQuest = jest.fn();
-      const getActiveCurses = jest.fn().mockReturnValue([{ id: 'c1', name: 'Curse' }]);
-      const reward = { type: 'curse-removal', text: 'Remove one curse.' };
-      applyTypedReward(reward, {
-        stateAdapter: { getActiveCurses, moveQuest },
-        updateCurrency
-      });
-      expect(getActiveCurses).toHaveBeenCalled();
-      expect(moveQuest).toHaveBeenCalled();
-    });
-
-    it('curse-removal does not call moveQuest when no active curses', () => {
-      const moveQuest = jest.fn();
-      const getActiveCurses = jest.fn().mockReturnValue([]);
-      const reward = { type: 'curse-removal', text: 'Remove one curse.' };
-      applyTypedReward(reward, {
-        stateAdapter: { getActiveCurses, moveQuest },
-        updateCurrency
-      });
-      expect(getActiveCurses).toHaveBeenCalled();
-      expect(moveQuest).not.toHaveBeenCalled();
-    });
   });
 
   describe('rewards from stop advancement (integration)', () => {

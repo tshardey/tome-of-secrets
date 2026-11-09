@@ -1232,8 +1232,7 @@ article th:first-child {
     margin-top: 30px;
 }
 
-.add-quest-form,
-.add-curse-form {
+.add-quest-form {
     border: 1px solid #54483b;
     padding: 20px;
     border-radius: 5px;
@@ -1241,52 +1240,22 @@ article th:first-child {
     background-color: #3e352f;
 }
 
-.add-quest-form .form-row,
-.add-curse-form .form-row {
+.add-quest-form .form-row {
     display: flex;
     gap: 15px;
     margin-bottom: 15px;
 }
 
-.add-quest-form .form-row:last-child,
-.add-curse-form .form-row:last-child {
+.add-quest-form .form-row:last-child {
     margin-bottom: 0;
 }
 
 .add-quest-form input,
-.add-quest-form select,
-.add-curse-form input,
-.add-curse-form select {
+.add-quest-form select {
     flex-grow: 1;
     /* Allows inputs to fill the space */
     width: 33.33%;
     /* Default width for flex items */
-}
-
-.add-curse-form .form-row {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    align-items: center;
-}
-
-.add-curse-form select {
-    flex: 2;
-    /* Make the select dropdown wider */
-}
-
-.add-curse-form input {
-    flex: 3;
-    /* Make the book title input even wider */
-}
-
-.add-curse-form button {
-    flex: 1;
-    /* Make the button smaller */
-    width: auto;
-    /* Override the 100% width */
-    min-width: 120px;
-    /* Ensure it's not too small */
 }
 
 .add-quest-form button {
@@ -1302,20 +1271,7 @@ article th:first-child {
     transition: background-color 0.2s;
 }
 
-.add-curse-form button {
-    background-color: #b89f62;
-    color: #2a231d;
-    border: none;
-    padding: 10px 20px;
-    font-family: 'Lora', serif;
-    font-size: 1em;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.add-quest-form button:hover,
-.add-curse-form button:hover {
+.add-quest-form button:hover {
     background-color: #cca352;
 }
 
@@ -1370,7 +1326,6 @@ article th:first-child {
 
 /* Ensure error messages are visible */
 .add-quest-form .field-error-message,
-.add-curse-form .field-error-message,
 .add-item-form .field-error-message,
 .add-temp-buff-form .field-error-message {
     width: 100%;
@@ -1443,10 +1398,7 @@ input:checked+.slider:before {
 .action-cell .complete-quest-btn,
 .action-cell .discard-quest-btn,
 .action-cell .delete-btn,
-.action-cell .edit-quest-btn,
-.action-cell .complete-curse-btn,
-.action-cell .edit-curse-btn,
-.action-cell .delete-curse-btn {
+.action-cell .edit-quest-btn {
     display: block;
     /* Stack the buttons vertically */
     margin-bottom: 5px;
@@ -1465,14 +1417,12 @@ input:checked+.slider:before {
 }
 
 /* Specific colors for each action button */
-.action-cell .edit-quest-btn,
-.action-cell .edit-curse-btn {
+.action-cell .edit-quest-btn {
     color: #b89f62;
     /* Muted Gold */
 }
 
-.action-cell .complete-quest-btn,
-.action-cell .complete-curse-btn {
+.action-cell .complete-quest-btn {
     color: #253D2C;
 }
 
@@ -1481,8 +1431,7 @@ input:checked+.slider:before {
     /* Maroon */
 }
 
-.action-cell .delete-btn,
-.action-cell .delete-curse-btn {
+.action-cell .delete-btn {
     color: #3F1717;
 }
 

@@ -362,45 +362,6 @@ export function renderEmptySlot(slotType) {
 }
 
 /**
- * Renders a curse row
- * @param {Object} curse - Curse object
- * @param {number} index - Curse index
- * @param {string} status - Status ('Active' or 'Completed')
- * @returns {HTMLTableRowElement} The rendered row element
- */
-export function renderCurseRow(curse, index, status = 'Active') {
-    const row = document.createElement('tr');
-    
-    const cells = [
-        escapeHtml(curse.name || ''),
-        escapeHtml(curse.requirement || ''),
-        escapeHtml(curse.book || ''),
-        status
-    ];
-    
-    cells.forEach(cellContent => {
-        const cell = document.createElement('td');
-        cell.textContent = cellContent;
-        row.appendChild(cell);
-    });
-    
-    // Action cell
-    const actionCell = document.createElement('td');
-    actionCell.className = 'action-cell';
-    
-    if (status === 'Active') {
-        actionCell.appendChild(createActionButton('Complete', 'complete-curse-btn', index));
-        actionCell.appendChild(createActionButton('Edit', 'edit-curse-btn', index));
-    }
-    actionCell.appendChild(createActionButton('Delete', 'delete-curse-btn', index, { 
-        'data-list': status === 'Active' ? undefined : 'completed' 
-    }));
-    
-    row.appendChild(actionCell);
-    return row;
-}
-
-/**
  * Renders a temporary buff row
  * @param {Object} buff - Temporary buff object
  * @param {number} index - Buff index
@@ -950,23 +911,23 @@ export function renderQuestCard(quest, index, listType = 'active') {
  * @returns {HTMLButtonElement} The button element
  */
 /**
- * Renders a single Worn Page mitigation helper tile for the Curse tab.
+ * Renders a single helper tile (e.g. Quest tab monthly draw / dice helpers).
  * @param {Object} helper - { sourceId, sourceType, slotMode?, name, effect, cadence, img? }
  * @param {Object} helperState - Map of sourceId -> { used: boolean, cooldownCyclesRemaining?: number }
  * @param {{ markUsedButtonClass?: string, undoButtonClass?: string }} [options]
  * @returns {HTMLDivElement}
  */
-export function renderCurseHelperRow(helper, helperState = {}, options = {}) {
+export function renderHelperTile(helper, helperState = {}, options = {}) {
     const markUsedClass = options.markUsedButtonClass || 'mark-helper-used-btn';
     const undoClass = options.undoButtonClass || 'undo-helper-used-btn';
 
-    const tile = createElement('div', { class: 'curse-helper-tile' });
+    const tile = createElement('div', { class: 'helper-tile' });
     tile.setAttribute('role', 'listitem');
 
     if (helper.img && typeof helper.img === 'string' && helper.img.trim()) {
-        const media = createElement('div', { class: 'curse-helper-tile__media' });
+        const media = createElement('div', { class: 'helper-tile__media' });
         const imgEl = createElement('img', {
-            class: 'curse-helper-tile__image',
+            class: 'helper-tile__image',
             alt: helper.name ? String(helper.name) : 'Resource'
         });
         const baseurl = typeof window !== 'undefined' ? (window.__BASEURL || '') : '';
@@ -986,23 +947,23 @@ export function renderCurseHelperRow(helper, helperState = {}, options = {}) {
         (helper.cadence === 'one-time' || helper.cadence === 'monthly' || (helper.cadence === 'every-2-months' && cooldown === 0));
     const canUndo = used && helper.cadence !== 'one-time';
 
-    const title = createElement('h4', { class: 'curse-helper-tile__title' });
+    const title = createElement('h4', { class: 'helper-tile__title' });
     title.textContent = (helper.name || '') + (sourceLabel ? ` (${sourceLabel})` : '');
     tile.appendChild(title);
 
-    const cadenceBadge = createElement('span', { class: 'curse-helper-tile__cadence' });
+    const cadenceBadge = createElement('span', { class: 'helper-tile__cadence' });
     cadenceBadge.textContent = cadenceLabel;
     tile.appendChild(cadenceBadge);
 
-    const effect = createElement('p', { class: 'curse-helper-tile__effect' });
+    const effect = createElement('p', { class: 'helper-tile__effect' });
     effect.textContent = helper.effect || '';
     tile.appendChild(effect);
 
-    const status = createElement('p', { class: 'curse-helper-tile__status' });
+    const status = createElement('p', { class: 'helper-tile__status' });
     status.textContent = statusText;
     tile.appendChild(status);
 
-    const actions = createElement('div', { class: 'curse-helper-tile__actions' });
+    const actions = createElement('div', { class: 'helper-tile__actions' });
     if (canMarkUsed) {
         actions.appendChild(createHelperActionButton('Mark used', markUsedClass, helper.sourceId, helper.cadence));
     }
@@ -1015,24 +976,12 @@ export function renderCurseHelperRow(helper, helperState = {}, options = {}) {
 }
 
 /**
- * Renders the empty state for Worn Page mitigation helpers (no tiles).
- * @returns {HTMLDivElement}
- */
-export function renderCurseHelpersEmptyRow() {
-    const empty = document.createElement('div');
-    empty.className = 'curse-helper-empty';
-    empty.setAttribute('role', 'status');
-    empty.textContent = 'No Worn Page mitigation helpers available. Equip items, add buffs, or learn abilities that remove or negate Worn Page penalties.';
-    return empty;
-}
-
-/**
  * Empty state for Quest tab monthly draw / dice helpers.
  * @returns {HTMLDivElement}
  */
 export function renderQuestDrawHelpersEmptyRow() {
     const empty = document.createElement('div');
-    empty.className = 'curse-helper-empty';
+    empty.className = 'helper-tile-empty';
     empty.setAttribute('role', 'status');
     empty.textContent = 'No monthly draw or dice helpers detected. Level bonuses, school (e.g. Divination), equipped or passively displayed items and familiars, abilities, and some buffs appear here when they affect the quest pool or rolls. Items sitting only in inventory are not listed.';
     return empty;

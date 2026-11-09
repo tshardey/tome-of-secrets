@@ -7,7 +7,6 @@ import { CharacterController } from '../assets/js/controllers/CharacterControlle
 import { AbilityController } from '../assets/js/controllers/AbilityController.js';
 import { InventoryController } from '../assets/js/controllers/InventoryController.js';
 import { QuestController } from '../assets/js/controllers/QuestController.js';
-import { CurseController } from '../assets/js/controllers/CurseController.js';
 import { BuffController } from '../assets/js/controllers/BuffController.js';
 import { EndOfMonthController } from '../assets/js/controllers/EndOfMonthController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
@@ -47,8 +46,6 @@ describe('Controllers', () => {
                 <button id="add-item-button"></button>
                 <button id="add-quest-button"></button>
                 <select id="new-quest-type"></select>
-                <select id="curse-penalty-select"></select>
-                <button id="add-curse-button"></button>
                 <select id="temp-buff-select"></select>
                 <button id="add-temp-buff-from-dropdown-button"></button>
                 <button class="end-of-month-button"></button>
@@ -70,7 +67,6 @@ describe('Controllers', () => {
         stateAdapter.removeInventoryItem = jest.fn();
         stateAdapter.getInventoryItems = jest.fn(() => []);
         stateAdapter.getEquippedItems = jest.fn(() => []);
-        stateAdapter.addActiveCurse = jest.fn();
         stateAdapter.addTemporaryBuff = jest.fn();
         stateAdapter.removeTemporaryBuff = jest.fn();
         stateAdapter.getTemporaryBuffs = jest.fn(() => []);
@@ -87,9 +83,7 @@ describe('Controllers', () => {
                 renderPermanentBonuses: jest.fn(),
                 renderBenefits: jest.fn(),
                 renderAtmosphericBuffs: jest.fn(),
-                renderActiveCurses: jest.fn(),
                 renderTemporaryBuffs: jest.fn(),
-                renderWornPageHelpers: jest.fn(),
                 renderQuestDrawHelpers: jest.fn(),
                 getSlotLimits: jest.fn(() => ({ wearable: 5, nonWearable: 5, familiar: 5 })),
                 populateBackgroundDropdown: jest.fn(),
@@ -434,66 +428,6 @@ describe('Controllers', () => {
             
             // renderLoadout should be called to show the warning again
             expect(dependencies.ui.renderLoadout).toHaveBeenCalled();
-        });
-    });
-
-    describe('CurseController', () => {
-        it('should initialize and populate curse dropdown', () => {
-            const controller = new CurseController(stateAdapter, form, dependencies);
-
-            controller.initialize();
-
-            const curseSelect = document.getElementById('curse-penalty-select');
-            expect(curseSelect).toBeTruthy();
-        });
-
-        it('should initialize curse controller with dropdown', () => {
-            const controller = new CurseController(stateAdapter, form, dependencies);
-            controller.initialize();
-
-            const curseSelect = document.getElementById('curse-penalty-select');
-            const addButton = document.getElementById('add-curse-button');
-            expect(curseSelect).toBeTruthy();
-            expect(addButton).toBeTruthy();
-        });
-
-        it('handleClick with mark-helper-used-btn calls markCurseHelperUsed and renderWornPageHelpers', () => {
-            stateAdapter.markCurseHelperUsed = jest.fn(() => true);
-            const controller = new CurseController(stateAdapter, form, dependencies);
-            controller.initialize();
-
-            const button = document.createElement('button');
-            button.className = 'mark-helper-used-btn';
-            button.dataset.sourceId = 'item:equipped:0_Chalice';
-            button.dataset.cadence = 'monthly';
-            document.body.appendChild(button);
-
-            const handled = controller.handleClick(button);
-
-            expect(handled).toBe(true);
-            expect(stateAdapter.markCurseHelperUsed).toHaveBeenCalledWith('item:equipped:0_Chalice', { cadence: 'monthly' });
-            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
-            expect(dependencies.saveState).toHaveBeenCalled();
-            document.body.removeChild(button);
-        });
-
-        it('handleClick with undo-helper-used-btn calls undoCurseHelperUsed and renderWornPageHelpers', () => {
-            stateAdapter.undoCurseHelperUsed = jest.fn(() => true);
-            const controller = new CurseController(stateAdapter, form, dependencies);
-            controller.initialize();
-
-            const button = document.createElement('button');
-            button.className = 'undo-helper-used-btn';
-            button.dataset.sourceId = 'ability:Ward';
-            document.body.appendChild(button);
-
-            const handled = controller.handleClick(button);
-
-            expect(handled).toBe(true);
-            expect(stateAdapter.undoCurseHelperUsed).toHaveBeenCalledWith('ability:Ward');
-            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
-            expect(dependencies.saveState).toHaveBeenCalled();
-            document.body.removeChild(button);
         });
     });
 
@@ -1700,11 +1634,11 @@ describe('Controllers', () => {
             expect(buttons.length).toBeGreaterThan(0);
         });
 
-        it('end of month flow calls getCurseHelpers, refreshCurseHelpersAtEndOfMonth, and renderWornPageHelpers', () => {
-            const getCurseHelpersSpy = jest.spyOn(stateAdapter, 'getCurseHelpers').mockReturnValue([
-                { sourceId: 'item:equipped:0_Chalice', cadence: 'monthly' }
+        it('end of month flow refreshes quest draw helpers and re-renders them', () => {
+            const getHelpersSpy = jest.spyOn(stateAdapter, 'getQuestDrawHelpers').mockReturnValue([
+                { sourceId: 'ability:Flicker of Prophecy', cadence: 'monthly' }
             ]);
-            const refreshSpy = jest.spyOn(stateAdapter, 'refreshCurseHelpersAtEndOfMonth').mockReturnValue(true);
+            const refreshSpy = jest.spyOn(stateAdapter, 'refreshQuestDrawHelpersAtEndOfMonth').mockReturnValue(true);
 
             const controller = new EndOfMonthController(stateAdapter, form, dependencies);
             const completedBooksSet = new Set();
@@ -1716,13 +1650,13 @@ describe('Controllers', () => {
             expect(eomButton).toBeTruthy();
             eomButton.click();
 
-            expect(getCurseHelpersSpy).toHaveBeenCalled();
+            expect(getHelpersSpy).toHaveBeenCalled();
             expect(refreshSpy).toHaveBeenCalledWith([
-                { sourceId: 'item:equipped:0_Chalice', cadence: 'monthly' }
+                { sourceId: 'ability:Flicker of Prophecy', cadence: 'monthly' }
             ]);
-            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
+            expect(dependencies.ui.renderQuestDrawHelpers).toHaveBeenCalled();
 
-            getCurseHelpersSpy.mockRestore();
+            getHelpersSpy.mockRestore();
             refreshSpy.mockRestore();
         });
     });

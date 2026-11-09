@@ -7,7 +7,6 @@ import {
     renderQuestCard,
     renderItemCard,
     renderEmptySlot,
-    renderCurseRow,
     renderTemporaryBuffRow,
     renderAbilityCard
 } from '../assets/js/character-sheet/renderComponents.js';
@@ -645,51 +644,6 @@ describe('Render Components', () => {
             expect(slot.classList.contains('item-card')).toBe(true);
             expect(slot.classList.contains('empty-slot')).toBe(true);
             expect(slot.textContent).toContain('Empty Wearable Slot');
-        });
-    });
-
-    describe('renderCurseRow', () => {
-        test('should render curse row with all fields', () => {
-            const curse = {
-                name: 'Test Curse',
-                requirement: 'Test requirement',
-                book: 'Test Book'
-            };
-
-            const row = renderCurseRow(curse, 0, 'Active');
-            
-            expect(row.tagName).toBe('TR');
-            expect(row.querySelectorAll('td').length).toBe(5); // 4 data cells + 1 action cell
-        });
-
-        test('should escape curse name and requirement', () => {
-            const curse = {
-                name: '<script>alert("xss")</script>',
-                requirement: 'Test & requirement',
-                book: 'Test Book'
-            };
-
-            const row = renderCurseRow(curse, 0, 'Active');
-            const cells = row.querySelectorAll('td');
-            
-            expect(cells[0].textContent).toContain('script');
-            expect(cells[0].innerHTML).not.toContain('<script>');
-        });
-
-        test('should show correct buttons for active vs completed', () => {
-            const curse = {
-                name: 'Test Curse',
-                requirement: 'Test',
-                book: 'Test'
-            };
-
-            const activeRow = renderCurseRow(curse, 0, 'Active');
-            expect(activeRow.querySelector('.complete-curse-btn')).toBeDefined();
-            expect(activeRow.querySelector('.edit-curse-btn')).toBeDefined();
-
-            const completedRow = renderCurseRow(curse, 0, 'Completed');
-            expect(completedRow.querySelector('.complete-curse-btn')).toBeNull();
-            expect(completedRow.querySelector('.edit-curse-btn')).toBeNull();
         });
     });
 

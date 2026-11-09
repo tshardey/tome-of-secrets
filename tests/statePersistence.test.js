@@ -54,8 +54,6 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.COMPLETED_QUESTS]: [{ type: '⭐ Extra Credit', prompt: 'Shelve the forbidden tomes', rewards: { xp: 25, inkDrops: 10, paperScraps: 0, items: [] } }],
             [STORAGE_KEYS.DISCARDED_QUESTS]: [],
             [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: { 'Candlelit Study': true },
-            [STORAGE_KEYS.ACTIVE_CURSES]: [{ name: 'Echo of Forgetfulness' }],
-            [STORAGE_KEYS.COMPLETED_CURSES]: [],
             [STORAGE_KEYS.TEMPORARY_BUFFS]: [{ name: 'Moonlit Focus', duration: 'two-months', monthsRemaining: 2, status: 'active' }],
             [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 3,
             [STORAGE_KEYS.SELECTED_GENRES]: ['Mystery', 'Fantasy'],
@@ -78,7 +76,6 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.SHOPPING_LOG]: [],
             [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
             [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
-            [STORAGE_KEYS.CURSE_HELPER_STATE]: {},
             [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
             [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
             [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
@@ -174,8 +171,6 @@ describe('state persistence compatibility', () => {
         localStorage.setItem(STORAGE_KEYS.INVENTORY_ITEMS, JSON.stringify([]));
         localStorage.setItem(STORAGE_KEYS.LEARNED_ABILITIES, JSON.stringify(['Scribe Sigils']));
         localStorage.setItem(STORAGE_KEYS.ATMOSPHERIC_BUFFS, JSON.stringify({ 'The Cozy Hearth': true }));
-        localStorage.setItem(STORAGE_KEYS.ACTIVE_CURSES, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.COMPLETED_CURSES, JSON.stringify([{ name: 'Dusty Silence' }]));
         localStorage.setItem(STORAGE_KEYS.TEMPORARY_BUFFS, JSON.stringify([{ name: 'Star Chart', duration: 'until-end-month', monthsRemaining: 1, status: 'active' }]));
         localStorage.setItem(STORAGE_KEYS.TEMPORARY_BUFFS, JSON.stringify([{ name: 'Star Chart', duration: 'until-end-month', monthsRemaining: 1, status: 'active' }]));
         localStorage.setItem(STORAGE_KEYS.BUFF_MONTH_COUNTER, JSON.stringify(4));

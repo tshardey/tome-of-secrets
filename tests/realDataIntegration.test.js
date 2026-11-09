@@ -5,7 +5,6 @@ import { ModifierPipeline } from '../assets/js/services/ModifierPipeline.js';
 import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
 import { TriggerPayload } from '../assets/js/services/TriggerPayload.js';
 import { TRIGGERS } from '../assets/js/services/effectSchema.js';
-import { tryPreventWornPage } from '../assets/js/services/WornPagePrevention.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
 function loadJson(filename) {
@@ -250,65 +249,6 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
         });
         expect(alchemicResult.xp).toBe(5);
         expect(alchemicResult.modifiedBy).toContain('Alchemic Focus');
-    });
-
-    test('worn page prevention works with real school/ability/item data', () => {
-        const dataModule = buildDataModule();
-        const createStateAdapter = ({ wizardSchool = '', learnedAbilities = [], equippedItems = [] } = {}) => {
-            const cooldowns = {};
-            return {
-                state: {
-                    ...emptyState(),
-                    [STORAGE_KEYS.LEARNED_ABILITIES]: learnedAbilities,
-                    [STORAGE_KEYS.EQUIPPED_ITEMS]: equippedItems
-                },
-                formData: { keeperBackground: '', wizardSchool },
-                isEffectCooldownAvailable(key, cadence, period) {
-                    const entry = cooldowns[key];
-                    if (!entry) return true;
-                    return entry.month !== period.month || entry.year !== period.year;
-                },
-                consumeEffectCooldown(key, cadence, period) {
-                    cooldowns[key] = { month: period.month, year: period.year };
-                }
-            };
-        };
-
-        const school = tryPreventWornPage({
-            stateAdapter: createStateAdapter({ wizardSchool: 'Abjuration' }),
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(school.prevented).toBe(true);
-        expect(school.sourceLabel).toBe('School of Abjuration');
-
-        const ability = tryPreventWornPage({
-            stateAdapter: createStateAdapter({ learnedAbilities: ['Ward Against the Shroud'] }),
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(ability.prevented).toBe(true);
-        expect(ability.sourceLabel).toBe('Ward Against the Shroud');
-
-        const raven = tryPreventWornPage({
-            stateAdapter: createStateAdapter({ equippedItems: [{ name: 'Raven Familiar', type: 'Familiar' }] }),
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(raven.prevented).toBe(true);
-        expect(raven.sourceLabel).toBe('Raven Familiar');
-
-        const chalice = tryPreventWornPage({
-            stateAdapter: createStateAdapter({ equippedItems: [{ name: 'Chalice of Restoration', type: 'Non-Wearable' }] }),
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(chalice.prevented).toBe(true);
-        expect(chalice.sourceLabel).toBe('Chalice of Restoration');
     });
 
     test('background bonus does not double-stack with legacy background buff cards', () => {

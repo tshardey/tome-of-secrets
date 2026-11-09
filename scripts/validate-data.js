@@ -370,30 +370,6 @@ function validateWings(wings, roomsById) {
 }
 
 /**
- * Validate curses
- */
-function validateCurses(curses) {
-    const ids = new Set();
-    const results = [];
-
-    for (const [key, curse] of Object.entries(curses)) {
-        if (!curse.id) {
-            results.push({ type: 'error', message: `Curse "${key}" missing id field` });
-        } else {
-            if (!isKebabCase(curse.id)) {
-                results.push({ type: 'error', message: `Curse "${key}" has invalid ID format: "${curse.id}"` });
-            }
-            if (ids.has(curse.id)) {
-                results.push({ type: 'error', message: `Duplicate curse ID: "${curse.id}"` });
-            }
-            ids.add(curse.id);
-        }
-    }
-
-    return results;
-}
-
-/**
  * Validate abilities
  */
 function validateAbilities(abilities) {
@@ -554,7 +530,6 @@ function validateAll() {
     const sideQuests = loadJSON('sideQuestsDetailed.json');
     const dungeonRooms = loadJSON('dungeonRooms.json');
     const wings = loadJSON('wings.json');
-    const curses = loadJSON('curseTableDetailed.json');
     const abilities = loadJSON('masteryAbilities.json');
     const atmosphericBuffs = loadJSON('atmosphericBuffs.json');
     const temporaryBuffs = loadJSON('temporaryBuffs.json');
@@ -608,15 +583,6 @@ function validateAll() {
             else results.warnings.push(r.message);
         });
         results.validated.push({ category: 'Wings', count: Object.keys(wings).length });
-    }
-
-    if (curses) {
-        console.log(`${BLUE}Validating curses...${RESET}`);
-        validateCurses(curses).forEach(r => {
-            if (r.type === 'error') results.errors.push(r.message);
-            else results.warnings.push(r.message);
-        });
-        results.validated.push({ category: 'Curses', count: Object.keys(curses).length });
     }
 
     if (abilities) {

@@ -10,6 +10,7 @@
 import { STORAGE_KEYS, createEmptyCharacterState } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
+import { validateHelperState } from './helperDiscoveryShared.js';
 
 /**
  * Current schema version - increment when data structure changes
@@ -22,8 +23,8 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
  * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
  * Version 10: Shopping/subscription state (shoppingLog, bookBoxSubscriptions, bookBoxHistory) and book shelfCategory
- * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState: usage/cooldown per source)
- * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: same shape as curse helpers)
+ * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState; retired with the Shroud, migration is now a pass-through)
+ * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: { [sourceId]: { used, cooldownCyclesRemaining? } })
  * Version 13: Modifier pipeline effect cooldowns (effectCooldowns: last-used month/year per effect source key)
  * Version 14: Quest draw helper UI prefs (questDrawHelperSettings: { autoApplyOnDraw })
  * Version 15: Sanctum/buff ID stabilization and side quest ID backfill
@@ -196,30 +197,6 @@ function validateItem(item, context = 'item') {
 }
 
 /**
- * Validate and fix a curse object
- * @param {*} curse - Curse object to validate
- * @param {string} context - Context for error messages
- * @returns {Object|null} - Validated curse object, or null if unfixable
- */
-function validateCurse(curse, context = 'curse') {
-    if (!curse || typeof curse !== 'object') {
-        console.warn(`Invalid curse in ${context}: not an object`);
-        return null;
-    }
-
-    if (typeof curse.name !== 'string' || !curse.name.trim()) {
-        console.warn(`Invalid curse in ${context}: missing or invalid name`);
-        return null;
-    }
-
-    return {
-        name: curse.name.trim(),
-        requirement: typeof curse.requirement === 'string' ? curse.requirement : '',
-        book: typeof curse.book === 'string' ? curse.book : ''
-    };
-}
-
-/**
  * Validate and fix a temporary buff object
  * @param {*} buff - Temporary buff object to validate
  * @param {string} context - Context for error messages
@@ -360,30 +337,6 @@ function validateItemArray(items, context = 'items') {
             validated.push(validatedItem);
         } else {
             console.warn(`Skipping invalid item at ${context}[${index}]`);
-        }
-    });
-    return validated;
-}
-
-/**
- * Validate and fix an array of curses
- * @param {Array} curses - Array of curse objects
- * @param {string} context - Context for error messages
- * @returns {Array} - Array of validated curse objects
- */
-function validateCurseArray(curses, context = 'curses') {
-    if (!Array.isArray(curses)) {
-        console.warn(`Invalid ${context}: not an array, using empty array`);
-        return [];
-    }
-
-    const validated = [];
-    curses.forEach((curse, index) => {
-        const validatedCurse = validateCurse(curse, `${context}[${index}]`);
-        if (validatedCurse) {
-            validated.push(validatedCurse);
-        } else {
-            console.warn(`Skipping invalid curse at ${context}[${index}]`);
         }
     });
     return validated;
@@ -863,10 +816,6 @@ function validateBookBoxHistory(history, context = STORAGE_KEYS.BOOK_BOX_HISTORY
 }
 
 /**
- * Validate curse helper state (Schema v11).
- * Shape: { [sourceId: string]: { used: boolean, cooldownCyclesRemaining?: number } }
- */
-/**
  * Validate effect cooldown state (Schema v13).
  * Shape: { [sourceKey: string]: { month: string, year: string } }
  */
@@ -884,28 +833,6 @@ function validateEffectCooldownState(raw) {
         const year = typeof entry.year === 'string' ? entry.year.trim() : '';
         if (!month || !year) continue;
         validated[sourceKey] = { month, year };
-    }
-    return validated;
-}
-
-function validateCurseHelperState(raw) {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-        return {};
-    }
-    const validated = {};
-    for (const key of Object.keys(raw)) {
-        const sourceId = typeof key === 'string' && key.trim() ? key.trim() : null;
-        if (!sourceId) continue;
-        const entry = raw[key];
-        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
-        const used = typeof entry.used === 'boolean' ? entry.used : false;
-        const cooldownCyclesRemaining = typeof entry.cooldownCyclesRemaining === 'number' && !isNaN(entry.cooldownCyclesRemaining) && entry.cooldownCyclesRemaining >= 0
-            ? Math.floor(entry.cooldownCyclesRemaining)
-            : undefined;
-        validated[sourceId] = { used };
-        if (cooldownCyclesRemaining !== undefined) {
-            validated[sourceId].cooldownCyclesRemaining = cooldownCyclesRemaining;
-        }
     }
     return validated;
 }
@@ -980,14 +907,6 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = validateAtmosphericBuffs(
         state[STORAGE_KEYS.ATMOSPHERIC_BUFFS]
     );
-    validated[STORAGE_KEYS.ACTIVE_CURSES] = validateCurseArray(
-        state[STORAGE_KEYS.ACTIVE_CURSES],
-        STORAGE_KEYS.ACTIVE_CURSES
-    );
-    validated[STORAGE_KEYS.COMPLETED_CURSES] = validateCurseArray(
-        state[STORAGE_KEYS.COMPLETED_CURSES],
-        STORAGE_KEYS.COMPLETED_CURSES
-    );
     validated[STORAGE_KEYS.TEMPORARY_BUFFS] = validateTemporaryBuffArray(
         state[STORAGE_KEYS.TEMPORARY_BUFFS],
         STORAGE_KEYS.TEMPORARY_BUFFS
@@ -1060,8 +979,7 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.SHOPPING_LOG] = validateShoppingLog(state[STORAGE_KEYS.SHOPPING_LOG], STORAGE_KEYS.SHOPPING_LOG);
     validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
     validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
-    validated[STORAGE_KEYS.CURSE_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
-    validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
+    validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
     validated[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = validateQuestDrawHelperSettings(
         state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]
     );

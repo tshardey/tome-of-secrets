@@ -3,7 +3,6 @@ import { ModifierPipeline } from '../assets/js/services/ModifierPipeline.js';
 import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
 import { TRIGGERS, MODIFIER_TYPES, validateEffect } from '../assets/js/services/effectSchema.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
-import { tryPreventWornPage } from '../assets/js/services/WornPagePrevention.js';
 
 describe('effectSchema', () => {
     test('validateEffect accepts valid effect', () => {
@@ -397,71 +396,6 @@ describe('ModifierPipeline.resolve', () => {
         const scribeMod = result.receipt.modifiers.find(m => m.type === 'effect:add_flat');
         expect(scribeMod.value).toBe(15);
         expect(scribeMod.description).toContain('5 × 3');
-    });
-});
-
-describe('WornPagePrevention.tryPreventWornPage', () => {
-    test('consumes school effect cooldown and prevents', () => {
-        const state = {
-            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {},
-            [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-            [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-            [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
-            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
-            [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-        };
-        const stateAdapter = {
-            state,
-            formData: { keeperBackground: '', wizardSchool: 'Abjuration' },
-            isEffectCooldownAvailable(key, cadence, period) {
-                const e = state[STORAGE_KEYS.EFFECT_COOLDOWNS][key];
-                if (!e) return true;
-                return e.month !== period.month || e.year !== period.year;
-            },
-            consumeEffectCooldown(key, cadence, period) {
-                state[STORAGE_KEYS.EFFECT_COOLDOWNS][key] = {
-                    month: period.month,
-                    year: period.year
-                };
-            }
-        };
-        const dataModule = {
-            schoolBenefits: {
-                Abjuration: {
-                    effects: [
-                        {
-                            trigger: TRIGGERS.ON_MONTH_END,
-                            modifier: { type: MODIFIER_TYPES.PREVENT, target: 'worn_page' },
-                            cooldown: 'monthly'
-                        }
-                    ]
-                }
-            },
-            keeperBackgrounds: {},
-            masteryAbilities: {},
-            allItems: {}
-        };
-        const first = tryPreventWornPage({
-            stateAdapter,
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(first.prevented).toBe(true);
-        const second = tryPreventWornPage({
-            stateAdapter,
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(second.prevented).toBe(false);
-        const third = tryPreventWornPage({
-            stateAdapter,
-            dataModule,
-            month: 'April',
-            year: '2026'
-        });
-        expect(third.prevented).toBe(true);
     });
 });
 

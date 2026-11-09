@@ -14,20 +14,17 @@ export class Character {
      * @param {Array} [data.completedQuests=[]] - Completed quests
      * @param {Array} [data.discardedQuests=[]] - Discarded quests
      * @param {Array} [data.inventoryItems=[]] - Inventory items
-     * @param {Array} [data.curses=[]] - Active curses
      */
     constructor({
         activeAssignments = [],
         completedQuests = [],
         discardedQuests = [],
-        inventoryItems = [],
-        curses = []
+        inventoryItems = []
     } = {}) {
         this.activeAssignments = activeAssignments.map(q => q instanceof Quest ? q : Quest.fromJSON(q));
         this.completedQuests = completedQuests.map(q => q instanceof Quest ? q : Quest.fromJSON(q));
         this.discardedQuests = discardedQuests.map(q => q instanceof Quest ? q : Quest.fromJSON(q));
         this.inventoryItems = Array.isArray(inventoryItems) ? inventoryItems : [];
-        this.curses = Array.isArray(curses) ? curses : [];
     }
 
     /**
@@ -134,34 +131,6 @@ export class Character {
     }
 
     /**
-     * Add a curse
-     * @param {Object} curse - Curse to add
-     */
-    addCurse(curse) {
-        this.curses.push(curse);
-    }
-
-    /**
-     * Remove a curse
-     * @param {number} index - Index of curse to remove
-     * @returns {Object|null} - The removed curse, or null if index is invalid
-     */
-    removeCurse(index) {
-        if (index < 0 || index >= this.curses.length) {
-            return null;
-        }
-        return this.curses.splice(index, 1)[0];
-    }
-
-    /**
-     * Get active curse count
-     * @returns {number}
-     */
-    getActiveCurseCount() {
-        return this.curses.length;
-    }
-
-    /**
      * Convert to plain JSON object (for localStorage)
      * @returns {Object}
      */
@@ -170,8 +139,7 @@ export class Character {
             activeAssignments: this.activeAssignments.map(q => q.toJSON()),
             completedQuests: this.completedQuests.map(q => q.toJSON()),
             discardedQuests: this.discardedQuests.map(q => q.toJSON()),
-            inventoryItems: this.inventoryItems,
-            curses: this.curses
+            inventoryItems: this.inventoryItems
         };
     }
 

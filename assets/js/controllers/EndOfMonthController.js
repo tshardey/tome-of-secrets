@@ -176,7 +176,7 @@ export class EndOfMonthController extends BaseController {
             const familiarSlotsInput = document.getElementById('familiar-slots');
             uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
 
-            // Refresh Worn Page mitigation helpers: monthly → restore each cycle; every-2-months → restore every second cycle
+            // Refresh monthly draw / dice helpers: monthly → restore each cycle; every-2-months → restore every second cycle
             const helperCatalogs = {
                 allItems: data.allItems || {},
                 temporaryBuffs: { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) },
@@ -186,14 +186,6 @@ export class EndOfMonthController extends BaseController {
                 permanentBonuses: data.permanentBonuses || {}
             };
             const school = document.getElementById('wizardSchool')?.value || '';
-            const curseHelpers = stateAdapter.getCurseHelpers(helperCatalogs, { school });
-            stateAdapter.refreshCurseHelpersAtEndOfMonth(curseHelpers);
-            // Remove one-time Worn Page temp buffs that were marked used (they expire after this EOM)
-            if (stateAdapter.removeUsedOneTimeWornPageTempBuffsAtEOM(curseHelpers)) {
-                uiModule.renderTemporaryBuffs();
-            }
-            if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
-
             const levelRaw = document.getElementById('level')?.value;
             const level = Math.max(1, parseInt(levelRaw, 10) || 1);
             const questDrawHelpers = stateAdapter.getQuestDrawHelpers(helperCatalogs, { school, level });
