@@ -5,7 +5,7 @@ import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
 import { evaluateQuestLink, isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
-import { buffNameFromCard, findPayingUseCountBuffIndex, remainingUses } from '../utils/useCountBuffs.js';
+import { spendUseCountBuffs } from '../utils/useCountBuffs.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -796,26 +796,13 @@ export class StateAdapter {
      * @returns {{ changed: boolean, spent: string[] }} Names of buffs whose last use was spent
      */
     consumeUseCountBuffsForQuest(buffCards, getCatalogUseCount) {
-        const spent = [];
-        if (!Array.isArray(buffCards) || buffCards.length === 0 || typeof getCatalogUseCount !== 'function') {
-            return { changed: false, spent };
-        }
-        const names = [...new Set(buffCards.map(buffNameFromCard).filter(Boolean))];
+        let spent = [];
         const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
-            let changed = false;
-            for (const name of names) {
-                const useCount = Number(getCatalogUseCount(name)) || 0;
-                if (useCount <= 0) continue;
-                const index = findPayingUseCountBuffIndex(list, name, useCount);
-                if (index < 0) continue;
-                const usesLeft = remainingUses(list[index], useCount) - 1;
-                list[index] = usesLeft <= 0
-                    ? { ...list[index], usesLeft: 0, status: 'used' }
-                    : { ...list[index], usesLeft };
-                if (usesLeft <= 0) spent.push(name);
-                changed = true;
-            }
-            return { changed };
+            const outcome = spendUseCountBuffs(list, buffCards, getCatalogUseCount);
+            if (!outcome.changed) return { changed: false };
+            list.splice(0, list.length, ...outcome.buffs);
+            spent = outcome.spent;
+            return { changed: true };
         });
         return { changed: result.changed, spent };
     }

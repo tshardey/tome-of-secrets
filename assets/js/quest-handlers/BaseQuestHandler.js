@@ -10,6 +10,9 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { Validator, required, selected, conditional } from '../services/Validator.js';
 import { characterState } from '../character-sheet/state.js';
 import { getLinkedQuestIds, isSecondaryQuestInBatch } from '../utils/questLinkRules.js';
+import { spendUseCountBuffs } from '../utils/useCountBuffs.js';
+import { getTemporaryBuffData } from '../character-sheet/data.js';
+import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 
 export class BaseQuestHandler {
     /**
@@ -117,7 +120,8 @@ export class BaseQuestHandler {
      * @param {Array} selectedBuffs - Selected buff/item names
      * @param {string} background - Background key
      * @param {string} wizardSchool - Wizard school key
-     * @param {{ isSecondaryQuest?: boolean|null }} [options] - isSecondaryQuest overrides the book-link lookup
+     * @param {{ isSecondaryQuest?: boolean|null, temporaryBuffs?: Array|null }} [options] - isSecondaryQuest overrides
+     *   the book-link lookup; temporaryBuffs overrides the state's buffs (batch use-count tracking)
      * @returns {Reward} Final rewards with all modifiers applied
      */
     calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null, options = {}) {
@@ -145,7 +149,8 @@ export class BaseQuestHandler {
             isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
             stateAdapter: adapter,
             getBook,
-            isSecondaryQuest: options.isSecondaryQuest ?? null
+            isSecondaryQuest: options.isSecondaryQuest ?? null,
+            temporaryBuffs: options.temporaryBuffs ?? null
         });
     }
 
@@ -184,6 +189,10 @@ export class BaseQuestHandler {
         const pendingLinksByBook = new Map();
         const rewardAdapter = this.data?.rewardStateAdapter;
         const liveQuestIds = typeof rewardAdapter?.getLiveQuestIds === 'function' ? rewardAdapter.getLiveQuestIds() : null;
+        // Use-count buffs (Enchanted Focus, ...) are spent only after the batch is stored, so track
+        // the uses each earlier quest of the batch will spend; the last use pays only once.
+        let batchBuffs = (rewardAdapter?.state ?? characterState)?.[STORAGE_KEYS.TEMPORARY_BUFFS] ?? null;
+        const getCatalogUseCount = name => getTemporaryBuffData(name)?.useCount || 0;
         return quests.map(quest => {
             if (getBook) BaseQuestHandler.enrichQuestWithBookPageCount(quest, getBook);
             let isSecondaryQuest = null;
@@ -201,8 +210,11 @@ export class BaseQuestHandler {
                 selectedBuffs,
                 background,
                 wizardSchool,
-                { isSecondaryQuest }
+                { isSecondaryQuest, temporaryBuffs: batchBuffs }
             );
+            if (Array.isArray(batchBuffs)) {
+                batchBuffs = spendUseCountBuffs(batchBuffs, selectedBuffs, getCatalogUseCount).buffs;
+            }
             return {
                 ...quest,
                 rewards: finalRewards.toJSON()

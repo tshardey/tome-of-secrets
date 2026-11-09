@@ -14,7 +14,7 @@ import {
     applyTypedReward
 } from '../assets/js/services/SeriesCompletionService.js';
 import { buildQuestDrawHelperList } from '../assets/js/character-sheet/questDrawHelperDiscovery.js';
-import { RewardCalculator } from '../assets/js/services/RewardCalculator.js';
+import { RewardCalculator, Reward } from '../assets/js/services/RewardCalculator.js';
 import { BaseQuestHandler } from '../assets/js/quest-handlers/BaseQuestHandler.js';
 import { QuestController } from '../assets/js/controllers/QuestController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
@@ -262,6 +262,27 @@ describe('Behavioral regressions - named game entities', () => {
             const { paid } = completeQuestsWithBuff(adapter, 'Long Read Focus', 2);
 
             expect(paid).toBe(1);
+        });
+
+        test('a batch added as completed pays the last use only once', () => {
+            const adapter = adapterWithBuff(
+                { name: 'Enchanted Focus', duration: 'one-time', status: 'active', usesLeft: 1 }
+            );
+            const handler = new BaseQuestHandler({}, { rewardStateAdapter: adapter });
+            const buffs = ['[Buff] Enchanted Focus'];
+            const makeQuest = (book) => ({
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book,
+                buffs,
+                rewards: new Reward({ xp: 15, dollars: 15 })
+            });
+
+            const quests = handler.processCompletedQuests([makeQuest('A'), makeQuest('B')], buffs, '', '');
+
+            expect(quests.map(q => q.rewards.dollars)).toEqual([17, 15]);
+            // The live state is untouched until QuestController spends the uses after storing the batch.
+            expect(adapter.getTemporaryBuffs()[0].usesLeft).toBe(1);
         });
 
         test('a quest without the bonus card does not spend a use', () => {

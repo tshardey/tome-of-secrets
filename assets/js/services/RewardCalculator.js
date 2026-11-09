@@ -527,7 +527,8 @@ export class RewardCalculator {
      * @param {string} type - Quest type
      * @param {string} prompt - Quest prompt
      * @param {Object} options - appliedBuffs, background, quest, wizardSchool, stateAdapter, getBook, baseRewardOverride,
-     *   isSecondaryQuest (optional override of the book-link lookup for the $10 secondary base)
+     *   isSecondaryQuest (optional override of the book-link lookup for the $10 secondary base),
+     *   temporaryBuffs (optional override of the state's temporary buffs, used to gate spent use-count buffs)
      * @returns {Reward}
      */
     static calculateFinalRewards(type, prompt, options = {}) {
@@ -543,7 +544,8 @@ export class RewardCalculator {
             isBefriend = true,
             stateAdapter = null,
             getBook = null,
-            isSecondaryQuest = null
+            isSecondaryQuest = null,
+            temporaryBuffs: temporaryBuffsOverride = null
         } = options;
 
         const rewards = baseRewardOverride
@@ -561,7 +563,7 @@ export class RewardCalculator {
             : { state: characterState, formData };
 
         const pipelineState = this._pipelineStateFromAdapter(adapter);
-        const temporaryBuffs = pipelineState?.[STORAGE_KEYS.TEMPORARY_BUFFS] ?? null;
+        const temporaryBuffs = temporaryBuffsOverride ?? pipelineState?.[STORAGE_KEYS.TEMPORARY_BUFFS] ?? null;
         this._appendBuffCardSkips(rewards, appliedBuffs, quest, temporaryBuffs);
 
         const payload = this._buildQuestCompletedPayload(type, prompt, quest, {
