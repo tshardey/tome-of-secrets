@@ -4,6 +4,7 @@ import { setStateKey } from './persistence.js';
 import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
+import { evaluateQuestLink, isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -1360,18 +1361,61 @@ export class StateAdapter {
     }
 
     /**
-     * Add a quest id to a book's links.questIds (for book-first quest integration).
+     * One book, one quest: may questId be linked to bookId? A second link needs a learned
+     * MULTI_QUEST_ABILITIES ability; a third is always refused. Relinking is idempotent (ok).
+     * Existing saves that already hold more links are not modified.
      * @param {string} bookId
      * @param {string} questId
-     * @returns {boolean} true if updated
+     * @param {{ allowSecondLink?: boolean }} [options] - set by an activation that grants the second link
+     * @returns {{ ok: boolean, reason?: 'already-linked' | 'max-links' }}
      */
-    linkQuestToBook(bookId, questId) {
+    canLinkQuestToBook(bookId, questId, options = {}) {
+        return evaluateQuestLink(this.getBook(bookId), questId, this.getLearnedAbilities(), {
+            ...options,
+            liveQuestIds: this.getLiveQuestIds()
+        });
+    }
+
+    /**
+     * Ids of quests that still exist (active or completed). Book links to any other id are stale
+     * (the quest was discarded or deleted) and do not count toward one book, one quest.
+     * @returns {Set<string>}
+     */
+    getLiveQuestIds() {
+        const ids = new Set();
+        for (const quest of [...(this.getActiveAssignments() || []), ...(this.getCompletedQuests() || [])]) {
+            if (quest && quest.id != null) ids.add(String(quest.id));
+        }
+        return ids;
+    }
+
+    /**
+     * True when questId is the book's second (or later) linked quest, which pays
+     * GAME_CONFIG.rewards.secondaryQuestBase.
+     * @param {string} bookId
+     * @param {string} questId
+     * @returns {boolean}
+     */
+    isSecondaryQuestForBook(bookId, questId) {
+        return isSecondaryQuestOnBook(this.getBook(bookId), questId, { liveQuestIds: this.getLiveQuestIds() });
+    }
+
+    /**
+     * Add a quest id to a book's links.questIds (for book-first quest integration).
+     * Refused (returns false) when canLinkQuestToBook is not ok.
+     * @param {string} bookId
+     * @param {string} questId
+     * @param {{ allowSecondLink?: boolean }} [options] - see canLinkQuestToBook
+     * @returns {boolean} true if linked (or already linked)
+     */
+    linkQuestToBook(bookId, questId, options = {}) {
         if (!bookId || !questId || typeof bookId !== 'string' || typeof questId !== 'string') return false;
         const book = this.getBook(bookId);
         if (!book) return false;
         const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
         const questIds = [...(links.questIds || [])];
         if (questIds.includes(questId)) return true;
+        if (!this.canLinkQuestToBook(bookId, questId, options).ok) return false;
         questIds.push(questId);
         this.updateBook(bookId, { links: { questIds, curriculumPromptIds: links.curriculumPromptIds || [] } });
         return true;

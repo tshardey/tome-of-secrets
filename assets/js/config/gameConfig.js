@@ -91,3 +91,10 @@ export const GAME_CONFIG = Object.freeze({
     }
 });
 
+
+/**
+ * Mastery abilities that let one library book clear a second quest.
+ * A keeper who knows one of these may link a book to two quests; the second pays
+ * GAME_CONFIG.rewards.secondaryQuestBase instead of questBase.
+ */
+export const MULTI_QUEST_ABILITIES = Object.freeze(['Quick Shot', 'Irresistible Charm', 'Concussive Blast']);

@@ -4,6 +4,8 @@
  */
 
 import { RewardCalculator } from '../services/RewardCalculator.js';
+import { evaluateQuestLink, getLinkedQuestIds, questLinkRefusalMessage } from './questLinkRules.js';
+import { toast } from '../ui/toast.js';
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -44,8 +46,64 @@ export function getUnlinkedActiveQuests(stateAdapter, excludeBookId = null) {
 }
 
 /**
+ * Why linking questId to bookId would be refused, as a keeper-facing message.
+ * @param {object} stateAdapter
+ * @param {string} bookId
+ * @param {string} questId
+ * @param {{ allowSecondLink?: boolean }} [options] - see stateAdapter.canLinkQuestToBook
+ * @returns {string|null} the refusal message, or null when the link is allowed
+ */
+export function getQuestLinkRefusal(stateAdapter, bookId, questId, options = {}) {
+    if (typeof stateAdapter?.canLinkQuestToBook !== 'function') return null;
+    const check = stateAdapter.canLinkQuestToBook(bookId, questId, options);
+    return check?.ok === false ? questLinkRefusalMessage(check.reason) : null;
+}
+
+/**
+ * Like getQuestLinkRefusal, for several quests that will be linked together (each quest's
+ * bookId and id), counting the earlier quests of the batch against each book.
+ * @param {object} stateAdapter
+ * @param {Array<{ id?: string, bookId?: string }>} quests
+ * @returns {string|null} the first refusal message, or null when every link is allowed
+ */
+export function getBatchQuestLinkRefusal(stateAdapter, quests) {
+    if (typeof stateAdapter?.getBook !== 'function') return null;
+    const learned = typeof stateAdapter.getLearnedAbilities === 'function' ? stateAdapter.getLearnedAbilities() : [];
+    const liveQuestIds = typeof stateAdapter.getLiveQuestIds === 'function' ? stateAdapter.getLiveQuestIds() : null;
+    const pendingByBook = new Map();
+    for (const quest of quests || []) {
+        if (!quest?.bookId || !quest.id) continue;
+        const book = stateAdapter.getBook(quest.bookId);
+        if (!book) continue;
+        const pending = pendingByBook.get(quest.bookId) || [];
+        const questIds = [...getLinkedQuestIds(book, { liveQuestIds, keepId: quest.id }), ...pending];
+        const check = evaluateQuestLink({ links: { questIds } }, quest.id, learned);
+        if (!check.ok) return questLinkRefusalMessage(check.reason);
+        if (!questIds.includes(quest.id)) pendingByBook.set(quest.bookId, [...pending, quest.id]);
+    }
+    return null;
+}
+
+/**
+ * Link questId to bookId, showing the refusal toast when one book, one quest blocks it.
+ * @param {object} stateAdapter
+ * @param {string} bookId
+ * @param {string} questId
+ * @param {{ allowSecondLink?: boolean }} [options] - see stateAdapter.canLinkQuestToBook
+ * @returns {boolean} true if linked (or already linked)
+ */
+export function linkQuestToBookOrNotify(stateAdapter, bookId, questId, options = {}) {
+    if (stateAdapter.linkQuestToBook(bookId, questId, options) !== false) return true;
+    const refusal = getQuestLinkRefusal(stateAdapter, bookId, questId, options);
+    if (refusal) toast.error(refusal);
+    return false;
+}
+
+/**
  * Links an existing active quest to a book.
  * If the quest is already linked to a different book, unlinks from the old book first.
+ * Refused (returns false, nothing changed) when the book cannot take another quest;
+ * the caller shows getQuestLinkRefusal() to the keeper.
  * @param {string} questId
  * @param {string} bookId
  * @param {object} stateAdapter
@@ -63,6 +121,7 @@ export function linkExistingQuestToBook(questId, bookId, stateAdapter) {
 
     const book = stateAdapter.getBook(bookId);
     if (!book) return false;
+    if (getQuestLinkRefusal(stateAdapter, bookId, questId)) return false;
 
     // Unlink from previous book if re-linking
     const previousBookId = quest.bookId;
@@ -77,13 +136,13 @@ export function linkExistingQuestToBook(questId, bookId, stateAdapter) {
         coverUrl: book.cover || undefined,
     });
 
-    stateAdapter.linkQuestToBook(bookId, questId);
-
-    return true;
+    return stateAdapter.linkQuestToBook(bookId, questId) !== false;
 }
 
 /**
  * Creates an Extra Credit quest for a book that was read outside the quest pool.
+ * Refused (returns null, nothing created) when the book cannot take another quest;
+ * the caller shows getQuestLinkRefusal() to the keeper.
  * @param {string} bookId
  * @param {object} stateAdapter
  * @returns {object|null}
@@ -91,6 +150,9 @@ export function linkExistingQuestToBook(questId, bookId, stateAdapter) {
 export function createExtraCreditForBook(bookId, stateAdapter) {
     const book = stateAdapter.getBook(bookId);
     if (!book) return null;
+
+    const id = generateQuestId();
+    if (getQuestLinkRefusal(stateAdapter, bookId, id)) return null;
 
     const type = '⭐ Extra Credit';
     const prompt = 'Book read outside of quest pool';
@@ -100,7 +162,7 @@ export function createExtraCreditForBook(bookId, stateAdapter) {
     const year = String(now.getFullYear());
 
     const quest = {
-        id: generateQuestId(),
+        id,
         type,
         prompt,
         bookId,

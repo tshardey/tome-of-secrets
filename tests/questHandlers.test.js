@@ -277,6 +277,25 @@ describe('Quest Handlers', () => {
             expect(quests[0].prompt).toBe(data.dungeonRooms['3'].challenge);
         });
 
+        it('a completed room + encounter on one book pays $15 then the $10 secondary base', () => {
+            formElements.dungeonRoomSelect.value = '2';
+            formElements.dungeonEncounterSelect.value = 'Mysterious Nymph';
+            formElements.dungeonActionToggle.checked = true;
+            formElements.statusSelect.value = 'completed';
+            const book = { id: 'test-book-id', title: 'Test Book', links: { questIds: [], curriculumPromptIds: [] } };
+            const handler = new DungeonQuestHandler(formElements, {
+                ...data,
+                getBook: (id) => (id === book.id ? book : null)
+            });
+
+            const quests = handler.createQuests();
+
+            expect(quests).toHaveLength(2);
+            expect(quests[0].bookId).toBe('test-book-id');
+            expect(quests[0].rewards.dollars).toBe(15);
+            expect(quests[1].rewards.dollars).toBe(10);
+        });
+
         it('should include rewards in dungeon quest', () => {
             formElements.dungeonRoomSelect.value = '1';
             formElements.dungeonEncounterSelect.value = '';

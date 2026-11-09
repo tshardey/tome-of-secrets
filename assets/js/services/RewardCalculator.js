@@ -11,6 +11,7 @@ import { ModifierPipeline } from './ModifierPipeline.js';
 import { EffectRegistry } from './EffectRegistry.js';
 import { TriggerPayload } from './TriggerPayload.js';
 import { TRIGGERS, MODIFIER_TYPES, RESOURCES } from './effectSchema.js';
+import { isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
 
 /**
  * Represents a reward package with XP, dollars (the real-money Fund), blueprints, and items.
@@ -489,10 +490,38 @@ export class RewardCalculator {
     }
 
     /**
+     * A quest that is its book's second link (cleared through a multi-quest ability) pays
+     * secondaryQuestBase instead of questBase. Only the base changes; bonuses apply normally.
+     * Mutates rewards in place.
+     * @param {Reward} rewards - base rewards, before the pipeline runs
+     * @param {Object} quest - quest being completed (bookId, id)
+     * @param {function(string): Object|null} [getBook]
+     * @param {boolean|null} [isSecondaryQuest] - caller's verdict (e.g. a batch whose links are
+     *   not stored yet); null reads it from the book's stored links
+     * @param {Object|null} [stateAdapter] - preferred link lookup (ignores stale links); getBook is the fallback
+     * @private
+     */
+    static _applySecondaryQuestBase(rewards, quest, getBook, isSecondaryQuest = null, stateAdapter = null) {
+        if (rewards.dollars !== GAME_CONFIG.rewards.questBase.dollars) return;
+        let secondary = false;
+        if (typeof isSecondaryQuest === 'boolean') {
+            secondary = isSecondaryQuest;
+        } else if (quest?.bookId && typeof stateAdapter?.isSecondaryQuestForBook === 'function') {
+            secondary = stateAdapter.isSecondaryQuestForBook(quest.bookId, quest.id);
+        } else if (quest?.bookId && typeof getBook === 'function') {
+            secondary = isSecondaryQuestOnBook(getBook(quest.bookId), quest.id);
+        }
+        if (!secondary) return;
+        rewards.dollars = GAME_CONFIG.rewards.secondaryQuestBase.dollars;
+        rewards.syncReceiptBase();
+    }
+
+    /**
      * Calculate final rewards for a quest with all modifiers
      * @param {string} type - Quest type
      * @param {string} prompt - Quest prompt
-     * @param {Object} options - appliedBuffs, background, quest, wizardSchool, stateAdapter, getBook, baseRewardOverride
+     * @param {Object} options - appliedBuffs, background, quest, wizardSchool, stateAdapter, getBook, baseRewardOverride,
+     *   isSecondaryQuest (optional override of the book-link lookup for the $10 secondary base)
      * @returns {Reward}
      */
     static calculateFinalRewards(type, prompt, options = {}) {
@@ -507,12 +536,14 @@ export class RewardCalculator {
             encounterName = null,
             isBefriend = true,
             stateAdapter = null,
-            getBook = null
+            getBook = null,
+            isSecondaryQuest = null
         } = options;
 
         const rewards = baseRewardOverride
             ? baseRewardOverride.clone()
             : this.getBaseRewards(type, prompt, { isEncounter, roomNumber, encounterName, isBefriend });
+        this._applySecondaryQuestBase(rewards, quest, getBook, isSecondaryQuest, stateAdapter);
 
         const formData = {
             ...(stateAdapter?.formData || {}),

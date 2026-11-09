@@ -412,6 +412,66 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
     });
 });
 
+describe('RewardCalculator - secondary quest base (one book, two quests)', () => {
+    const book = { id: 'book-2q', title: 'Two Quest Book', links: { questIds: ['q-first', 'q-second'], curriculumPromptIds: [] } };
+    const getBook = (id) => (id === book.id ? book : null);
+
+    afterEach(() => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    });
+
+    test('secondary quest for a book pays $10 base, item bonuses still apply', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
+        const quest = { id: 'q-second', bookId: book.id, type: '♥ Organize the Stacks', tags: ['cozy'] };
+        const final = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            appliedBuffs: ['[Item] Coffee Elemental'],
+            quest,
+            getBook
+        });
+
+        expect(final.receipt.base.dollars).toBe(10);
+        expect(final.dollars).toBe(12); // $10 secondary base + Coffee Elemental $2
+        expect(final.receipt.final.dollars).toBe(12);
+        expect(final.modifiedBy).toContain('Coffee Elemental');
+    });
+
+    test('the first quest on the same book keeps the $15 base', () => {
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { id: 'q-first', bookId: book.id, type: '⭐ Extra Credit' },
+            getBook
+        });
+        expect(final.dollars).toBe(15);
+        expect(final.receipt.base.dollars).toBe(15);
+    });
+
+    test('quest without bookId pays $15', () => {
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { id: 'q-second', type: '⭐ Extra Credit' },
+            getBook
+        });
+        expect(final.dollars).toBe(15);
+    });
+
+    test('prefers the state adapter verdict (which ignores stale links) over raw book links', () => {
+        const stateAdapter = { state: characterState, formData: {}, isSecondaryQuestForBook: jest.fn(() => false) };
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { id: 'q-second', bookId: book.id, type: '⭐ Extra Credit' },
+            getBook,
+            stateAdapter
+        });
+        expect(stateAdapter.isSecondaryQuestForBook).toHaveBeenCalledWith(book.id, 'q-second');
+        expect(final.dollars).toBe(15);
+    });
+
+    test('an explicit isSecondaryQuest verdict overrides the stored links', () => {
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { bookId: 'unknown-book', type: '⭐ Extra Credit' },
+            isSecondaryQuest: true
+        });
+        expect(final.dollars).toBe(10);
+    });
+});
+
 describe('RewardCalculator - Book tags in TriggerPayload', () => {
     test('should include book tags in pipeline payload via getBook', () => {
         const quest = { bookId: 'book-123', type: '♥ Organize the Stacks' };

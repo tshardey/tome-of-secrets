@@ -10,11 +10,20 @@ jest.mock('../assets/js/services/RewardCalculator.js', () => ({
     }
 }));
 
+jest.mock('../assets/js/ui/toast.js', () => ({
+    toast: { success: jest.fn(), error: jest.fn(), info: jest.fn(), warning: jest.fn() }
+}));
+
 import {
     getUnlinkedActiveQuests,
     linkExistingQuestToBook,
     createExtraCreditForBook,
+    getQuestLinkRefusal,
+    getBatchQuestLinkRefusal,
+    linkQuestToBookOrNotify,
 } from '../assets/js/utils/questBookLinker.js';
+import { evaluateQuestLink } from '../assets/js/utils/questLinkRules.js';
+import { toast } from '../assets/js/ui/toast.js';
 
 function createMockStateAdapter(activeQuests = [], books = {}) {
     const quests = [...activeQuests];
@@ -215,5 +224,64 @@ describe('createExtraCreditForBook', () => {
         const quest = createExtraCreditForBook('b1', adapter);
         expect(quest.month).toBe(expectedMonth);
         expect(quest.year).toBe(expectedYear);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// One book, one quest
+// ---------------------------------------------------------------------------
+describe('one book, one quest guard', () => {
+    function createGuardedAdapter(activeQuests, books, learned = []) {
+        const adapter = createMockStateAdapter(activeQuests, books);
+        adapter.getLearnedAbilities = () => learned;
+        adapter.canLinkQuestToBook = (bookId, questId) => evaluateQuestLink(books[bookId], questId, learned);
+        adapter.linkQuestToBook = jest.fn((bookId, questId) => adapter.canLinkQuestToBook(bookId, questId).ok);
+        return adapter;
+    }
+    const linkedBook = () => ({ title: 'Taken', author: 'A', links: { questIds: ['q-old'] } });
+
+    afterEach(() => jest.clearAllMocks());
+
+    test('linkExistingQuestToBook refuses an already-linked book and changes nothing', () => {
+        const adapter = createGuardedAdapter(
+            [{ id: 'q1', type: 'Genre Quest', prompt: 'p', bookId: 'b-prev' }],
+            { b1: linkedBook() }
+        );
+        expect(linkExistingQuestToBook('q1', 'b1', adapter)).toBe(false);
+        expect(adapter.unlinkQuestFromBook).not.toHaveBeenCalled();
+        expect(adapter.updateActiveQuest).not.toHaveBeenCalled();
+        expect(getQuestLinkRefusal(adapter, 'b1', 'q1')).toBe('This book is already linked to a quest.');
+    });
+
+    test('linkExistingQuestToBook allows a second link with a multi-quest ability', () => {
+        const adapter = createGuardedAdapter(
+            [{ id: 'q1', type: 'Genre Quest', prompt: 'p' }],
+            { b1: linkedBook() },
+            ['Irresistible Charm']
+        );
+        expect(linkExistingQuestToBook('q1', 'b1', adapter)).toBe(true);
+        expect(adapter.linkQuestToBook).toHaveBeenCalledWith('b1', 'q1');
+    });
+
+    test('createExtraCreditForBook refuses an already-linked book without creating a quest', () => {
+        const adapter = createGuardedAdapter([], { b1: linkedBook() });
+        expect(createExtraCreditForBook('b1', adapter)).toBeNull();
+        expect(adapter.addActiveQuests).not.toHaveBeenCalled();
+    });
+
+    test('linkQuestToBookOrNotify shows the max-links toast', () => {
+        const adapter = createGuardedAdapter([], { b1: { links: { questIds: ['a', 'b'] } } }, ['Quick Shot']);
+        expect(linkQuestToBookOrNotify(adapter, 'b1', 'c')).toBe(false);
+        expect(toast.error).toHaveBeenCalledWith('A book can complete at most two quests.');
+    });
+
+    test('getBatchQuestLinkRefusal counts earlier quests in the batch', () => {
+        const books = { b1: { links: { questIds: [] } } };
+        const batch = [{ id: 'room', bookId: 'b1' }, { id: 'encounter', bookId: 'b1' }];
+        expect(getBatchQuestLinkRefusal(createGuardedAdapter([], books), batch))
+            .toBe('This book is already linked to a quest.');
+        expect(getBatchQuestLinkRefusal(createGuardedAdapter([], books, ['Quick Shot']), batch)).toBeNull();
+        expect(getBatchQuestLinkRefusal(createGuardedAdapter([], books, ['Quick Shot']), [...batch, { id: 'third', bookId: 'b1' }]))
+            .toBe('A book can complete at most two quests.');
     });
 });

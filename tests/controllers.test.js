@@ -916,6 +916,11 @@ describe('Controllers', () => {
             expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
             const newest = realStateAdapter.getCompletedQuests()[1];
             expect(newest.bookId).toBe('book-a');
+            // Evocation grants the book its second quest, which pays the $10 secondary base.
+            expect(realStateAdapter.getBook('book-a').links.questIds).toEqual(['quest-completed', 'quest-active']);
+            expect(newest.receipt.base.dollars).toBe(10);
+            expect(newest.rewards.dollars).toBeGreaterThanOrEqual(10);
+            expect(newest.rewards.dollars).toBeLessThan(15);
             expect(realStateAdapter.isCooldownAvailable('school:Evocation', 'March', '2026')).toBe(false);
 
             promptSpy.mockRestore();
@@ -934,6 +939,17 @@ describe('Controllers', () => {
                     dateAdded: new Date().toISOString(),
                     dateCompleted: new Date().toISOString(),
                     links: { questIds: ['quest-completed'], curriculumPromptIds: [] }
+                },
+                'book-b': {
+                    id: 'book-b',
+                    title: 'Book B',
+                    author: 'Author B',
+                    cover: null,
+                    pageCount: 200,
+                    status: 'completed',
+                    dateAdded: new Date().toISOString(),
+                    dateCompleted: new Date().toISOString(),
+                    links: { questIds: ['quest-completed-b'], curriculumPromptIds: [] }
                 }
             };
             state[STORAGE_KEYS.COMPLETED_QUESTS] = [{
@@ -946,6 +962,17 @@ describe('Controllers', () => {
                 month: 'March',
                 year: '2026',
                 rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                buffs: []
+            }, {
+                id: 'quest-completed-b',
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                bookId: 'book-b',
+                book: 'Book B',
+                bookAuthor: 'Author B',
+                month: 'March',
+                year: '2026',
+                rewards: { xp: 15, items: [] },
                 buffs: []
             }];
             state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [
@@ -1007,9 +1034,11 @@ describe('Controllers', () => {
             controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
 
             const promptSpy = jest.spyOn(window, 'prompt')
+                .mockReturnValueOnce('1') // March: Book A
+                .mockReturnValueOnce('1') // March: first active quest
+                .mockReturnValueOnce('1') // April: Book A again (already has two quests)
                 .mockReturnValueOnce('1')
-                .mockReturnValueOnce('1')
-                .mockReturnValueOnce('1')
+                .mockReturnValueOnce('2') // April: Book B
                 .mockReturnValueOnce('1');
 
             const button = document.createElement('button');
@@ -1022,19 +1051,26 @@ describe('Controllers', () => {
 
             // First use in March succeeds
             controller.handleActivateAbility(button);
-            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
 
             // Second use in March is blocked by cooldown
             controller.handleActivateAbility(button);
-            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
 
-            // New month allows activation again
+            // New month: Book A already holds two quests, so a third is refused (cooldown kept)
             monthInput.value = 'April';
             controller.handleActivateAbility(button);
             expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(realStateAdapter.isCooldownAvailable('school:Evocation', 'April', '2026')).toBe(true);
+
+            // ...and Book B can take its second quest
+            controller.handleActivateAbility(button);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(4);
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
+            expect(realStateAdapter.getCompletedQuests()[3].receipt.base.dollars).toBe(10);
 
             promptSpy.mockRestore();
         });

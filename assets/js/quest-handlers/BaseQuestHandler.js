@@ -9,6 +9,7 @@ import { RewardCalculator, Reward } from '../services/RewardCalculator.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { Validator, required, selected, conditional } from '../services/Validator.js';
 import { characterState } from '../character-sheet/state.js';
+import { getLinkedQuestIds, isSecondaryQuestInBatch } from '../utils/questLinkRules.js';
 
 export class BaseQuestHandler {
     /**
@@ -116,9 +117,10 @@ export class BaseQuestHandler {
      * @param {Array} selectedBuffs - Selected buff/item names
      * @param {string} background - Background key
      * @param {string} wizardSchool - Wizard school key
+     * @param {{ isSecondaryQuest?: boolean|null }} [options] - isSecondaryQuest overrides the book-link lookup
      * @returns {Reward} Final rewards with all modifiers applied
      */
-    calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null) {
+    calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null, options = {}) {
         const stateAdapter = this.data?.rewardStateAdapter || null;
         const getBook =
             stateAdapter && typeof stateAdapter.getBook === 'function'
@@ -142,7 +144,8 @@ export class BaseQuestHandler {
             encounterName: quest.encounterName || null,
             isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
             stateAdapter: adapter,
-            getBook
+            getBook,
+            isSecondaryQuest: options.isSecondaryQuest ?? null
         });
     }
 
@@ -176,14 +179,29 @@ export class BaseQuestHandler {
      */
     processCompletedQuests(quests, selectedBuffs, background, wizardSchool = null) {
         const getBook = this.data && typeof this.data.getBook === 'function' ? this.data.getBook : null;
+        // Book links for this batch are stored only after the quests are added, so count the
+        // earlier quests of the batch on each book to find the secondary ($10 base) quest.
+        const pendingLinksByBook = new Map();
+        const rewardAdapter = this.data?.rewardStateAdapter;
+        const liveQuestIds = typeof rewardAdapter?.getLiveQuestIds === 'function' ? rewardAdapter.getLiveQuestIds() : null;
         return quests.map(quest => {
             if (getBook) BaseQuestHandler.enrichQuestWithBookPageCount(quest, getBook);
+            let isSecondaryQuest = null;
+            const book = getBook && quest.bookId ? getBook(quest.bookId) : null;
+            if (book) {
+                const earlier = pendingLinksByBook.get(quest.bookId) || 0;
+                isSecondaryQuest = isSecondaryQuestInBatch(book, quest.id, earlier, { liveQuestIds });
+                if (!(quest.id && getLinkedQuestIds(book, { liveQuestIds, keepId: quest.id }).includes(quest.id))) {
+                    pendingLinksByBook.set(quest.bookId, earlier + 1);
+                }
+            }
             const finalRewards = this.calculateFinalRewards(
                 quest.rewards,
                 quest,
                 selectedBuffs,
                 background,
-                wizardSchool
+                wizardSchool,
+                { isSecondaryQuest }
             );
             return {
                 ...quest,

@@ -23,6 +23,7 @@ import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
+import { linkQuestToBookOrNotify, getQuestLinkRefusal, getBatchQuestLinkRefusal } from '../utils/questBookLinker.js';
 import { createBookSelector } from '../utils/bookSelector.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 
@@ -518,8 +519,13 @@ export class QuestController extends BaseController {
         const questId = originalQuest.id || null;
         const previousBookId = originalQuest.bookId || null;
         if (selectedBookId && questId && selectedBookId !== previousBookId) {
+            const linkRefusal = getQuestLinkRefusal(stateAdapter, selectedBookId, questId);
+            if (linkRefusal) {
+                toast.error(linkRefusal);
+                return;
+            }
             if (previousBookId) stateAdapter.unlinkQuestFromBook(previousBookId, questId);
-            stateAdapter.linkQuestToBook(selectedBookId, questId);
+            linkQuestToBookOrNotify(stateAdapter, selectedBookId, questId);
         }
 
         // Preserve restorationData if it exists (for restoration project quests)
@@ -689,12 +695,19 @@ export class QuestController extends BaseController {
                 }
             });
             
+            // One book, one quest: refuse the whole add before anything is stored.
+            const linkRefusal = getBatchQuestLinkRefusal(stateAdapter, quests);
+            if (linkRefusal) {
+                toast.error(linkRefusal);
+                return;
+            }
+
             const status = formElements.statusSelect?.value || 'active';
 
             // Add quests to appropriate list and link each to its book (book-first)
             if (status === 'active') {
                 stateAdapter.addActiveQuests(quests);
-                quests.forEach(q => { if (q.bookId && q.id) stateAdapter.linkQuestToBook(q.bookId, q.id); });
+                quests.forEach(q => { if (q.bookId && q.id) linkQuestToBookOrNotify(stateAdapter, q.bookId, q.id); });
                 uiModule.renderActiveAssignments();
             } else if (status === 'completed') {
                 // Track if this is a new book
@@ -718,7 +731,7 @@ export class QuestController extends BaseController {
 
                 // Add to completed quests and link each to its book (book-first)
                 stateAdapter.addCompletedQuests(quests);
-                quests.forEach(q => { if (q.bookId && q.id) stateAdapter.linkQuestToBook(q.bookId, q.id); });
+                quests.forEach(q => { if (q.bookId && q.id) linkQuestToBookOrNotify(stateAdapter, q.bookId, q.id); });
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
@@ -989,13 +1002,27 @@ export class QuestController extends BaseController {
             if (selectedBook.bookId) {
                 updates.bookId = selectedBook.bookId;
             }
-            stateAdapter.updateQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, selectedQuestIndex, updates);
-            if (
+            const linkBook = Boolean(
                 selectedBook.bookId &&
                 selectedQuest?.id &&
                 typeof stateAdapter.linkQuestToBook === 'function'
-            ) {
-                stateAdapter.linkQuestToBook(selectedBook.bookId, selectedQuest.id);
+            );
+            // Evocation grants this book its second quest (still capped at two); it pays the $10 base.
+            const evocationLink = { allowSecondLink: true };
+            if (linkBook) {
+                const linkRefusal = getQuestLinkRefusal(stateAdapter, selectedBook.bookId, selectedQuest.id, evocationLink);
+                if (linkRefusal) {
+                    toast.error(linkRefusal);
+                    return;
+                }
+            }
+            const previousBookId = selectedQuest?.bookId || null;
+            if (linkBook && previousBookId && previousBookId !== selectedBook.bookId) {
+                stateAdapter.unlinkQuestFromBook(previousBookId, selectedQuest.id);
+            }
+            stateAdapter.updateQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, selectedQuestIndex, updates);
+            if (linkBook) {
+                linkQuestToBookOrNotify(stateAdapter, selectedBook.bookId, selectedQuest.id, evocationLink);
             }
 
             this.handleCompleteQuest(selectedQuestIndex);
@@ -1149,8 +1176,9 @@ export class QuestController extends BaseController {
         }
 
         // Ensure the completed quest is linked to its book for cascade / synergy logic
+        // (A legacy quest whose book already holds its quota keeps its bookId; the refusal is shown.)
         if (completedQuest.bookId && completedQuest.id && typeof stateAdapter.linkQuestToBook === 'function') {
-            stateAdapter.linkQuestToBook(completedQuest.bookId, completedQuest.id);
+            linkQuestToBookOrNotify(stateAdapter, completedQuest.bookId, completedQuest.id);
         }
 
         // Snapshot book cover onto quest so archive "Cover" toggle shows it even if the book is later removed
@@ -1785,8 +1813,15 @@ export class QuestController extends BaseController {
 
         // Update book links: unlink from old, link to new
         if (questId) {
+            const linkRefusal = selectedBookId && selectedBookId !== previousBookId
+                ? getQuestLinkRefusal(this.stateAdapter, selectedBookId, questId)
+                : null;
+            if (linkRefusal) {
+                toast.error(linkRefusal);
+                return;
+            }
             if (previousBookId && previousBookId !== selectedBookId) this.stateAdapter.unlinkQuestFromBook(previousBookId, questId);
-            if (selectedBookId) this.stateAdapter.linkQuestToBook(selectedBookId, questId);
+            if (selectedBookId) linkQuestToBookOrNotify(this.stateAdapter, selectedBookId, questId);
         }
 
         // Update quest (preserve prompt, restorationData, etc. from original). Include coverUrl so archive Cover toggle shows linked book.
