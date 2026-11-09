@@ -42,7 +42,7 @@ export const STORAGE_KEYS = Object.freeze({
     SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress',
     /** The Exchange's register: country names claimed once, ever, by side quest 13 branch B. */
     CLAIMED_COUNTRIES: 'claimedCountries',
-    // Shopping & book box tracking (rewards overhaul)
+    // Retired with the shopping page; kept only so the v18 migration can strip them from old saves.
     SHOPPING_LOG: 'shoppingLog',
     BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
     BOOK_BOX_HISTORY: 'bookBoxHistory',
@@ -89,9 +89,6 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
     STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
     STORAGE_KEYS.CLAIMED_COUNTRIES,
-    STORAGE_KEYS.SHOPPING_LOG,
-    STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
-    STORAGE_KEYS.BOOK_BOX_HISTORY,
     STORAGE_KEYS.FUND_BALANCE_CENTS,
     STORAGE_KEYS.FUND_LEDGER,
     STORAGE_KEYS.QUEST_DRAW_HELPER_STATE,
@@ -127,9 +124,6 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
         [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
         [STORAGE_KEYS.CLAIMED_COUNTRIES]: [],
-        [STORAGE_KEYS.SHOPPING_LOG]: [],
-        [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
-        [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
         [STORAGE_KEYS.FUND_BALANCE_CENTS]: 0,
         [STORAGE_KEYS.FUND_LEDGER]: [],
         [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},

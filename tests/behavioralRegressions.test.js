@@ -182,11 +182,6 @@ describe('Behavioral regressions - named game entities', () => {
             expect(namesAfter).toContain('Enchanted Focus');
         });
 
-        test.skip(
-            "The Archivist's Favor choice handling (reroll / +100 XP / 50% off) is not yet encoded in state",
-            () => {}
-        );
-
         test('Enchanted Focus usesLeft decrements on book complete and removes after 3 books', () => {
             const state = createEmptyCharacterState();
             state[STORAGE_KEYS.TEMPORARY_BUFFS] = [

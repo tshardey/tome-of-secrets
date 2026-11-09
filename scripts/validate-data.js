@@ -15,7 +15,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { findCatalogBanViolations, BAN_EXEMPT_FILES } from './catalogBans.js';
+import { findCatalogBanViolations } from './catalogBans.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -638,7 +638,7 @@ function validateAll() {
 
     console.log(`${BLUE}Checking catalog bans (multipliers, Ink/Paper, retired wording)...${RESET}`);
     const catalogFiles = fs.readdirSync(DATA_DIR)
-        .filter((name) => name.endsWith('.json') && !BAN_EXEMPT_FILES.has(name));
+        .filter((name) => name.endsWith('.json'));
     for (const filename of catalogFiles) {
         const json = loadJSON(filename);
         if (json) {

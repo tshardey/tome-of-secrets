@@ -38,7 +38,6 @@ const JSON_EXPORTS = {
     'temporaryBuffsFromRewards.json': 'temporaryBuffsFromRewards',
     'temporaryBuffs.json': 'temporaryBuffs',
     'levelRewards.json': 'levelRewards',
-    'shoppingOptions.json': 'shoppingOptions',
     'wings.json': 'wings',
     'restorationProjects.json': 'restorationProjects',
     'roomThemes.json': 'roomThemes',

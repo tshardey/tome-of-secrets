@@ -83,7 +83,7 @@ export async function loadState(form = null) {
 export async function saveState(form) {
     const characterData = {};
     for (const element of form.elements) {
-        if (element.id && element.type !== 'button' && element.type !== 'file' && !element.id.startsWith('new-quest-') && element.id !== 'item-select' && element.id !== 'ability-select' && element.id !== 'xp-needed') {
+        if (element.id && element.type !== 'button' && element.type !== 'file' && !element.id.startsWith('new-quest-') && !element.id.startsWith('fund-') && element.id !== 'item-select' && element.id !== 'ability-select' && element.id !== 'xp-needed') {
             characterData[element.id] = element.value;
         }
     }

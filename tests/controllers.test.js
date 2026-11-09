@@ -17,6 +17,10 @@ import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { calculateBlueprintReward } from '../assets/js/services/QuestRewardService.js';
 import { toast } from '../assets/js/ui/toast.js';
+import { FundController } from '../assets/js/controllers/FundController.js';
+import { buildFundLedgerViewModel } from '../assets/js/viewModels/fundLedgerViewModel.js';
+import { todayIsoDate } from '../assets/js/services/FundLedgerService.js';
+import { initializeDelegatedClickHandler } from '../assets/js/character-sheet/delegatedClickHandler.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -637,6 +641,59 @@ describe('Controllers', () => {
                     items: []
                 });
             }
+        });
+
+        describe("The Archivist's Favor choices", () => {
+            const markChoice = (controller, choiceId) => {
+                const target = document.createElement('button');
+                target.classList.add('mark-buff-used-btn');
+                target.dataset.index = '0';
+                if (choiceId) target.dataset.choiceId = choiceId;
+                return controller.handleClick(target);
+            };
+
+            let controller;
+            let updateCurrency;
+            beforeEach(() => {
+                updateCurrency = jest.fn();
+                controller = new BuffController(stateAdapter, form, dependencies);
+                controller.initialize(updateCurrency);
+                stateAdapter.getTemporaryBuffs = jest.fn(() => [{
+                    name: "The Archivist's Favor",
+                    status: 'active',
+                    duration: 'one-time'
+                }]);
+                stateAdapter.updateTemporaryBuff = jest.fn();
+            });
+
+            it('the +$10 option pays $10 into the Fund and marks the buff used', () => {
+                const realUpdateCurrency = jest.fn((rewards) => stateAdapter.addFunds(rewards.dollars));
+                controller.updateCurrency = realUpdateCurrency;
+                const before = stateAdapter.getFundBalanceCents();
+
+                expect(markChoice(controller, 'dollars')).toBe(true);
+                expect(realUpdateCurrency).toHaveBeenCalledWith({ xp: 0, dollars: 10, items: [] });
+                expect(stateAdapter.getFundBalanceCents()).toBe(before + 1000);
+                expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+            });
+
+            it('the +100 XP option pays XP and no dollars', () => {
+                expect(markChoice(controller, 'xp')).toBe(true);
+                expect(updateCurrency).toHaveBeenCalledWith({ xp: 100, dollars: 0, items: [] });
+            });
+
+            it('an unknown option id pays nothing and leaves the buff active', () => {
+                expect(markChoice(controller, 'gone')).toBe(true);
+                expect(updateCurrency).not.toHaveBeenCalled();
+                expect(stateAdapter.updateTemporaryBuff).not.toHaveBeenCalled();
+            });
+
+            it('the reroll option, or no option, pays nothing', () => {
+                expect(markChoice(controller, 'reroll')).toBe(true);
+                expect(markChoice(controller)).toBe(true);
+                expect(updateCurrency).not.toHaveBeenCalled();
+                expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledTimes(2);
+            });
         });
 
         it('should not pay a use-count buff when it is marked used (it pays per quest instead)', () => {
@@ -1896,6 +1953,171 @@ describe('Controllers', () => {
 
             getHelpersSpy.mockRestore();
             refreshSpy.mockRestore();
+        });
+    });
+
+    describe('FundController', () => {
+        let fundAdapter;
+        let fundForm;
+        let controller;
+        let confirmSpy;
+
+        const $ = (id) => document.getElementById(id);
+        const submitDeduction = (amount, note = '') => {
+            $('fund-deduct-amount').value = amount;
+            $('fund-deduct-note').value = note;
+            $('fund-deduct-submit').click();
+        };
+
+        beforeEach(() => {
+            document.body.innerHTML = `
+                <form id="character-sheet">
+                    <input type="number" id="fund-balance" step="0.01" />
+                    <input type="text" id="fund-deduct-amount" />
+                    <input type="text" id="fund-deduct-note" />
+                    <input type="date" id="fund-deduct-date" />
+                    <button type="button" id="fund-deduct-submit">Deduct</button>
+                    <p id="fund-deduct-error" hidden></p>
+                    <div id="fund-ledger"></div>
+                </form>
+            `;
+            fundForm = $('character-sheet');
+            fundAdapter = new StateAdapter(createEmptyCharacterState());
+            controller = new FundController(fundAdapter, fundForm, { saveState: jest.fn() });
+            controller.initialize();
+            confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+        });
+
+        afterEach(() => {
+            controller.destroy();
+            confirmSpy.mockRestore();
+        });
+
+        it('defaults the deduction date to today', () => {
+            expect($('fund-deduct-date').value).toBe(todayIsoDate());
+        });
+
+        it('submitting $20 with note deducts and renders under current month', () => {
+            fundAdapter.addFunds(50);
+            submitDeduction('$20', 'Legendarium purchase');
+
+            expect(fundAdapter.getFundBalanceCents()).toBe(3000);
+            expect(fundAdapter.getFundLedger()).toEqual([
+                expect.objectContaining({ amountCents: 2000, note: 'Legendarium purchase', date: todayIsoDate() })
+            ]);
+            expect($('fund-deduct-amount').value).toBe('');
+            expect($('fund-deduct-note').value).toBe('');
+            expect($('fund-balance').value).toBe('30');
+
+            const month = $('fund-ledger').querySelector('.fund-ledger-month');
+            const [currentMonth] = buildFundLedgerViewModel(fundAdapter.getFundLedger());
+            expect(month.querySelector('.fund-ledger-month-label').textContent).toBe(currentMonth.label);
+            expect(month.querySelector('.fund-ledger-month-total').textContent).toContain('$20');
+            const row = month.querySelector('.fund-ledger-entry');
+            expect(row.textContent).toContain('$20');
+            expect(row.textContent).toContain('Legendarium purchase');
+            expect(row.querySelector('[data-action="delete-fund-deduction"]').dataset.id)
+                .toBe(fundAdapter.getFundLedger()[0].id);
+        });
+
+        it('invalid amount shows error and does not deduct', () => {
+            fundAdapter.addFunds(50);
+            ['', '0', '-5', 'abc'].forEach((raw) => {
+                submitDeduction(raw);
+                expect($('fund-deduct-error').textContent).toBe('Enter an amount greater than $0.');
+                expect($('fund-deduct-error').hidden).toBe(false);
+            });
+            expect(fundAdapter.getFundBalanceCents()).toBe(5000);
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect(confirmSpy).not.toHaveBeenCalled();
+
+            fundAdapter.addFunds(2000);
+            submitDeduction('1,250.5');
+            expect($('fund-deduct-error').hidden).toBe(true);
+            expect(fundAdapter.getFundLedger()[0].amountCents).toBe(125050);
+        });
+
+        it('overdraft asks confirm; declining leaves balance unchanged', () => {
+            fundAdapter.addFunds(10);
+            confirmSpy.mockReturnValue(false);
+            submitDeduction('32');
+
+            expect(confirmSpy).toHaveBeenCalledWith('This will take your Fund below $0. Continue?');
+            expect(fundAdapter.getFundBalanceCents()).toBe(1000);
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect($('fund-deduct-amount').value).toBe('32');
+
+            confirmSpy.mockReturnValue(true);
+            submitDeduction('32');
+            expect(fundAdapter.getFundBalanceCents()).toBe(-2200);
+            expect($('fund-balance').value).toBe('-22');
+        });
+
+        it('does not ask confirm when the balance covers the deduction', () => {
+            fundAdapter.addFunds(20);
+            submitDeduction('20');
+            expect(confirmSpy).not.toHaveBeenCalled();
+            expect(fundAdapter.getFundBalanceCents()).toBe(0);
+        });
+
+        it('delete refunds', () => {
+            fundAdapter.addFunds(50);
+            submitDeduction('12.34', 'Paperback');
+            const button = $('fund-ledger').querySelector('[data-action="delete-fund-deduction"]');
+
+            expect(controller.handleClick(button)).toBe(true);
+            expect(fundAdapter.getFundBalanceCents()).toBe(5000);
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect($('fund-ledger').querySelector('.fund-ledger-entry')).toBeNull();
+            expect($('fund-ledger').textContent).toContain('No deductions yet');
+        });
+
+        it('cancelling the delete confirm keeps the entry', () => {
+            fundAdapter.addFunds(50);
+            submitDeduction('10');
+            confirmSpy.mockReturnValue(false);
+            const button = $('fund-ledger').querySelector('[data-action="delete-fund-deduction"]');
+
+            expect(controller.handleClick(button)).toBe(true);
+            expect(fundAdapter.getFundLedger()).toHaveLength(1);
+            expect(fundAdapter.getFundBalanceCents()).toBe(4000);
+        });
+
+        it('delete is routed through the delegated click handler', () => {
+            initializeDelegatedClickHandler(fundForm, {
+                ability: {}, inventory: {}, quest: {}, buff: {}, fund: controller
+            }, {});
+            fundAdapter.addFunds(5);
+            submitDeduction('5');
+            $('fund-ledger').querySelector('[data-action="delete-fund-deduction"]').click();
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect(fundAdapter.getFundBalanceCents()).toBe(500);
+        });
+
+        it('pressing Enter in the amount field deducts instead of submitting the form', () => {
+            fundAdapter.addFunds(10);
+            $('fund-deduct-amount').value = '4';
+            const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+            $('fund-deduct-amount').dispatchEvent(event);
+
+            expect(event.defaultPrevented).toBe(true);
+            expect(fundAdapter.getFundBalanceCents()).toBe(600);
+        });
+
+        it('editing #fund-balance sets cents', () => {
+            $('fund-balance').value = '123.45';
+            $('fund-balance').dispatchEvent(new Event('change', { bubbles: true }));
+            expect(fundAdapter.getFundBalanceCents()).toBe(12345);
+
+            $('fund-balance').value = '';
+            $('fund-balance').dispatchEvent(new Event('change', { bubbles: true }));
+            expect(fundAdapter.getFundBalanceCents()).toBe(12345);
+            expect($('fund-balance').value).toBe('123.45');
+        });
+
+        it('re-renders when the Fund changes elsewhere (quest payout)', () => {
+            fundAdapter.addFunds(15);
+            expect($('fund-balance').value).toBe('15');
         });
     });
 

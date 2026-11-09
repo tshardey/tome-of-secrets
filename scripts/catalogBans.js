@@ -19,12 +19,6 @@ export const BANNED_STAKE_KEYS = Object.freeze(['multiply', 'halve']);
 export const BANNED_TEXT_PATTERN = /\bink drops?\b|\bpaper scraps?\b|\bpage scraps?\b|\bworn pages?\b|\bjournal(?!is[mt])/i;
 
 /**
- * Catalog files excluded from the bans. shoppingOptions.json is still priced in Ink/Paper and is
- * deleted with the shopping page (dollar-economy plan, Task 7); drop it from here then.
- */
-export const BAN_EXEMPT_FILES = Object.freeze(new Set(['shoppingOptions.json']));
-
-/**
  * Walk one parsed catalog file and return a message for every banned construct.
  * @param {string} filename - e.g. "allItems.json" (used in messages)
  * @param {unknown} json - parsed file contents

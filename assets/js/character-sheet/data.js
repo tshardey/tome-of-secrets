@@ -20,7 +20,6 @@ import {
     temporaryBuffsFromRewards,
     temporaryBuffs,
     levelRewards,
-    shoppingOptions,
     wings,
     restorationProjects,
     roomThemes,
@@ -39,7 +38,7 @@ export const allGenres = (() => {
 })();
 
 // Re-export JSON data for backward compatibility
-export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, seriesCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects, roomThemes, bookTags };
+export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, seriesCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, wings, restorationProjects, roomThemes, bookTags };
 
 // atmosphericBuffs and other data are now imported from JSON exports above
 
@@ -269,3 +268,22 @@ export const sideQuests = (() => {
     }
     return result;
 })();
+
+/**
+ * Catalog data for a temporary buff (current or legacy source).
+ * @param {string} name
+ * @returns {Object|undefined}
+ */
+export function getTemporaryBuffData(name) {
+    return temporaryBuffs?.[name] || temporaryBuffsFromRewards?.[name];
+}
+
+/**
+ * The "choose one" options authored on a temporary buff, or [] when it has none.
+ * @param {string} name
+ * @returns {Array<{ id: string, label: string, rewardModifier?: Object }>}
+ */
+export function getTemporaryBuffChoices(name) {
+    const choices = getTemporaryBuffData(name)?.choices;
+    return Array.isArray(choices) ? choices : [];
+}

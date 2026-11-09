@@ -30,6 +30,12 @@ function shouldPersistElement(element) {
     if (element.id.startsWith('new-quest-')) {
         return false;
     }
+
+    // Exclude the Fund widget: its balance and ledger live in character state (StateAdapter),
+    // and the deduct form fields are transient.
+    if (element.id.startsWith('fund-')) {
+        return false;
+    }
     
     // Exclude quest creation dropdowns
     if (element.id === 'genre-quest-select' ||

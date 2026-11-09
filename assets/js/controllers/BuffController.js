@@ -103,7 +103,7 @@ export class BuffController extends BaseController {
         if (!tempBuffSelect || !tempBuffSelect.value) return;
 
         const buffName = tempBuffSelect.value;
-        const buffData = dataModule.temporaryBuffs?.[buffName] || dataModule.temporaryBuffsFromRewards?.[buffName];
+        const buffData = dataModule.getTemporaryBuffData(buffName);
         if (!buffData) return;
 
         // Calculate initial monthsRemaining based on duration
@@ -173,16 +173,24 @@ export class BuffController extends BaseController {
             if (buff) {
                 // Apply currency rewards when marking buff as used
                 if (this.updateCurrency && buff.duration === 'one-time') {
-                    // Get buff data to check for rewardModifier (check both new and legacy sources)
-                    const buffData = dataModule.temporaryBuffs?.[buff.name] || dataModule.temporaryBuffsFromRewards?.[buff.name];
+                    const buffData = dataModule.getTemporaryBuffData(buff.name);
+                    // "Choose one" buffs pay only the option the player picked (data-choice-id).
+                    const choiceId = target.dataset.choiceId;
+                    const choice = choiceId
+                        ? dataModule.getTemporaryBuffChoices(buff.name).find(c => c.id === choiceId)
+                        : null;
+                    // Stale button (option no longer in the catalog): leave the buff active.
+                    if (choiceId && !choice) return true;
+                    const rewardModifier = choiceId ? choice?.rewardModifier : buffData?.rewardModifier;
                     // Use-count buffs (Enchanted Focus, Story Surge, ...) pay per quest through their
                     // bonus card, so marking one used must not pay its per-quest amount again.
-                    if (buffData && buffData.rewardModifier && !(buffData.useCount > 0)) {
-                        const dollars = Number(buffData.rewardModifier.dollars) || 0;
+                    if (rewardModifier && !(buffData?.useCount > 0)) {
+                        const xp = Math.max(0, Number(rewardModifier.xp) || 0);
+                        const dollars = Math.max(0, Number(rewardModifier.dollars) || 0);
 
                         // Only apply currency if there are actual rewards (not just an empty rewardModifier object)
-                        if (dollars > 0) {
-                            this.updateCurrency({ xp: 0, dollars, items: [] });
+                        if (xp > 0 || dollars > 0) {
+                            this.updateCurrency({ xp, dollars, items: [] });
                         }
                     }
                 }

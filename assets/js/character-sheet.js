@@ -11,12 +11,10 @@ import { initializeSanctumPage } from './page-renderers/sanctumRenderer.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
-import { StateAdapter, STATE_EVENTS } from './character-sheet/stateAdapter.js';
-import { formatCents } from './services/FundLedgerService.js';
+import { StateAdapter } from './character-sheet/stateAdapter.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr } from './utils/helpers.js';
-import { initializeFormPersistence } from './character-sheet/formPersistence.js';
-import { initializeCurrencyWarning } from './character-sheet/currencyWarning.js';
+import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { initializeStateDependentUI } from './character-sheet/stateInitUI.js';
 import { RewardCalculator } from './services/RewardCalculator.js';
 import { defaultQuestMonthYearIfEmpty } from './character-sheet/calendarPeriod.js';
@@ -45,6 +43,7 @@ import { OtherQuestDeckController } from './controllers/OtherQuestDeckController
 import { LibraryController } from './controllers/LibraryController.js';
 import { CampaignsController } from './controllers/CampaignsController.js';
 import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
+import { FundController } from './controllers/FundController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -95,14 +94,6 @@ export async function initializeCharacterSheet() {
 
     const updateCurrency = createUpdateCurrency(stateAdapter, ui, dataModule);
 
-    // Read-only Fund balance placeholder (the Fund widget controller replaces this).
-    const renderFundBalanceDisplay = () => {
-        const fundDisplay = document.getElementById('fund-balance-display');
-        if (fundDisplay) fundDisplay.textContent = formatCents(stateAdapter.getFundBalanceCents());
-    };
-    renderFundBalanceDisplay();
-    stateAdapter.on(STATE_EVENTS.FUND_CHANGED, renderFundBalanceDisplay);
-
     stateAdapter.applyQuestDraftedEffects = createQuestDraftedHook({
         stateAdapter, updateCurrency, dataModule, form
     });
@@ -130,6 +121,7 @@ export async function initializeCharacterSheet() {
     const libraryController = new LibraryController(stateAdapter, form, dependencies);
     const campaignsController = new CampaignsController(stateAdapter, form, dependencies);
     const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
+    const fundController = new FundController(stateAdapter, form, dependencies);
 
     dependencies.onBookMarkedComplete = (result) => {
         (result.movedQuests || []).forEach((quest) => {
@@ -177,6 +169,7 @@ export async function initializeCharacterSheet() {
     libraryController.initialize();
     campaignsController.initialize();
     externalCurriculumController.initialize();
+    fundController.initialize();
 
     // --- COLLAPSIBLE PANELS (Add Book, Active Temporary Buffs, Draw Quest Cards) ---
     initializeCollapsiblePanels();
@@ -195,13 +188,18 @@ export async function initializeCharacterSheet() {
     dependencies.updateDeckActionsLabel = updateDeckActionsLabel;
 
     // --- MAIN EVENT HANDLERS ---
-    initializeCurrencyWarning(form);
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveState(form);
+        showSaveIndicator();
+    });
 
     initializeDelegatedClickHandler(form, {
         ability: abilityController,
         inventory: inventoryController,
         quest: questController,
-        buff: buffController
+        buff: buffController,
+        fund: fundController
     }, ui);
 
     initializeStateDependentUI({ ui, dataModule, stateAdapter, completedBooksSet });

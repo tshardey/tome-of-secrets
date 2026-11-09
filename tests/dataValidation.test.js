@@ -17,7 +17,7 @@ import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { findCatalogBanViolations, BAN_EXEMPT_FILES } from '../scripts/catalogBans.js';
+import { findCatalogBanViolations } from '../scripts/catalogBans.js';
 
 describe('Data Validation', () => {
     beforeEach(() => {
@@ -82,22 +82,16 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData.projectId).toBe('restore-card-catalog');
         });
 
-        test('should validate and default shopping/subscription state (v10)', () => {
+        test('should drop retired shopping/subscription state', () => {
             const state = {
-                [STORAGE_KEYS.SHOPPING_LOG]: [{ optionId: 'opt1', logDate: '2024-01-15', inkDrops: 5 }],
-                [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: { sub1: { id: 'sub1', company: 'Acme', tier: 'Standard', skipsAllowedPerYear: 2 } },
+                [STORAGE_KEYS.SHOPPING_LOG]: [{ optionId: 'opt1', logDate: '2024-01-15' }],
+                [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: { sub1: { id: 'sub1', company: 'Acme' } },
                 [STORAGE_KEYS.BOOK_BOX_HISTORY]: [{ subscriptionId: 'sub1', month: 'January', year: '2024', type: 'purchased' }]
             };
             const validated = validateCharacterState(state);
-            expect(Array.isArray(validated[STORAGE_KEYS.SHOPPING_LOG])).toBe(true);
-            expect(validated[STORAGE_KEYS.SHOPPING_LOG].length).toBe(1);
-            expect(validated[STORAGE_KEYS.SHOPPING_LOG][0].optionId).toBe('opt1');
-            expect(validated[STORAGE_KEYS.SHOPPING_LOG][0].inkDrops).toBe(5);
-            expect(typeof validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]).toBe('object');
-            expect(validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS].sub1.company).toBe('Acme');
-            expect(Array.isArray(validated[STORAGE_KEYS.BOOK_BOX_HISTORY])).toBe(true);
-            expect(validated[STORAGE_KEYS.BOOK_BOX_HISTORY].length).toBe(1);
-            expect(validated[STORAGE_KEYS.BOOK_BOX_HISTORY][0].type).toBe('purchased');
+            expect(validated).not.toHaveProperty(STORAGE_KEYS.SHOPPING_LOG);
+            expect(validated).not.toHaveProperty(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
+            expect(validated).not.toHaveProperty(STORAGE_KEYS.BOOK_BOX_HISTORY);
         });
 
         test('should add shelfCategory to validated books (v10)', () => {
@@ -912,7 +906,7 @@ describe('Integration: Load State with Validation and Migration', () => {
 describe('Catalog bans (dollar economy)', () => {
     const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
     const catalogFiles = fs.readdirSync(dataDir)
-        .filter((name) => name.endsWith('.json') && !BAN_EXEMPT_FILES.has(name));
+        .filter((name) => name.endsWith('.json'));
     const violationsFor = (predicate) => catalogFiles.flatMap((name) => {
         const json = JSON.parse(fs.readFileSync(path.join(dataDir, name), 'utf8'));
         return findCatalogBanViolations(name, json).filter(predicate);

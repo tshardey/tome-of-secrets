@@ -404,7 +404,16 @@ export function renderTemporaryBuffRow(buff, index) {
     actionCell.className = 'action-cell';
     
     if (buff.status === 'active' && buff.duration === 'one-time') {
-        actionCell.appendChild(createActionButton('Mark as Used', 'mark-buff-used-btn', index));
+        // "Choose one" buffs (The Archivist's Favor) get one mark-used button per option,
+        // so BuffController pays only the chosen option's reward.
+        const choices = data.getTemporaryBuffChoices(buff.name);
+        if (choices.length > 0) {
+            choices.forEach((choice) => {
+                actionCell.appendChild(createActionButton(choice.label, 'mark-buff-used-btn', index, { 'data-choice-id': choice.id }));
+            });
+        } else {
+            actionCell.appendChild(createActionButton('Mark as Used', 'mark-buff-used-btn', index));
+        }
     }
     if (buff.status === 'active') {
         actionCell.appendChild(createActionButton('Remove', 'remove-buff-btn', index));

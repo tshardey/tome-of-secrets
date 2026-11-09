@@ -8,7 +8,9 @@ import { initializeCharacterSheet } from '../assets/js/character-sheet.js';
 import { characterState, loadState, saveState } from '../assets/js/character-sheet/state.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
-import { formatCents } from '../assets/js/services/FundLedgerService.js';
+
+// The Fund balance input shows dollars; compare it in cents.
+const fundInputCents = () => Math.round(Number(document.getElementById('fund-balance').value) * 100);
 
 describe('Character Sheet', () => {
   beforeEach(async () => {
@@ -517,7 +519,7 @@ describe('Character Sheet', () => {
 
       it('should render all resource stat cards (Fund, Blueprints, SMP)', () => {
         const statCards = document.querySelectorAll('.rpg-stat-card');
-        const fundDisplay = document.querySelector('.rpg-stat-card #fund-balance-display');
+        const fundDisplay = document.querySelector('.rpg-stat-card #fund-balance');
         const blueprintsCard = document.querySelector('.rpg-stat-card label[for="dustyBlueprints"]');
         const smpCard = document.querySelector('.rpg-stat-card label[for="smp"]');
 
@@ -534,10 +536,18 @@ describe('Character Sheet', () => {
         expect(document.querySelector('.rpg-stats-panel').textContent).not.toMatch(/Ink Drops|Paper Scraps/);
       });
 
-      it('shows the Fund balance read-only, formatted in dollars', () => {
-        const fundDisplay = document.getElementById('fund-balance-display');
-        expect(fundDisplay.tagName).toBe('OUTPUT');
-        expect(fundDisplay.textContent).toBe(formatCents(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0));
+      it('shows the Fund balance as an editable dollar input', () => {
+        const fundInput = document.getElementById('fund-balance');
+        expect(fundInput.type).toBe('number');
+        expect(fundInput.step).toBe('0.01');
+        expect(fundInputCents()).toBe(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0);
+      });
+
+      it('renders the Fund deduct form and an empty deduction receipt', () => {
+        ['fund-deduct-amount', 'fund-deduct-note', 'fund-deduct-date', 'fund-deduct-submit', 'fund-deduct-error']
+          .forEach(id => expect(document.getElementById(id)).toBeTruthy());
+        expect(document.getElementById('fund-deduct-date').value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(document.getElementById('fund-ledger').textContent).toContain('No deductions yet');
       });
 
       it('should display currency inputs in stat cards', () => {
@@ -1277,7 +1287,7 @@ describe('Character Sheet', () => {
         // Level 2 rewards: $10 and +10 Blueprints
         expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1000);
         expect(characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(initialBlueprints + 10);
-        expect(document.getElementById('fund-balance-display').textContent).toBe(formatCents(initialFundCents + 1000));
+        expect(fundInputCents()).toBe(initialFundCents + 1000);
       });
 
       it('should update progress bar after leveling up', () => {
@@ -1821,7 +1831,7 @@ describe('Character Sheet', () => {
       completeBtnCurrency.click();
 
       expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1500);
-      expect(document.getElementById('fund-balance-display').textContent).toBe(formatCents(initialFundCents + 1500));
+      expect(fundInputCents()).toBe(initialFundCents + 1500);
       const completed = characterState.completedQuests[characterState.completedQuests.length - 1];
       expect(completed.rewards.dollars).toBe(15);
       expect(completed.rewards).not.toHaveProperty('inkDrops');

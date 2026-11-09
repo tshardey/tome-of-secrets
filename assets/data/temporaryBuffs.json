@@ -5,7 +5,12 @@
         "description": "Choose one: reroll a prompt, gain +100 XP, or gain +$10.",
         "duration": "one-time",
         "source": "Dungeon Completion Reward",
-        "rewardModifier": {}
+        "rewardModifier": {},
+        "choices": [
+            { "id": "reroll", "label": "Reroll a prompt" },
+            { "id": "xp", "label": "+100 XP", "rewardModifier": { "xp": 100 } },
+            { "id": "dollars", "label": "+$10", "rewardModifier": { "dollars": 10 } }
+        ]
     },
     "The Librarian's Hoard": {
         "id": "the-librarians-hoard",

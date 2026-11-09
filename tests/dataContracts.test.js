@@ -70,7 +70,6 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     const sanctumBenefits = loadJson('sanctumBenefits.json');
     const schoolBenefits = loadJson('schoolBenefits.json');
     const seriesCompletionRewards = loadJson('seriesCompletionRewards.json');
-    const shoppingOptions = loadJson('shoppingOptions.json');
     const sideQuestsDetailed = loadJson('sideQuestsDetailed.json');
     const temporaryBuffs = loadJson('temporaryBuffs.json');
     const temporaryBuffsFromRewards = loadJson('temporaryBuffsFromRewards.json');
@@ -384,22 +383,6 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             if (Object.prototype.hasOwnProperty.call(temporaryBuffsFromRewards, key)) {
                 expect(mergedByKey[key]).toEqual(temporaryBuffs[key]);
             }
-        });
-    });
-
-    test('shoppingOptions.json has unique ids and valid option shape', () => {
-        const validTypes = new Set(['book-purchase', 'item', 'subscription-month', 'special-edition']);
-        const ids = new Set();
-        Object.values(shoppingOptions).forEach((option) => {
-            expectString(option.id);
-            expect(ids.has(option.id)).toBe(false);
-            ids.add(option.id);
-            expectString(option.label);
-            expectString(option.description);
-            expectNonNegativeNumber(option.inkDrops);
-            expectNonNegativeNumber(option.paperScraps);
-            expect(typeof option.allowQuantity).toBe('boolean');
-            expect(validTypes.has(option.type)).toBe(true);
         });
     });
 

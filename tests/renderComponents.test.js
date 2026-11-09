@@ -704,6 +704,19 @@ describe('Render Components', () => {
             const row = renderTemporaryBuffRow(oneTimeBuff, 0);
             expect(row.querySelector('.mark-buff-used-btn')).toBeDefined();
         });
+
+        test("renders one mark-used button per choice for The Archivist's Favor", () => {
+            const row = renderTemporaryBuffRow({
+                name: "The Archivist's Favor",
+                description: 'Choose one',
+                duration: 'one-time',
+                status: 'active'
+            }, 2);
+            const buttons = Array.from(row.querySelectorAll('.mark-buff-used-btn'));
+            expect(buttons.map(b => b.dataset.choiceId)).toEqual(['reroll', 'xp', 'dollars']);
+            expect(buttons.map(b => b.textContent)).toEqual(['Reroll a prompt', '+100 XP', '+$10']);
+            expect(buttons.every(b => b.dataset.index === '2')).toBe(true);
+        });
     });
 
     describe('renderAbilityCard', () => {

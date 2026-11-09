@@ -167,15 +167,15 @@ describe('Cloud Sync - Loop Prevention', () => {
             window.removeEventListener('tos:localStateChanged', eventListener);
         });
 
-        it('syncs in-memory characterState when applying bookBoxSubscriptions (prevents next saveState from wiping cloud data)', async () => {
-            const subKey = STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS;
-            characterState[subKey] = {
-                stale: { id: 'stale', company: 'Stale RAM only', tier: '', defaultMonthlyCost: null, skipsAllowedPerYear: 0 }
-            };
+        it('syncs in-memory characterState when applying the fund ledger (prevents next saveState from wiping cloud data)', async () => {
+            const subKey = STORAGE_KEYS.FUND_LEDGER;
+            characterState[subKey] = [
+                { id: 'stale', date: '2026-10-01', amountCents: 100, note: 'Stale RAM only' }
+            ];
 
-            const cloudSubs = {
-                cloudSub: { id: 'cloudSub', company: 'From cloud', tier: 'Deluxe', defaultMonthlyCost: 39.99, skipsAllowedPerYear: 2 }
-            };
+            const cloudSubs = [
+                { id: 'cloudEntry', date: '2026-11-02', amountCents: 3200, note: 'From cloud' }
+            ];
 
             await applySnapshot({
                 version: 15,
@@ -189,12 +189,12 @@ describe('Cloud Sync - Loop Prevention', () => {
             });
 
             expect(characterState[subKey]).toEqual(cloudSubs);
-            const persisted = await getStateKey(subKey, {});
+            const persisted = await getStateKey(subKey, []);
             expect(persisted).toEqual(cloudSubs);
 
             // Snapshot payload must not share references with live state (mutate source → RAM unchanged)
-            cloudSubs.cloudSub.company = 'mutated';
-            expect(characterState[subKey].cloudSub.company).toBe('From cloud');
+            cloudSubs[0].note = 'mutated';
+            expect(characterState[subKey][0].note).toBe('From cloud');
         });
     });
 

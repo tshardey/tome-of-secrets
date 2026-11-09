@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from './storageKeys.js';
  * Attaches the consolidated delegated click handler to the form element.
  *
  * @param {HTMLElement} form - The form element to attach the click handler to
- * @param {{ ability, inventory, quest, buff }} controllers - Controller instances
+ * @param {{ ability, inventory, quest, buff, fund? }} controllers - Controller instances
  * @param {object} ui - The ui module (for renderCompletedQuests)
  */
 export function initializeDelegatedClickHandler(form, controllers, ui) {
@@ -81,6 +81,11 @@ export function initializeDelegatedClickHandler(form, controllers, ui) {
                 editButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
                 return;
             }
+        }
+
+        // Fund widget: delete a deduction (data-action="delete-fund-deduction", data-id)
+        if (controllers.fund?.handleClick && controllers.fund.handleClick(target)) {
+            return;
         }
 
         // Allow buttons without index if they're special buttons (delete-ability-btn, remove-passive-item-btn, equip-from-passive-btn, quest draw helper and ability activation actions)

@@ -62,8 +62,6 @@ There are three primary currencies that define your progress, plus a fourth for 
     *  Taming a *Familiar* in a *Dungeon Room* (+5 *Paper Scraps*)
     *  Triggering *Atmospheric Buffs* (+2 *Paper Scraps* per day, or +3 per day if the buff matches your Sanctum)
 
-*Note: See the [Shopping Episode]({{ site.baseurl }}/shopping.html) section for more details on creating books.*
-
 * **Dusty Blueprints:** A special currency used for **Library Restoration**. Spend Dusty Blueprints to complete Restoration Projects, which unlock **Display Slots** (passive item slots), **Adoption Slots** (passive familiar slots), and wing completion bonuses.
 
     **Earn Dusty Blueprints for:**
