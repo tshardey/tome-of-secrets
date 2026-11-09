@@ -76,6 +76,8 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.SHOPPING_LOG]: [],
             [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
             [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
+            [STORAGE_KEYS.FUND_BALANCE_CENTS]: 4250,
+            [STORAGE_KEYS.FUND_LEDGER]: [{ id: 'f1', date: '2026-11-08', amountCents: 3200, note: 'Hardcover' }],
             [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
             [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
             [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}

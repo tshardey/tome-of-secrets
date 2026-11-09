@@ -2,7 +2,8 @@
  * @jest-environment jsdom
  */
 import { StateAdapter, STATE_EVENTS } from '../assets/js/character-sheet/stateAdapter.js';
-import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { LARGE_STATE_KEYS } from '../assets/js/character-sheet/persistence.js';
 
 describe('StateAdapter', () => {
   let adapter;
@@ -444,6 +445,81 @@ describe('StateAdapter', () => {
     it('refundDungeonCompletionDraw returns false when none redeemed', () => {
       expect(adapter.refundDungeonCompletionDraw()).toBe(false);
       expect(adapter.getDungeonCompletionDrawsRedeemed()).toBe(0);
+    });
+  });
+
+  describe('Fund', () => {
+    it('addFunds adds whole dollars as cents and emits FUND_CHANGED', () => {
+      const handler = jest.fn();
+      adapter.on(STATE_EVENTS.FUND_CHANGED, handler);
+      expect(adapter.addFunds(15)).toBe(1500);
+      expect(adapter.getFundBalanceCents()).toBe(1500);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.FUND_BALANCE_CENTS))).toBe(1500);
+      expect(handler).toHaveBeenCalledWith({ balanceCents: 1500 });
+    });
+
+    it('addFunds ignores non-positive and non-numeric values', () => {
+      adapter.addFunds(15);
+      expect(adapter.addFunds(-5)).toBe(1500);
+      expect(adapter.addFunds(0)).toBe(1500);
+      expect(adapter.addFunds('10')).toBe(1500);
+      expect(adapter.addFunds(NaN)).toBe(1500);
+      expect(adapter.getFundBalanceCents()).toBe(1500);
+    });
+
+    it('deductFunds appends to the ledger and may take the balance negative; deleteFundDeduction refunds', () => {
+      adapter.addFunds(15);
+      const entry = adapter.deductFunds({ amountCents: 3200, note: 'x', date: '2026-11-08' });
+      expect(entry).toEqual(expect.objectContaining({ amountCents: 3200, note: 'x', date: '2026-11-08' }));
+      expect(typeof entry.id).toBe('string');
+      expect(adapter.getFundBalanceCents()).toBe(-1700);
+      expect(adapter.getFundLedger()).toHaveLength(1);
+
+      expect(adapter.deleteFundDeduction(entry.id)).toBe(true);
+      expect(adapter.getFundBalanceCents()).toBe(1500);
+      expect(adapter.getFundLedger()).toEqual([]);
+      expect(adapter.deleteFundDeduction(entry.id)).toBe(false);
+    });
+
+    it('deductFunds rejects non-positive or non-integer amounts', () => {
+      expect(adapter.deductFunds({ amountCents: 0 })).toBeNull();
+      expect(adapter.deductFunds({ amountCents: -100 })).toBeNull();
+      expect(adapter.deductFunds({ amountCents: 12.5 })).toBeNull();
+      expect(adapter.deductFunds({})).toBeNull();
+      expect(adapter.getFundLedger()).toEqual([]);
+      expect(adapter.getFundBalanceCents()).toBe(0);
+    });
+
+    it('deductFunds defaults the date to today', () => {
+      const entry = adapter.deductFunds({ amountCents: 100 });
+      expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(entry.note).toBe('');
+    });
+
+    it('setFundBalanceCents rounds to an integer', () => {
+      expect(adapter.setFundBalanceCents(1234.6)).toBe(1235);
+      expect(adapter.getFundBalanceCents()).toBe(1235);
+    });
+
+    it('deductFunds and deleteFundDeduction emit FUND_CHANGED with the new balance', () => {
+      const handler = jest.fn();
+      adapter.on(STATE_EVENTS.FUND_CHANGED, handler);
+      const entry = adapter.deductFunds({ amountCents: 500, date: '2026-11-08' });
+      expect(handler).toHaveBeenLastCalledWith({ balanceCents: -500 });
+      adapter.deleteFundDeduction(entry.id);
+      expect(handler).toHaveBeenLastCalledWith({ balanceCents: 0 });
+    });
+
+    it('fund ledger is IndexedDB-backed and the balance is a cloud-synced character key', () => {
+      expect(LARGE_STATE_KEYS.has(STORAGE_KEYS.FUND_LEDGER)).toBe(true);
+      expect(LARGE_STATE_KEYS.has(STORAGE_KEYS.FUND_BALANCE_CENTS)).toBe(false);
+      expect(CHARACTER_STATE_KEYS).toEqual(expect.arrayContaining([STORAGE_KEYS.FUND_BALANCE_CENTS, STORAGE_KEYS.FUND_LEDGER]));
+    });
+
+    it('getFundLedger returns a copy', () => {
+      adapter.deductFunds({ amountCents: 100, date: '2026-11-08' });
+      adapter.getFundLedger().pop();
+      expect(adapter.getFundLedger()).toHaveLength(1);
     });
   });
 

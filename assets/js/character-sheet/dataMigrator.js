@@ -781,7 +781,9 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
         STORAGE_KEYS.SHOPPING_LOG,
         STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
-        STORAGE_KEYS.BOOK_BOX_HISTORY
+        STORAGE_KEYS.BOOK_BOX_HISTORY,
+        STORAGE_KEYS.FUND_BALANCE_CENTS,
+        STORAGE_KEYS.FUND_LEDGER
     ];
 
     stateKeys.forEach(key => {
@@ -790,11 +792,11 @@ export function loadAndMigrateState() {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };
-        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS || key === STORAGE_KEYS.SHOPPING_LOG || key === STORAGE_KEYS.BOOK_BOX_HISTORY) {
+        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS || key === STORAGE_KEYS.SHOPPING_LOG || key === STORAGE_KEYS.BOOK_BOX_HISTORY || key === STORAGE_KEYS.FUND_LEDGER) {
             defaultValue = [];
         } else if (key === STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS) {
             defaultValue = {};
-        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
+        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS || key === STORAGE_KEYS.FUND_BALANCE_CENTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
             defaultValue = 'd6';

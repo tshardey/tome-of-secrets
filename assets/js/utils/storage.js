@@ -14,6 +14,7 @@ const CLOUD_SYNCED_LOCALSTORAGE_KEYS = new Set([
     'genreDiceSelection', // STORAGE_KEYS.GENRE_DICE_SELECTION
     'shelfBookColors', // STORAGE_KEYS.SHELF_BOOK_COLORS
     'dustyBlueprints', // STORAGE_KEYS.DUSTY_BLUEPRINTS
+    'fundBalanceCents', // STORAGE_KEYS.FUND_BALANCE_CENTS
     'completedRestorationProjects', // STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS
     'completedWings', // STORAGE_KEYS.COMPLETED_WINGS
     'passiveItemSlots', // STORAGE_KEYS.PASSIVE_ITEM_SLOTS

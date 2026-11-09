@@ -3,6 +3,7 @@ import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
 import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
+import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -32,7 +33,9 @@ const EVENTS = Object.freeze({
     CLAIMED_COUNTRIES_CHANGED: 'claimedCountriesChanged',
     // Book box subscriptions (rewards overhaul)
     BOOK_BOX_SUBSCRIPTIONS_CHANGED: 'bookBoxSubscriptionsChanged',
-    BOOK_BOX_HISTORY_CHANGED: 'bookBoxHistoryChanged'
+    BOOK_BOX_HISTORY_CHANGED: 'bookBoxHistoryChanged',
+    // Real-dollar Fund (dollar economy); payload { balanceCents }
+    FUND_CHANGED: 'fundChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -955,6 +958,89 @@ export class StateAdapter {
         void setStateKey(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
         this.emit(EVENTS.DUSTY_BLUEPRINTS_CHANGED, newValue);
         return true;
+    }
+
+    // ==========================================
+    // Fund (real dollars, stored as integer cents)
+    // ==========================================
+
+    getFundBalanceCents() {
+        const raw = this.state[STORAGE_KEYS.FUND_BALANCE_CENTS];
+        return Number.isFinite(raw) ? raw : 0;
+    }
+
+    /**
+     * Set the balance directly (manual corrections). Rounds to whole cents.
+     * Non-finite input is ignored.
+     * @param {number} cents
+     * @returns {number} the balance in cents
+     */
+    setFundBalanceCents(cents) {
+        if (typeof cents !== 'number' || !Number.isFinite(cents)) return this.getFundBalanceCents();
+        this._persistFundBalance(Math.round(cents));
+        return this.getFundBalanceCents();
+    }
+
+    /**
+     * Credit whole-dollar rewards to the Fund. Ignores values <= 0 and non-numbers.
+     * @param {number} dollars
+     * @returns {number} the new balance in cents
+     */
+    addFunds(dollars) {
+        if (typeof dollars !== 'number' || !Number.isFinite(dollars) || dollars <= 0) {
+            return this.getFundBalanceCents();
+        }
+        this._persistFundBalance(this.getFundBalanceCents() + Math.round(dollars * 100));
+        return this.getFundBalanceCents();
+    }
+
+    /**
+     * Record a deduction (a real purchase). The balance may go negative; the UI confirms first.
+     * @param {{ amountCents: number, note?: string, date?: string }} params
+     * @returns {{ id: string, date: string, amountCents: number, note: string } | null}
+     *   null when amountCents is not a positive integer
+     */
+    deductFunds({ amountCents, note = '', date } = {}) {
+        if (!Number.isInteger(amountCents) || amountCents <= 0) return null;
+        const entry = {
+            id: this._generateId(),
+            date: isIsoDate(date) ? date : todayIsoDate(),
+            amountCents,
+            note: typeof note === 'string' ? note.trim() : ''
+        };
+        const ledger = [...this.getFundLedger(), entry];
+        this.state[STORAGE_KEYS.FUND_LEDGER] = ledger;
+        void setStateKey(STORAGE_KEYS.FUND_LEDGER, ledger);
+        this._persistFundBalance(this.getFundBalanceCents() - amountCents);
+        return { ...entry };
+    }
+
+    /**
+     * Remove a deduction and refund its amount to the balance.
+     * @param {string} id
+     * @returns {boolean} true if an entry was removed
+     */
+    deleteFundDeduction(id) {
+        const ledger = this.getFundLedger();
+        const index = ledger.findIndex(e => e.id === id);
+        if (index === -1) return false;
+        const [removed] = ledger.splice(index, 1);
+        this.state[STORAGE_KEYS.FUND_LEDGER] = ledger;
+        void setStateKey(STORAGE_KEYS.FUND_LEDGER, ledger);
+        this._persistFundBalance(this.getFundBalanceCents() + removed.amountCents);
+        return true;
+    }
+
+    /** @returns {{ id: string, date: string, amountCents: number, note: string }[]} */
+    getFundLedger() {
+        const raw = this.state[STORAGE_KEYS.FUND_LEDGER];
+        return Array.isArray(raw) ? raw.map(e => ({ ...e })) : [];
+    }
+
+    _persistFundBalance(cents) {
+        this.state[STORAGE_KEYS.FUND_BALANCE_CENTS] = cents;
+        void setStateKey(STORAGE_KEYS.FUND_BALANCE_CENTS, cents);
+        this.emit(EVENTS.FUND_CHANGED, { balanceCents: cents });
     }
 
     // Completed Restoration Projects

@@ -46,6 +46,10 @@ export const STORAGE_KEYS = Object.freeze({
     SHOPPING_LOG: 'shoppingLog',
     BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
     BOOK_BOX_HISTORY: 'bookBoxHistory',
+    // Real-dollar Fund (dollar economy): balance in integer cents, plus the deduction ledger
+    FUND_BALANCE_CENTS: 'fundBalanceCents',
+    /** Deductions: [{ id, date: 'YYYY-MM-DD', amountCents, note }] */
+    FUND_LEDGER: 'fundLedger',
     /** Retired (Shroud removed). Kept only so the v18 migration can delete it from old saves. */
     CURSE_HELPER_STATE: 'curseHelperState',
     // Quest tab – monthly draw / dice helpers (usage and cooldown per source)
@@ -88,6 +92,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.SHOPPING_LOG,
     STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
     STORAGE_KEYS.BOOK_BOX_HISTORY,
+    STORAGE_KEYS.FUND_BALANCE_CENTS,
+    STORAGE_KEYS.FUND_LEDGER,
     STORAGE_KEYS.QUEST_DRAW_HELPER_STATE,
     STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS,
     STORAGE_KEYS.EFFECT_COOLDOWNS
@@ -124,6 +130,8 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.SHOPPING_LOG]: [],
         [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
         [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
+        [STORAGE_KEYS.FUND_BALANCE_CENTS]: 0,
+        [STORAGE_KEYS.FUND_LEDGER]: [],
         [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
         [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
         [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}

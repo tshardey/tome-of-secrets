@@ -429,6 +429,39 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.EXTERNAL_CURRICULUM].curriculums).toBeDefined();
             expect(typeof validated[STORAGE_KEYS.EXTERNAL_CURRICULUM].curriculums).toBe('object');
         });
+
+        test('Fund: missing keys default to 0 and []', () => {
+            const validated = validateCharacterState({});
+            expect(validated[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validated[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
+        });
+
+        test('Fund: non-integer balance resets to 0; negative integer is kept', () => {
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: 12.5 })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: '500' })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: Infinity })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: -1700 })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(-1700);
+        });
+
+        test('Fund: ledger drops malformed entries', () => {
+            const good = { id: 'a', date: '2026-11-08', amountCents: 3200, note: 'Legendarium purchase' };
+            const validated = validateCharacterState({
+                [STORAGE_KEYS.FUND_LEDGER]: [
+                    good,
+                    { id: 'b', date: '2026-11-08', amountCents: 0, note: '' },
+                    { id: 'c', date: 'Nov 8', amountCents: 100, note: '' },
+                    { id: '', date: '2026-11-08', amountCents: 100, note: '' },
+                    { id: 'd', date: '2026-11-08', amountCents: 10.5, note: '' },
+                    null,
+                    { id: 'e', date: '2026-11-08', amountCents: 100 }
+                ]
+            });
+            expect(validated[STORAGE_KEYS.FUND_LEDGER]).toEqual([
+                good,
+                { id: 'e', date: '2026-11-08', amountCents: 100, note: '' }
+            ]);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_LEDGER]: 'nope' })[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
+        });
     });
 
     describe('validateFormDataSafe', () => {

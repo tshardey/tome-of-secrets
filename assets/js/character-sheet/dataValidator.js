@@ -816,6 +816,53 @@ function validateBookBoxHistory(history, context = STORAGE_KEYS.BOOK_BOX_HISTORY
 }
 
 /**
+ * Validate the Fund balance: a finite integer number of cents, otherwise 0.
+ * May be negative (overdraft is allowed after a confirm).
+ */
+function validateFundBalanceCents(value) {
+    if (typeof value === 'number' && Number.isInteger(value)) {
+        return value;
+    }
+    if (value !== undefined) {
+        console.warn(`Invalid ${STORAGE_KEYS.FUND_BALANCE_CENTS}: not a finite integer, using 0`);
+    }
+    return 0;
+}
+
+const FUND_LEDGER_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Validate the Fund deduction ledger. Drops malformed entries.
+ * Entry shape: { id: string, date: 'YYYY-MM-DD', amountCents: positive integer, note: string }
+ */
+function validateFundLedger(ledger) {
+    if (!Array.isArray(ledger)) {
+        if (ledger !== undefined) {
+            console.warn(`Invalid ${STORAGE_KEYS.FUND_LEDGER}: not an array, using empty array`);
+        }
+        return [];
+    }
+    const validated = [];
+    ledger.forEach((entry, index) => {
+        if (!entry || typeof entry !== 'object') return;
+        const id = typeof entry.id === 'string' ? entry.id.trim() : '';
+        const date = typeof entry.date === 'string' ? entry.date.trim() : '';
+        const amountCents = entry.amountCents;
+        if (!id || !FUND_LEDGER_DATE_PATTERN.test(date) || !Number.isInteger(amountCents) || amountCents <= 0) {
+            console.warn(`Invalid ${STORAGE_KEYS.FUND_LEDGER}[${index}]: dropping malformed entry`);
+            return;
+        }
+        validated.push({
+            id,
+            date,
+            amountCents,
+            note: typeof entry.note === 'string' ? entry.note : ''
+        });
+    });
+    return validated;
+}
+
+/**
  * Validate effect cooldown state (Schema v13).
  * Shape: { [sourceKey: string]: { month: string, year: string } }
  */
@@ -979,6 +1026,8 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.SHOPPING_LOG] = validateShoppingLog(state[STORAGE_KEYS.SHOPPING_LOG], STORAGE_KEYS.SHOPPING_LOG);
     validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
     validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
+    validated[STORAGE_KEYS.FUND_BALANCE_CENTS] = validateFundBalanceCents(state[STORAGE_KEYS.FUND_BALANCE_CENTS]);
+    validated[STORAGE_KEYS.FUND_LEDGER] = validateFundLedger(state[STORAGE_KEYS.FUND_LEDGER]);
     validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
     validated[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = validateQuestDrawHelperSettings(
         state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]
