@@ -274,8 +274,14 @@ describe('Table Renderer', () => {
             expect(html).toContain('<tbody>');
             expect(html).toContain('Level');
             expect(html).toContain('XP Needed');
-            expect(html).toContain('Ink Drops Reward');
-            expect(html).toContain('Paper Scraps Reward');
+            expect(html).toContain('Fund Reward');
+            expect(html).toContain('Dusty Blueprints');
+            expect(html).not.toMatch(/Ink Drop|Paper Scrap/);
+            // Spec Levels table: level 2 pays $10 and +10 Blueprints; level 20 pays $50 and +25
+            const level2Index = html.indexOf('<td>2</td>');
+            expect(html.substring(level2Index, level2Index + 200)).toMatch(/<td>\+\$10<\/td>\s*<td>\+10<\/td>/);
+            const level20Index = html.indexOf('<td>20</td>');
+            expect(html.substring(level20Index, level20Index + 200)).toMatch(/<td>\+\$50<\/td>\s*<td>\+25<\/td>/);
             expect(html).toContain('New Item/Familiar Slot');
             expect(html).toContain('School Mastery Point');
             

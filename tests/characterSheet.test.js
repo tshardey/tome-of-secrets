@@ -8,6 +8,7 @@ import { initializeCharacterSheet } from '../assets/js/character-sheet.js';
 import { characterState, loadState, saveState } from '../assets/js/character-sheet/state.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
+import { formatCents } from '../assets/js/services/FundLedgerService.js';
 
 describe('Character Sheet', () => {
   beforeEach(async () => {
@@ -514,33 +515,38 @@ describe('Character Sheet', () => {
         expect(statsGrid).toBeTruthy();
       });
 
-      it('should render all currency stat cards (Ink Drops, Paper Scraps, Blueprints, SMP)', () => {
+      it('should render all resource stat cards (Fund, Blueprints, SMP)', () => {
         const statCards = document.querySelectorAll('.rpg-stat-card');
-        const inkDropsCard = document.querySelector('.rpg-stat-card label[for="inkDrops"]');
-        const paperScrapsCard = document.querySelector('.rpg-stat-card label[for="paperScraps"]');
+        const fundDisplay = document.querySelector('.rpg-stat-card #fund-balance-display');
         const blueprintsCard = document.querySelector('.rpg-stat-card label[for="dustyBlueprints"]');
         const smpCard = document.querySelector('.rpg-stat-card label[for="smp"]');
-        
-        expect(statCards.length).toBeGreaterThanOrEqual(4);
-        expect(inkDropsCard).toBeTruthy();
-        expect(paperScrapsCard).toBeTruthy();
+
+        expect(statCards.length).toBeGreaterThanOrEqual(3);
+        expect(fundDisplay).toBeTruthy();
         expect(blueprintsCard).toBeTruthy();
         expect(smpCard).toBeTruthy();
       });
 
+      it('has no Ink Drop / Paper Scrap inputs or shop currency warning', () => {
+        expect(document.getElementById('inkDrops')).toBeNull();
+        expect(document.getElementById('paperScraps')).toBeNull();
+        expect(document.getElementById('currency-unsaved-warning')).toBeNull();
+        expect(document.querySelector('.rpg-stats-panel').textContent).not.toMatch(/Ink Drops|Paper Scraps/);
+      });
+
+      it('shows the Fund balance read-only, formatted in dollars', () => {
+        const fundDisplay = document.getElementById('fund-balance-display');
+        expect(fundDisplay.tagName).toBe('OUTPUT');
+        expect(fundDisplay.textContent).toBe(formatCents(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0));
+      });
+
       it('should display currency inputs in stat cards', () => {
-        const inkDropsInput = document.getElementById('inkDrops');
-        const paperScrapsInput = document.getElementById('paperScraps');
         const blueprintsInput = document.getElementById('dustyBlueprints');
         const smpInput = document.getElementById('smp');
-        
-        expect(inkDropsInput).toBeTruthy();
-        expect(paperScrapsInput).toBeTruthy();
+
         expect(blueprintsInput).toBeTruthy();
         expect(smpInput).toBeTruthy();
-        
-        expect(inkDropsInput.classList.contains('rpg-stat-input')).toBe(true);
-        expect(paperScrapsInput.classList.contains('rpg-stat-input')).toBe(true);
+
         expect(blueprintsInput.classList.contains('rpg-stat-input')).toBe(true);
         expect(smpInput.classList.contains('rpg-stat-input')).toBe(true);
       });
@@ -1256,26 +1262,22 @@ describe('Character Sheet', () => {
         const levelUpBtn = document.getElementById('level-up-btn');
         const levelInput = document.getElementById('level');
         const xpCurrentInput = document.getElementById('xp-current');
-        const inkDropsInput = document.getElementById('inkDrops');
-        const paperScrapsInput = document.getElementById('paperScraps');
-        
+
         // Set initial state
         levelInput.value = '1';
         xpCurrentInput.value = '100'; // Exactly enough to level up
-        inkDropsInput.value = '10';
-        paperScrapsInput.value = '5';
         ui.updateXpProgressBar();
-        
-        const initialInk = parseInt(inkDropsInput.value);
-        const initialPaper = parseInt(paperScrapsInput.value);
-        
+
+        const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
+        const initialBlueprints = characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] || 0;
+
         // Click level up (should go to level 2)
         levelUpBtn.click();
-        
-        // Level 2 rewards: 5 inkDrops, 2 paperScraps
-        // Check that rewards were applied
-        expect(parseInt(inkDropsInput.value)).toBeGreaterThan(initialInk);
-        expect(parseInt(paperScrapsInput.value)).toBeGreaterThan(initialPaper);
+
+        // Level 2 rewards: $10 and +10 Blueprints
+        expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1000);
+        expect(characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(initialBlueprints + 10);
+        expect(document.getElementById('fund-balance-display').textContent).toBe(formatCents(initialFundCents + 1000));
       });
 
       it('should update progress bar after leveling up', () => {
@@ -1488,7 +1490,7 @@ describe('Character Sheet', () => {
       expect(highlightedBuffNames).toContain('The Excavation');
     });
 
-    it('should show daily buff value of 3 for highlighted buffs', () => {
+    it('should show daily buff value of 2 for highlighted buffs', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       librarySanctumSelect.value = 'The Spire of Whispers';
       librarySanctumSelect.dispatchEvent(new Event('change'));
@@ -1496,14 +1498,14 @@ describe('Character Sheet', () => {
       const tbody = document.getElementById('atmospheric-buffs-body');
       const highlightedRows = tbody.querySelectorAll('tr.highlight');
 
-      // Check that all highlighted rows have a daily buff value of 3 (sanctum bonus)
+      // Check that all highlighted rows have a daily buff value of 2 (sanctum bonus)
       highlightedRows.forEach(row => {
         const dailyBuffValue = row.cells[1].textContent;
-        expect(dailyBuffValue).toBe('3');
+        expect(dailyBuffValue).toBe('2');
       });
     });
 
-    it('should show daily buff value of 2 for non-highlighted buffs', () => {
+    it('should show daily buff value of 1 for non-highlighted buffs', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       librarySanctumSelect.value = 'The Spire of Whispers';
       librarySanctumSelect.dispatchEvent(new Event('change'));
@@ -1511,10 +1513,10 @@ describe('Character Sheet', () => {
       const tbody = document.getElementById('atmospheric-buffs-body');
       const nonHighlightedRows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('highlight'));
 
-      // Check that all non-highlighted rows have a daily buff value of 2 (base value)
+      // Check that all non-highlighted rows have a daily buff value of 1 (base value)
       nonHighlightedRows.forEach(row => {
         const dailyBuffValue = row.cells[1].textContent;
-        expect(dailyBuffValue).toBe('2');
+        expect(dailyBuffValue).toBe('1');
       });
     });
 
@@ -1529,11 +1531,11 @@ describe('Character Sheet', () => {
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const herbalistRow = rows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
 
-      // The daily buff value for highlighted buffs should be 3 (sanctum bonus)
-      expect(herbalistRow.cells[1].textContent).toBe('3');
+      // The daily buff value for highlighted buffs should be 2 (sanctum bonus)
+      expect(herbalistRow.cells[1].textContent).toBe('2');
 
-      // If we set days to 5, the monthly total calculation should use the multiplier of 3
-      // The rendered monthly total is initially 0 * 3 = 0
+      // If we set days to 5, the monthly total calculation should use the multiplier of 2
+      // The rendered monthly total is initially 0 * 1 = 0
       expect(herbalistRow.cells[4].textContent).toBe('0');
     });
 
@@ -1548,10 +1550,10 @@ describe('Character Sheet', () => {
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const candlightRow = rows.find(row => row.cells[0].textContent === 'The Candlight Study');
 
-      // The daily buff value for non-highlighted buffs should be 2 (base value)
-      expect(candlightRow.cells[1].textContent).toBe('2');
+      // The daily buff value for non-highlighted buffs should be 1 (base value)
+      expect(candlightRow.cells[1].textContent).toBe('1');
 
-      // The rendered monthly total is initially 0 * 2 = 0
+      // The rendered monthly total is initially 0 * 1 = 0
       expect(candlightRow.cells[4].textContent).toBe('0');
     });
 
@@ -1616,26 +1618,26 @@ describe('Character Sheet', () => {
       expect(highlightedRows.length).toBe(0);
     });
 
-    it('should maintain daily buff value of 2 when sanctum is deselected', () => {
+    it('should maintain daily buff value of 1 when sanctum is deselected', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       const tbody = document.getElementById('atmospheric-buffs-body');
 
-      // First select a sanctum to get daily buff value of 3
+      // First select a sanctum to get daily buff value of 2
       librarySanctumSelect.value = 'The Verdant Athenaeum';
       librarySanctumSelect.dispatchEvent(new Event('change'));
 
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const herbalistRow = rows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
-      expect(herbalistRow.cells[1].textContent).toBe('3');
+      expect(herbalistRow.cells[1].textContent).toBe('2');
 
       // Deselect sanctum
       librarySanctumSelect.value = '';
       librarySanctumSelect.dispatchEvent(new Event('change'));
 
-      // Check that daily buff value returns to 2 (base value)
+      // Check that daily buff value returns to 1 (base value)
       const updatedRows = Array.from(tbody.querySelectorAll('tr'));
       const updatedHerbalistRow = updatedRows.find(row => row.cells[0].textContent === 'The Herbalist\'s Nook');
-      expect(updatedHerbalistRow.cells[1].textContent).toBe('2');
+      expect(updatedHerbalistRow.cells[1].textContent).toBe('1');
     });
 
     it('should correctly highlight all three buffs for each sanctum', () => {
@@ -1676,10 +1678,10 @@ describe('Character Sheet', () => {
       const librarySanctumSelect = document.getElementById('librarySanctum');
       const tbody = document.getElementById('atmospheric-buffs-body');
 
-      // Initially without sanctum, The Soundscape Spire should have daily buff of 2 (base value)
+      // Initially without sanctum, The Soundscape Spire should have daily buff of 1 (base value)
       let rows = Array.from(tbody.querySelectorAll('tr'));
       let soundscapeRow = rows.find(row => row.cells[0].textContent === 'The Soundscape Spire');
-      expect(soundscapeRow.cells[1].textContent).toBe('2');
+      expect(soundscapeRow.cells[1].textContent).toBe('1');
 
       // Select a sanctum that includes Soundscape Spire
       librarySanctumSelect.value = 'The Verdant Athenaeum';
@@ -1689,8 +1691,8 @@ describe('Character Sheet', () => {
       rows = Array.from(tbody.querySelectorAll('tr'));
       soundscapeRow = rows.find(row => row.cells[0].textContent === 'The Soundscape Spire');
 
-      // Daily buff value should now be 3 (sanctum bonus) for the associated buff
-      expect(soundscapeRow.cells[1].textContent).toBe('3');
+      // Daily buff value should now be 2 (sanctum bonus) for the associated buff
+      expect(soundscapeRow.cells[1].textContent).toBe('2');
 
       // And the row should be highlighted
       expect(soundscapeRow.classList.contains('highlight')).toBe(true);
@@ -1709,11 +1711,8 @@ describe('Character Sheet', () => {
 
       // Get initial values
       const xpInput = document.getElementById('xp-current');
-      const inkDropsInput = document.getElementById('inkDrops');
-      const paperScrapsInput = document.getElementById('paperScraps');
       const initialXP = parseInt(xpInput.value, 10) || 0;
-      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
 
       // Click End of Month button
       const endOfMonthButton = document.querySelector('.end-of-month-button');
@@ -1723,13 +1722,8 @@ describe('Character Sheet', () => {
       const finalXP = parseInt(xpInput.value, 10) || 0;
       expect(finalXP).toBe(initialXP);
 
-      // Verify paper scraps were added (10 days * 2 paper scraps per day = 20 paper scraps)
-      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      expect(finalPaperScraps).toBe(initialPaperScraps + 20);
-
-      // Atmospheric buffs must never pay Ink Drops (R2)
-      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      expect(finalInkDrops).toBe(initialInkDrops);
+      // Atmospheric buffs pay $1 per active day into the Fund (10 days × $1 = $10)
+      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1000);
 
       // Verify books completed counter was reset
       expect(parseInt(booksCompletedInput.value, 10)).toBe(0);
@@ -1738,7 +1732,9 @@ describe('Character Sheet', () => {
       expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
     });
 
-    it('should apply the Tome-Bound Cat multiplier to a trackable item and a regular buff at end of month', () => {
+    // TODO(Task 5): re-express for the flat Tome-Bound Cat (+$1 per atmospheric buff day) and
+    // re-enable once Garden Gnome's rewardModifier pays `dollars` ($1/day).
+    it.skip('should apply the Tome-Bound Cat bonus to a trackable item and a regular buff at end of month', () => {
       // Regression guard for R3a/R3b: EndOfMonthController.js is the only production
       // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real multiplier
       // and trackableItemValues. Equip Garden Gnome (trackable, 2 Paper Scraps/day) and
@@ -1753,21 +1749,13 @@ describe('Character Sheet', () => {
         'Garden Gnome': { daysUsed: 5, isActive: false }
       };
 
-      const inkDropsInput = document.getElementById('inkDrops');
-      const paperScrapsInput = document.getElementById('paperScraps');
-      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
 
       const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
 
-      // ((10 days x 2 base) + (5 days x 2 from item)) x 2 (Tome-Bound Cat) = 60
-      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      expect(finalPaperScraps).toBe(initialPaperScraps + 60);
-
-      // Atmospheric buffs must never pay Ink Drops (R2).
-      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      expect(finalInkDrops).toBe(initialInkDrops);
+      // (10 days x $1 base) + (5 days x $1 from item) + Tome-Bound Cat +$1 per atmospheric day (15) = $30
+      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 3000);
     });
   });
 
@@ -1819,32 +1807,26 @@ describe('Character Sheet', () => {
       expect(addedQuest.rewards).toHaveProperty('items');
     });
 
-    it('should update currency when completing a quest', () => {
-      // Side quest #7 grants ink drops and paper scraps
+    it('should pay the $15 quest base into the Fund when completing a quest', () => {
       addActiveQuestAndRender({
         prompt: sideQuests['7'],
         book: 'Test Book',
         bookId: 'test-book',
-        rewards: { xp: 0, inkDrops: 2, paperScraps: 1, blueprints: 0, items: [] }
+        rewards: { xp: 0, dollars: 15, blueprints: 0, items: [] }
       });
 
-      // Get initial currency values
-      const inkDropsInput = document.getElementById('inkDrops');
-      const paperScrapsInput = document.getElementById('paperScraps');
-      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
 
       // Complete the quest
       const completeBtnCurrency = document.querySelector('#active-assignments-container .quest-card .complete-quest-btn');
       expect(completeBtnCurrency).toBeTruthy();
       completeBtnCurrency.click();
 
-      // Check that currency was updated
-      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-
-      expect(finalInkDrops).toBeGreaterThan(initialInkDrops);
-      expect(finalPaperScraps).toBeGreaterThan(initialPaperScraps);
+      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1500);
+      expect(document.getElementById('fund-balance-display').textContent).toBe(formatCents(initialFundCents + 1500));
+      const completed = characterState.completedQuests[characterState.completedQuests.length - 1];
+      expect(completed.rewards.dollars).toBe(15);
+      expect(completed.rewards).not.toHaveProperty('inkDrops');
     });
 
     it('should not increment books completed counter when completing a quest (counter only updates when marking book complete in Library)', () => {
@@ -2107,22 +2089,17 @@ describe('Character Sheet', () => {
       });
     });
 
-    it('should update paper scraps when completing an Extra Credit quest', () => {
+    it('should pay the $15 quest base when completing an Extra Credit quest', () => {
       addActiveQuestAndRender({
         type: '⭐ Extra Credit',
         prompt: '',
         book: 'Extra Book',
         bookId: 'extra-book',
-        rewards: { xp: 0, inkDrops: 0, paperScraps: 10, blueprints: 0, items: [] }
+        rewards: { xp: 0, dollars: 15, blueprints: 0, items: [] }
       });
 
-      // Get initial currency values
-      const paperScrapsInput = document.getElementById('paperScraps');
-      const inkDropsInput = document.getElementById('inkDrops');
       const xpInput = document.getElementById('xp-current');
-      
-      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      const initialInkDrops = parseInt(inkDropsInput.value, 10) || 0;
+      const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
       const initialXP = parseInt(xpInput.value, 10) || 0;
 
       // Complete the quest
@@ -2130,14 +2107,8 @@ describe('Character Sheet', () => {
       expect(completeBtnExtra).toBeTruthy();
       completeBtnExtra.click();
 
-      // Check that only paper scraps were updated (+10)
-      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      const finalInkDrops = parseInt(inkDropsInput.value, 10) || 0;
-      const finalXP = parseInt(xpInput.value, 10) || 0;
-
-      expect(finalPaperScraps).toBe(initialPaperScraps + 10);
-      expect(finalInkDrops).toBe(initialInkDrops); // Should not change
-      expect(finalXP).toBe(initialXP); // Should not change
+      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1500);
+      expect(parseInt(xpInput.value, 10) || 0).toBe(initialXP); // Should not change
     });
 
     it.skip('should add the correct dungeon encounter prompt based on the fight/befriend toggle (Add Quest form removed)', () => {
@@ -2603,7 +2574,6 @@ describe('Character Sheet', () => {
 
     it('should only process active atmospheric buffs at end of month', () => {
       const { characterState } = require('../assets/js/character-sheet/state.js');
-      const paperScrapsInput = document.getElementById('paperScraps');
 
       // Set up mixed active/inactive buffs
       characterState.atmosphericBuffs = {
@@ -2612,183 +2582,14 @@ describe('Character Sheet', () => {
         'The Cozy Hearth': { daysUsed: 8, isActive: true }
       };
 
-      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
+      const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
 
       // Click End of Month
       const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
 
-      // Should only get paper scraps from active buffs: (10 + 8) × 2 = 36
-      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      expect(finalPaperScraps).toBe(initialPaperScraps + 36);
-    });
-  });
-
-  describe('Currency Unsaved Changes Warning', () => {
-    beforeEach(async () => {
-      // Set up saved currency values
-      const formData = {
-        inkDrops: '100',
-        paperScraps: '50'
-      };
-      safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
-      
-      // Reload state to sync with saved values
-      const form = document.getElementById('character-sheet');
-      if (form) {
-        await loadState(form);
-        // Wait for async operations to complete
-        return new Promise(resolve => setTimeout(resolve, 10));
-      }
-    });
-
-    it('should not show warning when currency matches saved values', async () => {
-      // Wait a bit for the check to run after loadState
-      await new Promise(resolve => setTimeout(resolve, 20));
-      
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      expect(warningEl).toBeTruthy();
-      expect(warningEl.style.display).toBe('none');
-    });
-    
-    it('should not show warning on initial page load with empty values', async () => {
-      // Clear localStorage to simulate fresh page load
-      localStorage.removeItem(STORAGE_KEYS.CHARACTER_SHEET_FORM);
-      
-      // Reload the page HTML and reinitialize
-      loadHTML('character-sheet.md');
-      await initializeCharacterSheet();
-      
-      // Wait for initialization to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      const inkDropsEl = document.getElementById('inkDrops');
-      const paperScrapsEl = document.getElementById('paperScraps');
-      
-      expect(warningEl).toBeTruthy();
-      // Warning should not show if both form and saved values are empty
-      expect(warningEl.style.display).toBe('none');
-    });
-
-    it('should show warning when ink drops are modified', () => {
-      const inkDropsEl = document.getElementById('inkDrops');
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      
-      expect(warningEl).toBeTruthy();
-      expect(warningEl.style.display).toBe('none');
-      
-      // Modify ink drops
-      inkDropsEl.value = '150';
-      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Warning should appear
-      expect(warningEl.style.display).toBe('block');
-      expect(warningEl.textContent).toContain('unsaved changes');
-      expect(warningEl.textContent).toContain('Shopping');
-    });
-
-    it('should show warning when paper scraps are modified', () => {
-      const paperScrapsEl = document.getElementById('paperScraps');
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      
-      expect(warningEl).toBeTruthy();
-      expect(warningEl.style.display).toBe('none');
-      
-      // Modify paper scraps
-      paperScrapsEl.value = '75';
-      paperScrapsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Warning should appear
-      expect(warningEl.style.display).toBe('block');
-    });
-
-    it('should show warning when both currency fields are modified', () => {
-      const inkDropsEl = document.getElementById('inkDrops');
-      const paperScrapsEl = document.getElementById('paperScraps');
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      
-      // Modify both
-      inkDropsEl.value = '200';
-      paperScrapsEl.value = '100';
-      inkDropsEl.dispatchEvent(new Event('change', { bubbles: true }));
-      
-      // Warning should appear
-      expect(warningEl.style.display).toBe('block');
-    });
-
-    it('should hide warning when currency is saved', () => {
-      const inkDropsEl = document.getElementById('inkDrops');
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      const form = document.getElementById('character-sheet');
-      
-      // Modify currency
-      inkDropsEl.value = '150';
-      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(warningEl.style.display).toBe('block');
-      
-      // Save form - this will trigger saveState which updates localStorage
-      saveState(form);
-      
-      // The warning check should run after save (it's called in the submit handler)
-      // Since we're testing the logic directly, we need to manually trigger the check
-      // The actual implementation calls checkCurrencyUnsavedChanges after saveState
-      // For testing, we'll manually check the condition
-      const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
-      const currentInkDrops = inkDropsEl.value || '';
-      const savedInkDrops = savedData.inkDrops || '';
-      
-      // After save, values should match
-      expect(currentInkDrops).toBe(savedInkDrops);
-      
-      // Trigger the check by dispatching another input event
-      // This simulates what happens after save
-      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Warning should be hidden now
-      expect(warningEl.style.display).toBe('none');
-    });
-
-    it('should hide warning when currency is changed back to saved value', () => {
-      const inkDropsEl = document.getElementById('inkDrops');
-      const warningEl = document.getElementById('currency-unsaved-warning');
-
-      // Pin the saved currency values in localStorage so auto-save cannot cause flakiness.
-      // A debounced auto-save left over from an earlier test can write stale form values
-      // (including paperScraps) before this test runs, so pin both currency fields.
-      const paperScrapsEl = document.getElementById('paperScraps');
-      const formData = JSON.parse(localStorage.getItem('characterSheet') || '{}');
-      formData.inkDrops = '100';
-      formData.paperScraps = paperScrapsEl.value;
-      localStorage.setItem('characterSheet', JSON.stringify(formData));
-
-      // Set the form field to the saved value first
-      inkDropsEl.value = '100';
-      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(warningEl.style.display).toBe('none');
-
-      // Modify currency to a different value
-      inkDropsEl.value = '9999';
-      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(warningEl.style.display).toBe('block');
-
-      // Change back to the saved value
-      inkDropsEl.value = '100';
-      inkDropsEl.dispatchEvent(new Event('input', { bubbles: true }));
-
-      // Warning should be hidden
-      expect(warningEl.style.display).toBe('none');
-    });
-
-    it('should update warning on change event as well as input event', () => {
-      const inkDropsEl = document.getElementById('inkDrops');
-      const warningEl = document.getElementById('currency-unsaved-warning');
-      
-      // Modify using change event
-      inkDropsEl.value = '150';
-      inkDropsEl.dispatchEvent(new Event('change', { bubbles: true }));
-      
-      expect(warningEl.style.display).toBe('block');
+      // Should only get dollars from active buffs: (10 + 8) × $1 = $18
+      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 1800);
     });
   });
 

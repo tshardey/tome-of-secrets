@@ -9,8 +9,6 @@ export function createUpdateCurrency(stateAdapter, ui, dataModule) {
     return function updateCurrency(rewards) {
         if (!rewards) return;
         const xpCurrent = document.getElementById('xp-current');
-        const inkDrops = document.getElementById('inkDrops');
-        const paperScraps = document.getElementById('paperScraps');
         const dustyBlueprints = document.getElementById('dustyBlueprints');
 
         if (xpCurrent && rewards.xp > 0) {
@@ -18,19 +16,14 @@ export function createUpdateCurrency(stateAdapter, ui, dataModule) {
             xpCurrent.value = currentXP + rewards.xp;
         }
 
-        if (inkDrops && rewards.inkDrops > 0) {
-            const currentInk = parseIntOr(inkDrops.value, 0);
-            inkDrops.value = currentInk + rewards.inkDrops;
+        // Dollars go straight into the Fund (character state); addFunds ignores values <= 0.
+        if (rewards.dollars > 0 && typeof stateAdapter?.addFunds === 'function') {
+            stateAdapter.addFunds(rewards.dollars);
         }
 
         // Note: blueprints are awarded via stateAdapter, so we sync from characterState
         if (dustyBlueprints) {
             dustyBlueprints.value = characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] || 0;
-        }
-
-        if (paperScraps && rewards.paperScraps > 0) {
-            const currentPaper = parseIntOr(paperScraps.value, 0);
-            paperScraps.value = currentPaper + rewards.paperScraps;
         }
 
         // Handle items and temp buffs from rewards

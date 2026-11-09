@@ -11,7 +11,8 @@ import { initializeSanctumPage } from './page-renderers/sanctumRenderer.js';
 import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
-import { StateAdapter } from './character-sheet/stateAdapter.js';
+import { StateAdapter, STATE_EVENTS } from './character-sheet/stateAdapter.js';
+import { formatCents } from './services/FundLedgerService.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr } from './utils/helpers.js';
 import { initializeFormPersistence } from './character-sheet/formPersistence.js';
@@ -94,6 +95,14 @@ export async function initializeCharacterSheet() {
 
     const updateCurrency = createUpdateCurrency(stateAdapter, ui, dataModule);
 
+    // Read-only Fund balance placeholder (the Fund widget controller replaces this).
+    const renderFundBalanceDisplay = () => {
+        const fundDisplay = document.getElementById('fund-balance-display');
+        if (fundDisplay) fundDisplay.textContent = formatCents(stateAdapter.getFundBalanceCents());
+    };
+    renderFundBalanceDisplay();
+    stateAdapter.on(STATE_EVENTS.FUND_CHANGED, renderFundBalanceDisplay);
+
     stateAdapter.applyQuestDraftedEffects = createQuestDraftedHook({
         stateAdapter, updateCurrency, dataModule, form
     });
@@ -123,9 +132,6 @@ export async function initializeCharacterSheet() {
     const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
 
     dependencies.onBookMarkedComplete = (result) => {
-        if (result.synergyRewards && (result.synergyRewards.inkDrops > 0 || result.synergyRewards.paperScraps > 0)) {
-            updateCurrency(result.synergyRewards);
-        }
         (result.movedQuests || []).forEach((quest) => {
             questController.completeMovedQuestFromBook(quest);
         });

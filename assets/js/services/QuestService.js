@@ -167,8 +167,7 @@ export function formatReceiptTooltip(receipt, listType = 'active') {
     // Base rewards
     const baseParts = [];
     if (receipt.base.xp > 0) baseParts.push(`${receipt.base.xp} XP`);
-    if (receipt.base.inkDrops > 0) baseParts.push(`${receipt.base.inkDrops} Ink Drops`);
-    if (receipt.base.paperScraps > 0) baseParts.push(`${receipt.base.paperScraps} Paper Scraps`);
+    if (receipt.base.dollars > 0) baseParts.push(`$${receipt.base.dollars}`);
     if (receipt.base.blueprints > 0) baseParts.push(`${receipt.base.blueprints} Blueprints`);
     
     if (baseParts.length > 0) {
@@ -186,8 +185,7 @@ export function formatReceiptTooltip(receipt, listType = 'active') {
     // Final rewards
     const finalParts = [];
     if (receipt.final.xp > 0) finalParts.push(`${receipt.final.xp} XP`);
-    if (receipt.final.inkDrops > 0) finalParts.push(`${receipt.final.inkDrops} Ink Drops`);
-    if (receipt.final.paperScraps > 0) finalParts.push(`${receipt.final.paperScraps} Paper Scraps`);
+    if (receipt.final.dollars > 0) finalParts.push(`$${receipt.final.dollars}`);
     if (receipt.final.blueprints > 0) finalParts.push(`${receipt.final.blueprints} Blueprints`);
     
     if (finalParts.length > 0) {

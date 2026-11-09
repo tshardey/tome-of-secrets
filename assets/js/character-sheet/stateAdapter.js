@@ -1846,11 +1846,11 @@ export class StateAdapter {
     }
 
     /**
-     * Mark a book complete: set status/dateCompleted, cascade to linked quests and curriculum prompts,
-     * and compute synergy rewards. Caller should apply synergyRewards (e.g. updateCurrency) and run
-     * handleRestorationProjectCompletion for any movedQuests that are restoration projects.
+     * Mark a book complete: set status/dateCompleted and cascade to linked quests and curriculum prompts.
+     * Book completion pays no money. Caller should run handleRestorationProjectCompletion for any
+     * movedQuests that are restoration projects.
      * @param {string} bookId
-     * @returns {{ book: Object, movedQuests: Object[], synergyRewards: { xp: number, inkDrops: number, paperScraps: number, items: string[] } } | null}
+     * @returns {{ book: Object, movedQuests: Object[] } | null}
      */
     markBookComplete(bookId) {
         if (!bookId || typeof bookId !== 'string') return null;
@@ -1906,13 +1906,7 @@ export class StateAdapter {
             }
         }
 
-        const hasQuestLinks = questIds.length > 0;
-        const hasCurriculumLinks = curriculumPromptIds.length > 0;
-        const paperScraps = hasCurriculumLinks ? 5 : 0;
-        const inkDrops = hasQuestLinks && hasCurriculumLinks ? 10 : 0;
-        const synergyRewards = { xp: 0, inkDrops, paperScraps, items: [] };
-
-        return { book, movedQuests, synergyRewards };
+        return { book, movedQuests };
     }
 
     // ==========================================

@@ -109,7 +109,7 @@ export class EndOfMonthController extends BaseController {
                 stateAdapter.setAtmosphericBuffActive(buffKey, true);
             }
 
-            // Apply atmospheric buff paper scraps
+            // Pay atmospheric buff dollars into the Fund
             updateCurrency(atmosphericRewards);
 
             // Book completion XP is now awarded when marking a book complete in the Library (not at end of month).

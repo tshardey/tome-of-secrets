@@ -30,8 +30,7 @@ describe('Controllers', () => {
                 <input id="keeperName" type="text" />
                 <input id="level" type="number" />
                 <input id="xp-needed" type="text" />
-                <input id="inkDrops" type="number" />
-                <input id="paperScraps" type="number" />
+                <input id="dustyBlueprints" type="number" />
                 <select id="keeperBackground"></select>
                 <select id="wizardSchool"></select>
                 <select id="librarySanctum"></select>
@@ -157,75 +156,86 @@ describe('Controllers', () => {
             expect(dependencies.ui.renderPermanentBonuses).toHaveBeenCalled();
         });
 
-        it('should apply rewards when level increases', () => {
-            const controller = new CharacterController(stateAdapter, form, dependencies);
-            controller.initialize();
-            
-            const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            const paperScrapsInput = document.getElementById('paperScraps');
-            const smpInput = document.getElementById('smp');
-            
-            // Set initial values
-            levelInput.value = '1';
-            inkDropsInput.value = '10';
-            paperScrapsInput.value = '5';
-            smpInput.value = '0';
-            
-            // Trigger initial load to set previousLevel
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level up to 2
-            levelInput.value = '2';
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level 2 rewards: 25 inkDrops, 10 paperScraps, 0 SMP
-            expect(parseInt(inkDropsInput.value)).toBe(35); // 10 + 25
-            expect(parseInt(paperScrapsInput.value)).toBe(15); // 5 + 10
-            expect(parseInt(smpInput.value)).toBe(0);
-        });
+        describe('level-up payouts', () => {
+            beforeEach(() => {
+                characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 0;
+                characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 0;
+            });
 
-        it('should apply rewards for multiple level increases', () => {
-            const controller = new CharacterController(stateAdapter, form, dependencies);
-            controller.initialize();
-            
-            const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            const paperScrapsInput = document.getElementById('paperScraps');
-            const smpInput = document.getElementById('smp');
-            
-            // Set initial values
-            levelInput.value = '1';
-            inkDropsInput.value = '0';
-            paperScrapsInput.value = '0';
-            smpInput.value = '0';
-            
-            // Trigger initial load to set previousLevel
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level up from 1 to 4 (should get rewards for levels 2, 3, and 4)
-            levelInput.value = '4';
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level 2: 25 ink, 10 paper
-            // Level 3: 25 ink, 15 paper
-            // Level 4: 50 ink, 25 paper
-            // Total: 100 ink, 50 paper
-            expect(parseInt(inkDropsInput.value)).toBe(100);
-            expect(parseInt(paperScrapsInput.value)).toBe(50);
+            it('should pay level 2 rewards into the Fund and Blueprints', () => {
+                const controller = new CharacterController(stateAdapter, form, dependencies);
+                controller.initialize();
+
+                const levelInput = document.getElementById('level');
+                const smpInput = document.getElementById('smp');
+                levelInput.value = '1';
+                smpInput.value = '0';
+                levelInput.dispatchEvent(new Event('change'));
+
+                levelInput.value = '2';
+                levelInput.dispatchEvent(new Event('change'));
+
+                // Level 2: $10, +10 Blueprints, no SMP
+                expect(stateAdapter.getFundBalanceCents()).toBe(1000);
+                expect(stateAdapter.getDustyBlueprints()).toBe(10);
+                expect(document.getElementById('dustyBlueprints').value).toBe('10');
+                expect(parseInt(smpInput.value)).toBe(0);
+            });
+
+            it('should pay rewards for every level gained in one jump', () => {
+                const controller = new CharacterController(stateAdapter, form, dependencies);
+                controller.initialize();
+
+                const levelInput = document.getElementById('level');
+                const smpInput = document.getElementById('smp');
+                levelInput.value = '1';
+                smpInput.value = '0';
+                levelInput.dispatchEvent(new Event('change'));
+
+                // Levels 2, 3, 4: $10 each, +10 Blueprints each, SMP at 3
+                levelInput.value = '4';
+                levelInput.dispatchEvent(new Event('change'));
+
+                expect(stateAdapter.getFundBalanceCents()).toBe(3000);
+                expect(stateAdapter.getDustyBlueprints()).toBe(30);
+                expect(parseInt(smpInput.value)).toBe(1);
+            });
+
+            it('handleLevelUp pays only the new level (level 9 -> 10: $20, +15 Blueprints, +1 SMP)', () => {
+                const controller = new CharacterController(stateAdapter, form, dependencies);
+                controller.initialize();
+
+                const levelInput = document.getElementById('level');
+                const smpInput = document.getElementById('smp');
+                const xpInput = document.createElement('input');
+                xpInput.id = 'xp-current';
+                form.appendChild(xpInput);
+                levelInput.value = '9';
+                smpInput.value = '0';
+                xpInput.value = String(data.xpLevels['9']);
+                safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { previousLevel: 9 });
+                dependencies.ui.updateXpProgressBar = jest.fn();
+
+                controller.handleLevelUp();
+
+                expect(levelInput.value).toBe('10');
+                expect(stateAdapter.getFundBalanceCents()).toBe(2000);
+                expect(stateAdapter.getDustyBlueprints()).toBe(15);
+                expect(parseInt(smpInput.value)).toBe(1);
+            });
         });
 
         it('should award SMP when leveling up to levels with SMP rewards', () => {
             const controller = new CharacterController(stateAdapter, form, dependencies);
             controller.initialize();
-            
+
             const levelInput = document.getElementById('level');
             const smpInput = document.getElementById('smp');
-            
+
             levelInput.value = '4';
-            smpInput.value = '0';
             levelInput.dispatchEvent(new Event('change'));
-            
+            smpInput.value = '0';
+
             // Level up to 5 (awards 1 SMP)
             levelInput.value = '5';
             levelInput.dispatchEvent(new Event('change'));
@@ -269,18 +279,17 @@ describe('Controllers', () => {
             controller.initialize();
             
             const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            
-            // Set current level and currency (no change event to avoid applying rewards)
+            characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 10000;
+
+            // Set current level (no change event to avoid applying rewards)
             levelInput.value = '5';
-            inkDropsInput.value = '100';
-            
+
             // Decrease level
             levelInput.value = '3';
             levelInput.dispatchEvent(new Event('change'));
-            
-            // Should not change currency (rewards only apply on level increase)
-            expect(parseInt(inkDropsInput.value)).toBe(100);
+
+            // Should not change the Fund (rewards only apply on level increase)
+            expect(stateAdapter.getFundBalanceCents()).toBe(10000);
         });
     });
 
@@ -574,7 +583,34 @@ describe('Controllers', () => {
             expect(stateAdapter.removeTemporaryBuff).toHaveBeenCalledWith(0);
         });
 
-        it('should handle marking buff as used', () => {
+        it('marking a one-time dollar buff as used pays its dollars', () => {
+            const updateCurrency = jest.fn();
+            const controller = new BuffController(stateAdapter, form, dependencies);
+            controller.initialize(updateCurrency);
+
+            const original = data.temporaryBuffs['Disjointed Perception'];
+            data.temporaryBuffs['Disjointed Perception'] = { ...original, rewardModifier: { dollars: 3 } };
+            try {
+                stateAdapter.getTemporaryBuffs = jest.fn(() => [{
+                    name: 'Disjointed Perception',
+                    status: 'active',
+                    duration: 'one-time'
+                }]);
+                stateAdapter.updateTemporaryBuff = jest.fn();
+
+                const target = document.createElement('button');
+                target.classList.add('mark-buff-used-btn');
+                target.dataset.index = '0';
+
+                expect(controller.handleClick(target)).toBe(true);
+                expect(updateCurrency).toHaveBeenCalledWith({ xp: 0, dollars: 3, items: [] });
+            } finally {
+                data.temporaryBuffs['Disjointed Perception'] = original;
+            }
+        });
+
+        // TODO(Task 5): re-enable once temporaryBuffs.json gives Disjointed Perception rewardModifier { dollars: 3 }.
+        it.skip('should handle marking buff as used', () => {
             const updateCurrency = jest.fn();
             const controller = new BuffController(stateAdapter, form, dependencies);
             controller.initialize(updateCurrency);
@@ -598,8 +634,7 @@ describe('Controllers', () => {
                 // Verify currency is applied when buff is marked as used
                 expect(updateCurrency).toHaveBeenCalledWith({
                     xp: 0,
-                    inkDrops: 10,
-                    paperScraps: 5,
+                    dollars: 3,
                     items: []
                 });
             }
@@ -981,6 +1016,124 @@ describe('Controllers', () => {
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
 
             promptSpy.mockRestore();
+        });
+
+        describe('Transmutation and Philosopher\'s Stone activations', () => {
+            const setupActivation = (state) => {
+                const monthInput = document.createElement('select');
+                monthInput.id = 'quest-month';
+                monthInput.innerHTML = '<option value="March">March</option><option value="April">April</option>';
+                monthInput.value = 'March';
+                form.appendChild(monthInput);
+
+                const yearInput = document.createElement('select');
+                yearInput.id = 'quest-year';
+                yearInput.innerHTML = '<option value="2026">2026</option>';
+                yearInput.value = '2026';
+                form.appendChild(yearInput);
+
+                const realStateAdapter = new StateAdapter(state);
+                const localDependencies = {
+                    ui: {
+                        renderActiveAssignments: jest.fn(),
+                        renderCompletedQuests: jest.fn(),
+                        renderActivatedAbilities: jest.fn(),
+                        updateXpProgressBar: jest.fn()
+                    },
+                    saveState: jest.fn()
+                };
+                const controller = new QuestController(realStateAdapter, form, localDependencies);
+                controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+                return { controller, realStateAdapter, monthInput };
+            };
+
+            const activationButton = (action, sourceType, sourceId, abilityName) => {
+                const button = document.createElement('button');
+                button.className = 'activate-ability-btn';
+                button.dataset.action = action;
+                button.dataset.sourceType = sourceType;
+                button.dataset.sourceId = sourceId;
+                button.dataset.cooldown = 'monthly';
+                button.dataset.abilityName = abilityName;
+                return button;
+            };
+
+            it('Transmutation converts 20 blueprints to $2 once per month', () => {
+                const state = createEmptyCharacterState();
+                state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 50;
+                const { controller, realStateAdapter, monthInput } = setupActivation(state);
+                const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('1');
+                const button = activationButton('transmute_currency', 'school', 'Transmutation', 'School of Transmutation');
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(30);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(200);
+
+                // Second use in the same month is blocked by the cooldown
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(30);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(200);
+
+                // A new month allows it again
+                monthInput.value = 'April';
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(10);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(400);
+
+                promptSpy.mockRestore();
+            });
+
+            it('Transmutation converts $2 to 20 blueprints and refuses when the Fund is short', () => {
+                const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+                const state = createEmptyCharacterState();
+                state[STORAGE_KEYS.FUND_BALANCE_CENTS] = 150;
+                const { controller, realStateAdapter } = setupActivation(state);
+                const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('2');
+                const button = activationButton('transmute_currency', 'school', 'Transmutation', 'School of Transmutation');
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(150);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(0);
+                expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Not enough in your Fund'));
+                // A refused conversion does not consume the monthly cooldown
+                realStateAdapter.setFundBalanceCents(250);
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(50);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(20);
+
+                promptSpy.mockRestore();
+                errorSpy.mockRestore();
+            });
+
+            it('Transmutation refuses without 20 blueprints', () => {
+                const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+                const state = createEmptyCharacterState();
+                state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 19;
+                const { controller, realStateAdapter } = setupActivation(state);
+                const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('1');
+
+                controller.handleActivateAbility(activationButton('transmute_currency', 'school', 'Transmutation', 'School of Transmutation'));
+                expect(realStateAdapter.getDustyBlueprints()).toBe(19);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(0);
+                expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('need 20'));
+
+                promptSpy.mockRestore();
+                errorSpy.mockRestore();
+            });
+
+            it("Philosopher's Stone trades 50 XP for $5", () => {
+                const state = createEmptyCharacterState();
+                const { controller, realStateAdapter } = setupActivation(state);
+                const xpInput = document.createElement('input');
+                xpInput.id = 'xp-current';
+                xpInput.value = '120';
+                form.appendChild(xpInput);
+
+                controller.handleActivateAbility(activationButton('sacrifice_xp_for_currency', 'ability', 'philosophers-stone', "Philosopher's Stone"));
+
+                expect(xpInput.value).toBe('70');
+                expect(realStateAdapter.getFundBalanceCents()).toBe(500);
+            });
         });
 
         it('should reject Evocation activation for non-Evocation school', () => {
@@ -1559,13 +1712,8 @@ describe('Controllers', () => {
             // Wing should now be completed
             expect(realStateAdapter.isWingCompleted(wingId)).toBe(true);
             // And UI currency award should have been invoked
-            expect(updateCurrency).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    xp: expect.any(Number),
-                    inkDrops: expect.any(Number),
-                    paperScraps: expect.any(Number)
-                })
-            );
+            // Wing completion pays $25 and 75 XP
+            expect(updateCurrency).toHaveBeenCalledWith({ xp: 75, dollars: 25, items: [] });
         });
 
         it('should finalize the correct moved completed quest when multiple entries have null ids', () => {

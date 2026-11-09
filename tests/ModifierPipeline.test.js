@@ -79,7 +79,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('applies GRANT_RESOURCE like an additive currency grant', () => {
-        const base = new Reward({ inkDrops: 3 });
+        const base = new Reward({ dollars: 3 });
         const effects = [
             {
                 source: { name: 'Cartographer' },
@@ -88,7 +88,7 @@ describe('ModifierPipeline.resolve', () => {
                     condition: { questType: 'dungeon_crawl' },
                     modifier: {
                         type: MODIFIER_TYPES.GRANT_RESOURCE,
-                        resource: 'inkDrops',
+                        resource: 'dollars',
                         value: 15
                     }
                 }
@@ -101,7 +101,7 @@ describe('ModifierPipeline.resolve', () => {
             effects,
             base
         );
-        expect(result.inkDrops).toBe(18);
+        expect(result.dollars).toBe(18);
         expect(result.receipt.modifiers[0].type).toBe('effect:grant_resource');
         expect(result.modifiedBy).toContain('Cartographer');
     });
@@ -138,7 +138,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('skips effects with unmet condition', () => {
-        const base = new Reward({ paperScraps: 10 });
+        const base = new Reward({ dollars: 10 });
         const effects = [
             {
                 source: { name: 'Dungeon Bonus' },
@@ -147,7 +147,7 @@ describe('ModifierPipeline.resolve', () => {
                     condition: { questType: 'dungeon_crawl' },
                     modifier: {
                         type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'paperScraps',
+                        resource: 'dollars',
                         value: 10
                     }
                 }
@@ -160,7 +160,7 @@ describe('ModifierPipeline.resolve', () => {
             effects,
             base
         );
-        expect(result.paperScraps).toBe(10);
+        expect(result.dollars).toBe(10);
     });
 
     test('encounterType:any requires encounter context', () => {
@@ -198,7 +198,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('matches condition keys including genre and pageCount', () => {
-        const base = new Reward({ inkDrops: 0 });
+        const base = new Reward({ dollars: 0 });
         const effects = [
             {
                 source: { name: 'Genre and Length' },
@@ -210,7 +210,7 @@ describe('ModifierPipeline.resolve', () => {
                     },
                     modifier: {
                         type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'inkDrops',
+                        resource: 'dollars',
                         value: 10
                     }
                 }
@@ -223,7 +223,7 @@ describe('ModifierPipeline.resolve', () => {
             effects,
             base
         );
-        expect(result.inkDrops).toBe(10);
+        expect(result.dollars).toBe(10);
     });
 
     test('records modifier entries in receipt', () => {
@@ -249,7 +249,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('records UNLOCK_SLOT as deferred non-numeric effect', () => {
-        const base = new Reward({ xp: 10, inkDrops: 3, paperScraps: 1 });
+        const base = new Reward({ xp: 10, dollars: 3, blueprints: 1 });
         const effects = [
             {
                 source: { name: 'School of Conjuration' },
@@ -265,8 +265,8 @@ describe('ModifierPipeline.resolve', () => {
         const result = ModifierPipeline.resolve(TRIGGERS.ON_STATE_LOAD, {}, effects, base);
 
         expect(result.xp).toBe(10);
-        expect(result.inkDrops).toBe(3);
-        expect(result.paperScraps).toBe(1);
+        expect(result.dollars).toBe(3);
+        expect(result.blueprints).toBe(1);
         expect(result.modifiedBy).toEqual([]);
         expect(result.receipt.modifiers).toContainEqual(
             expect.objectContaining({
@@ -278,7 +278,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('records ACTIVATE eligibility without changing numeric rewards', () => {
-        const base = new Reward({ xp: 12, inkDrops: 4 });
+        const base = new Reward({ xp: 12, dollars: 4 });
         const effects = [
             {
                 source: { sourceType: 'school', id: 'Evocation', name: 'School of Evocation' },
@@ -300,7 +300,7 @@ describe('ModifierPipeline.resolve', () => {
         );
 
         expect(result.xp).toBe(12);
-        expect(result.inkDrops).toBe(4);
+        expect(result.dollars).toBe(4);
         expect(result.receipt.modifiers).toContainEqual(
             expect.objectContaining({
                 type: 'effect:activate',
@@ -395,7 +395,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'paperScraps',
+                                resource: 'dollars',
                                 value: 10
                             }
                         }
@@ -423,7 +423,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'paperScraps',
+                                resource: 'dollars',
                                 value: 5
                             }
                         }
@@ -451,7 +451,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'inkDrops',
+                                resource: 'dollars',
                                 value: 3
                             }
                         }
@@ -495,7 +495,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'paperScraps',
+                                resource: 'dollars',
                                 value: 10
                             }
                         }
@@ -548,7 +548,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                     effects: [
                         {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 1 }
+                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 1 }
                         }
                     ]
                 },
@@ -557,7 +557,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                     effects: [
                         {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 2 }
+                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 2 }
                         }
                     ]
                 }

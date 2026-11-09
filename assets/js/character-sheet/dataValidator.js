@@ -150,18 +150,25 @@ function validateRewards(rewards, context = 'rewards') {
     if (!rewards || typeof rewards !== 'object') {
         return {
             xp: 0,
-            inkDrops: 0,
-            paperScraps: 0,
+            dollars: 0,
             blueprints: 0,
             items: [],
             modifiedBy: []
         };
     }
 
+    const nonNegative = (value) => (typeof value === 'number' && !isNaN(value) ? Math.max(0, value) : 0);
+    // Legacy history: quests completed before the dollar economy stored Ink/Paper amounts.
+    // Keep them (never invent them) so history is preserved; renderers hide them.
+    const legacyCurrency = {};
+    ['inkDrops', 'paperScraps'].forEach((key) => {
+        if (key in rewards) legacyCurrency[key] = nonNegative(rewards[key]);
+    });
+
     return {
-        xp: typeof rewards.xp === 'number' && !isNaN(rewards.xp) ? Math.max(0, rewards.xp) : 0,
-        inkDrops: typeof rewards.inkDrops === 'number' && !isNaN(rewards.inkDrops) ? Math.max(0, rewards.inkDrops) : 0,
-        paperScraps: typeof rewards.paperScraps === 'number' && !isNaN(rewards.paperScraps) ? Math.max(0, rewards.paperScraps) : 0,
+        xp: nonNegative(rewards.xp),
+        dollars: nonNegative(rewards.dollars),
+        ...legacyCurrency,
         // Side quests are the first quest type to carry authored Blueprints on the quest
         // itself. Omitting this key stripped them on every load, so the reward rendered
         // on the card and was never paid.

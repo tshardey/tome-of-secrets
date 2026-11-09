@@ -9,33 +9,27 @@ export const GAME_CONFIG = Object.freeze({
      * Base reward values for quest types
      */
     rewards: {
-        // Quest type base rewards
-        extraCredit: {
-            paperScraps: 10
+        // Every completed quest pays this flat dollar base, whatever its type.
+        questBase: {
+            dollars: 15
         },
+        // A second quest cleared by the same book through an ability pays this base instead.
+        secondaryQuestBase: {
+            dollars: 10
+        },
+
+        // Quest type XP bases (dollars always come from questBase)
         organizeTheStacks: {
-            xp: 15,
-            inkDrops: 10
+            xp: 15
         },
         defaultQuestCompletion: {
-            xp: 25,
-            inkDrops: 10,
-            paperScraps: 0
+            xp: 25
         },
-        defaultFallback: {
-            inkDrops: 10
-        },
-        
+
         // Dungeon encounter rewards
         encounter: {
             monster: {
                 xp: 30
-            },
-            friendlyCreature: {
-                inkDrops: 10
-            },
-            familiar: {
-                paperScraps: 5
             }
         }
     },
@@ -48,18 +42,6 @@ export const GAME_CONFIG = Object.freeze({
     },
 
     /**
-     * Background bonuses
-     */
-    backgrounds: {
-        biblioslinker: {
-            dungeonCrawlPaperScraps: 10 // Bonus for completing dungeon crawls
-        },
-        backgroundBonus: {
-            inkDrops: 15 // Bonus for Archivist, Prophet, Cartographer
-        }
-    },
-
-    /**
      * UI and storage configuration
      */
     ui: {
@@ -69,13 +51,30 @@ export const GAME_CONFIG = Object.freeze({
 
     /**
      * Atmospheric buff configuration.
-     * Atmospheric play is the Paper Scrap faucet; `resource` keeps the currency
-     * a single knob rather than a value hardcoded across calculator and view model.
+     * Each active buff pays `baseValue` dollars per active day; a buff associated with
+     * the chosen sanctum pays `sanctumBonus` per day in total. `resource` keeps the
+     * currency a single knob rather than a value hardcoded across calculator and view model.
      */
     atmospheric: {
-        resource: 'paperScraps',
-        baseValue: 2,
-        sanctumBonus: 3
+        resource: 'dollars',
+        baseValue: 1,
+        sanctumBonus: 2
+    },
+
+    /**
+     * Once-per-month activated exchanges (cooldowns gated through effectCooldowns).
+     */
+    activations: {
+        // Transmutation school: 20 Blueprints -> $2, or $2 -> 20 Blueprints
+        transmutation: {
+            blueprints: 20,
+            dollars: 2
+        },
+        // Philosopher's Stone: sacrifice 50 XP for $5
+        philosophersStone: {
+            xpCost: 50,
+            dollars: 5
+        }
     },
 
     /**
@@ -84,12 +83,9 @@ export const GAME_CONFIG = Object.freeze({
     restoration: {
         // Rewards for completing all projects in a wing
         wingCompletionRewards: {
-            inkDrops: 100,
-            paperScraps: 40,
+            dollars: 25,
             xp: 75
         },
-        // Permanent bonus from completing a wing (+X Ink Drops for matching genre books)
-        wingPassiveBonus: 4,
         // Blueprint rewards by quest type
         extraCreditBlueprintReward: 10
     }

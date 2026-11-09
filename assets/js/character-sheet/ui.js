@@ -35,6 +35,7 @@ import { shouldExcludeFromQuestBonuses } from '../services/AtmosphericBuffServic
 import { EffectRegistry } from '../services/EffectRegistry.js';
 import { ModifierPipeline } from '../services/ModifierPipeline.js';
 import { TRIGGERS } from '../services/effectSchema.js';
+import { formatCents } from '../services/FundLedgerService.js';
 
 /**
  * Effective cover URL for a quest: from linked library book when quest.bookId is set, else quest.coverUrl.
@@ -1936,15 +1937,9 @@ export function displayCalculationReceipt(receipt, questType = '', questPrompt =
         li.style.cssText = 'padding: 5px 0;';
         baseList.appendChild(li);
     }
-    if (receipt.base.inkDrops > 0) {
+    if (receipt.base.dollars > 0) {
         const li = document.createElement('li');
-        li.textContent = `Ink Drops: +${receipt.base.inkDrops}`;
-        li.style.cssText = 'padding: 5px 0;';
-        baseList.appendChild(li);
-    }
-    if (receipt.base.paperScraps > 0) {
-        const li = document.createElement('li');
-        li.textContent = `Paper Scraps: +${receipt.base.paperScraps}`;
+        li.textContent = `Fund: +${formatCents(receipt.base.dollars * 100)}`;
         li.style.cssText = 'padding: 5px 0;';
         baseList.appendChild(li);
     }
@@ -2014,15 +2009,9 @@ export function displayCalculationReceipt(receipt, questType = '', questPrompt =
         li.style.cssText = 'padding: 5px 0; font-weight: bold;';
         finalList.appendChild(li);
     }
-    if (receipt.final.inkDrops > 0) {
+    if (receipt.final.dollars > 0) {
         const li = document.createElement('li');
-        li.textContent = `Ink Drops: +${receipt.final.inkDrops}`;
-        li.style.cssText = 'padding: 5px 0; font-weight: bold;';
-        finalList.appendChild(li);
-    }
-    if (receipt.final.paperScraps > 0) {
-        const li = document.createElement('li');
-        li.textContent = `Paper Scraps: +${receipt.final.paperScraps}`;
+        li.textContent = `Fund: +${formatCents(receipt.final.dollars * 100)}`;
         li.style.cssText = 'padding: 5px 0; font-weight: bold;';
         finalList.appendChild(li);
     }

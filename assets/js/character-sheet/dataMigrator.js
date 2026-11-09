@@ -31,24 +31,22 @@ function migrateQuestRewards(quest) {
     // Generate default rewards based on quest type
     const defaultRewards = {
         xp: 0,
-        inkDrops: 0,
-        paperScraps: 0,
+        // Historical quests never show invented dollars; active quests are recomputed at completion.
+        dollars: 0,
         items: [],
         modifiedBy: []
     };
 
     if (quest.type === '♥ Organize the Stacks') {
         defaultRewards.xp = GAME_CONFIG.rewards.organizeTheStacks.xp;
-        defaultRewards.inkDrops = GAME_CONFIG.rewards.organizeTheStacks.inkDrops;
     } else if (quest.type === '⭐ Extra Credit') {
-        defaultRewards.paperScraps = GAME_CONFIG.rewards.extraCredit.paperScraps;
+        // Extra credit carries no XP
     } else if (quest.type === '♠ Dungeon Crawl' && quest.isEncounter) {
         // Default encounter rewards
         defaultRewards.xp = GAME_CONFIG.rewards.encounter.monster.xp;
     } else {
         // Default quest completion rewards
         defaultRewards.xp = GAME_CONFIG.rewards.defaultQuestCompletion.xp;
-        defaultRewards.inkDrops = GAME_CONFIG.rewards.defaultQuestCompletion.inkDrops;
     }
 
     return {

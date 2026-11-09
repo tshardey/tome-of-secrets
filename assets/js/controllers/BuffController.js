@@ -176,18 +176,11 @@ export class BuffController extends BaseController {
                     // Get buff data to check for rewardModifier (check both new and legacy sources)
                     const buffData = dataModule.temporaryBuffs?.[buff.name] || dataModule.temporaryBuffsFromRewards?.[buff.name];
                     if (buffData && buffData.rewardModifier) {
-                        const inkDrops = buffData.rewardModifier.inkDrops || 0;
-                        const paperScraps = buffData.rewardModifier.paperScraps || 0;
-                        
+                        const dollars = Number(buffData.rewardModifier.dollars) || 0;
+
                         // Only apply currency if there are actual rewards (not just an empty rewardModifier object)
-                        if (inkDrops > 0 || paperScraps > 0) {
-                            const rewards = {
-                                xp: 0,
-                                inkDrops: inkDrops,
-                                paperScraps: paperScraps,
-                                items: []
-                            };
-                            this.updateCurrency(rewards);
+                        if (dollars > 0) {
+                            this.updateCurrency({ xp: 0, dollars, items: [] });
                         }
                     }
                 }

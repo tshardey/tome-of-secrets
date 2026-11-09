@@ -136,7 +136,7 @@ describe('Book state (StateAdapter)', () => {
   });
 
   describe('markBookComplete', () => {
-    it('sets status and dateCompleted and returns result with book, movedQuests, synergyRewards', () => {
+    it('sets status and dateCompleted and returns result with book and movedQuests', () => {
       const book = adapter.addBook({ title: 'In Progress', status: 'reading' });
       const result = adapter.markBookComplete(book.id);
 
@@ -145,7 +145,7 @@ describe('Book state (StateAdapter)', () => {
       expect(result.book.status).toBe('completed');
       expect(result.book.dateCompleted).toBeDefined();
       expect(result.movedQuests).toEqual([]);
-      expect(result.synergyRewards).toEqual({ xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
+      expect(result).not.toHaveProperty('synergyRewards');
       expect(adapter.getBooksByStatus('completed')).toHaveLength(1);
     });
   });

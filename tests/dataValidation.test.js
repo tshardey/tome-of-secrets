@@ -222,8 +222,9 @@ describe('Data Validation', () => {
                         year: '2024',
                         rewards: {
                             xp: 'not a number', // Invalid
-                            inkDrops: -5, // Invalid (negative)
-                            paperScraps: NaN, // Invalid
+                            dollars: -5, // Invalid (negative)
+                            inkDrops: -5, // Legacy history, invalid (negative)
+                            paperScraps: NaN, // Legacy history, invalid
                             items: 'not an array', // Invalid
                             modifiedBy: null // Invalid
                         }
@@ -234,10 +235,24 @@ describe('Data Validation', () => {
             const validated = validateCharacterState(state);
             const rewards = validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards;
             expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0); // Negative values become 0
+            expect(rewards.dollars).toBe(0); // Negative values become 0
+            // Legacy Ink/Paper history is kept (sanitized), never invented
+            expect(rewards.inkDrops).toBe(0);
             expect(rewards.paperScraps).toBe(0);
             expect(Array.isArray(rewards.items)).toBe(true);
             expect(Array.isArray(rewards.modifiedBy)).toBe(true);
+        });
+
+        test('does not add legacy Ink/Paper keys to dollar-era rewards', () => {
+            const state = {
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [
+                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 15, items: [] } }
+                ]
+            };
+            const rewards = validateCharacterState(state)[STORAGE_KEYS.COMPLETED_QUESTS][0].rewards;
+            expect(rewards.dollars).toBe(15);
+            expect(rewards).not.toHaveProperty('inkDrops');
+            expect(rewards).not.toHaveProperty('paperScraps');
         });
 
         test('should validate items array', () => {
@@ -531,7 +546,8 @@ describe('Data Migration', () => {
             const migrated = migrateState(state);
             expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards).toBeDefined();
             expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe(15);
-            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.inkDrops).toBe(10);
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.dollars).toBe(0); // history never shows invented dollars
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards).not.toHaveProperty('inkDrops');
         });
 
         test('should not migrate if already at current version and no repair needed', () => {

@@ -95,17 +95,11 @@
         <div class="rpg-panel-body">
             <div class="rpg-stats-grid">
                 <div class="rpg-stat-card">
-                    <label for="inkDrops" class="rpg-stat-icon">💧</label>
+                    <span class="rpg-stat-icon" aria-hidden="true">💰</span>
                     <div class="rpg-stat-content">
-                        <label for="inkDrops" class="rpg-stat-label">Ink Drops</label>
-                        <input type="number" id="inkDrops" class="rpg-stat-input" value="0" />
-                    </div>
-                </div>
-                <div class="rpg-stat-card">
-                    <label for="paperScraps" class="rpg-stat-icon">📄</label>
-                    <div class="rpg-stat-content">
-                        <label for="paperScraps" class="rpg-stat-label">Paper Scraps</label>
-                        <input type="number" id="paperScraps" class="rpg-stat-input" value="0" />
+                        <span class="rpg-stat-label">Fund</span>
+                        <!-- Read-only placeholder; the Fund widget (balance edit, deductions) replaces it. -->
+                        <output id="fund-balance-display" class="rpg-stat-input" aria-live="polite">$0</output>
                     </div>
                 </div>
                 <div class="rpg-stat-card">
@@ -121,11 +115,6 @@
                         <label for="smp" class="rpg-stat-label">SMP</label>
                         <input type="number" id="smp" class="rpg-stat-input" value="0" min="0" />
                     </div>
-                </div>
-            </div>
-            <div id="currency-unsaved-warning" class="currency-warning" style="display: none;">
-                <div class="warning-message">
-                    <strong>⚠️ Warning:</strong> You have unsaved changes to your currency. Please save your character sheet before redeeming items on the <a href="{{ site.baseurl }}/shopping.html">Shopping</a> page to ensure your changes are preserved.
                 </div>
             </div>
         </div>

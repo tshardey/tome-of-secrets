@@ -57,7 +57,7 @@ describe('branch-aware side quest rewards', () => {
         });
 
         expect(reward.xp).toBe(0);
-        expect(reward.paperScraps).toBe(5);
+        expect(reward.dollars).toBe(15); // authored Scraps ignored; flat quest base
         expect(reward.blueprints).toBe(15);
         expect(reward.receipt.base.blueprints).toBe(15);
         expect(reward.receipt.final.blueprints).toBe(15);

@@ -316,8 +316,7 @@ export class OtherQuestDeckController extends BaseController {
                 prompt,
                 rewards: {
                     xp: 0,
-                    inkDrops: 0,
-                    paperScraps: 0,
+                    dollars: 0,
                     blueprints: 0,
                     items: []
                 },

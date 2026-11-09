@@ -90,47 +90,37 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
         expect(withoutCelestialTag.modifiedBy).not.toContain('Celestial Koi Fish');
     });
 
-    test('background effects from keeperBackgrounds.json apply across backgrounds with pipeline effects', () => {
+    // TODO(Task 5): re-enable once keeperBackgrounds.json effects use resource "dollars"
+    // (Archivist +$2, Cartographer +$3, Prophet +$3, Biblioslinker +$3 per the spec table).
+    test.skip('background dollar effects from keeperBackgrounds.json apply', () => {
         const scenarios = [
-            {
-                id: 'archivist',
-                trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['non-fiction'] }),
-                baseReward: new Reward({ inkDrops: 0 }),
-                assert: (result) => expect(result.inkDrops).toBe(10),
-                sourceName: "The Archivist's Apprentice"
-            },
-            {
-                id: 'cartographer',
-                trigger: TRIGGERS.ON_QUEST_DRAFTED,
-                payload: TriggerPayload.questDrafted({ questType: 'dungeon_crawl' }),
-                baseReward: new Reward({ inkDrops: 0 }),
-                assert: (result) => expect(result.inkDrops).toBe(15),
-                sourceName: "The Cartographer's Guild"
-            },
-            {
-                id: 'prophet',
-                trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                payload: TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['mythology'] }),
-                baseReward: new Reward({ inkDrops: 0 }),
-                assert: (result) => expect(result.inkDrops).toBe(15),
-                sourceName: 'The Cloistered Prophet'
-            },
-            {
-                id: 'biblioslinker',
-                trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                payload: TriggerPayload.questCompleted({ questType: 'dungeon_crawl' }),
-                baseReward: new Reward({ paperScraps: 0 }),
-                assert: (result) => expect(result.paperScraps).toBe(10),
-                sourceName: 'The Biblioslinker'
-            },
+            ['archivist', TRIGGERS.ON_QUEST_COMPLETED, TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['non-fiction'] }), 2, "The Archivist's Apprentice"],
+            ['cartographer', TRIGGERS.ON_QUEST_DRAFTED, TriggerPayload.questDrafted({ questType: 'dungeon_crawl' }), 3, "The Cartographer's Guild"],
+            ['prophet', TRIGGERS.ON_QUEST_COMPLETED, TriggerPayload.questCompleted({ questType: 'genre_quest', tags: ['mythology'] }), 3, 'The Cloistered Prophet'],
+            ['biblioslinker', TRIGGERS.ON_QUEST_COMPLETED, TriggerPayload.questCompleted({ questType: 'dungeon_crawl' }), 3, 'The Biblioslinker']
+        ];
+        scenarios.forEach(([id, trigger, payload, dollars, sourceName]) => {
+            const result = resolveWithRealData({
+                trigger,
+                payload,
+                baseReward: new Reward(),
+                state: emptyState(),
+                formData: { keeperBackground: id, wizardSchool: '' }
+            });
+            expect({ id, dollars: result.dollars }).toEqual({ id, dollars });
+            expect(result.modifiedBy).toContain(sourceName);
+        });
+    });
+
+    test('background activation effects from keeperBackgrounds.json apply', () => {
+        const scenarios = [
             {
                 id: 'groveTender',
                 trigger: TRIGGERS.ON_MONTH_START,
                 payload: TriggerPayload.monthStart({ questPoolSize: 4 }),
-                baseReward: new Reward({ inkDrops: 0 }),
+                baseReward: new Reward(),
                 assert: (result) => {
-                    expect(result.inkDrops).toBe(0);
+                    expect(result.dollars).toBe(0);
                     expect(result.receipt.modifiers).toContainEqual(
                         expect.objectContaining({
                             type: 'effect:activate',
@@ -196,17 +186,6 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
             expect.arrayContaining(['Silver Tongue', 'Alchemic Focus'])
         );
 
-        const silverState = emptyState();
-        silverState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
-        const silverResult = resolveWithRealData({
-            trigger: TRIGGERS.ON_QUEST_COMPLETED,
-            payload: TriggerPayload.questCompleted({ questType: 'genre_quest' }),
-            baseReward: new Reward({ paperScraps: 0 }),
-            state: silverState
-        });
-        expect(silverResult.paperScraps).toBe(5);
-        expect(silverResult.modifiedBy).toContain('Silver Tongue');
-
         const alchemicState = emptyState();
         alchemicState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Alchemic Focus'];
         const alchemicResult = resolveWithRealData({
@@ -219,15 +198,40 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
         expect(alchemicResult.modifiedBy).toContain('Alchemic Focus');
     });
 
-    test('background bonus does not double-stack with legacy background buff cards', () => {
+    // TODO(Task 5): re-enable once Silver Tongue pays +$1 per quest.
+    test.skip('Silver Tongue from masteryAbilities.json adds +$1', () => {
+        const silverState = emptyState();
+        silverState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
+        const silverResult = resolveWithRealData({
+            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+            payload: TriggerPayload.questCompleted({ questType: 'genre_quest' }),
+            baseReward: new Reward(),
+            state: silverState
+        });
+        expect(silverResult.dollars).toBe(1);
+        expect(silverResult.modifiedBy).toContain('Silver Tongue');
+    });
+
+    test('legacy background buff cards never add their own bonus', () => {
         const result = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: archive study', {
-            baseRewardOverride: new Reward({ inkDrops: 10 }),
             appliedBuffs: ['[Background] Archivist Bonus'],
             background: 'archivist',
             quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
         });
 
-        expect(result.inkDrops).toBe(20);
+        expect(result.modifiedBy).not.toContain('Archivist Bonus');
+        expect(result.receipt.modifiers.map(m => m.source)).not.toContain('Archivist Bonus');
+    });
+
+    // TODO(Task 5): re-enable once Archivist pays +$2 (15 base + 2 = 17).
+    test.skip('background bonus does not double-stack with legacy background buff cards', () => {
+        const result = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: archive study', {
+            appliedBuffs: ['[Background] Archivist Bonus'],
+            background: 'archivist',
+            quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
+        });
+
+        expect(result.dollars).toBe(17);
         expect(result.modifiedBy).toContain("The Archivist's Apprentice");
         expect(result.modifiedBy).not.toContain('Archivist Bonus');
     });

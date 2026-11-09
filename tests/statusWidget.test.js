@@ -40,12 +40,11 @@ describe('Status Widget', () => {
             keeperName: 'Test Keeper',
             level: '5',
             'xp-current': '150',
-            inkDrops: '25',
-            paperScraps: '10',
             smp: '3'
         });
-        
+
         characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 5;
+        characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 2550;
         
         // Mark state as loaded to avoid async loadState call
         // Note: This is a workaround since isStateLoaded might not be exported
@@ -96,8 +95,8 @@ describe('Status Widget', () => {
             const toggle = widget.querySelector('.status-widget__toggle');
             
             expect(toggle.textContent).toContain('Lv 5');
-            expect(toggle.textContent).toContain('25'); // Ink Drops
-            expect(toggle.textContent).toContain('10'); // Paper Scraps
+            expect(toggle.textContent).toContain('$25.50'); // Fund
+            expect(toggle.textContent).not.toMatch(/Ink|Paper|💧|📄/);
             expect(toggle.textContent).toContain('5'); // Blueprints
             expect(toggle.textContent).toContain('3'); // SMP
         });
@@ -216,11 +215,12 @@ describe('Status Widget', () => {
             const panel = widget.querySelector('.status-widget__panel');
             const currencies = panel.querySelectorAll('.status-widget__currency');
             
-            expect(currencies.length).toBe(4); // Ink Drops, Paper Scraps, Blueprints, SMP
-            
+            expect(currencies.length).toBe(3); // Fund, Blueprints, SMP
+
             const currencyText = panel.textContent;
-            expect(currencyText).toContain('25'); // Ink Drops
-            expect(currencyText).toContain('10'); // Paper Scraps
+            expect(currencyText).toContain('Fund');
+            expect(currencyText).toContain('$25.50'); // Fund
+            expect(currencyText).not.toMatch(/Ink Drops|Paper Scraps/);
             expect(currencyText).toContain('5'); // Blueprints
             expect(currencyText).toContain('3'); // SMP
         });
@@ -285,17 +285,17 @@ describe('Status Widget', () => {
                 keeperName: 'Updated Keeper',
                 level: '6',
                 'xp-current': '200',
-                inkDrops: '50',
-                paperScraps: '20',
                 smp: '5'
             });
-            
+            characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = -500;
+
             // Fire event
             window.dispatchEvent(new CustomEvent('tos:localStateChanged'));
-            
+
             // Widget should update (check collapsed state)
             expect(toggle.textContent).toContain('Lv 6');
-            expect(toggle.textContent).toContain('50');
+            expect(toggle.textContent).toContain('-$5');
+            expect(toggle.querySelector('.currency-negative')).toBeTruthy();
         });
     });
 });

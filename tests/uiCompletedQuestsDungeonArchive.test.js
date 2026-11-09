@@ -127,6 +127,80 @@ describe('ui.renderCompletedQuests dungeon archive sections', () => {
     expect(cards).toHaveLength(3);
   });
 
+  test('legacy quest with inkDrops/paperScraps renders XP and blueprints only', () => {
+    const completed = [
+      {
+        type: '♣ Side Quest',
+        prompt: 'An old side quest',
+        book: 'Old Book',
+        dateCompleted: '2025-06-15T12:00:00Z',
+        rewards: { xp: 40, inkDrops: 25, paperScraps: 10, blueprints: 5, items: [], modifiedBy: [] },
+        receipt: {
+          base: { xp: 40, inkDrops: 25, paperScraps: 10, blueprints: 5 },
+          modifiers: [],
+          final: { xp: 40, inkDrops: 25, paperScraps: 10, blueprints: 5 }
+        },
+        buffs: [],
+      },
+      {
+        type: '♠ Dungeon Crawl',
+        prompt: 'Old room',
+        dateCompleted: '2025-06-16T12:00:00Z',
+        isEncounter: false,
+        roomNumber: '1',
+        rewards: { xp: 0, inkDrops: 0, paperScraps: 5, items: [] },
+        buffs: [],
+      },
+    ];
+
+    characterState[STORAGE_KEYS.COMPLETED_QUESTS] = completed;
+
+    ui.renderCompletedQuests();
+
+    const html = document.getElementById('completed-quests-container').innerHTML;
+    const text = document.getElementById('completed-quests-container').textContent;
+    expect(html).not.toMatch(/undefined|NaN|Ink/);
+    expect(text).not.toMatch(/Paper|💧|📄/);
+    expect(text).toContain('+40 XP');
+    expect(text).toContain('+5 📜');
+    // Legacy currency is hidden, never shown as dollars
+    expect(text).not.toContain('$');
+  });
+
+  test('quest-completion receipt pop-up shows a single dollar line and no Ink/Paper', () => {
+    ui.displayCalculationReceipt(
+      {
+        base: { xp: 15, dollars: 15, blueprints: 0 },
+        modifiers: [{ source: "Librarian's Compass", type: 'effect:add_flat', value: 4, description: '+$4', currency: 'dollars' }],
+        final: { xp: 15, dollars: 19, blueprints: 0 },
+        items: [],
+        modifiedBy: ["Librarian's Compass"]
+      },
+      '♥ Organize the Stacks',
+      'Fantasy'
+    );
+
+    const text = document.body.textContent;
+    expect(text).toContain('Fund: +$15');
+    expect(text).toContain('+$4');
+    expect(text).toContain('Fund: +$19');
+    expect(text).not.toMatch(/Ink|Paper|undefined|NaN/);
+  });
+
+  test('legacy receipt with only Ink/Paper base values shows no currency line', () => {
+    ui.displayCalculationReceipt({
+      base: { xp: 0, inkDrops: 10, paperScraps: 5, blueprints: 0 },
+      modifiers: [],
+      final: { xp: 0, inkDrops: 10, paperScraps: 5, blueprints: 0 },
+      items: [],
+      modifiedBy: []
+    });
+
+    const text = document.body.textContent;
+    expect(text).toContain('No base rewards');
+    expect(text).not.toMatch(/Ink|Paper|Fund|undefined|NaN/);
+  });
+
   test('uses legacy month/year when dateCompleted is missing and renders flat list by type', () => {
     const completed = [
       {

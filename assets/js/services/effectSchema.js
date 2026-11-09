@@ -17,6 +17,9 @@ export const MODIFIER_TYPES = Object.freeze({
     ACTIVATE: 'ACTIVATE'
 });
 
+/** Numeric reward resources an effect modifier may target (the fields on `Reward`). */
+export const RESOURCES = Object.freeze(['xp', 'dollars', 'blueprints']);
+
 export const RESOLUTION_ORDER = Object.freeze([
     MODIFIER_TYPES.ADD_FLAT,
     MODIFIER_TYPES.GRANT_RESOURCE,

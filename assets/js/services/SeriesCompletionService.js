@@ -141,10 +141,9 @@ export function applyTypedReward(reward, deps) {
     switch (reward.type) {
         case 'currency': {
             const xp = typeof reward.xp === 'number' ? reward.xp : 0;
-            const inkDrops = typeof reward.inkDrops === 'number' ? reward.inkDrops : 0;
-            const paperScraps = typeof reward.paperScraps === 'number' ? reward.paperScraps : 0;
-            if (updateCurrency && (xp !== 0 || inkDrops !== 0 || paperScraps !== 0)) {
-                updateCurrency({ xp, inkDrops, paperScraps });
+            const dollars = typeof reward.dollars === 'number' ? reward.dollars : 0;
+            if (updateCurrency && (xp !== 0 || dollars !== 0)) {
+                updateCurrency({ xp, dollars });
             }
             return { applied: true, rewardText: text };
         }

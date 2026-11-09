@@ -95,8 +95,9 @@ export function createQuestRowViewModel(quest, index, listType = 'active', backg
         
         // Rewards
         xp: formatReward(rewards.xp || 0),
-        paperScraps: formatReward(rewards.paperScraps || 0),
-        inkDrops: formatReward(rewards.inkDrops || 0),
+        // Legacy inkDrops/paperScraps on old completed quests are intentionally not shown.
+        dollars: rewards.dollars > 0 ? formatReward(rewards.dollars).replace(/^\+/, '+$') : '-',
+        blueprints: formatReward(rewards.blueprints || 0),
         items: itemsDisplay,
         
         // Metadata

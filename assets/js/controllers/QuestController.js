@@ -889,8 +889,6 @@ export class QuestController extends BaseController {
 
         let success = false;
         const xpCurrentInput = document.getElementById('xp-current');
-        const inkDropsInput = document.getElementById('inkDrops');
-        const paperScrapsInput = document.getElementById('paperScraps');
 
         if (action === 'complete_two_quests_one_book') {
             const currentSchool = document.getElementById('wizardSchool')?.value || '';
@@ -1010,61 +1008,46 @@ export class QuestController extends BaseController {
             toast.success(`Evocation activated: completed 1 additional quest using "${selectedBook.title}".`);
             success = true;
         } else if (action === 'transmute_currency') {
+            const { blueprints, dollars } = GAME_CONFIG.activations.transmutation;
             const directionRaw = window.prompt(
-                'Transmute direction:\n1 = Ink Drops -> Paper Scraps (3:1)\n2 = Paper Scraps -> Ink Drops (1:3)',
+                `Transmute (once per month):\n1 = ${blueprints} Dusty Blueprints -> $${dollars}\n2 = $${dollars} -> ${blueprints} Dusty Blueprints`,
                 '1'
             );
             const direction = (directionRaw || '').trim();
-            const currentInk = parseIntOr(inkDropsInput?.value, 0);
-            const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
-            const toPaper = direction === '1';
-            const toInk = direction === '2';
-            if (!toPaper && !toInk) {
+            if (direction === '1') {
+                if (!stateAdapter.spendDustyBlueprints(blueprints)) {
+                    toast.error(`Not enough Dusty Blueprints (need ${blueprints}).`);
+                    return;
+                }
+                stateAdapter.addFunds(dollars);
+                toast.success(`Transmuted ${blueprints} Dusty Blueprints into $${dollars}.`);
+            } else if (direction === '2') {
+                const balanceCents = stateAdapter.getFundBalanceCents();
+                if (balanceCents < dollars * 100) {
+                    toast.error(`Not enough in your Fund (need $${dollars}).`);
+                    return;
+                }
+                stateAdapter.setFundBalanceCents(balanceCents - dollars * 100);
+                stateAdapter.addDustyBlueprints(blueprints);
+                toast.success(`Transmuted $${dollars} into ${blueprints} Dusty Blueprints.`);
+            } else {
                 toast.info('Transmutation cancelled.');
                 return;
             }
-
-            const maxUnits = toPaper ? Math.floor(currentInk / 3) : currentPaper;
-            if (maxUnits <= 0) {
-                toast.error(toPaper ? 'Not enough Ink Drops (need at least 3).' : 'Not enough Paper Scraps (need at least 1).');
-                return;
-            }
-
-            const amountRaw = window.prompt(
-                `How many conversion units? (1-${maxUnits})`,
-                '1'
-            );
-            const amount = Number.parseInt((amountRaw || '').trim(), 10);
-            if (!Number.isFinite(amount) || amount < 1 || amount > maxUnits) {
-                toast.error(`Enter a whole number between 1 and ${maxUnits}.`);
-                return;
-            }
-
-            if (toPaper) {
-                if (inkDropsInput) inkDropsInput.value = String(currentInk - amount * 3);
-                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper + amount);
-                toast.success(`Transmuted ${amount * 3} Ink Drops into ${amount} Paper Scrap${amount === 1 ? '' : 's'}.`);
-            } else {
-                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper - amount);
-                if (inkDropsInput) inkDropsInput.value = String(currentInk + amount * 3);
-                toast.success(`Transmuted ${amount} Paper Scrap${amount === 1 ? '' : 's'} into ${amount * 3} Ink Drops.`);
-            }
+            const dustyBlueprintsInput = document.getElementById('dustyBlueprints');
+            if (dustyBlueprintsInput) dustyBlueprintsInput.value = String(stateAdapter.getDustyBlueprints());
             success = true;
         } else if (action === 'sacrifice_xp_for_currency') {
+            const { xpCost, dollars } = GAME_CONFIG.activations.philosophersStone;
             const currentXp = parseIntOr(xpCurrentInput?.value, 0);
-            if (currentXp < 50) {
-                toast.error('Not enough XP (need 50).');
+            if (currentXp < xpCost) {
+                toast.error(`Not enough XP (need ${xpCost}).`);
                 return;
             }
-            if (xpCurrentInput) xpCurrentInput.value = String(currentXp - 50);
-            if (this.updateCurrency) {
-                this.updateCurrency({ xp: 0, inkDrops: 50, paperScraps: 10, items: [] });
-            } else {
-                if (inkDropsInput) inkDropsInput.value = String(parseIntOr(inkDropsInput.value, 0) + 50);
-                if (paperScrapsInput) paperScrapsInput.value = String(parseIntOr(paperScrapsInput.value, 0) + 10);
-            }
+            if (xpCurrentInput) xpCurrentInput.value = String(currentXp - xpCost);
+            stateAdapter.addFunds(dollars);
             if (uiModule.updateXpProgressBar) uiModule.updateXpProgressBar();
-            toast.success("Philosopher's Stone activated: -50 XP, +50 Ink Drops, +10 Paper Scraps.");
+            toast.success(`Philosopher's Stone activated: -${xpCost} XP, +$${dollars}.`);
             success = true;
         } else {
             toast.success(`${abilityName} activated. Apply its effect to the relevant quest flow now.`);
@@ -1443,21 +1426,13 @@ export class QuestController extends BaseController {
                 stateAdapter.completeWing(wingId);
 
                 // Award wing completion rewards (currency) if hook available
+                const { xp, dollars } = GAME_CONFIG.restoration.wingCompletionRewards;
                 if (this.updateCurrency) {
-                    this.updateCurrency({
-                        xp: GAME_CONFIG.restoration.wingCompletionRewards.xp,
-                        inkDrops: GAME_CONFIG.restoration.wingCompletionRewards.inkDrops,
-                        paperScraps: GAME_CONFIG.restoration.wingCompletionRewards.paperScraps,
-                        items: []
-                    });
+                    this.updateCurrency({ xp, dollars, items: [] });
                 }
 
                 // Notify
-                this.showRewardNotification(
-                    `Wing Restored! +${GAME_CONFIG.restoration.wingCompletionRewards.xp} XP, ` +
-                    `+${GAME_CONFIG.restoration.wingCompletionRewards.inkDrops} Ink Drops, ` +
-                    `+${GAME_CONFIG.restoration.wingCompletionRewards.paperScraps} Paper Scraps`
-                );
+                this.showRewardNotification(`Wing Restored! +${xp} XP, +$${dollars}`);
             }
         }
         

@@ -84,8 +84,8 @@ function renderQuestRowPure(viewModel) {
         escapeHtml(viewModel.prompt),
         escapeHtml(viewModel.book),
         viewModel.xp, // Already formatted with indicator
-        viewModel.paperScraps, // Already formatted with indicator
-        viewModel.inkDrops, // Already formatted with indicator
+        viewModel.dollars, // Already formatted with indicator
+        viewModel.blueprints, // Already formatted with indicator
         escapeHtml(viewModel.items),
         escapeHtml(viewModel.buffs),
         escapeHtml(viewModel.notes)
@@ -785,16 +785,11 @@ export function renderQuestCard(quest, index, listType = 'active') {
         rewardsGrid.appendChild(xpReward);
     }
     
-    if (rewards.paperScraps > 0) {
-        const psReward = createElement('div', { class: 'reward-item paper-scraps-reward' });
-        psReward.innerHTML = `<span class="reward-label">📄</span><span class="reward-value">+${rewards.paperScraps}${rewardIndicator}</span>`;
-        rewardsGrid.appendChild(psReward);
-    }
-    
-    if (rewards.inkDrops > 0) {
-        const idReward = createElement('div', { class: 'reward-item ink-drops-reward' });
-        idReward.innerHTML = `<span class="reward-label">💧</span><span class="reward-value">+${rewards.inkDrops}${rewardIndicator}</span>`;
-        rewardsGrid.appendChild(idReward);
+    // Legacy inkDrops/paperScraps on old completed quests are intentionally not shown.
+    if (rewards.dollars > 0) {
+        const dollarReward = createElement('div', { class: 'reward-item dollars-reward' });
+        dollarReward.innerHTML = `<span class="reward-label">💰</span><span class="reward-value">+$${rewards.dollars}${rewardIndicator}</span>`;
+        rewardsGrid.appendChild(dollarReward);
     }
     
     if (rewards.blueprints > 0) {

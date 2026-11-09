@@ -6,6 +6,7 @@
  */
 
 import { RewardCalculator, Reward } from '../services/RewardCalculator.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 import { Validator, required, selected, conditional } from '../services/Validator.js';
 import { characterState } from '../character-sheet/state.js';
 
@@ -232,31 +233,17 @@ export class BaseQuestHandler {
         // and we have stored rewards that look more complete, use stored rewards as base instead
         // This handles legacy quests and test cases that don't have full quest metadata
         if (quest.rewards && quest.type === '♠ Dungeon Crawl' && !quest.roomNumber) {
-            // Check if we got a fallback reward (only default inkDrops, no XP/paperScraps)
-            const isFallbackReward = baseRewards.inkDrops === 10 && 
-                                     baseRewards.xp === 0 && 
-                                     baseRewards.paperScraps === 0 &&
-                                     baseRewards.blueprints === 0;
-            
+            // Check if we got a fallback reward (only the dollar quest base, no XP/blueprints)
+            const isFallbackReward = baseRewards.xp === 0 && baseRewards.blueprints === 0;
+
             // Check if stored rewards look like actual quest rewards (not just defaults)
-            const storedHasContent = (quest.rewards.xp > 0 || quest.rewards.inkDrops > 0 || 
-                                     quest.rewards.paperScraps > 0 || quest.rewards.blueprints > 0);
-            
+            const storedHasContent = (quest.rewards.xp > 0 || quest.rewards.blueprints > 0);
+
             if (isFallbackReward && storedHasContent) {
-                // Use stored rewards as base, but create a proper Reward object with receipt
-                baseRewards = new Reward({
-                    xp: quest.rewards.xp || 0,
-                    inkDrops: quest.rewards.inkDrops || 0,
-                    paperScraps: quest.rewards.paperScraps || 0,
-                    blueprints: quest.rewards.blueprints || 0,
-                    items: quest.rewards.items || []
-                });
-                // Set receipt base values from the stored rewards
-                baseRewards.receipt.base.xp = baseRewards.xp;
-                baseRewards.receipt.base.inkDrops = baseRewards.inkDrops;
-                baseRewards.receipt.base.paperScraps = baseRewards.paperScraps;
-                baseRewards.receipt.base.blueprints = baseRewards.blueprints;
-                baseRewards.receipt.final = { ...baseRewards.receipt.base };
+                // Use stored XP/blueprints as base; dollars always come from the flat quest base
+                baseRewards = Reward.fromAuthored(quest.rewards);
+                baseRewards.dollars = GAME_CONFIG.rewards.questBase.dollars;
+                baseRewards.syncReceiptBase();
             }
         }
         

@@ -27,6 +27,17 @@ function matchesPageCount(pageCount, conditionValue) {
     return matchesConditionValue(pageCount, conditionValue);
 }
 
+/**
+ * Receipt wording for a flat resource change: dollars read "+$3", other resources "+5 xp".
+ * @param {string} resource
+ * @param {number} value
+ */
+function formatResourceDelta(resource, value) {
+    const sign = value < 0 ? '-' : '+';
+    const abs = Math.abs(value);
+    return resource === 'dollars' ? `${sign}$${abs}` : `${sign}${abs} ${resource}`;
+}
+
 export class ModifierPipeline {
     static evaluateCondition(condition = {}, payload = {}) {
         if (!condition || Object.keys(condition).length === 0) {
@@ -127,12 +138,7 @@ export class ModifierPipeline {
             this._applyActivate(resolved, entry, payload);
         }
 
-        resolved.receipt.final.xp = resolved.xp;
-        resolved.receipt.final.inkDrops = resolved.inkDrops;
-        resolved.receipt.final.paperScraps = resolved.paperScraps;
-        resolved.receipt.final.blueprints = resolved.blueprints;
-
-        return resolved;
+        return resolved.syncReceiptFinal();
     }
 
     static _sourceName(entry) {
@@ -153,7 +159,7 @@ export class ModifierPipeline {
             source: this._sourceName(entry),
             type: 'effect:add_flat',
             value,
-            description: `+${value} ${resource}`,
+            description: formatResourceDelta(resource, value),
             currency: resource
         });
     }
@@ -173,7 +179,7 @@ export class ModifierPipeline {
             source: this._sourceName(entry),
             type: 'effect:grant_resource',
             value,
-            description: `Granted +${value} ${resource}`,
+            description: `Granted ${formatResourceDelta(resource, value)}`,
             currency: resource
         });
     }

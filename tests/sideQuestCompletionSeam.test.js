@@ -55,7 +55,7 @@ describe('completing a branching side quest pays the branch that was chosen', ()
     });
 
     test('a roll quest pays the branch rolled, not the first branch in the array', () => {
-        // The Blind Stall: branch "1" is +40 XP / +10 Scraps, branch "6" is +80 / +20.
+        // The Blind Stall: branch "1" is +40 XP, branch "6" is +80 XP.
         const first = sideQuestsDetailed['10'].branches[0];
         const lot = sideQuestsDetailed['10'].branches.find(b => b.key === '6');
         expect(lot.rewards.xp).not.toBe(first.rewards.xp);
@@ -65,7 +65,7 @@ describe('completing a branching side quest pays the branch that was chosen', ()
         );
 
         expect(completed.rewards.xp).toBe(lot.rewards.xp);
-        expect(completed.rewards.paperScraps).toBe(lot.rewards.paperScraps);
+        expect(completed.rewards.dollars).toBe(15); // authored Scraps are ignored: every quest pays the flat $15 base
     });
 
     test('every branch of every new quest completes to its own reward', () => {
@@ -78,13 +78,13 @@ describe('completing a branching side quest pays the branch that was chosen', ()
                     key,
                     branch: branch.key,
                     xp: completed.rewards.xp,
-                    paperScraps: completed.rewards.paperScraps,
+                    dollars: completed.rewards.dollars,
                     blueprints: completed.rewards.blueprints
                 }).toEqual({
                     key,
                     branch: branch.key,
                     xp: branch.rewards.xp,
-                    paperScraps: branch.rewards.paperScraps,
+                    dollars: 15,
                     blueprints: branch.rewards.blueprints
                 });
             }

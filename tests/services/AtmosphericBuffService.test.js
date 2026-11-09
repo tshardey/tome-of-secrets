@@ -107,17 +107,17 @@ describe('AtmosphericBuffService', () => {
     describe('calculateDailyValue', () => {
         test('should return base value for non-associated buff', () => {
             const value = calculateDailyValue('Buff1', []);
-            expect(value).toBe(2);
+            expect(value).toBe(1);
         });
 
         test('should return sanctum bonus for associated buff', () => {
             const value = calculateDailyValue('Buff1', ['Buff1', 'Buff2']);
-            expect(value).toBe(3);
+            expect(value).toBe(2);
         });
 
         test('should return base value when associatedBuffs is undefined', () => {
             const value = calculateDailyValue('Buff1', undefined);
-            expect(value).toBe(2);
+            expect(value).toBe(1);
         });
     });
 
@@ -307,14 +307,14 @@ describe('AtmosphericBuffService', () => {
                 'Garden Gnome': {
                     atmosphericReward: true,
                     atmosphericRewardTrackable: true,
-                    rewardModifier: { paperScraps: 2 },
-                    passiveRewardModifier: { paperScraps: 1 }
+                    rewardModifier: { dollars: 2 },
+                    passiveRewardModifier: { dollars: 1 }
                 },
                 'Mystical Moth': {
                     atmosphericReward: true,
                     atmosphericRewardTrackable: true,
-                    rewardModifier: { paperScraps: 2 },
-                    passiveRewardModifier: { paperScraps: 1 }
+                    rewardModifier: { dollars: 2 },
+                    passiveRewardModifier: { dollars: 1 }
                 },
                 'Tome-Bound Cat': {
                     atmosphericReward: true,
