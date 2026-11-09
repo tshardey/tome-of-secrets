@@ -226,7 +226,8 @@ test('groupLedgerByMonth sorts newest first and totals per month', () => {
 - [ ] **Step 3: Implement the core.**
   - Replace the Reward fields as above. Update the pipeline's `receipt.final` and the receipt/StatusWidget rendering to a single dollar line, formatted with `formatCents(dollars * 100)`.
   - Route every payout through `dollars`: quests, atmospheric, wing completion, level-up, series stops, Librarian's Hoard ($20), and Philosopher's Stone (−50 XP → +$5).
-  - Delete the ink↔paper transmute flow and the curriculum synergy.
+  - Replace the ink↔paper transmute flow with the Transmutation school's new monthly activation: convert 20 Blueprints → $2 or $2 → 20 Blueprints, once per month, gated through the existing `effectCooldowns`. Add `test('Transmutation converts 20 blueprints to $2 once per month')` to `tests/controllers.test.js`.
+  - Delete the curriculum synergy.
   - Delete the dead `applyModifiers` path (`RewardCalculator.js:280-391`) and the hardcoded `_getModifier` background bonus (~611).
   - Leave `MULTIPLY` handling in place for now; Task 5 removes it together with the data.
 - [ ] **Step 4: Convert the level rewards.** Convert `levelRewards.json`. Run `node scripts/generate-data.js && cd tests && npm run validate-data`.
