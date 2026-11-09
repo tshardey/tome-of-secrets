@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { backoffAt, handle, type IntakeDb, MAX_PHOTO_BYTES } from "./handler.ts";
+import { backoffAt, handle, type IntakeDb, MAX_PHOTO_BYTES, rpcDb, type SupabaseLike } from "./handler.ts";
 import type { Extraction, VisionClient, VisionResult } from "./vision.ts";
 
 const ITEM = "0b6f4f6e-6a3c-4c1e-9d55-2f1f0f3a9b10";
@@ -268,4 +268,63 @@ Deno.test("a finish whose claim went stale reports busy, not ready", async () =>
   const { vision } = fakeVision(OK);
   const res = await run(db, vision);
   assert.deepEqual(res.body, { outcome: "busy" });
+});
+
+Deno.test("rpcDb maps the claim row and the release arguments", async () => {
+  const calls: { schema: string; fn: string; args: Record<string, unknown> }[] = [];
+  const replies: Record<string, unknown> = {
+    claim_intake_item: [{
+      outcome: "claimed",
+      claim_token: CLAIM,
+      attempts: 2,
+      cover_path: COVER,
+      title_page_path: null,
+      retry_at: null,
+    }],
+    release_intake_item: "pending",
+  };
+  const client: SupabaseLike = {
+    schema(schema) {
+      return {
+        rpc(fn, args) {
+          calls.push({ schema, fn, args });
+          return Promise.resolve({ data: replies[fn], error: null });
+        },
+      };
+    },
+    storage: { from: () => ({ download: () => Promise.resolve({ data: null, error: null }) }) },
+  };
+  const db = rpcDb(client);
+
+  assert.deepEqual(await db.claim(ITEM), {
+    outcome: "claimed",
+    claimToken: CLAIM,
+    attempts: 2,
+    coverPath: COVER,
+    titlePagePath: null,
+    retryAt: null,
+  });
+  assert.deepEqual(calls[0], { schema: "library", fn: "claim_intake_item", args: { p_item: ITEM } });
+
+  const usage = { inputTokens: 10, outputTokens: 2 };
+  assert.equal(await db.release(ITEM, CLAIM, null, null), "pending");
+  assert.equal(await db.release(ITEM, CLAIM, null, new Date("2026-11-08T12:01:30.000Z"), usage), "pending");
+  assert.equal(await db.release(ITEM, CLAIM, "vision_refused", null, usage), "pending");
+  assert.deepEqual(calls.slice(1).map((c) => [c.schema, c.fn, c.args]), [
+    ["library", "release_intake_item", { p_item: ITEM, p_claim: CLAIM, p_error: null, p_retry_at: null, p_usage: null }],
+    ["library", "release_intake_item", {
+      p_item: ITEM,
+      p_claim: CLAIM,
+      p_error: null,
+      p_retry_at: "2026-11-08T12:01:30.000Z",
+      p_usage: usage,
+    }],
+    ["library", "release_intake_item", {
+      p_item: ITEM,
+      p_claim: CLAIM,
+      p_error: "vision_refused",
+      p_retry_at: null,
+      p_usage: usage,
+    }],
+  ]);
 });

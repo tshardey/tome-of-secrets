@@ -191,7 +191,8 @@ export function rpcDb(supabase: SupabaseLike): IntakeDb {
         if (isNotFound(error)) return null;
         throw error;
       }
-      // An oversized object is refused before buffering; the handler treats it as missing.
+      // download() has already buffered the Blob (the bucket caps objects at 2 MiB);
+      // an oversized one is still refused here, and the handler treats it as missing.
       if (!data || data.size > MAX_PHOTO_BYTES) return null;
       return new Uint8Array(await data.arrayBuffer());
     },
