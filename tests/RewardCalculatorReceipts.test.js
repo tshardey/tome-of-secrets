@@ -271,44 +271,6 @@ describe('RewardCalculator Receipt System', () => {
             expect(receipt.modifiers[0].description).toContain('5 books');
         });
 
-        test('should track journal entry rewards in receipt', () => {
-            const reward = RewardCalculator.calculateJournalEntryRewards(3, {
-                stateAdapter: {
-                    state: {
-                        [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-                        [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-                        [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-                    },
-                    formData: { keeperBackground: 'scribe', wizardSchool: '' }
-                },
-                dataModule: {
-                    keeperBackgrounds: {
-                        scribe: {
-                            name: "The Scribe's Acolyte",
-                            effects: [
-                                {
-                                    trigger: 'ON_JOURNAL_ENTRY',
-                                    modifier: { type: 'ADD_FLAT', resource: 'paperScraps', value: 3 }
-                                }
-                            ]
-                        }
-                    },
-                    schoolBenefits: {},
-                    masteryAbilities: {},
-                    allItems: {}
-                }
-            });
-            const receipt = reward.getReceipt();
-
-            expect(receipt.base.paperScraps).toBe(15); // 3 × 5 base
-            expect(receipt.final.paperScraps).toBe(24); // 3 × (5 + 3) with Scribe bonus
-            expect(receipt.modifiers.length).toBeGreaterThanOrEqual(1);
-
-            const scribeModifier = receipt.modifiers.find(m => m.source === "The Scribe's Acolyte");
-            expect(scribeModifier).toBeDefined();
-            expect(scribeModifier.value).toBe(9); // 3 × 3 bonus
-        });
-
         test('should track atmospheric buff rewards in receipt', () => {
             const atmosphericBuffs = {
                 'The Candlight Study': { daysUsed: 5, isActive: true },

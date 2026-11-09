@@ -17,6 +17,14 @@ describe('effectSchema', () => {
         expect(result.valid).toBe(true);
     });
 
+    test('ON_JOURNAL_ENTRY is not a valid trigger', () => {
+        const result = validateEffect({
+            trigger: 'ON_JOURNAL_ENTRY',
+            modifier: { type: 'ADD_FLAT', resource: 'xp', value: 1 }
+        });
+        expect(result.valid).toBe(false);
+    });
+
     test('validateEffect rejects invalid modifier type', () => {
         const result = validateEffect({
             trigger: TRIGGERS.ON_QUEST_COMPLETED,
@@ -362,41 +370,6 @@ describe('ModifierPipeline.resolve', () => {
             })
         );
     });
-
-    test('scales ON_JOURNAL_ENTRY ADD_FLAT by entryCount', () => {
-        const base = new Reward({ paperScraps: 25 });
-        base.receipt.base.paperScraps = 25;
-        base.receipt.modifiers.push({
-            source: 'End of Month - Journal Entry',
-            type: 'system',
-            value: 25,
-            description: '5 entries × 5 Paper Scraps',
-            currency: 'paperScraps'
-        });
-        const effects = [
-            {
-                source: { name: "The Scribe's Acolyte" },
-                effect: {
-                    trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                    modifier: {
-                        type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'paperScraps',
-                        value: 3
-                    }
-                }
-            }
-        ];
-        const result = ModifierPipeline.resolve(
-            TRIGGERS.ON_JOURNAL_ENTRY,
-            { entryCount: 5 },
-            effects,
-            base
-        );
-        expect(result.paperScraps).toBe(40);
-        const scribeMod = result.receipt.modifiers.find(m => m.type === 'effect:add_flat');
-        expect(scribeMod.value).toBe(15);
-        expect(scribeMod.description).toContain('5 × 3');
-    });
 });
 
 describe('EffectRegistry.getActiveEffects', () => {
@@ -574,7 +547,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                 "Librarian's Compass": {
                     effects: [
                         {
-                            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
+                            trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 1 }
                         }
                     ]
@@ -583,7 +556,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                     id: 'librarians-quill',
                     effects: [
                         {
-                            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
+                            trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 2 }
                         }
                     ]
@@ -595,7 +568,7 @@ describe('EffectRegistry.getActiveEffects', () => {
             temporaryBuffs: {}
         };
         const activeEffects = EffectRegistry.getActiveEffects(
-            TRIGGERS.ON_JOURNAL_ENTRY,
+            TRIGGERS.ON_QUEST_COMPLETED,
             mockStateAdapter,
             mockDataModule
         );

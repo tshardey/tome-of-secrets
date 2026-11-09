@@ -191,26 +191,7 @@
         "rewardModifier": {},
         "passiveRewardModifier": {},
         "excludeFromQuestBonuses": true,
-        "effects": [
-            {
-                "trigger": "ON_JOURNAL_ENTRY",
-                "modifier": {
-                    "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 2
-                },
-                "slot": "equipped"
-            },
-            {
-                "trigger": "ON_JOURNAL_ENTRY",
-                "modifier": {
-                    "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 1
-                },
-                "slot": "passive"
-            }
-        ]
+        "effects": []
     },
     "Chalice of Restoration": {
         "id": "chalice-of-restoration",
@@ -816,26 +797,7 @@
         "passiveBonus": "Journaling grants +5 Paper Scraps (passive).",
         "rewardModifier": {},
         "passiveRewardModifier": {},
-        "effects": [
-            {
-                "trigger": "ON_JOURNAL_ENTRY",
-                "modifier": {
-                    "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 10
-                },
-                "slot": "equipped"
-            },
-            {
-                "trigger": "ON_JOURNAL_ENTRY",
-                "modifier": {
-                    "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 5
-                },
-                "slot": "passive"
-            }
-        ]
+        "effects": []
     },
     "Detective's Magnifying Glass": {
         "id": "detectives-magnifying-glass",

@@ -44,11 +44,7 @@ export const GAME_CONFIG = Object.freeze({
      * End of month rewards
      */
     endOfMonth: {
-        bookCompletionXP: 15, // XP per unique book completed
-        journalEntry: {
-            basePaperScraps: 5,
-            scribeBonus: 3 // Additional paper scraps for Scribe's Acolyte background
-        }
+        bookCompletionXP: 15 // XP per unique book completed
     },
 
     /**

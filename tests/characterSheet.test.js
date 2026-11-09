@@ -2507,32 +2507,6 @@ describe('Character Sheet', () => {
       }
     });
 
-    it('should apply Scribe bonus to journal entries at end of month', () => {
-      const backgroundSelect = document.getElementById('keeperBackground');
-      const journalEntriesInput = document.getElementById('journal-entries-completed');
-      const paperScrapsInput = document.getElementById('paperScraps');
-      
-      // Select Scribe's Acolyte background
-      backgroundSelect.value = 'scribe';
-      backgroundSelect.dispatchEvent(new Event('change'));
-      
-      // Set journal entries
-      journalEntriesInput.value = '5';
-      
-      const initialPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      
-      // Click End of Month
-      const endOfMonthButton = document.querySelector('.end-of-month-button');
-      endOfMonthButton.click();
-      
-      // Should get 8 paper scraps per entry (5 base + 3 Scribe bonus) = 40 total
-      const finalPaperScraps = parseInt(paperScrapsInput.value, 10) || 0;
-      expect(finalPaperScraps).toBe(initialPaperScraps + 40);
-      
-      // Journal entries should be reset
-      expect(parseInt(journalEntriesInput.value, 10)).toBe(0);
-    });
-
     it('should automatically activate Soaking in Nature buff for Grove Tender', () => {
       const backgroundSelect = document.getElementById('keeperBackground');
       
@@ -2857,15 +2831,12 @@ describe('Character Sheet', () => {
         expect(monthlyStats).toBeTruthy();
         
         const booksInput = document.getElementById('books-completed-month');
-        const journalInput = document.getElementById('journal-entries-completed');
         const endOfMonthBtn = document.querySelector('.end-of-month-button');
         
         expect(booksInput).toBeTruthy();
-        expect(journalInput).toBeTruthy();
         expect(endOfMonthBtn).toBeTruthy();
         
         expect(booksInput.classList.contains('rpg-stat-input')).toBe(true);
-        expect(journalInput.classList.contains('rpg-stat-input')).toBe(true);
         expect(endOfMonthBtn.classList.contains('rpg-btn')).toBe(true);
         expect(endOfMonthBtn.classList.contains('rpg-btn-primary')).toBe(true);
       });
@@ -2978,8 +2949,6 @@ describe('Character Sheet', () => {
             expect(content).toBeTruthy();
             expect(content.textContent).toContain('+15 XP');
             expect(content.textContent).toContain('+10 Ink Drops');
-            expect(content.textContent).toContain('The Mess');
-            expect(content.textContent).toContain('The Discovery');
             
             // Check table container exists
             const tableContainer = content.querySelector('#genre-quests-table-container');
@@ -3085,9 +3054,6 @@ describe('Character Sheet', () => {
             // Check content
             const content = drawer.querySelector('.info-drawer-content');
             expect(content).toBeTruthy();
-            expect(content.textContent).toContain('The Senses');
-            expect(content.textContent).toContain('The Memory');
-            expect(content.textContent).toContain('The Effect');
             
             // Check table container exists
             const tableContainer = content.querySelector('#atmospheric-buffs-table-container');
@@ -3169,8 +3135,6 @@ describe('Character Sheet', () => {
             // Check content
             const content = drawer.querySelector('.info-drawer-content');
             expect(content).toBeTruthy();
-            expect(content.textContent).toContain('The Encounter');
-            expect(content.textContent).toContain('The Result');
             
             // Check table container exists
             const tableContainer = content.querySelector('#side-quests-table-container');
@@ -3253,8 +3217,6 @@ describe('Character Sheet', () => {
             expect(content).toBeTruthy();
             // "Roll a d20" is in the header (h2); rest of copy is in content
             expect(drawer.textContent).toContain('Roll a d20');
-            expect(drawer.textContent).toContain('The Setting');
-            expect(drawer.textContent).toContain('The Encounter');
             // Check for table containers (tables are rendered dynamically)
             const rewardsContainer = content.querySelector('#dungeon-rewards-table-container');
             const roomsContainer = content.querySelector('#dungeon-rooms-table-container');

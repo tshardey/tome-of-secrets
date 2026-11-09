@@ -42,9 +42,6 @@ describe('Game Configuration', () => {
   it('should have end of month configuration', () => {
     expect(GAME_CONFIG.endOfMonth).toBeDefined();
     expect(GAME_CONFIG.endOfMonth.bookCompletionXP).toBe(15);
-    expect(GAME_CONFIG.endOfMonth.journalEntry).toBeDefined();
-    expect(GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps).toBe(5);
-    expect(GAME_CONFIG.endOfMonth.journalEntry.scribeBonus).toBe(3);
   });
 
   it('should have background bonus configuration', () => {

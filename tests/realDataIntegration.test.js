@@ -42,30 +42,6 @@ function resolveWithRealData({ trigger, payload, baseReward, state, formData = {
 }
 
 describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
-    test('ON_JOURNAL_ENTRY applies Librarian\'s Quill and Golden Pen from allItems.json', () => {
-        const quillState = emptyState();
-        quillState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: "Librarian's Quill" }];
-        const quillResult = resolveWithRealData({
-            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-            payload: TriggerPayload.journalEntry({ entryCount: 3 }),
-            baseReward: new Reward({ paperScraps: 0 }),
-            state: quillState
-        });
-        expect(quillResult.paperScraps).toBe(6);
-        expect(quillResult.modifiedBy).toContain("Librarian's Quill");
-
-        const penState = emptyState();
-        penState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Golden Pen' }];
-        const penResult = resolveWithRealData({
-            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-            payload: TriggerPayload.journalEntry({ entryCount: 2 }),
-            baseReward: new Reward({ paperScraps: 0 }),
-            state: penState
-        });
-        expect(penResult.paperScraps).toBe(20);
-        expect(penResult.modifiedBy).toContain('Golden Pen');
-    });
-
     test('Lantern of Foresight exposes an ON_ACTIVATE action from allItems.json', () => {
         const state = emptyState();
         state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Lantern of Foresight' }];
@@ -114,16 +90,8 @@ describe('Real data integration: EffectRegistry + ModifierPipeline', () => {
         expect(withoutCelestialTag.modifiedBy).not.toContain('Celestial Koi Fish');
     });
 
-    test('background effects from keeperBackgrounds.json apply across all 6 backgrounds', () => {
+    test('background effects from keeperBackgrounds.json apply across backgrounds with pipeline effects', () => {
         const scenarios = [
-            {
-                id: 'scribe',
-                trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                payload: TriggerPayload.journalEntry({ entryCount: 2 }),
-                baseReward: new Reward({ paperScraps: 0 }),
-                assert: (result) => expect(result.paperScraps).toBe(6),
-                sourceName: "The Scribe's Acolyte"
-            },
             {
                 id: 'archivist',
                 trigger: TRIGGERS.ON_QUEST_COMPLETED,

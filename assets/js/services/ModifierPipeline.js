@@ -1,5 +1,5 @@
 import { Reward } from './RewardCalculator.js';
-import { MODIFIER_TYPES, RESOLUTION_ORDER, TRIGGERS, validateEffect } from './effectSchema.js';
+import { MODIFIER_TYPES, RESOLUTION_ORDER, validateEffect } from './effectSchema.js';
 
 function matchesConditionValue(payloadValue, expectedValue) {
     if (Array.isArray(expectedValue)) {
@@ -108,10 +108,10 @@ export class ModifierPipeline {
         const unlockSlotEntries = matching.filter(match => match.effect.modifier.type === MODIFIER_TYPES.UNLOCK_SLOT);
 
         for (const entry of byType[MODIFIER_TYPES.ADD_FLAT] || []) {
-            this._applyAddFlat(resolved, entry, payload);
+            this._applyAddFlat(resolved, entry);
         }
         for (const entry of byType[MODIFIER_TYPES.GRANT_RESOURCE] || []) {
-            this._applyGrantResource(resolved, entry, payload);
+            this._applyGrantResource(resolved, entry);
         }
         for (const entry of byType[MODIFIER_TYPES.MULTIPLY] || []) {
             this._applyMultiply(resolved, entry);
@@ -139,15 +139,7 @@ export class ModifierPipeline {
         return entry?.source?.name || entry?.source?.id || 'Unknown Effect Source';
     }
 
-    static _journalEntryMultiplier(entry, payload) {
-        if (entry?.effect?.trigger !== TRIGGERS.ON_JOURNAL_ENTRY) {
-            return 1;
-        }
-        const n = Number(payload?.entryCount);
-        return n > 0 ? n : 1;
-    }
-
-    static _applyAddFlat(reward, entry, payload = {}) {
+    static _applyAddFlat(reward, entry) {
         const { resource, value } = entry.effect.modifier;
         if (!resource || typeof value !== 'number') {
             return;
@@ -155,24 +147,19 @@ export class ModifierPipeline {
         if (typeof reward[resource] !== 'number') {
             return;
         }
-        const mult = this._journalEntryMultiplier(entry, payload);
-        const total = value * mult;
-        reward[resource] += total;
+        reward[resource] += value;
         reward.modifiedBy.push(this._sourceName(entry));
         reward.receipt.modifiers.push({
             source: this._sourceName(entry),
             type: 'effect:add_flat',
-            value: total,
-            description:
-                mult > 1
-                    ? `+${total} ${resource} (${mult} × ${value})`
-                    : `+${total} ${resource}`,
+            value,
+            description: `+${value} ${resource}`,
             currency: resource
         });
     }
 
     /** Immediate resource grant (e.g. ON_QUEST_DRAFTED); same applied math as ADD_FLAT on Reward fields. */
-    static _applyGrantResource(reward, entry, payload = {}) {
+    static _applyGrantResource(reward, entry) {
         const { resource, value } = entry.effect.modifier;
         if (!resource || typeof value !== 'number') {
             return;
@@ -180,18 +167,13 @@ export class ModifierPipeline {
         if (typeof reward[resource] !== 'number') {
             return;
         }
-        const mult = this._journalEntryMultiplier(entry, payload);
-        const total = value * mult;
-        reward[resource] += total;
+        reward[resource] += value;
         reward.modifiedBy.push(this._sourceName(entry));
         reward.receipt.modifiers.push({
             source: this._sourceName(entry),
             type: 'effect:grant_resource',
-            value: total,
-            description:
-                mult > 1
-                    ? `Granted +${total} ${resource} (${mult} × ${value})`
-                    : `Granted +${total} ${resource}`,
+            value,
+            description: `Granted +${value} ${resource}`,
             currency: resource
         });
     }

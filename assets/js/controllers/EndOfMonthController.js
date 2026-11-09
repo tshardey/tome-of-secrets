@@ -3,13 +3,11 @@
  * 
  * Manages:
  * - Processing atmospheric buff rewards
- * - Processing journal entry rewards
  * - Resetting monthly counters (book completion XP is awarded when marking a book complete in Library)
  */
 
 import { BaseController } from './BaseController.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { parseIntOr } from '../utils/helpers.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { safeSetJSON } from '../utils/storage.js';
 import { characterState } from '../character-sheet/state.js';
@@ -122,37 +120,6 @@ export class EndOfMonthController extends BaseController {
                 safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
                 characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = [];
                 uiModule.renderShelfBooks(0, []);
-            }
-
-            // Calculate and add journal entries paper scraps using RewardCalculator
-            const journalEntriesInput = document.getElementById('journal-entries-completed');
-            if (journalEntriesInput) {
-                const journalEntries = parseIntOr(journalEntriesInput.value, 0);
-                const wizardSchool = document.getElementById('wizardSchool')?.value || '';
-                const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, {
-                    stateAdapter: {
-                        state: stateAdapter.state,
-                        formData: {
-                            keeperBackground: background,
-                            wizardSchool
-                        }
-                    },
-                    dataModule: data
-                });
-
-                if (journalRewards.paperScraps > 0) {
-                    updateCurrency(journalRewards);
-                    if (journalEntries > 0) {
-                        const extras =
-                            journalRewards.modifiedBy && journalRewards.modifiedBy.length
-                                ? ` — ${journalRewards.modifiedBy.join(', ')}`
-                                : '';
-                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps${extras}`);
-                    }
-                }
-
-                // Reset journal entries counter to 0
-                journalEntriesInput.value = 0;
             }
 
             // Clear the completed books set for the new month

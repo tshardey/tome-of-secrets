@@ -26,13 +26,15 @@ function collectEffects(node, out = []) {
 }
 
 /**
- * Entities whose only effect was a Worn Page PREVENT. Those effects were removed with the Shroud
- * and the dollar-economy work gives them new effects; until then they legitimately have `effects: []`.
+ * Entities whose only effects were a Worn Page PREVENT (removed with the Shroud) or an
+ * ON_JOURNAL_ENTRY bonus (removed with journaling). The dollar-economy work gives them new
+ * effects; until then they legitimately have `effects: []`.
  * Remove entries from here as each one is retargeted.
  */
-const AWAITING_RETARGET_AFTER_SHROUD_REMOVAL = Object.freeze({
-    items: new Set(['chalice-of-restoration', 'raven-familiar']),
-    schools: new Set(['Abjuration'])
+const AWAITING_RETARGET = Object.freeze({
+    items: new Set(['chalice-of-restoration', 'raven-familiar', 'librarians-quill', 'golden-pen']),
+    schools: new Set(['Abjuration']),
+    backgrounds: new Set(['scribe'])
 });
 
 function expectString(value) {
@@ -113,7 +115,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expectString(background.description);
             expectString(background.benefit);
             expect(Array.isArray(background.effects)).toBe(true);
-            if (key === '') {
+            if (key === '' || AWAITING_RETARGET.backgrounds.has(key)) {
                 expect(background.effects).toHaveLength(0);
             } else {
                 expect(background.effects.length).toBeGreaterThan(0);
@@ -129,7 +131,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expectString(school.description);
             expectString(school.benefit);
             expect(Array.isArray(school.effects)).toBe(true);
-            if (!AWAITING_RETARGET_AFTER_SHROUD_REMOVAL.schools.has(schoolName)) {
+            if (!AWAITING_RETARGET.schools.has(schoolName)) {
                 expect(school.effects.length).toBeGreaterThan(0);
             }
             school.effects.forEach((effect) => {
@@ -172,6 +174,18 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             const wornPageEffects = collectEffects(loadJson(filename))
                 .filter((effect) => effect?.modifier?.target === 'worn_page');
             expect({ filename, wornPageEffects }).toEqual({ filename, wornPageEffects: [] });
+        });
+    });
+
+    test('no catalog effect uses ON_JOURNAL_ENTRY', () => {
+        const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
+        const catalogFiles = fs.readdirSync(dataDir).filter((name) => name.endsWith('.json'));
+        expect(catalogFiles.length).toBeGreaterThan(0);
+
+        catalogFiles.forEach((filename) => {
+            const journalEffects = collectEffects(loadJson(filename))
+                .filter((effect) => effect?.trigger === 'ON_JOURNAL_ENTRY');
+            expect({ filename, journalEffects }).toEqual({ filename, journalEffects: [] });
         });
     });
 
@@ -569,7 +583,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             const missing = [];
             Object.values(allItems).forEach((item) => {
                 if (LEGACY_MODIFIER_EXCLUSIONS.has(item.id)) return;
-                if (AWAITING_RETARGET_AFTER_SHROUD_REMOVAL.items.has(item.id)) {
+                if (AWAITING_RETARGET.items.has(item.id)) {
                     expect(item.effects).toEqual([]);
                     return;
                 }

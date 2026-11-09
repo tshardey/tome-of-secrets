@@ -48,15 +48,11 @@ export class TriggerPayload {
         return { questType, roomNumber };
     }
 
-    static monthEnd({ journalEntries = 0, booksCompleted = 0, atmosphericBuffs = {} } = {}) {
-        return { journalEntries, booksCompleted, atmosphericBuffs };
+    static monthEnd({ booksCompleted = 0, atmosphericBuffs = {} } = {}) {
+        return { booksCompleted, atmosphericBuffs };
     }
 
     static monthStart({ questPoolSize = 0 } = {}) {
         return { questPoolSize };
-    }
-
-    static journalEntry({ entryCount = 0 } = {}) {
-        return { entryCount };
     }
 }

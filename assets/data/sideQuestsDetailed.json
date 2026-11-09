@@ -628,16 +628,7 @@
                     "items": []
                 }
             }
-        ],
-        "stake": {
-            "name": "Credit transfer",
-            "declareBefore": false,
-            "condition": "assignment output logged as a journal entry",
-            "onSuccess": {
-                "countsAsJournalEntry": true
-            },
-            "onFailure": {}
-        }
+        ]
     },
     "15": {
         "id": "side-quest-the-crossroads-inn",

@@ -85,7 +85,6 @@ describe('Temporary buff end-of-month lifecycle', () => {
                 <select id="keeperBackground"></select>
                 <select id="wizardSchool"></select>
                 <input id="books-completed-month" value="0" />
-                <input id="journal-entries-completed" value="0" />
                 <input id="wearable-slots" value="0" />
                 <input id="non-wearable-slots" value="0" />
                 <input id="familiar-slots" value="0" />

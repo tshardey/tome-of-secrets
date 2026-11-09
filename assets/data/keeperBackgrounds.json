@@ -9,16 +9,7 @@
         "name": "The Scribe's Acolyte",
         "description": "You spent your formative years copying manuscripts and illuminating texts. Your fingers are permanently stained with ink, but your understanding of the written word is profound.",
         "benefit": "Gain a permanent +3 Paper Scrap bonus every time you complete an Adventure Journal entry.",
-        "effects": [
-            {
-                "trigger": "ON_JOURNAL_ENTRY",
-                "modifier": {
-                    "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 3
-                }
-            }
-        ]
+        "effects": []
     },
     "archivist": {
         "name": "The Archivist's Apprentice",

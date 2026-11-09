@@ -808,54 +808,6 @@ export class RewardCalculator {
     }
 
     /**
-     * Calculate journal entry paper scrap rewards for end of month.
-     * Base: journalEntries × GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps.
-     * ON_JOURNAL_ENTRY effects (scribe background, Librarian's Quill, Golden Pen, etc.) apply via ModifierPipeline.
-     *
-     * @param {number} journalEntries - Number of journal entries completed
-     * @param {Object} [context]
-     * @param {object} [context.stateAdapter] - For EffectRegistry (state + optional formData: keeperBackground, wizardSchool)
-     * @param {object} [context.dataModule] - Data catalogs (keeperBackgrounds, allItems, …)
-     * @returns {Reward} Reward with paper scraps only
-     */
-    static calculateJournalEntryRewards(journalEntries, context = {}) {
-        const ctx = typeof context === 'string' ? {} : context || {};
-        const { stateAdapter = null, dataModule = null } = ctx;
-
-        const n = Math.max(0, journalEntries);
-        const basePer = GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps;
-        const baseTotal = n * basePer;
-
-        const reward = new Reward({
-            xp: 0,
-            inkDrops: 0,
-            paperScraps: baseTotal,
-            items: []
-        });
-
-        reward.receipt.base.paperScraps = baseTotal;
-        reward.receipt.final.paperScraps = baseTotal;
-
-        if (baseTotal > 0) {
-            reward.receipt.modifiers.push({
-                source: 'End of Month - Journal Entry',
-                type: 'system',
-                value: baseTotal,
-                description: `${n} entries × ${basePer} Paper Scraps`,
-                currency: 'paperScraps'
-            });
-        }
-
-        if (!stateAdapter || !dataModule || n === 0) {
-            return reward;
-        }
-
-        const payload = TriggerPayload.journalEntry({ entryCount: n });
-        const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_JOURNAL_ENTRY, stateAdapter, dataModule);
-        return ModifierPipeline.resolve(TRIGGERS.ON_JOURNAL_ENTRY, payload, effects, reward);
-    }
-
-    /**
      * Calculate atmospheric buff paper scrap rewards for end of month
      * Formula: Sum of (daysUsed × dailyValue) for each active buff
      * - Associated buffs (from selected sanctum): dailyValue = GAME_CONFIG.atmospheric.sanctumBonus

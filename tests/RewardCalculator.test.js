@@ -5,7 +5,6 @@
 import { Reward, RewardCalculator } from '../assets/js/services/RewardCalculator.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
-import { MODIFIER_TYPES, TRIGGERS } from '../assets/js/services/effectSchema.js';
 
 describe('Reward Class', () => {
     test('should create a reward with default values', () => {
@@ -601,102 +600,6 @@ describe('RewardCalculator - End of Month Calculations', () => {
             const rewards = RewardCalculator.calculateBookCompletionRewards(100);
             
             expect(rewards.xp).toBe(1500); // 100 × 15
-        });
-    });
-
-    describe('calculateJournalEntryRewards', () => {
-        const emptyPipelineCtx = {
-            stateAdapter: {
-                state: {
-                    [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-                    [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-                    [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-                },
-                formData: { keeperBackground: '', wizardSchool: '' }
-            },
-            dataModule: {
-                keeperBackgrounds: {},
-                schoolBenefits: {},
-                masteryAbilities: {},
-                allItems: {}
-            }
-        };
-
-        test('should calculate paper scraps for journal entries without pipeline bonuses', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, emptyPipelineCtx);
-
-            expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(25); // 5 × 5
-            expect(rewards.items).toEqual([]);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-
-        test('should apply Scribe background via ON_JOURNAL_ENTRY pipeline', () => {
-            const ctx = {
-                stateAdapter: {
-                    state: {
-                        [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-                        [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-                        [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-                    },
-                    formData: { keeperBackground: 'scribe', wizardSchool: '' }
-                },
-                dataModule: {
-                    keeperBackgrounds: {
-                        scribe: {
-                            name: "The Scribe's Acolyte",
-                            effects: [
-                                {
-                                    trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                                    modifier: {
-                                        type: MODIFIER_TYPES.ADD_FLAT,
-                                        resource: 'paperScraps',
-                                        value: 3
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    schoolBenefits: {},
-                    masteryAbilities: {},
-                    allItems: {}
-                }
-            };
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, ctx);
-
-            expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(40); // 5 × (5 + 3)
-            expect(rewards.modifiedBy).toContain("The Scribe's Acolyte");
-        });
-
-        test('should return zero for zero entries', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(0, emptyPipelineCtx);
-
-            expect(rewards.paperScraps).toBe(0);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-
-        test('should handle negative input gracefully', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(-3, emptyPipelineCtx);
-
-            expect(rewards.paperScraps).toBe(0);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-
-        test('should not apply Scribe bonus for non-scribe backgrounds', () => {
-            const ctx = {
-                ...emptyPipelineCtx,
-                stateAdapter: {
-                    ...emptyPipelineCtx.stateAdapter,
-                    formData: { keeperBackground: 'archivist', wizardSchool: '' }
-                }
-            };
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, ctx);
-
-            expect(rewards.paperScraps).toBe(25);
-            expect(rewards.modifiedBy).toEqual([]);
         });
     });
 
