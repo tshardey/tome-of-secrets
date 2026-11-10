@@ -212,28 +212,63 @@ describe('formPersistence', () => {
             const form = setupForm();
             const keeperNameInput = document.getElementById('keeperName');
             const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            
+            const slotsInput = document.getElementById('wearable-slots');
+
             initializeFormPersistence(form, 500);
-            
+
             keeperNameInput.value = 'Test Keeper';
             keeperNameInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-            
+
             levelInput.value = '5';
             levelInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-            
-            inkDropsInput.value = '10';
-            inkDropsInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-            
+
+            slotsInput.value = '2';
+            slotsInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+
             // Fast-forward past debounce delay
             jest.advanceTimersByTime(500);
-            
+
             await Promise.resolve();
-            
+
             const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
             expect(savedData.keeperName).toBe('Test Keeper');
             expect(savedData.level).toBe('5');
-            expect(savedData.inkDrops).toBe('10');
+            expect(savedData['wearable-slots']).toBe('2');
+        });
+
+        it('never persists retired form fields (inkDrops, paperScraps, journal-entries-completed)', async () => {
+            const form = setupForm();
+            form.insertAdjacentHTML('beforeend', '<input type="number" id="journal-entries-completed" value="3" />');
+            const levelInput = document.getElementById('level');
+
+            initializeFormPersistence(form, 500);
+
+            document.getElementById('inkDrops').value = '10';
+            levelInput.value = '5';
+            levelInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+
+            jest.advanceTimersByTime(500);
+            await Promise.resolve();
+
+            const savedData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
+            expect(savedData.level).toBe('5');
+            expect(savedData).not.toHaveProperty('inkDrops');
+            expect(savedData).not.toHaveProperty('paperScraps');
+            expect(savedData).not.toHaveProperty('journal-entries-completed');
+        });
+
+        it('typing into a retired field does not trigger a save', async () => {
+            const form = setupForm();
+            initializeFormPersistence(form, 500);
+
+            const inkDropsInput = document.getElementById('inkDrops');
+            inkDropsInput.value = '10';
+            inkDropsInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+
+            jest.advanceTimersByTime(500);
+            await Promise.resolve();
+
+            expect(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM)).toBeNull();
         });
     });
 

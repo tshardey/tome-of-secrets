@@ -3,25 +3,29 @@ export const TRIGGERS = Object.freeze({
     ON_QUEST_DRAFTED: 'ON_QUEST_DRAFTED',
     ON_MONTH_END: 'ON_MONTH_END',
     ON_MONTH_START: 'ON_MONTH_START',
-    ON_JOURNAL_ENTRY: 'ON_JOURNAL_ENTRY',
     ON_BOOK_COMPLETED: 'ON_BOOK_COMPLETED',
     ON_STATE_LOAD: 'ON_STATE_LOAD',
     ON_ACTIVATE: 'ON_ACTIVATE'
 });
 
+/**
+ * Modifier types the pipeline resolves. There is deliberately no MULTIPLY: every bonus is a
+ * flat amount (dollar economy), and scripts/validate-data.js rejects MULTIPLY in catalog JSON.
+ */
 export const MODIFIER_TYPES = Object.freeze({
     ADD_FLAT: 'ADD_FLAT',
-    MULTIPLY: 'MULTIPLY',
     PREVENT: 'PREVENT',
     GRANT_RESOURCE: 'GRANT_RESOURCE',
     UNLOCK_SLOT: 'UNLOCK_SLOT',
     ACTIVATE: 'ACTIVATE'
 });
 
+/** Numeric reward resources an effect modifier may target (the fields on `Reward`). */
+export const RESOURCES = Object.freeze(['xp', 'dollars', 'blueprints']);
+
 export const RESOLUTION_ORDER = Object.freeze([
     MODIFIER_TYPES.ADD_FLAT,
     MODIFIER_TYPES.GRANT_RESOURCE,
-    MODIFIER_TYPES.MULTIPLY,
     MODIFIER_TYPES.PREVENT
 ]);
 

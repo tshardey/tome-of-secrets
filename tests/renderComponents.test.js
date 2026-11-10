@@ -7,7 +7,6 @@ import {
     renderQuestCard,
     renderItemCard,
     renderEmptySlot,
-    renderCurseRow,
     renderTemporaryBuffRow,
     renderAbilityCard
 } from '../assets/js/character-sheet/renderComponents.js';
@@ -26,7 +25,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test notes',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -44,7 +43,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test "notes"',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -64,7 +63,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: ['[Item] Librarian\'s Compass']
             };
 
@@ -82,8 +81,7 @@ describe('Render Components', () => {
                 year: '2024',
                 rewards: { 
                     xp: 15, 
-                    inkDrops: 10, 
-                    paperScraps: 0, 
+                    dollars: 10,
                     items: [],
                     modifiedBy: ['Librarian\'s Compass']
                 },
@@ -102,7 +100,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -136,7 +134,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test notes',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 5, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -155,7 +153,7 @@ describe('Render Components', () => {
                 bookAuthor: 'Jane Doe',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -178,7 +176,7 @@ describe('Render Components', () => {
                 isEncounter: true,
                 roomNumber: '1',
                 encounterName: 'Librarian\'s Spirit',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -196,7 +194,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '1',
@@ -223,7 +221,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, blueprints: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '2',
@@ -251,7 +249,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '2',
@@ -279,7 +277,7 @@ describe('Render Components', () => {
                 book: 'Test Book',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: '3',
@@ -310,8 +308,7 @@ describe('Render Components', () => {
                 year: '2024',
                 rewards: { 
                     xp: 15, 
-                    inkDrops: 10, 
-                    paperScraps: 0, 
+                    dollars: 10,
                     items: ['Some Item'] 
                 },
                 buffs: []
@@ -337,7 +334,7 @@ describe('Render Components', () => {
                 month: 'January',
                 year: '2024',
                 notes: 'Test "notes"',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -361,7 +358,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: ['[Item] Librarian\'s Compass']
             };
 
@@ -377,7 +374,7 @@ describe('Render Components', () => {
                 book: 'Test',
                 month: 'Jan',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -396,7 +393,7 @@ describe('Render Components', () => {
                 book: 'This is a very long book title that should wrap properly within the card container without bleeding out',
                 month: 'January',
                 year: '2024',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             };
 
@@ -428,7 +425,7 @@ describe('Render Components', () => {
                     year: '2024',
                     isEncounter: false,
                     roomNumber: '1',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -461,7 +458,7 @@ describe('Render Components', () => {
                     isEncounter: true,
                     roomNumber: '1',
                     encounterName: 'Mischievous Pixie',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -481,7 +478,7 @@ describe('Render Components', () => {
                 month: 'Jan',
                 year: '2024',
                 notes: 'Lots of notes',
-                rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 1, dollars: 0, items: [] },
                 buffs: []
             };
 
@@ -506,7 +503,7 @@ describe('Render Components', () => {
                     book: 'Test Book',
                     month: 'January',
                     year: '2024',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -535,7 +532,7 @@ describe('Render Components', () => {
                     book: 'Test Book',
                     month: 'January',
                     year: '2024',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -562,7 +559,7 @@ describe('Render Components', () => {
                     book: 'Test Book',
                     month: 'January',
                     year: '2024',
-                    rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+                    rewards: { xp: 1, dollars: 0, items: [] },
                     buffs: []
                 };
 
@@ -648,51 +645,6 @@ describe('Render Components', () => {
         });
     });
 
-    describe('renderCurseRow', () => {
-        test('should render curse row with all fields', () => {
-            const curse = {
-                name: 'Test Curse',
-                requirement: 'Test requirement',
-                book: 'Test Book'
-            };
-
-            const row = renderCurseRow(curse, 0, 'Active');
-            
-            expect(row.tagName).toBe('TR');
-            expect(row.querySelectorAll('td').length).toBe(5); // 4 data cells + 1 action cell
-        });
-
-        test('should escape curse name and requirement', () => {
-            const curse = {
-                name: '<script>alert("xss")</script>',
-                requirement: 'Test & requirement',
-                book: 'Test Book'
-            };
-
-            const row = renderCurseRow(curse, 0, 'Active');
-            const cells = row.querySelectorAll('td');
-            
-            expect(cells[0].textContent).toContain('script');
-            expect(cells[0].innerHTML).not.toContain('<script>');
-        });
-
-        test('should show correct buttons for active vs completed', () => {
-            const curse = {
-                name: 'Test Curse',
-                requirement: 'Test',
-                book: 'Test'
-            };
-
-            const activeRow = renderCurseRow(curse, 0, 'Active');
-            expect(activeRow.querySelector('.complete-curse-btn')).toBeDefined();
-            expect(activeRow.querySelector('.edit-curse-btn')).toBeDefined();
-
-            const completedRow = renderCurseRow(curse, 0, 'Completed');
-            expect(completedRow.querySelector('.complete-curse-btn')).toBeNull();
-            expect(completedRow.querySelector('.edit-curse-btn')).toBeNull();
-        });
-    });
-
     describe('renderTemporaryBuffRow', () => {
         test('should render temporary buff row', () => {
             const buff = {
@@ -749,6 +701,19 @@ describe('Render Components', () => {
 
             const row = renderTemporaryBuffRow(oneTimeBuff, 0);
             expect(row.querySelector('.mark-buff-used-btn')).toBeDefined();
+        });
+
+        test("renders one mark-used button per choice for The Archivist's Favor", () => {
+            const row = renderTemporaryBuffRow({
+                name: "The Archivist's Favor",
+                description: 'Choose one',
+                duration: 'one-time',
+                status: 'active'
+            }, 2);
+            const buttons = Array.from(row.querySelectorAll('.mark-buff-used-btn'));
+            expect(buttons.map(b => b.dataset.choiceId)).toEqual(['reroll', 'xp', 'dollars']);
+            expect(buttons.map(b => b.textContent)).toEqual(['Reroll a prompt', '+100 XP', '+$10']);
+            expect(buttons.every(b => b.dataset.index === '2')).toBe(true);
         });
     });
 

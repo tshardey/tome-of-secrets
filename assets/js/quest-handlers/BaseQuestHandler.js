@@ -6,8 +6,13 @@
  */
 
 import { RewardCalculator, Reward } from '../services/RewardCalculator.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 import { Validator, required, selected, conditional } from '../services/Validator.js';
 import { characterState } from '../character-sheet/state.js';
+import { getLinkedQuestIds, isSecondaryQuestInBatch } from '../utils/questLinkRules.js';
+import { spendUseCountBuffs } from '../utils/useCountBuffs.js';
+import { getTemporaryBuffData } from '../character-sheet/data.js';
+import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 
 export class BaseQuestHandler {
     /**
@@ -115,9 +120,11 @@ export class BaseQuestHandler {
      * @param {Array} selectedBuffs - Selected buff/item names
      * @param {string} background - Background key
      * @param {string} wizardSchool - Wizard school key
+     * @param {{ isSecondaryQuest?: boolean|null, temporaryBuffs?: Array|null }} [options] - isSecondaryQuest overrides
+     *   the book-link lookup; temporaryBuffs overrides the state's buffs (batch use-count tracking)
      * @returns {Reward} Final rewards with all modifiers applied
      */
-    calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null) {
+    calculateFinalRewards(baseRewards, quest, selectedBuffs, background, wizardSchool = null, options = {}) {
         const stateAdapter = this.data?.rewardStateAdapter || null;
         const getBook =
             stateAdapter && typeof stateAdapter.getBook === 'function'
@@ -141,7 +148,9 @@ export class BaseQuestHandler {
             encounterName: quest.encounterName || null,
             isBefriend: quest.isBefriend !== undefined ? quest.isBefriend : true,
             stateAdapter: adapter,
-            getBook
+            getBook,
+            isSecondaryQuest: options.isSecondaryQuest ?? null,
+            temporaryBuffs: options.temporaryBuffs ?? null
         });
     }
 
@@ -175,15 +184,37 @@ export class BaseQuestHandler {
      */
     processCompletedQuests(quests, selectedBuffs, background, wizardSchool = null) {
         const getBook = this.data && typeof this.data.getBook === 'function' ? this.data.getBook : null;
+        // Book links for this batch are stored only after the quests are added, so count the
+        // earlier quests of the batch on each book to find the secondary ($10 base) quest.
+        const pendingLinksByBook = new Map();
+        const rewardAdapter = this.data?.rewardStateAdapter;
+        const liveQuestIds = typeof rewardAdapter?.getLiveQuestIds === 'function' ? rewardAdapter.getLiveQuestIds() : null;
+        // Use-count buffs (Enchanted Focus, ...) are spent only after the batch is stored, so track
+        // the uses each earlier quest of the batch will spend; the last use pays only once.
+        let batchBuffs = (rewardAdapter?.state ?? characterState)?.[STORAGE_KEYS.TEMPORARY_BUFFS] ?? null;
+        const getCatalogUseCount = name => getTemporaryBuffData(name)?.useCount || 0;
         return quests.map(quest => {
             if (getBook) BaseQuestHandler.enrichQuestWithBookPageCount(quest, getBook);
+            let isSecondaryQuest = null;
+            const book = getBook && quest.bookId ? getBook(quest.bookId) : null;
+            if (book) {
+                const earlier = pendingLinksByBook.get(quest.bookId) || 0;
+                isSecondaryQuest = isSecondaryQuestInBatch(book, quest.id, earlier, { liveQuestIds });
+                if (!(quest.id && getLinkedQuestIds(book, { liveQuestIds, keepId: quest.id }).includes(quest.id))) {
+                    pendingLinksByBook.set(quest.bookId, earlier + 1);
+                }
+            }
             const finalRewards = this.calculateFinalRewards(
                 quest.rewards,
                 quest,
                 selectedBuffs,
                 background,
-                wizardSchool
+                wizardSchool,
+                { isSecondaryQuest, temporaryBuffs: batchBuffs }
             );
+            if (Array.isArray(batchBuffs)) {
+                batchBuffs = spendUseCountBuffs(batchBuffs, selectedBuffs, getCatalogUseCount).buffs;
+            }
             return {
                 ...quest,
                 rewards: finalRewards.toJSON()
@@ -232,31 +263,17 @@ export class BaseQuestHandler {
         // and we have stored rewards that look more complete, use stored rewards as base instead
         // This handles legacy quests and test cases that don't have full quest metadata
         if (quest.rewards && quest.type === '♠ Dungeon Crawl' && !quest.roomNumber) {
-            // Check if we got a fallback reward (only default inkDrops, no XP/paperScraps)
-            const isFallbackReward = baseRewards.inkDrops === 10 && 
-                                     baseRewards.xp === 0 && 
-                                     baseRewards.paperScraps === 0 &&
-                                     baseRewards.blueprints === 0;
-            
+            // Check if we got a fallback reward (only the dollar quest base, no XP/blueprints)
+            const isFallbackReward = baseRewards.xp === 0 && baseRewards.blueprints === 0;
+
             // Check if stored rewards look like actual quest rewards (not just defaults)
-            const storedHasContent = (quest.rewards.xp > 0 || quest.rewards.inkDrops > 0 || 
-                                     quest.rewards.paperScraps > 0 || quest.rewards.blueprints > 0);
-            
+            const storedHasContent = (quest.rewards.xp > 0 || quest.rewards.blueprints > 0);
+
             if (isFallbackReward && storedHasContent) {
-                // Use stored rewards as base, but create a proper Reward object with receipt
-                baseRewards = new Reward({
-                    xp: quest.rewards.xp || 0,
-                    inkDrops: quest.rewards.inkDrops || 0,
-                    paperScraps: quest.rewards.paperScraps || 0,
-                    blueprints: quest.rewards.blueprints || 0,
-                    items: quest.rewards.items || []
-                });
-                // Set receipt base values from the stored rewards
-                baseRewards.receipt.base.xp = baseRewards.xp;
-                baseRewards.receipt.base.inkDrops = baseRewards.inkDrops;
-                baseRewards.receipt.base.paperScraps = baseRewards.paperScraps;
-                baseRewards.receipt.base.blueprints = baseRewards.blueprints;
-                baseRewards.receipt.final = { ...baseRewards.receipt.base };
+                // Use stored XP/blueprints as base; dollars always come from the flat quest base
+                baseRewards = Reward.fromAuthored(quest.rewards);
+                baseRewards.dollars = GAME_CONFIG.rewards.questBase.dollars;
+                baseRewards.syncReceiptBase();
             }
         }
         

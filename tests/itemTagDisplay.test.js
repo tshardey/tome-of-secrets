@@ -21,7 +21,7 @@ describe('extractItemTagGroups', () => {
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['romance']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 12 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 12 }
                 }
             ]
         };
@@ -34,7 +34,7 @@ describe('extractItemTagGroups', () => {
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['fantasy', 'fae']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 15 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 15 }
                 }
             ]
         };
@@ -47,7 +47,7 @@ describe('extractItemTagGroups', () => {
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['horror'], ['fantasy', 'dark']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 12 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 12 }
                 }
             ]
         };
@@ -60,13 +60,13 @@ describe('extractItemTagGroups', () => {
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['romance']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 20 },
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 20 },
                     slot: 'equipped'
                 },
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['romance']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 },
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 },
                     slot: 'passive'
                 }
             ]
@@ -81,13 +81,13 @@ describe('extractItemTagGroups', () => {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['romance'], ['contemporary-fiction', 'social']] },
                     slot: 'equipped',
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 15 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 15 }
                 },
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['romance'], ['contemporary-fiction', 'social']] },
                     slot: 'passive',
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 8 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 8 }
                 }
             ]
         };
@@ -177,7 +177,7 @@ describe('renderItemCard tag integration', () => {
                 {
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['romance'], ['fantasy']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 },
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 },
                     slot: 'equipped'
                 }
             ]

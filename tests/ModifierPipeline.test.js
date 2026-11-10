@@ -3,7 +3,6 @@ import { ModifierPipeline } from '../assets/js/services/ModifierPipeline.js';
 import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
 import { TRIGGERS, MODIFIER_TYPES, validateEffect } from '../assets/js/services/effectSchema.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
-import { tryPreventWornPage } from '../assets/js/services/WornPagePrevention.js';
 
 describe('effectSchema', () => {
     test('validateEffect accepts valid effect', () => {
@@ -16,6 +15,14 @@ describe('effectSchema', () => {
             }
         });
         expect(result.valid).toBe(true);
+    });
+
+    test('ON_JOURNAL_ENTRY is not a valid trigger', () => {
+        const result = validateEffect({
+            trigger: 'ON_JOURNAL_ENTRY',
+            modifier: { type: 'ADD_FLAT', resource: 'xp', value: 1 }
+        });
+        expect(result.valid).toBe(false);
     });
 
     test('validateEffect rejects invalid modifier type', () => {
@@ -51,28 +58,28 @@ describe('ModifierPipeline.resolve', () => {
         expect(result.modifiedBy).toContain('Bonus Source');
     });
 
-    test('applies MULTIPLY effects', () => {
-        const base = new Reward({ xp: 10 });
-        const effects = [
-            {
-                source: { name: 'Multiplier Source' },
-                effect: {
-                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                    modifier: {
-                        type: MODIFIER_TYPES.MULTIPLY,
-                        resource: 'xp',
-                        value: 1.5
-                    }
-                }
-            }
-        ];
+    test('MULTIPLY is not a modifier type: it is rejected and changes nothing', () => {
+        expect(MODIFIER_TYPES).not.toHaveProperty('MULTIPLY');
+        const multiply = {
+            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+            modifier: { type: 'MULTIPLY', resource: 'xp', value: 2 }
+        };
+        expect(validateEffect(multiply).valid).toBe(false);
 
-        const result = ModifierPipeline.resolve(TRIGGERS.ON_QUEST_COMPLETED, {}, effects, base);
-        expect(result.xp).toBe(15);
+        const base = new Reward({ xp: 10, dollars: 15 });
+        const result = ModifierPipeline.resolve(
+            TRIGGERS.ON_QUEST_COMPLETED,
+            {},
+            [{ source: { name: 'Multiplier Source' }, effect: multiply }],
+            base
+        );
+        expect(result.xp).toBe(10);
+        expect(result.dollars).toBe(15);
+        expect(result.receipt.modifiers).toEqual([]);
     });
 
     test('applies GRANT_RESOURCE like an additive currency grant', () => {
-        const base = new Reward({ inkDrops: 3 });
+        const base = new Reward({ dollars: 3 });
         const effects = [
             {
                 source: { name: 'Cartographer' },
@@ -81,7 +88,7 @@ describe('ModifierPipeline.resolve', () => {
                     condition: { questType: 'dungeon_crawl' },
                     modifier: {
                         type: MODIFIER_TYPES.GRANT_RESOURCE,
-                        resource: 'inkDrops',
+                        resource: 'dollars',
                         value: 15
                     }
                 }
@@ -94,44 +101,28 @@ describe('ModifierPipeline.resolve', () => {
             effects,
             base
         );
-        expect(result.inkDrops).toBe(18);
+        expect(result.dollars).toBe(18);
         expect(result.receipt.modifiers[0].type).toBe('effect:grant_resource');
         expect(result.modifiedBy).toContain('Cartographer');
     });
 
-    test('applies flat before multiplier', () => {
-        const base = new Reward({ xp: 10 });
-        const effects = [
-            {
-                source: { name: 'Flat' },
-                effect: {
-                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                    modifier: {
-                        type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'xp',
-                        value: 10
-                    }
-                }
-            },
-            {
-                source: { name: 'Multiply' },
-                effect: {
-                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
-                    modifier: {
-                        type: MODIFIER_TYPES.MULTIPLY,
-                        resource: 'xp',
-                        value: 2
-                    }
-                }
+    test('flat dollar bonuses stack additively', () => {
+        const base = new Reward({ dollars: 15 });
+        const effects = [3, 2].map((value, index) => ({
+            source: { name: `Flat ${index}` },
+            effect: {
+                trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value }
             }
-        ];
+        }));
 
         const result = ModifierPipeline.resolve(TRIGGERS.ON_QUEST_COMPLETED, {}, effects, base);
-        expect(result.xp).toBe(40);
+        expect(result.dollars).toBe(20);
+        expect(result.receipt.modifiers.map(m => m.description)).toEqual(['+$3', '+$2']);
     });
 
     test('skips effects with unmet condition', () => {
-        const base = new Reward({ paperScraps: 10 });
+        const base = new Reward({ dollars: 10 });
         const effects = [
             {
                 source: { name: 'Dungeon Bonus' },
@@ -140,7 +131,7 @@ describe('ModifierPipeline.resolve', () => {
                     condition: { questType: 'dungeon_crawl' },
                     modifier: {
                         type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'paperScraps',
+                        resource: 'dollars',
                         value: 10
                     }
                 }
@@ -153,7 +144,7 @@ describe('ModifierPipeline.resolve', () => {
             effects,
             base
         );
-        expect(result.paperScraps).toBe(10);
+        expect(result.dollars).toBe(10);
     });
 
     test('encounterType:any requires encounter context', () => {
@@ -191,7 +182,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('matches condition keys including genre and pageCount', () => {
-        const base = new Reward({ inkDrops: 0 });
+        const base = new Reward({ dollars: 0 });
         const effects = [
             {
                 source: { name: 'Genre and Length' },
@@ -203,7 +194,7 @@ describe('ModifierPipeline.resolve', () => {
                     },
                     modifier: {
                         type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'inkDrops',
+                        resource: 'dollars',
                         value: 10
                     }
                 }
@@ -216,7 +207,7 @@ describe('ModifierPipeline.resolve', () => {
             effects,
             base
         );
-        expect(result.inkDrops).toBe(10);
+        expect(result.dollars).toBe(10);
     });
 
     test('records modifier entries in receipt', () => {
@@ -242,7 +233,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('records UNLOCK_SLOT as deferred non-numeric effect', () => {
-        const base = new Reward({ xp: 10, inkDrops: 3, paperScraps: 1 });
+        const base = new Reward({ xp: 10, dollars: 3, blueprints: 1 });
         const effects = [
             {
                 source: { name: 'School of Conjuration' },
@@ -258,8 +249,8 @@ describe('ModifierPipeline.resolve', () => {
         const result = ModifierPipeline.resolve(TRIGGERS.ON_STATE_LOAD, {}, effects, base);
 
         expect(result.xp).toBe(10);
-        expect(result.inkDrops).toBe(3);
-        expect(result.paperScraps).toBe(1);
+        expect(result.dollars).toBe(3);
+        expect(result.blueprints).toBe(1);
         expect(result.modifiedBy).toEqual([]);
         expect(result.receipt.modifiers).toContainEqual(
             expect.objectContaining({
@@ -271,7 +262,7 @@ describe('ModifierPipeline.resolve', () => {
     });
 
     test('records ACTIVATE eligibility without changing numeric rewards', () => {
-        const base = new Reward({ xp: 12, inkDrops: 4 });
+        const base = new Reward({ xp: 12, dollars: 4 });
         const effects = [
             {
                 source: { sourceType: 'school', id: 'Evocation', name: 'School of Evocation' },
@@ -293,7 +284,7 @@ describe('ModifierPipeline.resolve', () => {
         );
 
         expect(result.xp).toBe(12);
-        expect(result.inkDrops).toBe(4);
+        expect(result.dollars).toBe(4);
         expect(result.receipt.modifiers).toContainEqual(
             expect.objectContaining({
                 type: 'effect:activate',
@@ -363,106 +354,6 @@ describe('ModifierPipeline.resolve', () => {
             })
         );
     });
-
-    test('scales ON_JOURNAL_ENTRY ADD_FLAT by entryCount', () => {
-        const base = new Reward({ paperScraps: 25 });
-        base.receipt.base.paperScraps = 25;
-        base.receipt.modifiers.push({
-            source: 'End of Month - Journal Entry',
-            type: 'system',
-            value: 25,
-            description: '5 entries × 5 Paper Scraps',
-            currency: 'paperScraps'
-        });
-        const effects = [
-            {
-                source: { name: "The Scribe's Acolyte" },
-                effect: {
-                    trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                    modifier: {
-                        type: MODIFIER_TYPES.ADD_FLAT,
-                        resource: 'paperScraps',
-                        value: 3
-                    }
-                }
-            }
-        ];
-        const result = ModifierPipeline.resolve(
-            TRIGGERS.ON_JOURNAL_ENTRY,
-            { entryCount: 5 },
-            effects,
-            base
-        );
-        expect(result.paperScraps).toBe(40);
-        const scribeMod = result.receipt.modifiers.find(m => m.type === 'effect:add_flat');
-        expect(scribeMod.value).toBe(15);
-        expect(scribeMod.description).toContain('5 × 3');
-    });
-});
-
-describe('WornPagePrevention.tryPreventWornPage', () => {
-    test('consumes school effect cooldown and prevents', () => {
-        const state = {
-            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {},
-            [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-            [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-            [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
-            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: [],
-            [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-        };
-        const stateAdapter = {
-            state,
-            formData: { keeperBackground: '', wizardSchool: 'Abjuration' },
-            isEffectCooldownAvailable(key, cadence, period) {
-                const e = state[STORAGE_KEYS.EFFECT_COOLDOWNS][key];
-                if (!e) return true;
-                return e.month !== period.month || e.year !== period.year;
-            },
-            consumeEffectCooldown(key, cadence, period) {
-                state[STORAGE_KEYS.EFFECT_COOLDOWNS][key] = {
-                    month: period.month,
-                    year: period.year
-                };
-            }
-        };
-        const dataModule = {
-            schoolBenefits: {
-                Abjuration: {
-                    effects: [
-                        {
-                            trigger: TRIGGERS.ON_MONTH_END,
-                            modifier: { type: MODIFIER_TYPES.PREVENT, target: 'worn_page' },
-                            cooldown: 'monthly'
-                        }
-                    ]
-                }
-            },
-            keeperBackgrounds: {},
-            masteryAbilities: {},
-            allItems: {}
-        };
-        const first = tryPreventWornPage({
-            stateAdapter,
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(first.prevented).toBe(true);
-        const second = tryPreventWornPage({
-            stateAdapter,
-            dataModule,
-            month: 'March',
-            year: '2026'
-        });
-        expect(second.prevented).toBe(false);
-        const third = tryPreventWornPage({
-            stateAdapter,
-            dataModule,
-            month: 'April',
-            year: '2026'
-        });
-        expect(third.prevented).toBe(true);
-    });
 });
 
 describe('EffectRegistry.getActiveEffects', () => {
@@ -488,7 +379,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'paperScraps',
+                                resource: 'dollars',
                                 value: 10
                             }
                         }
@@ -501,9 +392,9 @@ describe('EffectRegistry.getActiveEffects', () => {
                         {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
-                                type: MODIFIER_TYPES.MULTIPLY,
+                                type: MODIFIER_TYPES.ADD_FLAT,
                                 resource: 'xp',
-                                value: 1.5
+                                value: 10
                             }
                         }
                     ]
@@ -516,7 +407,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'paperScraps',
+                                resource: 'dollars',
                                 value: 5
                             }
                         }
@@ -544,7 +435,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'inkDrops',
+                                resource: 'dollars',
                                 value: 3
                             }
                         }
@@ -588,7 +479,7 @@ describe('EffectRegistry.getActiveEffects', () => {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
                                 type: MODIFIER_TYPES.ADD_FLAT,
-                                resource: 'paperScraps',
+                                resource: 'dollars',
                                 value: 10
                             }
                         }
@@ -601,9 +492,9 @@ describe('EffectRegistry.getActiveEffects', () => {
                         {
                             trigger: TRIGGERS.ON_QUEST_COMPLETED,
                             modifier: {
-                                type: MODIFIER_TYPES.MULTIPLY,
+                                type: MODIFIER_TYPES.ADD_FLAT,
                                 resource: 'xp',
-                                value: 1.5
+                                value: 10
                             }
                         }
                     ]
@@ -640,8 +531,8 @@ describe('EffectRegistry.getActiveEffects', () => {
                 "Librarian's Compass": {
                     effects: [
                         {
-                            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 1 }
+                            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 1 }
                         }
                     ]
                 },
@@ -649,8 +540,8 @@ describe('EffectRegistry.getActiveEffects', () => {
                     id: 'librarians-quill',
                     effects: [
                         {
-                            trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'paperScraps', value: 2 }
+                            trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                            modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 2 }
                         }
                     ]
                 }
@@ -661,7 +552,7 @@ describe('EffectRegistry.getActiveEffects', () => {
             temporaryBuffs: {}
         };
         const activeEffects = EffectRegistry.getActiveEffects(
-            TRIGGERS.ON_JOURNAL_ENTRY,
+            TRIGGERS.ON_QUEST_COMPLETED,
             mockStateAdapter,
             mockDataModule
         );

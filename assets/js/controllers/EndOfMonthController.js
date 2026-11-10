@@ -3,13 +3,11 @@
  * 
  * Manages:
  * - Processing atmospheric buff rewards
- * - Processing journal entry rewards
  * - Resetting monthly counters (book completion XP is awarded when marking a book complete in Library)
  */
 
 import { BaseController } from './BaseController.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
-import { parseIntOr } from '../utils/helpers.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { safeSetJSON } from '../utils/storage.js';
 import { characterState } from '../character-sheet/state.js';
@@ -17,7 +15,7 @@ import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
 import { EffectRegistry } from '../services/EffectRegistry.js';
 import { buildEffectContext } from '../services/effectContext.js';
-import { getAtmosphericBuffMultiplier, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
+import { getAtmosphericDailyBonus, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -87,7 +85,7 @@ export class EndOfMonthController extends BaseController {
                 })
             );
 
-            const { multiplier, modifierItemName } = getAtmosphericBuffMultiplier(stateAdapter.state);
+            const { bonusPerDay, modifierItemName } = getAtmosphericDailyBonus(stateAdapter.state);
             const trackableItemValues = getTrackableAtmosphericItemValues(stateAdapter.state);
 
             // Calculate atmospheric buff rewards using RewardCalculator
@@ -95,7 +93,7 @@ export class EndOfMonthController extends BaseController {
                 atmosphericBuffs,
                 associatedBuffs,
                 forcedBuffNames,
-                { multiplier, multiplierSource: modifierItemName, trackableItemValues }
+                { dailyBonus: bonusPerDay, dailyBonusSource: modifierItemName, trackableItemValues }
             );
 
             // Reset atmospheric buffs (re-activate pipeline-forced buffs after reset)
@@ -111,7 +109,7 @@ export class EndOfMonthController extends BaseController {
                 stateAdapter.setAtmosphericBuffActive(buffKey, true);
             }
 
-            // Apply atmospheric buff paper scraps
+            // Pay atmospheric buff dollars into the Fund
             updateCurrency(atmosphericRewards);
 
             // Book completion XP is now awarded when marking a book complete in the Library (not at end of month).
@@ -122,37 +120,6 @@ export class EndOfMonthController extends BaseController {
                 safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
                 characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = [];
                 uiModule.renderShelfBooks(0, []);
-            }
-
-            // Calculate and add journal entries paper scraps using RewardCalculator
-            const journalEntriesInput = document.getElementById('journal-entries-completed');
-            if (journalEntriesInput) {
-                const journalEntries = parseIntOr(journalEntriesInput.value, 0);
-                const wizardSchool = document.getElementById('wizardSchool')?.value || '';
-                const journalRewards = RewardCalculator.calculateJournalEntryRewards(journalEntries, {
-                    stateAdapter: {
-                        state: stateAdapter.state,
-                        formData: {
-                            keeperBackground: background,
-                            wizardSchool
-                        }
-                    },
-                    dataModule: data
-                });
-
-                if (journalRewards.paperScraps > 0) {
-                    updateCurrency(journalRewards);
-                    if (journalEntries > 0) {
-                        const extras =
-                            journalRewards.modifiedBy && journalRewards.modifiedBy.length
-                                ? ` — ${journalRewards.modifiedBy.join(', ')}`
-                                : '';
-                        toast.info(`Journal entries rewarded: ${journalRewards.paperScraps} Paper Scraps${extras}`);
-                    }
-                }
-
-                // Reset journal entries counter to 0
-                journalEntriesInput.value = 0;
             }
 
             // Clear the completed books set for the new month
@@ -176,7 +143,7 @@ export class EndOfMonthController extends BaseController {
             const familiarSlotsInput = document.getElementById('familiar-slots');
             uiModule.updateQuestBuffsDropdown(wearableSlotsInput, nonWearableSlotsInput, familiarSlotsInput);
 
-            // Refresh Worn Page mitigation helpers: monthly → restore each cycle; every-2-months → restore every second cycle
+            // Refresh monthly draw / dice helpers: monthly → restore each cycle; every-2-months → restore every second cycle
             const helperCatalogs = {
                 allItems: data.allItems || {},
                 temporaryBuffs: { ...(data.temporaryBuffsFromRewards || {}), ...(data.temporaryBuffs || {}) },
@@ -186,14 +153,6 @@ export class EndOfMonthController extends BaseController {
                 permanentBonuses: data.permanentBonuses || {}
             };
             const school = document.getElementById('wizardSchool')?.value || '';
-            const curseHelpers = stateAdapter.getCurseHelpers(helperCatalogs, { school });
-            stateAdapter.refreshCurseHelpersAtEndOfMonth(curseHelpers);
-            // Remove one-time Worn Page temp buffs that were marked used (they expire after this EOM)
-            if (stateAdapter.removeUsedOneTimeWornPageTempBuffsAtEOM(curseHelpers)) {
-                uiModule.renderTemporaryBuffs();
-            }
-            if (uiModule.renderWornPageHelpers) uiModule.renderWornPageHelpers();
-
             const levelRaw = document.getElementById('level')?.value;
             const level = Math.max(1, parseInt(levelRaw, 10) || 1);
             const questDrawHelpers = stateAdapter.getQuestDrawHelpers(helperCatalogs, { school, level });

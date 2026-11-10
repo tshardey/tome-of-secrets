@@ -172,8 +172,7 @@ export class RestorationController extends BaseController {
         if (uiModule && typeof uiModule.updateCurrency === 'function') {
             uiModule.updateCurrency({
                 xp: rewards.xp,
-                inkDrops: rewards.inkDrops,
-                paperScraps: rewards.paperScraps
+                dollars: rewards.dollars
             });
         }
 

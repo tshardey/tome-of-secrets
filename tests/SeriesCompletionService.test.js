@@ -252,17 +252,15 @@ describe('SeriesCompletionService', () => {
       const reward = {
         type: 'currency',
         xp: 10,
-        inkDrops: 50,
-        paperScraps: 5,
-        text: 'Gain +10 XP, +50 Ink Drops, +5 Paper Scraps.'
+        dollars: 15,
+        text: 'Gain +10 XP and +$15.'
       };
       const result = applyTypedReward(reward, { stateAdapter: adapter, updateCurrency });
       expect(result.applied).toBe(true);
       expect(result.rewardText).toBe(reward.text);
       expect(updateCurrency).toHaveBeenCalledWith({
         xp: 10,
-        inkDrops: 50,
-        paperScraps: 5
+        dollars: 15
       });
     });
 
@@ -270,8 +268,7 @@ describe('SeriesCompletionService', () => {
       const reward = {
         type: 'currency',
         xp: 0,
-        inkDrops: 0,
-        paperScraps: 0,
+        dollars: 0,
         text: 'No gain.'
       };
       applyTypedReward(reward, { stateAdapter: adapter, updateCurrency });
@@ -282,8 +279,7 @@ describe('SeriesCompletionService', () => {
       const reward = {
         type: 'currency',
         xp: 10,
-        inkDrops: 0,
-        paperScraps: 0,
+        dollars: 0,
         text: 'Gain +10 XP.'
       };
       const result = applyTypedReward(reward, { stateAdapter: adapter });
@@ -360,29 +356,6 @@ describe('SeriesCompletionService', () => {
       expect(result.rewardText).toBe('You feel inspired.');
     });
 
-    it('curse-removal moves one active curse to completed when present', () => {
-      const moveQuest = jest.fn();
-      const getActiveCurses = jest.fn().mockReturnValue([{ id: 'c1', name: 'Curse' }]);
-      const reward = { type: 'curse-removal', text: 'Remove one curse.' };
-      applyTypedReward(reward, {
-        stateAdapter: { getActiveCurses, moveQuest },
-        updateCurrency
-      });
-      expect(getActiveCurses).toHaveBeenCalled();
-      expect(moveQuest).toHaveBeenCalled();
-    });
-
-    it('curse-removal does not call moveQuest when no active curses', () => {
-      const moveQuest = jest.fn();
-      const getActiveCurses = jest.fn().mockReturnValue([]);
-      const reward = { type: 'curse-removal', text: 'Remove one curse.' };
-      applyTypedReward(reward, {
-        stateAdapter: { getActiveCurses, moveQuest },
-        updateCurrency
-      });
-      expect(getActiveCurses).toHaveBeenCalled();
-      expect(moveQuest).not.toHaveBeenCalled();
-    });
   });
 
   describe('rewards from stop advancement (integration)', () => {
@@ -402,8 +375,7 @@ describe('SeriesCompletionService', () => {
       expect(updateCurrency).toHaveBeenCalledWith(
         expect.objectContaining({
           xp: stop1.reward.xp,
-          inkDrops: stop1.reward.inkDrops,
-          paperScraps: stop1.reward.paperScraps
+          dollars: stop1.reward.dollars
         })
       );
     });
@@ -436,13 +408,11 @@ describe('SeriesCompletionService', () => {
 
       expect(updateCurrency).toHaveBeenNthCalledWith(1, expect.objectContaining({
         xp: 0,
-        inkDrops: 50,
-        paperScraps: 10
+        dollars: 15
       }));
       expect(updateCurrency).toHaveBeenNthCalledWith(2, expect.objectContaining({
         xp: stop3.reward.xp,
-        inkDrops: 0,
-        paperScraps: 0
+        dollars: 0
       }));
     });
 
@@ -605,8 +575,7 @@ describe('SeriesCompletionService', () => {
       applySeriesCompletionReward(reward, { stateAdapter: adapter, updateCurrency });
       expect(updateCurrency).toHaveBeenCalledWith(
         expect.objectContaining({
-          inkDrops: 50,
-          paperScraps: 10
+          dollars: 15
         })
       );
     });

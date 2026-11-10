@@ -1,8 +1,11 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey } from './persistence.js';
-import { buildCurseHelperList, buildSourceId } from './curseHelperDiscovery.js';
+import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
+import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
+import { evaluateQuestLink, isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
+import { spendUseCountBuffs } from '../utils/useCountBuffs.js';
 
 const EVENTS = Object.freeze({
     SELECTED_GENRES_CHANGED: 'selectedGenresChanged',
@@ -11,8 +14,6 @@ const EVENTS = Object.freeze({
     DISCARDED_QUESTS_CHANGED: 'discardedQuestsChanged',
     INVENTORY_ITEMS_CHANGED: 'inventoryItemsChanged',
     EQUIPPED_ITEMS_CHANGED: 'equippedItemsChanged',
-    ACTIVE_CURSES_CHANGED: 'activeCursesChanged',
-    COMPLETED_CURSES_CHANGED: 'completedCursesChanged',
     TEMPORARY_BUFFS_CHANGED: 'temporaryBuffsChanged',
     LEARNED_ABILITIES_CHANGED: 'learnedAbilitiesChanged',
     ATMOSPHERIC_BUFFS_CHANGED: 'atmosphericBuffsChanged',
@@ -32,9 +33,8 @@ const EVENTS = Object.freeze({
     SERIES_EXPEDITION_PROGRESS_CHANGED: 'seriesExpeditionProgressChanged',
     // The Exchange's register – countries struck off once, ever
     CLAIMED_COUNTRIES_CHANGED: 'claimedCountriesChanged',
-    // Book box subscriptions (rewards overhaul)
-    BOOK_BOX_SUBSCRIPTIONS_CHANGED: 'bookBoxSubscriptionsChanged',
-    BOOK_BOX_HISTORY_CHANGED: 'bookBoxHistoryChanged'
+    // Real-dollar Fund (dollar economy); payload { balanceCents }
+    FUND_CHANGED: 'fundChanged'
 });
 
 const LIST_EVENTS = Object.freeze({
@@ -43,8 +43,6 @@ const LIST_EVENTS = Object.freeze({
     [STORAGE_KEYS.DISCARDED_QUESTS]: EVENTS.DISCARDED_QUESTS_CHANGED,
     [STORAGE_KEYS.INVENTORY_ITEMS]: EVENTS.INVENTORY_ITEMS_CHANGED,
     [STORAGE_KEYS.EQUIPPED_ITEMS]: EVENTS.EQUIPPED_ITEMS_CHANGED,
-    [STORAGE_KEYS.ACTIVE_CURSES]: EVENTS.ACTIVE_CURSES_CHANGED,
-    [STORAGE_KEYS.COMPLETED_CURSES]: EVENTS.COMPLETED_CURSES_CHANGED,
     [STORAGE_KEYS.TEMPORARY_BUFFS]: EVENTS.TEMPORARY_BUFFS_CHANGED,
     [STORAGE_KEYS.LEARNED_ABILITIES]: EVENTS.LEARNED_ABILITIES_CHANGED,
     // Library Restoration Expansion
@@ -453,256 +451,8 @@ export class StateAdapter {
         return item;
     }
 
-    // Curses helpers
-    getActiveCurses() {
-        return this.state[STORAGE_KEYS.ACTIVE_CURSES];
-    }
-
-    getCompletedCurses() {
-        return this.state[STORAGE_KEYS.COMPLETED_CURSES];
-    }
-
-    addActiveCurse(curse) {
-        const { value } = this._mutateList(STORAGE_KEYS.ACTIVE_CURSES, list => {
-            if (!curse) return { changed: false };
-            list.push(curse);
-            return { changed: true, value: curse };
-        });
-        return value || null;
-    }
-
-    updateActiveCurse(index, curse) {
-        const { value } = this._mutateList(STORAGE_KEYS.ACTIVE_CURSES, list => {
-            if (index < 0 || index >= list.length || !curse) {
-                return { changed: false };
-            }
-            list[index] = curse;
-            return { changed: true, value: curse };
-        });
-        return value || null;
-    }
-
-    removeActiveCurse(index) {
-        const { value } = this._mutateList(STORAGE_KEYS.ACTIVE_CURSES, list => {
-            if (index < 0 || index >= list.length) {
-                return { changed: false };
-            }
-            const [removed] = list.splice(index, 1);
-            return { changed: true, value: removed };
-        });
-        return value || null;
-    }
-
-    moveCurseToCompleted(index) {
-        const curse = this.removeActiveCurse(index);
-        if (!curse) return null;
-        this._mutateList(STORAGE_KEYS.COMPLETED_CURSES, list => {
-            list.push(curse);
-            return { changed: true, value: curse };
-        });
-        return curse;
-    }
-
-    removeCompletedCurse(index) {
-        const { value } = this._mutateList(STORAGE_KEYS.COMPLETED_CURSES, list => {
-            if (index < 0 || index >= list.length) {
-                return { changed: false };
-            }
-            const [removed] = list.splice(index, 1);
-            return { changed: true, value: removed };
-        });
-        return value || null;
-    }
-
-    // Curse tab – Worn Page mitigation helpers
-    getCurseHelperState() {
-        const raw = this.state[STORAGE_KEYS.CURSE_HELPER_STATE];
-        return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
-    }
-
     /**
-     * Build current list of Worn Page mitigation helpers from character state and data catalogs.
-     * Assigns stable source IDs per source instance (item slot, buff index, ability, school, expedition stop).
-     * @param {Object} catalogs - { allItems, temporaryBuffs, masteryAbilities, schoolBenefits, seriesExpedition }
-     * @param {{ school?: string }} [options] - Optional: current wizard school (from DOM)
-     * @returns {Array<{ sourceId: string, sourceType: string, slotMode?: string, name: string, effect: string, cadence: 'monthly'|'every-2-months'|'one-time' }>}
-     */
-    getCurseHelpers(catalogs, options = {}) {
-        return buildCurseHelperList(this.state, catalogs, options);
-    }
-
-    /**
-     * Mark a Worn Page mitigation helper as used (persists to curseHelperState).
-     * For every-2-months cadence, sets cooldownCyclesRemaining so refreshCurseHelpersAtEndOfMonth can restore after 2 cycles.
-     * @param {string} sourceId - Stable source ID from helper
-     * @param {{ cadence?: 'monthly'|'every-2-months'|'one-time' }} [options] - Optional cadence; if 'every-2-months', sets cooldown to 2 cycles
-     * @returns {boolean} Whether state changed
-     */
-    markCurseHelperUsed(sourceId, options = {}) {
-        if (!sourceId || typeof sourceId !== 'string') return false;
-        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
-        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
-            ? this.state[key]
-            : {};
-        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
-        if (entry.used) return false;
-        const nextEntry = { ...entry, used: true };
-        if (options.cadence === 'every-2-months') {
-            nextEntry.cooldownCyclesRemaining = 2;
-        }
-        const next = { ...prev, [sourceId]: nextEntry };
-        this.state[key] = next;
-        void setStateKey(key, next);
-        return true;
-    }
-
-    /**
-     * Refresh Worn Page helper usage/cooldown at End of Month: restore monthly helpers each cycle,
-     * and every-2-months helpers every second cycle (decrement cooldown; when 0, clear used).
-     * @param {Array<{ sourceId: string, cadence: 'monthly'|'every-2-months'|'one-time' }>} helpers - Current helper list with sourceId and cadence
-     * @returns {boolean} Whether state changed
-     */
-    refreshCurseHelpersAtEndOfMonth(helpers) {
-        if (!Array.isArray(helpers) || helpers.length === 0) return false;
-        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
-        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
-            ? this.state[key]
-            : {};
-        let changed = false;
-        const next = { ...prev };
-        for (const { sourceId, cadence } of helpers) {
-            const entry = next[sourceId] && typeof next[sourceId] === 'object' ? { ...next[sourceId] } : {};
-            if (cadence === 'monthly') {
-                if (entry.used) {
-                    next[sourceId] = { ...entry, used: false };
-                    changed = true;
-                }
-            } else if (cadence === 'every-2-months') {
-                const cooldown = entry.cooldownCyclesRemaining != null ? entry.cooldownCyclesRemaining : 0;
-                if (cooldown > 0) {
-                    const newCooldown = cooldown - 1;
-                    next[sourceId] = { ...entry, cooldownCyclesRemaining: newCooldown, used: newCooldown === 0 ? false : entry.used };
-                    changed = true;
-                }
-            }
-            // one-time: no change
-        }
-        if (!changed) return false;
-        this.state[key] = next;
-        void setStateKey(key, next);
-        return true;
-    }
-
-    /**
-     * At End of Month: remove temporary buffs that are Worn Page one-time helpers and have been marked used.
-     * Cleans CURSE_HELPER_STATE for removed sourceIds. Call after refreshCurseHelpersAtEndOfMonth.
-     * @param {Array<{ sourceId: string, sourceType: string, cadence: 'monthly'|'every-2-months'|'one-time' }>} helpers - Current helper list
-     * @returns {boolean} Whether any buff was removed
-     */
-    removeUsedOneTimeWornPageTempBuffsAtEOM(helpers) {
-        if (!Array.isArray(helpers)) return false;
-        const helperState = this.getCurseHelperState();
-        const toRemove = [];
-        for (const h of helpers) {
-            if (h.sourceType !== 'tempBuff' || h.cadence !== 'one-time') continue;
-            const entry = helperState[h.sourceId];
-            if (!entry || !entry.used) continue;
-            // sourceId format: "tempBuff:index_name" (buildSourceId replaces | and : in identifier with _)
-            const match = h.sourceId.match(/^tempBuff:(.+)$/);
-            if (!match) continue;
-            const identifier = match[1];
-            const underscoreIdx = identifier.indexOf('_');
-            const indexStr = underscoreIdx >= 0 ? identifier.slice(0, underscoreIdx) : identifier;
-            const index = parseInt(indexStr, 10);
-            if (isNaN(index) || index < 0) continue;
-            toRemove.push({ sourceId: h.sourceId, index });
-        }
-        if (toRemove.length === 0) return false;
-        // Remove from highest index first so indices don't shift
-        toRemove.sort((a, b) => b.index - a.index);
-        const removedSourceIds = new Set(toRemove.map(r => r.sourceId));
-        for (const { index } of toRemove) {
-            this.removeTemporaryBuff(index);
-        }
-        // Prune curse helper state for removed sourceIds
-        const curseKey = STORAGE_KEYS.CURSE_HELPER_STATE;
-        const prevCurse = this.state[curseKey] && typeof this.state[curseKey] === 'object' && !Array.isArray(this.state[curseKey])
-            ? this.state[curseKey]
-            : {};
-        let nextCurse = { ...prevCurse };
-        for (const id of removedSourceIds) {
-            delete nextCurse[id];
-        }
-        // Remap remaining tempBuff keys to new indices so usage tracking is preserved after array shift
-        nextCurse = this._remapTempBuffCurseHelperKeys(nextCurse);
-        this.state[curseKey] = nextCurse;
-        void setStateKey(curseKey, nextCurse);
-        return true;
-    }
-
-    /**
-     * Remap tempBuff entries in curseHelperState to use current array indices after removals.
-     * Parses keys like "tempBuff:oldIndex_name" and reassigns state to "tempBuff:newIndex_name".
-     * @param {Record<string, { used?: boolean, cooldownCyclesRemaining?: number }>} curseState - Current state after pruning removed ids
-     * @returns {Record<string, { used?: boolean, cooldownCyclesRemaining?: number }>} State with remapped tempBuff keys
-     */
-    _remapTempBuffCurseHelperKeys(curseState) {
-        const tempBuffs = this.state[STORAGE_KEYS.TEMPORARY_BUFFS];
-        if (!Array.isArray(tempBuffs) || tempBuffs.length === 0) {
-            return curseState;
-        }
-        const result = { ...curseState };
-        const tempBuffPrefix = 'tempBuff:';
-        const oldEntries = [];
-        for (const key of Object.keys(result)) {
-            if (!key.startsWith(tempBuffPrefix)) continue;
-            const identifier = key.slice(tempBuffPrefix.length);
-            const firstUnderscore = identifier.indexOf('_');
-            if (firstUnderscore < 0) continue;
-            const oldIndexStr = identifier.slice(0, firstUnderscore);
-            const name = identifier.slice(firstUnderscore + 1);
-            const oldIndex = parseInt(oldIndexStr, 10);
-            if (isNaN(oldIndex) || oldIndex < 0) continue;
-            oldEntries.push({ key, oldIndex, name, entry: result[key] });
-        }
-        if (oldEntries.length === 0) return result;
-        oldEntries.sort((a, b) => a.oldIndex - b.oldIndex);
-        const newEntries = tempBuffs.map((b, i) => ({ newIndex: i, name: b?.name ?? b?.id ?? `Buff ${i}` }));
-        const usedNewIndices = new Set();
-        for (const { key, name, entry } of oldEntries) {
-            const idx = newEntries.findIndex((n, i) => !usedNewIndices.has(i) && n.name === name);
-            if (idx < 0) continue;
-            usedNewIndices.add(idx);
-            const { newIndex } = newEntries[idx];
-            const newKey = buildSourceId('tempBuff', null, `${newIndex}|${name}`);
-            delete result[key];
-            result[newKey] = entry;
-        }
-        return result;
-    }
-
-    /**
-     * Clear the "used" flag for a Worn Page mitigation helper (undo).
-     * @param {string} sourceId - Stable source ID from helper
-     * @returns {boolean} Whether state changed
-     */
-    undoCurseHelperUsed(sourceId) {
-        if (!sourceId || typeof sourceId !== 'string') return false;
-        const key = STORAGE_KEYS.CURSE_HELPER_STATE;
-        const prev = this.state[key] && typeof this.state[key] === 'object' && !Array.isArray(this.state[key])
-            ? this.state[key]
-            : {};
-        const entry = prev[sourceId] && typeof prev[sourceId] === 'object' ? { ...prev[sourceId] } : {};
-        if (!entry.used) return false;
-        const nextEntry = { ...entry, used: false };
-        const next = { ...prev, [sourceId]: nextEntry };
-        this.state[key] = next;
-        void setStateKey(key, next);
-        return true;
-    }
-
-    /**
-     * Whether a pipeline effect may be used for this calendar month/year (one automatic prevention per key per month).
+     * Whether a pipeline effect may be used for this calendar month/year (one use per key per calendar period).
      * @param {string} cooldownKey - e.g. "school:Abjuration"
      * @param {string} [_cadence] - reserved for future cadence types (e.g. bi-monthly passive items)
      */
@@ -1037,39 +787,24 @@ export class StateAdapter {
     }
 
     /**
-     * Decrement `usesLeft` on all active buffs that carry a use-count, removing any that reach zero.
-     * Call this whenever a book is marked complete.
-     * @returns {{ changed: boolean, expired: string[] }} Names of buffs that were removed
+     * Spend one use of each use-count temporary buff (Enchanted Focus, Story Surge, ...) whose
+     * bonus card paid on a completed quest. A buff whose uses reach 0 is marked used
+     * (`status: 'used'`, `usesLeft: 0`), so RewardCalculator stops paying it on later quests.
+     * Call once per completed quest, after its rewards are calculated.
+     * @param {string[]} buffCards - The quest's bonus cards (e.g. "[Buff] Enchanted Focus")
+     * @param {(name: string) => number} getCatalogUseCount - Catalog `useCount` for a buff name (0 if none)
+     * @returns {{ changed: boolean, spent: string[] }} Names of buffs whose last use was spent
      */
-    decrementUseCountBuffsOnBookComplete() {
-        const expired = [];
+    consumeUseCountBuffsForQuest(buffCards, getCatalogUseCount) {
+        let spent = [];
         const result = this._mutateList(STORAGE_KEYS.TEMPORARY_BUFFS, (list) => {
-            if (!Array.isArray(list) || list.length === 0) return { changed: false };
-            let changed = false;
-            const next = [];
-            for (const buff of list) {
-                if (!buff || typeof buff !== 'object') {
-                    next.push(buff);
-                    continue;
-                }
-                if (typeof buff.usesLeft === 'number' && buff.usesLeft > 0) {
-                    const remaining = buff.usesLeft - 1;
-                    if (remaining <= 0) {
-                        expired.push(buff.name || '');
-                        changed = true;
-                        continue;
-                    }
-                    next.push({ ...buff, usesLeft: remaining });
-                    changed = true;
-                } else {
-                    next.push(buff);
-                }
-            }
-            if (!changed) return { changed: false };
-            list.splice(0, list.length, ...next);
+            const outcome = spendUseCountBuffs(list, buffCards, getCatalogUseCount);
+            if (!outcome.changed) return { changed: false };
+            list.splice(0, list.length, ...outcome.buffs);
+            spent = outcome.spent;
             return { changed: true };
         });
-        return { changed: result.changed, expired };
+        return { changed: result.changed, spent };
     }
 
     updateTemporaryBuff(index, updates) {
@@ -1207,6 +942,89 @@ export class StateAdapter {
         void setStateKey(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
         this.emit(EVENTS.DUSTY_BLUEPRINTS_CHANGED, newValue);
         return true;
+    }
+
+    // ==========================================
+    // Fund (real dollars, stored as integer cents)
+    // ==========================================
+
+    getFundBalanceCents() {
+        const raw = this.state[STORAGE_KEYS.FUND_BALANCE_CENTS];
+        return Number.isFinite(raw) ? raw : 0;
+    }
+
+    /**
+     * Set the balance directly (manual corrections). Rounds to whole cents.
+     * Non-finite input is ignored.
+     * @param {number} cents
+     * @returns {number} the balance in cents
+     */
+    setFundBalanceCents(cents) {
+        if (typeof cents !== 'number' || !Number.isFinite(cents)) return this.getFundBalanceCents();
+        this._persistFundBalance(Math.round(cents));
+        return this.getFundBalanceCents();
+    }
+
+    /**
+     * Credit whole-dollar rewards to the Fund. Ignores values <= 0 and non-numbers.
+     * @param {number} dollars
+     * @returns {number} the new balance in cents
+     */
+    addFunds(dollars) {
+        if (typeof dollars !== 'number' || !Number.isFinite(dollars) || dollars <= 0) {
+            return this.getFundBalanceCents();
+        }
+        this._persistFundBalance(this.getFundBalanceCents() + Math.round(dollars * 100));
+        return this.getFundBalanceCents();
+    }
+
+    /**
+     * Record a deduction (a real purchase). The balance may go negative; the UI confirms first.
+     * @param {{ amountCents: number, note?: string, date?: string }} params
+     * @returns {{ id: string, date: string, amountCents: number, note: string } | null}
+     *   null when amountCents is not a positive integer
+     */
+    deductFunds({ amountCents, note = '', date } = {}) {
+        if (!Number.isInteger(amountCents) || amountCents <= 0) return null;
+        const entry = {
+            id: this._generateId(),
+            date: isIsoDate(date) ? date : todayIsoDate(),
+            amountCents,
+            note: typeof note === 'string' ? note.trim() : ''
+        };
+        const ledger = [...this.getFundLedger(), entry];
+        this.state[STORAGE_KEYS.FUND_LEDGER] = ledger;
+        void setStateKey(STORAGE_KEYS.FUND_LEDGER, ledger);
+        this._persistFundBalance(this.getFundBalanceCents() - amountCents);
+        return { ...entry };
+    }
+
+    /**
+     * Remove a deduction and refund its amount to the balance.
+     * @param {string} id
+     * @returns {boolean} true if an entry was removed
+     */
+    deleteFundDeduction(id) {
+        const ledger = this.getFundLedger();
+        const index = ledger.findIndex(e => e.id === id);
+        if (index === -1) return false;
+        const [removed] = ledger.splice(index, 1);
+        this.state[STORAGE_KEYS.FUND_LEDGER] = ledger;
+        void setStateKey(STORAGE_KEYS.FUND_LEDGER, ledger);
+        this._persistFundBalance(this.getFundBalanceCents() + removed.amountCents);
+        return true;
+    }
+
+    /** @returns {{ id: string, date: string, amountCents: number, note: string }[]} */
+    getFundLedger() {
+        const raw = this.state[STORAGE_KEYS.FUND_LEDGER];
+        return Array.isArray(raw) ? raw.map(e => ({ ...e })) : [];
+    }
+
+    _persistFundBalance(cents) {
+        this.state[STORAGE_KEYS.FUND_BALANCE_CENTS] = cents;
+        void setStateKey(STORAGE_KEYS.FUND_BALANCE_CENTS, cents);
+        this.emit(EVENTS.FUND_CHANGED, { balanceCents: cents });
     }
 
     // Completed Restoration Projects
@@ -1526,18 +1344,61 @@ export class StateAdapter {
     }
 
     /**
-     * Add a quest id to a book's links.questIds (for book-first quest integration).
+     * One book, one quest: may questId be linked to bookId? A second link needs a learned
+     * MULTI_QUEST_ABILITIES ability; a third is always refused. Relinking is idempotent (ok).
+     * Existing saves that already hold more links are not modified.
      * @param {string} bookId
      * @param {string} questId
-     * @returns {boolean} true if updated
+     * @param {{ allowSecondLink?: boolean }} [options] - set by an activation that grants the second link
+     * @returns {{ ok: boolean, reason?: 'already-linked' | 'max-links' }}
      */
-    linkQuestToBook(bookId, questId) {
+    canLinkQuestToBook(bookId, questId, options = {}) {
+        return evaluateQuestLink(this.getBook(bookId), questId, this.getLearnedAbilities(), {
+            ...options,
+            liveQuestIds: this.getLiveQuestIds()
+        });
+    }
+
+    /**
+     * Ids of quests that still exist (active or completed). Book links to any other id are stale
+     * (the quest was discarded or deleted) and do not count toward one book, one quest.
+     * @returns {Set<string>}
+     */
+    getLiveQuestIds() {
+        const ids = new Set();
+        for (const quest of [...(this.getActiveAssignments() || []), ...(this.getCompletedQuests() || [])]) {
+            if (quest && quest.id != null) ids.add(String(quest.id));
+        }
+        return ids;
+    }
+
+    /**
+     * True when questId is the book's second (or later) linked quest, which pays
+     * GAME_CONFIG.rewards.secondaryQuestBase.
+     * @param {string} bookId
+     * @param {string} questId
+     * @returns {boolean}
+     */
+    isSecondaryQuestForBook(bookId, questId) {
+        return isSecondaryQuestOnBook(this.getBook(bookId), questId, { liveQuestIds: this.getLiveQuestIds() });
+    }
+
+    /**
+     * Add a quest id to a book's links.questIds (for book-first quest integration).
+     * Refused (returns false) when canLinkQuestToBook is not ok.
+     * @param {string} bookId
+     * @param {string} questId
+     * @param {{ allowSecondLink?: boolean }} [options] - see canLinkQuestToBook
+     * @returns {boolean} true if linked (or already linked)
+     */
+    linkQuestToBook(bookId, questId, options = {}) {
         if (!bookId || !questId || typeof bookId !== 'string' || typeof questId !== 'string') return false;
         const book = this.getBook(bookId);
         if (!book) return false;
         const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
         const questIds = [...(links.questIds || [])];
         if (questIds.includes(questId)) return true;
+        if (!this.canLinkQuestToBook(bookId, questId, options).ok) return false;
         questIds.push(questId);
         this.updateBook(bookId, { links: { questIds, curriculumPromptIds: links.curriculumPromptIds || [] } });
         return true;
@@ -1850,173 +1711,12 @@ export class StateAdapter {
         return this.getSeriesExpeditionProgress().some(p => p.seriesId === seriesId);
     }
 
-    // ==========================================
-    // Book Box Subscriptions (Schema v10)
-    // ==========================================
-
-    _getBookBoxSubscriptionsRaw() {
-        const subs = this.state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS];
-        return subs && typeof subs === 'object' && !Array.isArray(subs) ? subs : {};
-    }
-
-    _persistBookBoxSubscriptions(subs) {
-        this.state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = subs;
-        void setStateKey(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS, subs);
-        this.emit(EVENTS.BOOK_BOX_SUBSCRIPTIONS_CHANGED, { ...subs });
-    }
-
-    _getBookBoxHistoryRaw() {
-        const list = this.state[STORAGE_KEYS.BOOK_BOX_HISTORY];
-        return Array.isArray(list) ? list : [];
-    }
-
-    _persistBookBoxHistory(list) {
-        this.state[STORAGE_KEYS.BOOK_BOX_HISTORY] = list;
-        void setStateKey(STORAGE_KEYS.BOOK_BOX_HISTORY, list);
-        this.emit(EVENTS.BOOK_BOX_HISTORY_CHANGED, [...list]);
-    }
-
-    /** @param {{ company?: string, tier?: string, defaultMonthlyCost?: number|null, skipsAllowedPerYear?: number }} data */
-    addBookBoxSubscription(data) {
-        if (!data || typeof data !== 'object') return null;
-        const subs = { ...this._getBookBoxSubscriptionsRaw() };
-        const id = (typeof data.id === 'string' && data.id.trim()) ? data.id.trim() : this._generateId();
-        const company = typeof data.company === 'string' ? data.company.trim() : '';
-        const tier = typeof data.tier === 'string' ? data.tier.trim() : '';
-        const defaultMonthlyCost = typeof data.defaultMonthlyCost === 'number' && !isNaN(data.defaultMonthlyCost) && data.defaultMonthlyCost >= 0 ? data.defaultMonthlyCost : null;
-        const skipsAllowedPerYear = typeof data.skipsAllowedPerYear === 'number' && !isNaN(data.skipsAllowedPerYear) && data.skipsAllowedPerYear >= 0 ? Math.floor(data.skipsAllowedPerYear) : 0;
-        subs[id] = { id, company, tier, defaultMonthlyCost, skipsAllowedPerYear };
-        this._persistBookBoxSubscriptions(subs);
-        return subs[id];
-    }
-
-    updateBookBoxSubscription(subscriptionId, updates) {
-        if (!subscriptionId || typeof subscriptionId !== 'string') return null;
-        const subs = { ...this._getBookBoxSubscriptionsRaw() };
-        const s = subs[subscriptionId];
-        if (!s) return null;
-        if (updates && typeof updates === 'object') {
-            if (typeof updates.company === 'string') s.company = updates.company.trim();
-            if (typeof updates.tier === 'string') s.tier = updates.tier.trim();
-            if (typeof updates.defaultMonthlyCost === 'number' && !isNaN(updates.defaultMonthlyCost) && updates.defaultMonthlyCost >= 0) s.defaultMonthlyCost = updates.defaultMonthlyCost;
-            else if (updates.defaultMonthlyCost === null) s.defaultMonthlyCost = null;
-            if (typeof updates.skipsAllowedPerYear === 'number' && !isNaN(updates.skipsAllowedPerYear) && updates.skipsAllowedPerYear >= 0) s.skipsAllowedPerYear = Math.floor(updates.skipsAllowedPerYear);
-        }
-        subs[subscriptionId] = s;
-        this._persistBookBoxSubscriptions(subs);
-        return s;
-    }
-
-    deleteBookBoxSubscription(subscriptionId) {
-        if (!subscriptionId || typeof subscriptionId !== 'string') return false;
-        const subs = { ...this._getBookBoxSubscriptionsRaw() };
-        if (!(subscriptionId in subs)) return false;
-        delete subs[subscriptionId];
-        this._persistBookBoxSubscriptions(subs);
-        return true;
-    }
-
-    getBookBoxSubscription(subscriptionId) {
-        if (!subscriptionId || typeof subscriptionId !== 'string') return null;
-        const s = this._getBookBoxSubscriptionsRaw()[subscriptionId];
-        return s ? { ...s } : null;
-    }
-
-    getBookBoxSubscriptionsList() {
-        const raw = this._getBookBoxSubscriptionsRaw();
-        return Object.keys(raw).map(id => {
-            const s = raw[id];
-            return s ? { ...s } : null;
-        }).filter(Boolean);
-    }
-
     /**
-     * Add a book box history entry (monthly purchase or skip).
-     * @param {{ subscriptionId: string, month?: string, year?: string, type: 'purchased'|'skipped', actualSpend?: number|null, inkDrops?: number, paperScraps?: number, bookIds?: string[], reaction?: 'thumbsUp'|'thumbsDown'|null }} entry
-     */
-    addBookBoxHistoryEntry(entry) {
-        if (!entry || typeof entry.subscriptionId !== 'string' || !entry.subscriptionId.trim()) return null;
-        const subscriptionId = entry.subscriptionId.trim();
-        const list = [...this._getBookBoxHistoryRaw()];
-        const id = (typeof entry.id === 'string' && entry.id.trim()) ? entry.id.trim() : `${subscriptionId}-${entry.month || ''}-${entry.year || ''}-${this._generateId().slice(0, 8)}`;
-        const type = entry.type === 'purchased' || entry.type === 'skipped' ? entry.type : 'purchased';
-        const month = typeof entry.month === 'string' ? entry.month : (typeof entry.month === 'number' ? String(entry.month) : '');
-        const year = typeof entry.year === 'string' ? entry.year : (typeof entry.year === 'number' ? String(entry.year) : '');
-        const actualSpend = typeof entry.actualSpend === 'number' && !isNaN(entry.actualSpend) ? entry.actualSpend : null;
-        const inkDrops = typeof entry.inkDrops === 'number' && !isNaN(entry.inkDrops) ? Math.max(0, Math.floor(entry.inkDrops)) : 0;
-        const paperScraps = typeof entry.paperScraps === 'number' && !isNaN(entry.paperScraps) ? Math.max(0, Math.floor(entry.paperScraps)) : 0;
-        const bookIds = Array.isArray(entry.bookIds) ? entry.bookIds.filter(x => typeof x === 'string' && x.trim()) : [];
-        const reaction = entry.reaction === 'thumbsUp' || entry.reaction === 'thumbsDown' ? entry.reaction : null;
-        const record = { id, subscriptionId, month, year, type, actualSpend, inkDrops, paperScraps, bookIds, reaction };
-        list.push(record);
-        this._persistBookBoxHistory(list);
-        return record;
-    }
-
-    getBookBoxHistory() {
-        return [...this._getBookBoxHistoryRaw()];
-    }
-
-    /**
-     * Update the reaction of a book box history entry (for editing after the fact).
-     * @param {string} entryId
-     * @param {'thumbsUp'|'thumbsDown'|null} reaction
-     * @returns {Object|null} Updated entry or null
-     */
-    updateBookBoxHistoryEntryReaction(entryId, reaction) {
-        if (!entryId || typeof entryId !== 'string') return null;
-        const list = [...this._getBookBoxHistoryRaw()];
-        const idx = list.findIndex((e) => e.id === entryId);
-        if (idx < 0) return null;
-        const entry = { ...list[idx] };
-        entry.reaction = reaction === 'thumbsUp' || reaction === 'thumbsDown' ? reaction : null;
-        list[idx] = entry;
-        this._persistBookBoxHistory(list);
-        return entry;
-    }
-
-    getBookBoxHistoryForSubscription(subscriptionId) {
-        if (!subscriptionId || typeof subscriptionId !== 'string') return [];
-        return this._getBookBoxHistoryRaw().filter(e => e.subscriptionId === subscriptionId);
-    }
-
-    /**
-     * Skips remaining for a subscription in a given year (default current year).
-     * @param {string} subscriptionId
-     * @param {number} [year] - Defaults to current calendar year
-     */
-    getSubscriptionSkipsRemaining(subscriptionId, year) {
-        const sub = this.getBookBoxSubscription(subscriptionId);
-        if (!sub) return 0;
-        const y = typeof year === 'number' && !isNaN(year) ? year : new Date().getFullYear();
-        const skippedThisYear = this._getBookBoxHistoryRaw().filter(
-            e => e.subscriptionId === subscriptionId && e.type === 'skipped' && String(e.year || '') === String(y)
-        ).length;
-        return Math.max(0, (sub.skipsAllowedPerYear || 0) - skippedThisYear);
-    }
-
-    /**
-     * Thumbs summary for a subscription: { thumbsUp, ratedMonths }. Rated = entries with reaction thumbsUp or thumbsDown.
-     */
-    getSubscriptionThumbsSummary(subscriptionId) {
-        const history = this.getBookBoxHistoryForSubscription(subscriptionId);
-        let thumbsUp = 0;
-        let ratedMonths = 0;
-        history.forEach(e => {
-            if (e.reaction === 'thumbsUp' || e.reaction === 'thumbsDown') {
-                ratedMonths += 1;
-                if (e.reaction === 'thumbsUp') thumbsUp += 1;
-            }
-        });
-        return { thumbsUp, ratedMonths };
-    }
-
-    /**
-     * Mark a book complete: set status/dateCompleted, cascade to linked quests and curriculum prompts,
-     * and compute synergy rewards. Caller should apply synergyRewards (e.g. updateCurrency) and run
-     * handleRestorationProjectCompletion for any movedQuests that are restoration projects.
+     * Mark a book complete: set status/dateCompleted and cascade to linked quests and curriculum prompts.
+     * Book completion pays no money. Caller should run handleRestorationProjectCompletion for any
+     * movedQuests that are restoration projects.
      * @param {string} bookId
-     * @returns {{ book: Object, movedQuests: Object[], synergyRewards: { xp: number, inkDrops: number, paperScraps: number, items: string[] } } | null}
+     * @returns {{ book: Object, movedQuests: Object[] } | null}
      */
     markBookComplete(bookId) {
         if (!bookId || typeof bookId !== 'string') return null;
@@ -2072,13 +1772,7 @@ export class StateAdapter {
             }
         }
 
-        const hasQuestLinks = questIds.length > 0;
-        const hasCurriculumLinks = curriculumPromptIds.length > 0;
-        const paperScraps = hasCurriculumLinks ? 5 : 0;
-        const inkDrops = hasQuestLinks && hasCurriculumLinks ? 10 : 0;
-        const synergyRewards = { xp: 0, inkDrops, paperScraps, items: [] };
-
-        return { book, movedQuests, synergyRewards };
+        return { book, movedQuests };
     }
 
     // ==========================================

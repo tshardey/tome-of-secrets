@@ -18,7 +18,6 @@ permalink: /character-sheet.html
 {% include character-sheet/tabs/quests.html %}
 {% include character-sheet/tabs/external-curriculum.html %}
 {% include character-sheet/tabs/archived.html %}
-{% include character-sheet/tabs/curses.html %}
 </div>
 <!-- END TAB CONTAINER -->
 

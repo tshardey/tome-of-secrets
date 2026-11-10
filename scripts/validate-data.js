@@ -9,11 +9,13 @@
  * - Required fields
  * - Type validation
  * - Duplicate display names
+ * - Dollar-economy catalog bans (no MULTIPLY, no Ink/Paper, no retired wording; see catalogBans.js)
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { findCatalogBanViolations } from './catalogBans.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -260,9 +262,6 @@ function validateSideQuests(quests, itemsById, temporaryBuffs, temporaryBuffsFro
                         results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" is missing a rewards object` });
                         continue;
                     }
-                    if (Number(branch.rewards.inkDrops) !== 0) {
-                        results.push({ type: 'error', message: `Side quest "${key}" branch "${branch.key}" grants Ink Drops; the expansion contract is zero` });
-                    }
                     for (const itemName of branch.rewards.items ?? []) {
                         const itemExists = itemsById.has(itemName) ||
                             Array.from(itemsById.values()).some(item => item.name === itemName || item.id === itemName);
@@ -363,30 +362,6 @@ function validateWings(wings, roomsById) {
                     });
                 }
             }
-        }
-    }
-
-    return results;
-}
-
-/**
- * Validate curses
- */
-function validateCurses(curses) {
-    const ids = new Set();
-    const results = [];
-
-    for (const [key, curse] of Object.entries(curses)) {
-        if (!curse.id) {
-            results.push({ type: 'error', message: `Curse "${key}" missing id field` });
-        } else {
-            if (!isKebabCase(curse.id)) {
-                results.push({ type: 'error', message: `Curse "${key}" has invalid ID format: "${curse.id}"` });
-            }
-            if (ids.has(curse.id)) {
-                results.push({ type: 'error', message: `Duplicate curse ID: "${curse.id}"` });
-            }
-            ids.add(curse.id);
         }
     }
 
@@ -554,7 +529,6 @@ function validateAll() {
     const sideQuests = loadJSON('sideQuestsDetailed.json');
     const dungeonRooms = loadJSON('dungeonRooms.json');
     const wings = loadJSON('wings.json');
-    const curses = loadJSON('curseTableDetailed.json');
     const abilities = loadJSON('masteryAbilities.json');
     const atmosphericBuffs = loadJSON('atmosphericBuffs.json');
     const temporaryBuffs = loadJSON('temporaryBuffs.json');
@@ -610,15 +584,6 @@ function validateAll() {
         results.validated.push({ category: 'Wings', count: Object.keys(wings).length });
     }
 
-    if (curses) {
-        console.log(`${BLUE}Validating curses...${RESET}`);
-        validateCurses(curses).forEach(r => {
-            if (r.type === 'error') results.errors.push(r.message);
-            else results.warnings.push(r.message);
-        });
-        results.validated.push({ category: 'Curses', count: Object.keys(curses).length });
-    }
-
     if (abilities) {
         console.log(`${BLUE}Validating abilities...${RESET}`);
         validateAbilities(abilities).forEach(r => {
@@ -670,6 +635,17 @@ function validateAll() {
         else results.warnings.push(r.message);
     });
     results.validated.push({ category: 'Expansions', count: Object.keys(expansions.expansions || {}).length + 1 });
+
+    console.log(`${BLUE}Checking catalog bans (multipliers, Ink/Paper, retired wording)...${RESET}`);
+    const catalogFiles = fs.readdirSync(DATA_DIR)
+        .filter((name) => name.endsWith('.json'));
+    for (const filename of catalogFiles) {
+        const json = loadJSON(filename);
+        if (json) {
+            results.errors.push(...findCatalogBanViolations(filename, json));
+        }
+    }
+    results.validated.push({ category: 'Catalog bans', count: catalogFiles.length });
 
     // Print results
     console.log(`\n${BLUE}=== Validation Results ===${RESET}\n`);

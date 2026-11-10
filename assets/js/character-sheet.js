@@ -14,8 +14,7 @@ import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { StateAdapter } from './character-sheet/stateAdapter.js';
 import { safeGetJSON, safeSetJSON } from './utils/storage.js';
 import { parseIntOr } from './utils/helpers.js';
-import { initializeFormPersistence } from './character-sheet/formPersistence.js';
-import { initializeCurrencyWarning } from './character-sheet/currencyWarning.js';
+import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { initializeStateDependentUI } from './character-sheet/stateInitUI.js';
 import { RewardCalculator } from './services/RewardCalculator.js';
 import { defaultQuestMonthYearIfEmpty } from './character-sheet/calendarPeriod.js';
@@ -34,7 +33,6 @@ import { CharacterController } from './controllers/CharacterController.js';
 import { AbilityController } from './controllers/AbilityController.js';
 import { InventoryController } from './controllers/InventoryController.js';
 import { QuestController } from './controllers/QuestController.js';
-import { CurseController } from './controllers/CurseController.js';
 import { BuffController } from './controllers/BuffController.js';
 import { EndOfMonthController } from './controllers/EndOfMonthController.js';
 import { DungeonDeckController } from './controllers/DungeonDeckController.js';
@@ -45,6 +43,7 @@ import { OtherQuestDeckController } from './controllers/OtherQuestDeckController
 import { LibraryController } from './controllers/LibraryController.js';
 import { CampaignsController } from './controllers/CampaignsController.js';
 import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
+import { FundController } from './controllers/FundController.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -112,7 +111,6 @@ export async function initializeCharacterSheet() {
     const abilityController = new AbilityController(stateAdapter, form, dependencies);
     const inventoryController = new InventoryController(stateAdapter, form, dependencies);
     const questController = new QuestController(stateAdapter, form, dependencies);
-    const curseController = new CurseController(stateAdapter, form, dependencies);
     const buffController = new BuffController(stateAdapter, form, dependencies);
     const endOfMonthController = new EndOfMonthController(stateAdapter, form, dependencies);
     const dungeonDeckController = new DungeonDeckController(stateAdapter, form, dependencies);
@@ -123,11 +121,9 @@ export async function initializeCharacterSheet() {
     const libraryController = new LibraryController(stateAdapter, form, dependencies);
     const campaignsController = new CampaignsController(stateAdapter, form, dependencies);
     const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
+    const fundController = new FundController(stateAdapter, form, dependencies);
 
     dependencies.onBookMarkedComplete = (result) => {
-        if (result.synergyRewards && (result.synergyRewards.inkDrops > 0 || result.synergyRewards.paperScraps > 0)) {
-            updateCurrency(result.synergyRewards);
-        }
         (result.movedQuests || []).forEach((quest) => {
             questController.completeMovedQuestFromBook(quest);
         });
@@ -139,7 +135,6 @@ export async function initializeCharacterSheet() {
         if (result.book && result.book.title && completedBooksSet && !completedBooksSet.has(result.book.title)) {
             completedBooksSet.add(result.book.title);
             if (saveCompletedBooksSet) saveCompletedBooksSet();
-            stateAdapter.decrementUseCountBuffsOnBookComplete();
             const booksCompletedInput = document.getElementById('books-completed-month');
             if (booksCompletedInput) {
                 const current = parseIntOr(booksCompletedInput.value, 0);
@@ -163,7 +158,6 @@ export async function initializeCharacterSheet() {
     abilityController.initialize();
     inventoryController.initialize();
     questController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency, () => updateGenreQuestDropdown(stateAdapter, dataModule));
-    curseController.initialize();
     buffController.initialize(updateCurrency);
     endOfMonthController.initialize(completedBooksSet, saveCompletedBooksSet, updateCurrency);
     dungeonDeckController.initialize();
@@ -174,6 +168,7 @@ export async function initializeCharacterSheet() {
     libraryController.initialize();
     campaignsController.initialize();
     externalCurriculumController.initialize();
+    fundController.initialize();
 
     // --- COLLAPSIBLE PANELS (Add Book, Active Temporary Buffs, Draw Quest Cards) ---
     initializeCollapsiblePanels();
@@ -192,14 +187,18 @@ export async function initializeCharacterSheet() {
     dependencies.updateDeckActionsLabel = updateDeckActionsLabel;
 
     // --- MAIN EVENT HANDLERS ---
-    initializeCurrencyWarning(form);
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveState(form);
+        showSaveIndicator();
+    });
 
     initializeDelegatedClickHandler(form, {
         ability: abilityController,
         inventory: inventoryController,
         quest: questController,
-        curse: curseController,
-        buff: buffController
+        buff: buffController,
+        fund: fundController
     }, ui);
 
     initializeStateDependentUI({ ui, dataModule, stateAdapter, completedBooksSet });

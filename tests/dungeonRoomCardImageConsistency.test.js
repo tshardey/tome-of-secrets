@@ -22,7 +22,7 @@ describe('Dungeon room card image path consistency', () => {
         year: '2024',
         isEncounter: false,
         roomNumber: '1',
-        rewards: { xp: 1, inkDrops: 0, paperScraps: 0, items: [] },
+        rewards: { xp: 1, dollars: 0, items: [] },
         buffs: [],
       };
 

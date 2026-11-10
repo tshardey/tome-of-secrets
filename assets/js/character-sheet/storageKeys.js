@@ -7,8 +7,6 @@ export const STORAGE_KEYS = Object.freeze({
     INVENTORY_ITEMS: 'inventoryItems',
     LEARNED_ABILITIES: 'learnedAbilities',
     ATMOSPHERIC_BUFFS: 'atmosphericBuffs',
-    ACTIVE_CURSES: 'activeCurses',
-    COMPLETED_CURSES: 'completedCurses',
     TEMPORARY_BUFFS: 'temporaryBuffs',
     BUFF_MONTH_COUNTER: 'buffMonthCounter',
     MONTHLY_COMPLETED_BOOKS: 'monthlyCompletedBooks',
@@ -41,17 +39,15 @@ export const STORAGE_KEYS = Object.freeze({
     SERIES_EXPEDITION_PROGRESS: 'seriesExpeditionProgress',
     /** The Exchange's register: country names claimed once, ever, by side quest 13 branch B. */
     CLAIMED_COUNTRIES: 'claimedCountries',
-    // Shopping & book box tracking (rewards overhaul)
-    SHOPPING_LOG: 'shoppingLog',
-    BOOK_BOX_SUBSCRIPTIONS: 'bookBoxSubscriptions',
-    BOOK_BOX_HISTORY: 'bookBoxHistory',
-    // Curse tab – Worn Page mitigation helpers (usage and cooldown per source)
-    CURSE_HELPER_STATE: 'curseHelperState',
+    // Real-dollar Fund (dollar economy): balance in integer cents, plus the deduction ledger
+    FUND_BALANCE_CENTS: 'fundBalanceCents',
+    /** Deductions: [{ id, date: 'YYYY-MM-DD', amountCents, note }] */
+    FUND_LEDGER: 'fundLedger',
     // Quest tab – monthly draw / dice helpers (usage and cooldown per source)
     QUEST_DRAW_HELPER_STATE: 'questDrawHelperState',
     /** UI preference: auto-consume first eligible helper on deck click (one helper per click). */
     QUEST_DRAW_HELPER_SETTINGS: 'questDrawHelperSettings',
-    /** Last-used calendar period for TCG effect cooldowns (e.g. monthly PREVENT worn_page). */
+    /** Last-used calendar period for TCG effect cooldowns (e.g. once-per-month effects). */
     EFFECT_COOLDOWNS: 'effectCooldowns',
     /** Alias used by Phase 5 ability activations. */
     ABILITY_COOLDOWNS: 'effectCooldowns'
@@ -65,8 +61,6 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.COMPLETED_QUESTS,
     STORAGE_KEYS.DISCARDED_QUESTS,
     STORAGE_KEYS.ATMOSPHERIC_BUFFS,
-    STORAGE_KEYS.ACTIVE_CURSES,
-    STORAGE_KEYS.COMPLETED_CURSES,
     STORAGE_KEYS.TEMPORARY_BUFFS,
     STORAGE_KEYS.BUFF_MONTH_COUNTER,
     STORAGE_KEYS.SELECTED_GENRES,
@@ -86,10 +80,8 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
     STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
     STORAGE_KEYS.CLAIMED_COUNTRIES,
-    STORAGE_KEYS.SHOPPING_LOG,
-    STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
-    STORAGE_KEYS.BOOK_BOX_HISTORY,
-    STORAGE_KEYS.CURSE_HELPER_STATE,
+    STORAGE_KEYS.FUND_BALANCE_CENTS,
+    STORAGE_KEYS.FUND_LEDGER,
     STORAGE_KEYS.QUEST_DRAW_HELPER_STATE,
     STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS,
     STORAGE_KEYS.EFFECT_COOLDOWNS
@@ -104,8 +96,6 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.COMPLETED_QUESTS]: [],
         [STORAGE_KEYS.DISCARDED_QUESTS]: [],
         [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
-        [STORAGE_KEYS.ACTIVE_CURSES]: [],
-        [STORAGE_KEYS.COMPLETED_CURSES]: [],
         [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
         [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
         [STORAGE_KEYS.SELECTED_GENRES]: [],
@@ -125,22 +115,11 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.CLAIMED_SERIES_REWARDS]: [],
         [STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS]: [],
         [STORAGE_KEYS.CLAIMED_COUNTRIES]: [],
-        [STORAGE_KEYS.SHOPPING_LOG]: [],
-        [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: {},
-        [STORAGE_KEYS.BOOK_BOX_HISTORY]: [],
-        [STORAGE_KEYS.CURSE_HELPER_STATE]: {},
+        [STORAGE_KEYS.FUND_BALANCE_CENTS]: 0,
+        [STORAGE_KEYS.FUND_LEDGER]: [],
         [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
         [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
         [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
     };
 }
-
-/**
- * Default shape for curse helper state.
- * Keys: stable source IDs (assigned at runtime from character + data).
- * Values: { used: boolean, cooldownCyclesRemaining?: number }
- * - used: whether the helper has been marked used this period
- * - cooldownCyclesRemaining: for every-2-months cadence, cycles until next restore (0 = available)
- */
-export const CURSE_HELPER_STATE_DEFAULT = Object.freeze({});
 

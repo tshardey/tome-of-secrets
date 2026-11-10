@@ -53,14 +53,15 @@ export function calculateBuffTotal(daysUsed, dailyValue) {
 }
 
 /**
- * Get the atmospheric buff multiplier from equipped/displayed items (e.g. Tome-Bound Cat).
- * Reads atmosphericBuffMultiplier when item is equipped, passiveAtmosphericMultiplier when adopted (passive slot).
- * Equipped takes precedence if the same item could appear in both.
+ * Get the flat per-day atmospheric bonus from equipped/displayed items (e.g. Tome-Bound Cat +$1/day).
+ * Reads atmosphericBonusPerDay when the item is equipped, passiveAtmosphericBonusPerDay when adopted
+ * (passive slot). Equipped takes precedence if the same item could appear in both.
  * @param {Object} state - Character state object
- * @returns {{ multiplier: number, modifierItemName: string|null }} Multiplier to apply (1 if none) and name of item providing it (for modifier row)
+ * @returns {{ bonusPerDay: number, modifierItemName: string|null }} Dollars added per paying day (0 if none)
+ *   and the name of the item providing it (for the modifier row)
  */
-export function getAtmosphericBuffMultiplier(state) {
-    let multiplier = 1;
+export function getAtmosphericDailyBonus(state) {
+    let bonusPerDay = 0;
     let modifierItemName = null;
     const allItems = data.allItems || {};
 
@@ -68,10 +69,10 @@ export function getAtmosphericBuffMultiplier(state) {
         const itemData = allItems[itemName];
         if (!itemData?.atmosphericReward) return;
         const value = isEquipped
-            ? itemData.atmosphericBuffMultiplier
-            : itemData.passiveAtmosphericMultiplier;
-        if (typeof value === 'number' && value > 0 && value !== 1) {
-            multiplier = value;
+            ? itemData.atmosphericBonusPerDay
+            : itemData.passiveAtmosphericBonusPerDay;
+        if (typeof value === 'number' && value > 0) {
+            bonusPerDay = value;
             modifierItemName = itemName;
         }
     };
@@ -80,16 +81,16 @@ export function getAtmosphericBuffMultiplier(state) {
     if (Array.isArray(equipped)) {
         equipped.forEach((item) => { checkSlot(item?.name, true); });
     }
-    if (modifierItemName) return { multiplier, modifierItemName };
+    if (modifierItemName) return { bonusPerDay, modifierItemName };
 
     const passiveItems = state?.[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] || [];
     passiveItems.forEach((slot) => { checkSlot(slot?.itemName, false); });
-    if (modifierItemName) return { multiplier, modifierItemName };
+    if (modifierItemName) return { bonusPerDay, modifierItemName };
 
     const passiveFamiliars = state?.[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] || [];
     passiveFamiliars.forEach((slot) => { checkSlot(slot?.itemName, false); });
 
-    return { multiplier, modifierItemName };
+    return { bonusPerDay, modifierItemName };
 }
 
 /**

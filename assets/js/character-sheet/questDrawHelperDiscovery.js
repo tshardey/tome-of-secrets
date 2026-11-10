@@ -1,10 +1,10 @@
 /**
  * Monthly quest-draw / dice helper discovery: allowlist matching and cadence classification.
- * Mirrors curse helper inventory scans; uses stable IDs from curseHelperDiscovery.
+ * Uses stable source IDs and cadence detection from helperDiscoveryShared.
  */
 
 import { STORAGE_KEYS } from './storageKeys.js';
-import { buildSourceId, getCadenceFromText } from './curseHelperDiscovery.js';
+import { buildSourceId, getCadenceFromText } from './helperDiscoveryShared.js';
 import { TRIGGERS, effectTriggerIs } from '../services/effectSchema.js';
 
 /** True when ability has ON_MONTH_START pool-card draw actions (Flicker / Master), regardless of trigger string casing. */
@@ -51,10 +51,6 @@ export function stripSimpleHtml(html) {
     return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function isExcludedWornPageAlternateDraw(lowered) {
-    return lowered.includes('worn page') && lowered.includes('instead') && lowered.includes('draw a card');
-}
-
 /**
  * @param {string} text - Plain text (strip HTML for permanent bonuses first)
  * @returns {boolean}
@@ -62,7 +58,7 @@ function isExcludedWornPageAlternateDraw(lowered) {
 export function isQuestDrawHelperText(text) {
     if (!text || typeof text !== 'string') return false;
     const t = text.trim().toLowerCase();
-    if (!t || isExcludedWornPageAlternateDraw(t)) return false;
+    if (!t) return false;
     return QUEST_DRAW_HELPER_PHRASES_LC.some(phrase => t.includes(phrase));
 }
 
@@ -99,7 +95,7 @@ export function classifyQuestDrawCadence(plainText, meta = {}) {
 }
 
 /**
- * Normalize expedition stops (same shape as curseHelperDiscovery).
+ * Normalize expedition stops (raw seriesCompletionRewards shape).
  * @param {{ stops?: unknown }} raw
  * @returns {Array<{ id: string, name: string, reward: { type?: string, text?: string } }>}
  */

@@ -25,15 +25,11 @@ export const LARGE_STATE_KEYS = new Set([
     STORAGE_KEYS.INVENTORY_ITEMS,
     STORAGE_KEYS.LEARNED_ABILITIES,
     STORAGE_KEYS.ATMOSPHERIC_BUFFS,
-    STORAGE_KEYS.ACTIVE_CURSES,
-    STORAGE_KEYS.COMPLETED_CURSES,
     STORAGE_KEYS.TEMPORARY_BUFFS,
     STORAGE_KEYS.BUFF_MONTH_COUNTER,
     STORAGE_KEYS.BOOKS,
     STORAGE_KEYS.EXTERNAL_CURRICULUM,
-    STORAGE_KEYS.SHOPPING_LOG,
-    STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
-    STORAGE_KEYS.BOOK_BOX_HISTORY
+    STORAGE_KEYS.FUND_LEDGER
 ]);
 
 let dbPromise = null;
@@ -162,6 +158,24 @@ export async function removeStateKey(key) {
     }
     safeRemoveJSON(key);
     return true;
+}
+
+/**
+ * Delete a key from every store it may have been written to: IndexedDB (whatever
+ * LARGE_STATE_KEYS says today, since a retired key may have been IndexedDB-backed in an
+ * older release) and localStorage. Used to clean up retired state keys.
+ * @param {string} key - The storage key
+ * @returns {Promise<void>}
+ */
+export async function purgeStateKey(key) {
+    if (isIndexedDBAvailable()) {
+        try {
+            await idbDelete(key);
+        } catch (error) {
+            console.warn(`Failed to delete "${key}" from IndexedDB.`, error);
+        }
+    }
+    safeRemoveJSON(key);
 }
 
 /**

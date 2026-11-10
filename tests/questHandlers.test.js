@@ -50,12 +50,48 @@ describe('Quest Handlers', () => {
 
     describe('BaseQuestHandler', () => {
         describe('completeActiveQuest', () => {
-            it('should apply modifiers and background bonuses to quest rewards', () => {
+            it('keeps stored XP for a legacy dungeon quest without a room and pays the $15 base', () => {
                 const quest = {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
                     rewards: { xp: 10, inkDrops: 5, paperScraps: 5, items: [], modifiedBy: [] },
-                    buffs: ['Long Read Focus'], // +10 Ink Drops
+                    buffs: [],
+                    month: 'January',
+                    year: '2024',
+                    book: 'Test Book',
+                    notes: ''
+                };
+
+                const completedQuest = BaseQuestHandler.completeActiveQuest(quest, '');
+
+                expect(completedQuest.rewards.xp).toBe(10);
+                expect(completedQuest.rewards.dollars).toBe(15);
+                expect(completedQuest.rewards).not.toHaveProperty('inkDrops');
+                expect(completedQuest.rewards).not.toHaveProperty('paperScraps');
+                expect(completedQuest.receipt.base).toEqual({ xp: 10, dollars: 15, blueprints: 0 });
+            });
+
+            it('restoration project quest completion pays the $15 base', () => {
+                const quest = {
+                    type: '🔨 Restoration Project',
+                    prompt: 'Some project: restore it',
+                    rewards: { xp: 0, dollars: 0, blueprints: 0, items: [] },
+                    buffs: [],
+                    book: 'Test Book'
+                };
+
+                const completedQuest = BaseQuestHandler.completeActiveQuest(quest, '');
+
+                expect(completedQuest.rewards.dollars).toBe(15);
+                expect(completedQuest.receipt.base.dollars).toBe(15);
+            });
+
+            it('should apply modifiers and background bonuses to quest rewards', () => {
+                const quest = {
+                    type: '♠ Dungeon Crawl',
+                    prompt: 'Test Dungeon',
+                    rewards: { xp: 10, dollars: 0, items: [], modifiedBy: [] },
+                    buffs: ['Long Read Focus'], // +$3
                     month: 'January',
                     year: '2024',
                     book: 'Test Book',
@@ -66,17 +102,16 @@ describe('Quest Handlers', () => {
 
                 // Should have buff modifier applied
                 expect(completedQuest.rewards.modifiedBy).toContain('Long Read Focus');
-                // Should have Biblioslinker bonus (+10 Paper Scraps for dungeons)
+                // Should have Biblioslinker bonus (+$3 for dungeons)
                 expect(completedQuest.rewards.modifiedBy).toContain('The Biblioslinker');
-                expect(completedQuest.rewards.inkDrops).toBe(15); // 5 base + 10 from Long Read Focus
-                expect(completedQuest.rewards.paperScraps).toBe(15); // 5 base + 10 from Biblioslinker
+                expect(completedQuest.rewards.dollars).toBe(21); // $15 base + $3 Long Read Focus + $3 Biblioslinker
             });
 
             it('should apply background bonuses even without buffs', () => {
                 const quest = {
                     type: '♠ Dungeon Crawl',
                     prompt: 'Test Dungeon',
-                    rewards: { xp: 10, inkDrops: 5, paperScraps: 5, items: [] },
+                    rewards: { xp: 10, dollars: 0, items: [] },
                     buffs: [],
                     month: 'January',
                     year: '2024',
@@ -87,7 +122,7 @@ describe('Quest Handlers', () => {
                 const completedQuest = BaseQuestHandler.completeActiveQuest(quest, 'biblioslinker');
 
                 expect(completedQuest.rewards.modifiedBy).toContain('The Biblioslinker');
-                expect(completedQuest.rewards.paperScraps).toBe(15); // 5 base + 10 from Biblioslinker
+                expect(completedQuest.rewards.dollars).toBe(18); // $15 base + $3 Biblioslinker
             });
         });
 
@@ -242,6 +277,25 @@ describe('Quest Handlers', () => {
             expect(quests[0].prompt).toBe(data.dungeonRooms['3'].challenge);
         });
 
+        it('a completed room + encounter on one book pays $15 then the $10 secondary base', () => {
+            formElements.dungeonRoomSelect.value = '2';
+            formElements.dungeonEncounterSelect.value = 'Mysterious Nymph';
+            formElements.dungeonActionToggle.checked = true;
+            formElements.statusSelect.value = 'completed';
+            const book = { id: 'test-book-id', title: 'Test Book', links: { questIds: [], curriculumPromptIds: [] } };
+            const handler = new DungeonQuestHandler(formElements, {
+                ...data,
+                getBook: (id) => (id === book.id ? book : null)
+            });
+
+            const quests = handler.createQuests();
+
+            expect(quests).toHaveLength(2);
+            expect(quests[0].bookId).toBe('test-book-id');
+            expect(quests[0].rewards.dollars).toBe(15);
+            expect(quests[1].rewards.dollars).toBe(10);
+        });
+
         it('should include rewards in dungeon quest', () => {
             formElements.dungeonRoomSelect.value = '1';
             formElements.dungeonEncounterSelect.value = '';
@@ -252,8 +306,7 @@ describe('Quest Handlers', () => {
             // Verify rewards object exists and has expected properties
             expect(quests[0].rewards).toBeDefined();
             expect(quests[0].rewards).toHaveProperty('xp');
-            expect(quests[0].rewards).toHaveProperty('inkDrops');
-            expect(quests[0].rewards).toHaveProperty('paperScraps');
+            expect(quests[0].rewards).toHaveProperty('dollars');
             expect(quests[0].rewards).toHaveProperty('items');
         });
     });
@@ -288,7 +341,7 @@ describe('Quest Handlers', () => {
             const quests = handler.createQuests();
 
             expect(quests[0].rewards.xp).toBeGreaterThan(0);
-            expect(quests[0].rewards.inkDrops).toBeGreaterThan(0);
+            expect(quests[0].rewards.dollars).toBe(15);
         });
     });
 
@@ -325,8 +378,7 @@ describe('Quest Handlers', () => {
             // Verify rewards object exists and has expected properties
             expect(quests[0].rewards).toBeDefined();
             expect(quests[0].rewards).toHaveProperty('xp');
-            expect(quests[0].rewards).toHaveProperty('inkDrops');
-            expect(quests[0].rewards).toHaveProperty('paperScraps');
+            expect(quests[0].rewards).toHaveProperty('dollars');
         });
     });
 
@@ -352,9 +404,8 @@ describe('Quest Handlers', () => {
             const handler = new ExtraCreditHandler(formElements, data);
             const quests = handler.createQuests();
 
-            expect(quests[0].rewards.paperScraps).toBe(10);
+            expect(quests[0].rewards.dollars).toBe(15);
             expect(quests[0].rewards.xp).toBe(0);
-            expect(quests[0].rewards.inkDrops).toBe(0);
         });
     });
 
@@ -492,6 +543,27 @@ describe('Quest Handlers', () => {
             expect(quests[0].restorationData.projectId).toBe(projectId);
             expect(quests[0].restorationData.wingName).toBeDefined();
             expect(quests[0].restorationData.projectName).toBeDefined();
+            // Active restoration quests preview the flat $15 quest base
+            expect(quests[0].rewards.dollars).toBe(15);
+        });
+
+        it('a restoration project logged directly as completed pays the $15 base', () => {
+            const projects = data.restorationProjects || {};
+            const projectId = Object.keys(projects).find(id => projects[id].wingId === '6');
+            expect(projectId).toBeDefined();
+
+            formElements.restorationWingSelect.value = '6';
+            formElements.restorationProjectSelect.value = projectId;
+            formElements.statusSelect.value = 'completed';
+            try {
+                const handler = new RestorationQuestHandler(formElements, data);
+                const quests = handler.createQuests();
+
+                expect(quests).toHaveLength(1);
+                expect(quests[0].rewards.dollars).toBe(15);
+            } finally {
+                formElements.statusSelect.value = 'active';
+            }
         });
 
         it('should allow alwaysAccessible wings without room completion', () => {

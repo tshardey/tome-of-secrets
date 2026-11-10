@@ -95,17 +95,10 @@
         <div class="rpg-panel-body">
             <div class="rpg-stats-grid">
                 <div class="rpg-stat-card">
-                    <label for="inkDrops" class="rpg-stat-icon">💧</label>
+                    <label for="fund-balance" class="rpg-stat-icon">💰</label>
                     <div class="rpg-stat-content">
-                        <label for="inkDrops" class="rpg-stat-label">Ink Drops</label>
-                        <input type="number" id="inkDrops" class="rpg-stat-input" value="0" />
-                    </div>
-                </div>
-                <div class="rpg-stat-card">
-                    <label for="paperScraps" class="rpg-stat-icon">📄</label>
-                    <div class="rpg-stat-content">
-                        <label for="paperScraps" class="rpg-stat-label">Paper Scraps</label>
-                        <input type="number" id="paperScraps" class="rpg-stat-input" value="0" />
+                        <label for="fund-balance" class="rpg-stat-label">Fund ($)</label>
+                        <input type="number" id="fund-balance" class="rpg-stat-input" value="0" step="0.01" inputmode="decimal" />
                     </div>
                 </div>
                 <div class="rpg-stat-card">
@@ -123,10 +116,31 @@
                     </div>
                 </div>
             </div>
-            <div id="currency-unsaved-warning" class="currency-warning" style="display: none;">
-                <div class="warning-message">
-                    <strong>⚠️ Warning:</strong> You have unsaved changes to your currency. Please save your character sheet before redeeming items on the <a href="{{ site.baseurl }}/shopping.html">Shopping</a> page to ensure your changes are preserved.
+
+            <!-- Fund: deduct a purchase, then the month-grouped deduction receipt (FundController) -->
+            <div class="fund-deduct">
+                <h3 class="fund-section-title">Spend from the Fund</h3>
+                <div class="fund-deduct-fields">
+                    <div class="fund-deduct-field">
+                        <label for="fund-deduct-amount" class="rpg-stat-label">Amount</label>
+                        <input type="text" id="fund-deduct-amount" class="rpg-stat-input" inputmode="decimal" placeholder="$0.00" autocomplete="off" aria-describedby="fund-deduct-error" />
+                    </div>
+                    <div class="fund-deduct-field fund-deduct-field-note">
+                        <label for="fund-deduct-note" class="rpg-stat-label">Note</label>
+                        <input type="text" id="fund-deduct-note" class="rpg-stat-input" placeholder="e.g. Legendarium purchase" autocomplete="off" />
+                    </div>
+                    <div class="fund-deduct-field">
+                        <label for="fund-deduct-date" class="rpg-stat-label">Date</label>
+                        <input type="date" id="fund-deduct-date" class="rpg-stat-input" />
+                    </div>
+                    <button type="button" id="fund-deduct-submit" class="rpg-btn rpg-btn-primary">Deduct</button>
                 </div>
+                <p id="fund-deduct-error" class="fund-deduct-error" role="alert" hidden></p>
+            </div>
+
+            <div class="fund-receipt">
+                <h3 class="fund-section-title">Deduction Receipt</h3>
+                <div id="fund-ledger" class="fund-ledger" aria-live="polite"></div>
             </div>
         </div>
     </div>

@@ -11,48 +11,33 @@ describe('Game Configuration', () => {
 
   it('should have all required reward configurations', () => {
     expect(GAME_CONFIG.rewards).toBeDefined();
-    expect(GAME_CONFIG.rewards.extraCredit).toBeDefined();
+    expect(GAME_CONFIG.rewards.questBase).toBeDefined();
+    expect(GAME_CONFIG.rewards.secondaryQuestBase).toBeDefined();
     expect(GAME_CONFIG.rewards.organizeTheStacks).toBeDefined();
     expect(GAME_CONFIG.rewards.defaultQuestCompletion).toBeDefined();
-    expect(GAME_CONFIG.rewards.defaultFallback).toBeDefined();
     expect(GAME_CONFIG.rewards.encounter).toBeDefined();
   });
 
-  it('should have correct extra credit reward value', () => {
-    expect(GAME_CONFIG.rewards.extraCredit.paperScraps).toBe(10);
+  it('should pay a $15 quest base and a $10 secondary quest base', () => {
+    expect(GAME_CONFIG.rewards.questBase).toEqual({ dollars: 15 });
+    expect(GAME_CONFIG.rewards.secondaryQuestBase).toEqual({ dollars: 10 });
   });
 
-  it('should have correct organize the stacks reward values', () => {
-    expect(GAME_CONFIG.rewards.organizeTheStacks.xp).toBe(15);
-    expect(GAME_CONFIG.rewards.organizeTheStacks.inkDrops).toBe(10);
+  it('should keep the XP bases unchanged', () => {
+    expect(GAME_CONFIG.rewards.organizeTheStacks).toEqual({ xp: 15 });
+    expect(GAME_CONFIG.rewards.defaultQuestCompletion).toEqual({ xp: 25 });
+    expect(GAME_CONFIG.rewards.encounter).toEqual({ monster: { xp: 30 } });
   });
 
-  it('should have correct default quest completion values', () => {
-    expect(GAME_CONFIG.rewards.defaultQuestCompletion.xp).toBe(25);
-    expect(GAME_CONFIG.rewards.defaultQuestCompletion.inkDrops).toBe(10);
-    expect(GAME_CONFIG.rewards.defaultQuestCompletion.paperScraps).toBe(0);
-  });
-
-  it('should have correct encounter reward values', () => {
-    expect(GAME_CONFIG.rewards.encounter.monster.xp).toBe(30);
-    expect(GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops).toBe(10);
-    expect(GAME_CONFIG.rewards.encounter.familiar.paperScraps).toBe(5);
+  it('should carry no Ink Drop or Paper Scrap values', () => {
+    const json = JSON.stringify(GAME_CONFIG);
+    expect(json).not.toMatch(/inkDrops|paperScraps/);
+    expect(GAME_CONFIG.backgrounds).toBeUndefined();
   });
 
   it('should have end of month configuration', () => {
     expect(GAME_CONFIG.endOfMonth).toBeDefined();
     expect(GAME_CONFIG.endOfMonth.bookCompletionXP).toBe(15);
-    expect(GAME_CONFIG.endOfMonth.journalEntry).toBeDefined();
-    expect(GAME_CONFIG.endOfMonth.journalEntry.basePaperScraps).toBe(5);
-    expect(GAME_CONFIG.endOfMonth.journalEntry.scribeBonus).toBe(3);
-  });
-
-  it('should have background bonus configuration', () => {
-    expect(GAME_CONFIG.backgrounds).toBeDefined();
-    expect(GAME_CONFIG.backgrounds.biblioslinker).toBeDefined();
-    expect(GAME_CONFIG.backgrounds.biblioslinker.dungeonCrawlPaperScraps).toBe(10);
-    expect(GAME_CONFIG.backgrounds.backgroundBonus).toBeDefined();
-    expect(GAME_CONFIG.backgrounds.backgroundBonus.inkDrops).toBe(15);
   });
 
   it('should have UI configuration', () => {
@@ -62,10 +47,11 @@ describe('Game Configuration', () => {
   });
 
   it('should have atmospheric configuration', () => {
-    expect(GAME_CONFIG.atmospheric).toBeDefined();
-    expect(GAME_CONFIG.atmospheric.resource).toBe('paperScraps');
-    expect(GAME_CONFIG.atmospheric.baseValue).toBe(2);
-    expect(GAME_CONFIG.atmospheric.sanctumBonus).toBe(3);
+    expect(GAME_CONFIG.atmospheric).toEqual({ resource: 'dollars', baseValue: 1, sanctumBonus: 2 });
+  });
+
+  it('should configure the monthly Transmutation and Philosopher\'s Stone exchanges', () => {
+    expect(GAME_CONFIG.activations.transmutation).toEqual({ blueprints: 20, dollars: 2 });
+    expect(GAME_CONFIG.activations.philosophersStone).toEqual({ xpCost: 50, dollars: 5 });
   });
 });
-

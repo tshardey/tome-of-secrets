@@ -8,7 +8,6 @@ import {
     renderGenreQuestsTable,
     renderAtmosphericBuffsTable,
     renderSideQuestsTable,
-    renderCurseTable,
     renderExchangeRegister,
     renderLevelingRewardsTable,
     initializeTables
@@ -128,8 +127,7 @@ describe('Table Renderer', () => {
             expect(html).toContain('Familiar');
             expect(html).toContain('+15 XP');
             expect(html).toContain('+30 XP');
-            expect(html).toContain('+10 Ink Drops');
-            expect(html).toContain('+5 Paper Scraps');
+            expect(html).not.toMatch(/Ink Drop|Paper Scrap/);
         });
 
         test('renderDungeonRoomsTable should render all 12 rooms', () => {
@@ -266,14 +264,6 @@ describe('Table Renderer', () => {
             }
         });
 
-        test('renderCurseTable should render all 4 curses as ordered list', () => {
-            const html = renderCurseTable();
-            
-            expect(html).toContain('<ol>');
-            expect(html).toContain('</ol>');
-            expect(html).toContain('The Unread Tome');
-        });
-
         test('renderLevelingRewardsTable should render all 20 levels with correct data', () => {
             const html = renderLevelingRewardsTable();
             
@@ -283,8 +273,14 @@ describe('Table Renderer', () => {
             expect(html).toContain('<tbody>');
             expect(html).toContain('Level');
             expect(html).toContain('XP Needed');
-            expect(html).toContain('Ink Drops Reward');
-            expect(html).toContain('Paper Scraps Reward');
+            expect(html).toContain('Fund Reward');
+            expect(html).toContain('Dusty Blueprints');
+            expect(html).not.toMatch(/Ink Drop|Paper Scrap/);
+            // Spec Levels table: level 2 pays $10 and +10 Blueprints; level 20 pays $50 and +25
+            const level2Index = html.indexOf('<td>2</td>');
+            expect(html.substring(level2Index, level2Index + 200)).toMatch(/<td>\+\$10<\/td>\s*<td>\+10<\/td>/);
+            const level20Index = html.indexOf('<td>20</td>');
+            expect(html.substring(level20Index, level20Index + 200)).toMatch(/<td>\+\$50<\/td>\s*<td>\+25<\/td>/);
             expect(html).toContain('New Item/Familiar Slot');
             expect(html).toContain('School Mastery Point');
             
@@ -322,7 +318,7 @@ describe('Table Renderer', () => {
             // Only create some of the table containers
             document.body.innerHTML = `
                 <div id="genre-quests-table"></div>
-                <div id="curse-table"></div>
+                <div id="leveling-rewards-table"></div>
             `;
 
             // Should not throw error for missing containers
@@ -332,7 +328,7 @@ describe('Table Renderer', () => {
 
             // Should populate the tables that exist
             expect(document.getElementById('genre-quests-table').innerHTML).not.toBe('');
-            expect(document.getElementById('curse-table').innerHTML).not.toBe('');
+            expect(document.getElementById('leveling-rewards-table').innerHTML).not.toBe('');
         });
 
         test('should handle empty body gracefully', () => {
@@ -372,13 +368,6 @@ describe('Table Renderer', () => {
             expect(html).toMatch(/<table[^>]*class="nested-table"[^>]*>/);
         });
 
-        test('curse table should render as ordered list, not table', () => {
-            const html = renderCurseTable();
-            
-            expect(html).toContain('<ol>');
-            expect(html).toContain('<li>');
-            expect(html).not.toContain('<table');
-        });
     });
 
     describe("The Exchange's Register", () => {

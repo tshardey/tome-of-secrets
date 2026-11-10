@@ -2,7 +2,8 @@
  * @jest-environment jsdom
  */
 import { StateAdapter, STATE_EVENTS } from '../assets/js/character-sheet/stateAdapter.js';
-import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { LARGE_STATE_KEYS } from '../assets/js/character-sheet/persistence.js';
 
 describe('StateAdapter', () => {
   let adapter;
@@ -201,77 +202,6 @@ describe('StateAdapter', () => {
     expect(state[STORAGE_KEYS.EQUIPPED_ITEMS]).toHaveLength(1);
     expect(invHandler).toHaveBeenCalled();
     expect(equipHandler).toHaveBeenCalled();
-  });
-
-  describe('Curses', () => {
-    it('addActiveCurse adds curse and emits event', () => {
-      const handler = jest.fn();
-      adapter.on(STATE_EVENTS.ACTIVE_CURSES_CHANGED, handler);
-
-      const curse = { name: 'Test Curse', requirement: 'Read 5 books' };
-      const result = adapter.addActiveCurse(curse);
-
-      expect(result).toEqual(curse);
-      expect(state[STORAGE_KEYS.ACTIVE_CURSES]).toHaveLength(1);
-      expect(state[STORAGE_KEYS.ACTIVE_CURSES][0]).toEqual(curse);
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('updateActiveCurse updates curse at index', () => {
-      const curse = { name: 'Test Curse', requirement: 'Read 5 books' };
-      adapter.addActiveCurse(curse);
-      
-      const updated = { name: 'Updated Curse', requirement: 'Read 10 books' };
-      const result = adapter.updateActiveCurse(0, updated);
-
-      expect(result).toEqual(updated);
-      expect(state[STORAGE_KEYS.ACTIVE_CURSES][0]).toEqual(updated);
-    });
-
-    it('removeActiveCurse removes curse at index', () => {
-      adapter.addActiveCurse({ name: 'Curse 1' });
-      adapter.addActiveCurse({ name: 'Curse 2' });
-      const handler = jest.fn();
-      adapter.on(STATE_EVENTS.ACTIVE_CURSES_CHANGED, handler);
-
-      const removed = adapter.removeActiveCurse(0);
-
-      expect(removed).toEqual({ name: 'Curse 1' });
-      expect(state[STORAGE_KEYS.ACTIVE_CURSES]).toHaveLength(1);
-      expect(state[STORAGE_KEYS.ACTIVE_CURSES][0].name).toBe('Curse 2');
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('moveCurseToCompleted moves curse between lists', () => {
-      const curse = { name: 'Active Curse', requirement: 'Complete quest' };
-      adapter.addActiveCurse(curse);
-      const activeHandler = jest.fn();
-      const completedHandler = jest.fn();
-      adapter.on(STATE_EVENTS.ACTIVE_CURSES_CHANGED, activeHandler);
-      adapter.on(STATE_EVENTS.COMPLETED_CURSES_CHANGED, completedHandler);
-
-      const moved = adapter.moveCurseToCompleted(0);
-
-      expect(moved).toEqual(curse);
-      expect(state[STORAGE_KEYS.ACTIVE_CURSES]).toHaveLength(0);
-      expect(state[STORAGE_KEYS.COMPLETED_CURSES]).toHaveLength(1);
-      expect(state[STORAGE_KEYS.COMPLETED_CURSES][0]).toEqual(curse);
-      expect(activeHandler).toHaveBeenCalled();
-      expect(completedHandler).toHaveBeenCalled();
-    });
-
-    it('removeCompletedCurse removes completed curse', () => {
-      adapter.addActiveCurse({ name: 'Curse' });
-      adapter.moveCurseToCompleted(0);
-      const handler = jest.fn();
-      adapter.on(STATE_EVENTS.COMPLETED_CURSES_CHANGED, handler);
-
-      const removed = adapter.removeCompletedCurse(0);
-
-      expect(removed).toBeTruthy();
-      expect(state[STORAGE_KEYS.COMPLETED_CURSES]).toHaveLength(0);
-      expect(handler).toHaveBeenCalled();
-    });
   });
 
   describe('Temporary Buffs', () => {
@@ -518,262 +448,78 @@ describe('StateAdapter', () => {
     });
   });
 
-  describe('book box subscription thumbs summary', () => {
-    it('getSubscriptionThumbsSummary returns thumbsUp and ratedMonths only for entries with reaction', () => {
-      state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = {
-        sub1: { id: 'sub1', company: 'Fairyloot', tier: 'Adult', defaultMonthlyCost: 30, skipsAllowedPerYear: 2 }
-      };
-      state[STORAGE_KEYS.BOOK_BOX_HISTORY] = [
-        { id: 'e1', subscriptionId: 'sub1', month: '01', year: '2025', type: 'purchased', reaction: 'thumbsUp' },
-        { id: 'e2', subscriptionId: 'sub1', month: '02', year: '2025', type: 'purchased', reaction: 'thumbsDown' },
-        { id: 'e3', subscriptionId: 'sub1', month: '03', year: '2025', type: 'purchased' }
-      ];
-      const summary = adapter.getSubscriptionThumbsSummary('sub1');
-      expect(summary.thumbsUp).toBe(1);
-      expect(summary.ratedMonths).toBe(2);
+  describe('Fund', () => {
+    it('addFunds adds whole dollars as cents and emits FUND_CHANGED', () => {
+      const handler = jest.fn();
+      adapter.on(STATE_EVENTS.FUND_CHANGED, handler);
+      expect(adapter.addFunds(15)).toBe(1500);
+      expect(adapter.getFundBalanceCents()).toBe(1500);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.FUND_BALANCE_CENTS))).toBe(1500);
+      expect(handler).toHaveBeenCalledWith({ balanceCents: 1500 });
     });
 
-    it('getSubscriptionThumbsSummary ignores unrated months (no reaction)', () => {
-      state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = {
-        sub1: { id: 'sub1', company: 'Test', tier: 'Adult', defaultMonthlyCost: null, skipsAllowedPerYear: 0 }
-      };
-      state[STORAGE_KEYS.BOOK_BOX_HISTORY] = [
-        { id: 'a', subscriptionId: 'sub1', month: '01', year: '2025', type: 'purchased' },
-        { id: 'b', subscriptionId: 'sub1', month: '02', year: '2025', type: 'purchased' }
-      ];
-      const summary = adapter.getSubscriptionThumbsSummary('sub1');
-      expect(summary.thumbsUp).toBe(0);
-      expect(summary.ratedMonths).toBe(0);
+    it('addFunds ignores non-positive and non-numeric values', () => {
+      adapter.addFunds(15);
+      expect(adapter.addFunds(-5)).toBe(1500);
+      expect(adapter.addFunds(0)).toBe(1500);
+      expect(adapter.addFunds('10')).toBe(1500);
+      expect(adapter.addFunds(NaN)).toBe(1500);
+      expect(adapter.getFundBalanceCents()).toBe(1500);
     });
 
-    it('getSubscriptionThumbsSummary returns zero for unknown subscription', () => {
-      const summary = adapter.getSubscriptionThumbsSummary('nonexistent');
-      expect(summary.thumbsUp).toBe(0);
-      expect(summary.ratedMonths).toBe(0);
-    });
-  });
+    it('deductFunds appends to the ledger and may take the balance negative; deleteFundDeduction refunds', () => {
+      adapter.addFunds(15);
+      const entry = adapter.deductFunds({ amountCents: 3200, note: 'x', date: '2026-11-08' });
+      expect(entry).toEqual(expect.objectContaining({ amountCents: 3200, note: 'x', date: '2026-11-08' }));
+      expect(typeof entry.id).toBe('string');
+      expect(adapter.getFundBalanceCents()).toBe(-1700);
+      expect(adapter.getFundLedger()).toHaveLength(1);
 
-  describe('curse helpers (Worn Page mitigation)', () => {
-    it('getCurseHelperState returns a copy of persisted helper state', () => {
-      state[STORAGE_KEYS.CURSE_HELPER_STATE] = { 'item:equipped:0|Chalice': { used: true } };
-      const result = adapter.getCurseHelperState();
-      expect(result).toEqual({ 'item:equipped:0|Chalice': { used: true } });
-      expect(result).not.toBe(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
-    });
-
-    it('getCurseHelperState returns empty object when not set', () => {
-      state[STORAGE_KEYS.CURSE_HELPER_STATE] = undefined;
-      expect(adapter.getCurseHelperState()).toEqual({});
+      expect(adapter.deleteFundDeduction(entry.id)).toBe(true);
+      expect(adapter.getFundBalanceCents()).toBe(1500);
+      expect(adapter.getFundLedger()).toEqual([]);
+      expect(adapter.deleteFundDeduction(entry.id)).toBe(false);
     });
 
-    it('getCurseHelpers discovers item in equipped slot with Worn Page mitigation', () => {
-      state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Chalice of Restoration' }];
-      const catalogs = {
-        allItems: {
-          'Chalice of Restoration': {
-            name: 'Chalice of Restoration',
-            bonus: 'Once per month, you may use this item to remove a Worn Page penalty.'
-          }
-        },
-        temporaryBuffs: {},
-        masteryAbilities: {},
-        schoolBenefits: {},
-        seriesExpedition: { stops: [] }
-      };
-      const helpers = adapter.getCurseHelpers(catalogs, {});
-      expect(helpers).toHaveLength(1);
-      expect(helpers[0].sourceType).toBe('item');
-      expect(helpers[0].slotMode).toBe('equipped');
-      expect(helpers[0].name).toBe('Chalice of Restoration');
-      expect(helpers[0].cadence).toBe('monthly');
-      expect(helpers[0].sourceId).toMatch(/^item:equipped:/);
+    it('deductFunds rejects non-positive or non-integer amounts', () => {
+      expect(adapter.deductFunds({ amountCents: 0 })).toBeNull();
+      expect(adapter.deductFunds({ amountCents: -100 })).toBeNull();
+      expect(adapter.deductFunds({ amountCents: 12.5 })).toBeNull();
+      expect(adapter.deductFunds({})).toBeNull();
+      expect(adapter.getFundLedger()).toEqual([]);
+      expect(adapter.getFundBalanceCents()).toBe(0);
     });
 
-    it('getCurseHelpers discovers learned ability with Worn Page mitigation', () => {
-      state[STORAGE_KEYS.LEARNED_ABILITIES] = ['Ward Against the Shroud'];
-      const catalogs = {
-        allItems: {},
-        temporaryBuffs: {},
-        masteryAbilities: {
-          'Ward Against the Shroud': {
-            name: 'Ward Against the Shroud',
-            benefit: 'Once per month, when you would gain a Worn Page penalty for an uncompleted quest, you may choose to completely negate it.'
-          }
-        },
-        schoolBenefits: {},
-        seriesExpedition: { stops: [] }
-      };
-      const helpers = adapter.getCurseHelpers(catalogs, {});
-      expect(helpers).toHaveLength(1);
-      expect(helpers[0].sourceType).toBe('ability');
-      expect(helpers[0].name).toBe('Ward Against the Shroud');
-      expect(helpers[0].cadence).toBe('monthly');
-      expect(helpers[0].sourceId).toBe('ability:Ward Against the Shroud');
+    it('deductFunds defaults the date to today', () => {
+      const entry = adapter.deductFunds({ amountCents: 100 });
+      expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(entry.note).toBe('');
     });
 
-    it('getCurseHelpers discovers school passive when school option provided', () => {
-      const catalogs = {
-        allItems: {},
-        temporaryBuffs: {},
-        masteryAbilities: {},
-        schoolBenefits: {
-          Abjuration: {
-            benefit: 'Once per month, when you would gain a Worn Page penalty, you may instead draw a card from the deck and choose a quest from that draw to complete.'
-          }
-        },
-        seriesExpedition: { stops: [] }
-      };
-      const helpers = adapter.getCurseHelpers(catalogs, { school: 'Abjuration' });
-      expect(helpers).toHaveLength(1);
-      expect(helpers[0].sourceType).toBe('school');
-      expect(helpers[0].name).toBe('Abjuration');
-      expect(helpers[0].cadence).toBe('monthly');
+    it('setFundBalanceCents rounds to an integer', () => {
+      expect(adapter.setFundBalanceCents(1234.6)).toBe(1235);
+      expect(adapter.getFundBalanceCents()).toBe(1235);
     });
 
-    it('getCurseHelpers returns empty when no sources and no school', () => {
-      const catalogs = { allItems: {}, temporaryBuffs: {}, masteryAbilities: {}, schoolBenefits: {}, seriesExpedition: { stops: [] } };
-      expect(adapter.getCurseHelpers(catalogs, {})).toEqual([]);
+    it('deductFunds and deleteFundDeduction emit FUND_CHANGED with the new balance', () => {
+      const handler = jest.fn();
+      adapter.on(STATE_EVENTS.FUND_CHANGED, handler);
+      const entry = adapter.deductFunds({ amountCents: 500, date: '2026-11-08' });
+      expect(handler).toHaveBeenLastCalledWith({ balanceCents: -500 });
+      adapter.deleteFundDeduction(entry.id);
+      expect(handler).toHaveBeenLastCalledWith({ balanceCents: 0 });
     });
 
-    it('markCurseHelperUsed sets used and returns true on first use', () => {
-      const sourceId = 'item:equipped:0_Chalice';
-      const result = adapter.markCurseHelperUsed(sourceId, {});
-      expect(result).toBe(true);
-      expect(adapter.getCurseHelperState()[sourceId]).toEqual({ used: true });
+    it('fund ledger is IndexedDB-backed and the balance is a cloud-synced character key', () => {
+      expect(LARGE_STATE_KEYS.has(STORAGE_KEYS.FUND_LEDGER)).toBe(true);
+      expect(LARGE_STATE_KEYS.has(STORAGE_KEYS.FUND_BALANCE_CENTS)).toBe(false);
+      expect(CHARACTER_STATE_KEYS).toEqual(expect.arrayContaining([STORAGE_KEYS.FUND_BALANCE_CENTS, STORAGE_KEYS.FUND_LEDGER]));
     });
 
-    it('markCurseHelperUsed returns false when already used', () => {
-      const sourceId = 'ability:Ward';
-      adapter.markCurseHelperUsed(sourceId, {});
-      const result = adapter.markCurseHelperUsed(sourceId, {});
-      expect(result).toBe(false);
-    });
-
-    it('markCurseHelperUsed with cadence every-2-months sets cooldownCyclesRemaining to 2', () => {
-      const sourceId = 'item:inventory:0_Spellbook';
-      adapter.markCurseHelperUsed(sourceId, { cadence: 'every-2-months' });
-      expect(adapter.getCurseHelperState()[sourceId]).toEqual({ used: true, cooldownCyclesRemaining: 2 });
-    });
-
-    it('markCurseHelperUsed returns false for invalid sourceId', () => {
-      expect(adapter.markCurseHelperUsed('', {})).toBe(false);
-      expect(adapter.markCurseHelperUsed(null, {})).toBe(false);
-    });
-
-    it('refreshCurseHelpersAtEndOfMonth restores monthly helper (clears used)', () => {
-      const sourceId = 'item:equipped:0_Chalice';
-      adapter.markCurseHelperUsed(sourceId, { cadence: 'monthly' });
-      const helpers = [{ sourceId, cadence: 'monthly' }];
-      const result = adapter.refreshCurseHelpersAtEndOfMonth(helpers);
-      expect(result).toBe(true);
-      expect(adapter.getCurseHelperState()[sourceId].used).toBe(false);
-    });
-
-    it('refreshCurseHelpersAtEndOfMonth decrements every-2-months cooldown and clears used when 0', () => {
-      const sourceId = 'ability:Ward';
-      adapter.markCurseHelperUsed(sourceId, { cadence: 'every-2-months' });
-      const helpers = [{ sourceId, cadence: 'every-2-months' }];
-      adapter.refreshCurseHelpersAtEndOfMonth(helpers);
-      expect(adapter.getCurseHelperState()[sourceId].cooldownCyclesRemaining).toBe(1);
-      expect(adapter.getCurseHelperState()[sourceId].used).toBe(true);
-      adapter.refreshCurseHelpersAtEndOfMonth(helpers);
-      expect(adapter.getCurseHelperState()[sourceId].cooldownCyclesRemaining).toBe(0);
-      expect(adapter.getCurseHelperState()[sourceId].used).toBe(false);
-    });
-
-    it('refreshCurseHelpersAtEndOfMonth returns false for empty helpers', () => {
-      expect(adapter.refreshCurseHelpersAtEndOfMonth([])).toBe(false);
-    });
-
-    it('separate-per-source: marking one helper used does not affect another', () => {
-      state[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Chalice' }];
-      state[STORAGE_KEYS.INVENTORY_ITEMS] = [{ name: 'Chalice' }];
-      const catalogs = {
-        allItems: {
-          Chalice: { name: 'Chalice', bonus: 'Once per month, remove a Worn Page penalty.' }
-        },
-        temporaryBuffs: {},
-        masteryAbilities: {},
-        schoolBenefits: {},
-        seriesExpedition: { stops: [] }
-      };
-      const helpers = adapter.getCurseHelpers(catalogs, {});
-      expect(helpers).toHaveLength(2);
-      const [equippedHelper, invHelper] = helpers;
-      adapter.markCurseHelperUsed(equippedHelper.sourceId, { cadence: 'monthly' });
-      const stateAfter = adapter.getCurseHelperState();
-      expect(stateAfter[equippedHelper.sourceId].used).toBe(true);
-      expect(stateAfter[invHelper.sourceId]).toBeUndefined();
-    });
-
-    it('removeUsedOneTimeWornPageTempBuffsAtEOM removes used one-time temp buff and prunes state', () => {
-      state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
-        { name: 'OneTimeBlessing', description: 'remove one Worn Page penalty.' }
-      ];
-      const catalogs = {
-        allItems: {},
-        temporaryBuffs: {
-          OneTimeBlessing: { name: 'OneTimeBlessing', description: 'remove one Worn Page penalty.' }
-        },
-        masteryAbilities: {},
-        schoolBenefits: {},
-        seriesExpedition: { stops: [] }
-      };
-      const helpers = adapter.getCurseHelpers(catalogs, {});
-      expect(helpers).toHaveLength(1);
-      expect(helpers[0].cadence).toBe('one-time');
-      adapter.markCurseHelperUsed(helpers[0].sourceId, {});
-      const removed = adapter.removeUsedOneTimeWornPageTempBuffsAtEOM(helpers);
-      expect(removed).toBe(true);
-      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS]).toHaveLength(0);
-      expect(adapter.getCurseHelperState()[helpers[0].sourceId]).toBeUndefined();
-    });
-
-    it('removeUsedOneTimeWornPageTempBuffsAtEOM remaps remaining temp buff state to new indices so usage is preserved', () => {
-      state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
-        { name: 'OneTimeA', description: 'remove one Worn Page penalty.' },
-        { name: 'MonthlyB', description: 'Once per month, remove a Worn Page penalty.' },
-        { name: 'OneTimeC', description: 'remove one Worn Page penalty.' }
-      ];
-      const catalogs = {
-        allItems: {},
-        temporaryBuffs: {
-          OneTimeA: { name: 'OneTimeA', description: 'remove one Worn Page penalty.' },
-          MonthlyB: { name: 'MonthlyB', description: 'Once per month, remove a Worn Page penalty.' },
-          OneTimeC: { name: 'OneTimeC', description: 'remove one Worn Page penalty.' }
-        },
-        masteryAbilities: {},
-        schoolBenefits: {},
-        seriesExpedition: { stops: [] }
-      };
-      let helpers = adapter.getCurseHelpers(catalogs, {});
-      expect(helpers).toHaveLength(3);
-      adapter.markCurseHelperUsed(helpers[0].sourceId, {}); // OneTimeA at index 0 - will be removed
-      adapter.markCurseHelperUsed(helpers[1].sourceId, { cadence: 'monthly' }); // MonthlyB at index 1 - keep, mark used
-      adapter.removeUsedOneTimeWornPageTempBuffsAtEOM(helpers);
-      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS]).toHaveLength(2);
-      expect(state[STORAGE_KEYS.TEMPORARY_BUFFS].map(b => b.name)).toEqual(['MonthlyB', 'OneTimeC']);
-      helpers = adapter.getCurseHelpers(catalogs, {});
-      expect(helpers).toHaveLength(2);
-      const helperState = adapter.getCurseHelperState();
-      const monthlyBNewKey = helpers[0].sourceId;
-      expect(monthlyBNewKey).toMatch(/^tempBuff:0_MonthlyB$/);
-      expect(helperState[monthlyBNewKey]).toEqual({ used: true });
-      const oneTimeCNewKey = helpers[1].sourceId;
-      expect(oneTimeCNewKey).toMatch(/^tempBuff:1_OneTimeC$/);
-      expect(helperState[oneTimeCNewKey]).toBeUndefined();
-    });
-
-    it('undoCurseHelperUsed clears used flag', () => {
-      const sourceId = 'item:equipped:0_Chalice';
-      adapter.markCurseHelperUsed(sourceId, {});
-      const result = adapter.undoCurseHelperUsed(sourceId);
-      expect(result).toBe(true);
-      expect(adapter.getCurseHelperState()[sourceId].used).toBe(false);
-    });
-
-    it('undoCurseHelperUsed returns false when not used', () => {
-      expect(adapter.undoCurseHelperUsed('item:equipped:0_Chalice')).toBe(false);
+    it('getFundLedger returns a copy', () => {
+      adapter.deductFunds({ amountCents: 100, date: '2026-11-08' });
+      adapter.getFundLedger().pop();
+      expect(adapter.getFundLedger()).toHaveLength(1);
     });
   });
 
@@ -855,17 +601,6 @@ describe('StateAdapter', () => {
       adapter.refreshQuestDrawHelpersAtEndOfMonth(helpers);
       expect(adapter.getQuestDrawHelperState()[sourceId].cooldownCyclesRemaining).toBe(0);
       expect(adapter.getQuestDrawHelperState()[sourceId].used).toBe(false);
-    });
-
-    it('quest draw helper state is independent from curse helper state', () => {
-      const qid = 'item:equipped:0_Shared';
-      adapter.markQuestDrawHelperUsed(qid, { cadence: 'monthly' });
-      adapter.markCurseHelperUsed(qid, { cadence: 'monthly' });
-      expect(adapter.getQuestDrawHelperState()[qid].used).toBe(true);
-      expect(adapter.getCurseHelperState()[qid].used).toBe(true);
-      adapter.undoQuestDrawHelperUsed(qid);
-      expect(adapter.getQuestDrawHelperState()[qid].used).toBe(false);
-      expect(adapter.getCurseHelperState()[qid].used).toBe(true);
     });
 
     it('removeUsedOneTimeQuestDrawTempBuffsAtEOM removes used one-time matching buff', () => {

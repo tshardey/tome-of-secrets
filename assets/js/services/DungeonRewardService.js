@@ -6,7 +6,6 @@
  */
 
 import { dungeonRooms, dungeonCompletionRewards, allItems, temporaryBuffs, temporaryBuffsFromRewards } from '../character-sheet/data.js';
-
 /**
  * Check if a dungeon room is completed (challenge + at least one encounter)
  * Pure function: same logic as table-renderer checkDungeonRoomCompletion
@@ -87,7 +86,8 @@ export function canClaimRoomReward(roomNumber, completedQuests, claimedRoomRewar
  * Get the room rewards object for a room (for applying to character state)
  * @param {string} roomNumber - Room number
  * @param {Object} [rooms] - Dungeon rooms data
- * @returns {Object|null} { xp, inkDrops, paperScraps, items } or null if no rewards
+ * Dollars are not included: a room pays the flat quest base when its quest completes.
+ * @returns {Object|null} { xp, blueprints, items } or null if no rewards
  */
 export function getRoomRewardsForClaim(roomNumber, rooms = dungeonRooms) {
     const room = rooms[String(roomNumber)];
@@ -95,8 +95,7 @@ export function getRoomRewardsForClaim(roomNumber, rooms = dungeonRooms) {
     const r = room.roomRewards;
     return {
         xp: r.xp || 0,
-        inkDrops: r.inkDrops || 0,
-        paperScraps: r.paperScraps || 0,
+        blueprints: r.blueprints || 0,
         items: Array.isArray(r.items) ? r.items : []
     };
 }
@@ -126,7 +125,7 @@ export function getDungeonCompletionRewardCardImage(reward) {
 
 /**
  * Apply a dungeon completion reward (from d20 roll) to character state.
- * Handles items (inventory), temporary buffs, and currency (XP, ink, paper, blueprints).
+ * Handles items (inventory), temporary buffs, and currency (XP, dollars, blueprints).
  * Skips adding items already in inventory.
  * @param {number} roll - d20 roll result (1-20)
  * @param {Object} deps - { stateAdapter, updateCurrency }
@@ -175,11 +174,8 @@ export function applyDungeonCompletionReward(roll, deps) {
         return { applied: true, rewardName: name, rewardText };
     }
 
-    // Currency / one-off rewards
-    if (name === "The Librarian's Hoard") {
-        if (updateCurrency) updateCurrency({ inkDrops: 150, paperScraps: 20 });
-        return { applied: true, rewardName: name, rewardText };
-    }
+    // Currency / one-off rewards. (The Librarian's Hoard is a one-time temporary buff above;
+    // its dollars come from its rewardModifier in temporaryBuffs.json when marked used.)
     if (name === "Keeper's Blessing") {
         if (updateCurrency) updateCurrency({ xp: 200 });
         if (stateAdapter.addDustyBlueprints) stateAdapter.addDustyBlueprints(50);

@@ -24,18 +24,7 @@ describe('EffectRegistry Phase 4 helpers', () => {
         sanctumBenefits: {
             'The Spire of Whispers': {
                 id: 'the-spire-of-whispers',
-                effects: [
-                    {
-                        trigger: 'ON_MONTH_END',
-                        condition: { hasAtmosphericBuff: 'The Candlight Study' },
-                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
-                    },
-                    {
-                        trigger: 'ON_MONTH_END',
-                        condition: { hasAtmosphericBuff: 'The Cozy Hearth' },
-                        modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
-                    }
-                ],
+                effects: [],
                 associatedBuffs: ['The Candlight Study', 'The Cozy Hearth']
             },
             legacyOnly: {
@@ -64,14 +53,14 @@ describe('EffectRegistry Phase 4 helpers', () => {
         ]);
     });
 
-    test('getSanctumAssociatedBuffIds reads structured sanctum effects', () => {
+    test('getSanctumAssociatedBuffIds resolves associatedBuffs to atmospheric buff ids', () => {
         expect(EffectRegistry.getSanctumAssociatedBuffIds('the-spire-of-whispers', dataModule)).toEqual([
             'the-candlight-study',
             'the-cozy-hearth'
         ]);
     });
 
-    test('getSanctumAssociatedBuffIds falls back to legacy associatedBuffs', () => {
+    test('getSanctumAssociatedBuffIds works when the sanctum has no effects field', () => {
         expect(EffectRegistry.getSanctumAssociatedBuffIds('legacy-only', dataModule)).toEqual([
             'head-in-the-clouds'
         ]);

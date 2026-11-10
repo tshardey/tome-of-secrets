@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  *
  * Tests for Phase 5: Book completion cascade — markBookComplete moves linked quests to completed,
- * marks curriculum prompts complete, and returns synergy rewards (and movedQuests for restoration).
+ * marks curriculum prompts complete, and returns movedQuests (for restoration).
  */
 import { StateAdapter, STATE_EVENTS } from '../assets/js/character-sheet/stateAdapter.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
@@ -21,7 +21,7 @@ describe('Book completion cascade', () => {
     expect(adapter.markBookComplete('nonexistent-id')).toBeNull();
   });
 
-  it('book with no links: only book updated, movedQuests empty, synergyRewards all zero', () => {
+  it('book with no links: only book updated, movedQuests empty, no synergy rewards', () => {
     const book = adapter.addBook({ title: 'Solo Book', status: 'reading' });
     const result = adapter.markBookComplete(book.id);
 
@@ -29,7 +29,7 @@ describe('Book completion cascade', () => {
     expect(result.book.status).toBe('completed');
     expect(result.book.dateCompleted).toBeDefined();
     expect(result.movedQuests).toEqual([]);
-    expect(result.synergyRewards).toEqual({ xp: 0, inkDrops: 0, paperScraps: 0, items: [] });
+    expect(result).not.toHaveProperty('synergyRewards');
     expect(adapter.getActiveAssignments()).toHaveLength(0);
     expect(adapter.getCompletedQuests()).toHaveLength(0);
   });
@@ -50,14 +50,13 @@ describe('Book completion cascade', () => {
     expect(result.movedQuests).toHaveLength(1);
     expect(result.movedQuests[0].id).toBe(questId);
     expect(result.movedQuests[0].dateCompleted).toBeDefined();
-    expect(result.synergyRewards.paperScraps).toBe(0);
-    expect(result.synergyRewards.inkDrops).toBe(0);
+    expect(result).not.toHaveProperty('synergyRewards'); // book completion pays no money
     expect(adapter.getActiveAssignments()).toHaveLength(0);
     expect(adapter.getCompletedQuests()).toHaveLength(1);
     expect(adapter.getCompletedQuests()[0].id).toBe(questId);
   });
 
-  it('curriculum only: linked prompts marked complete, +5 Paper Scraps synergy', () => {
+  it('curriculum only: linked prompts marked complete, no currency synergy', () => {
     const curriculum = adapter.addCurriculum('Challenge');
     const category = adapter.addCategory(curriculum.id, 'Fiction');
     const added = adapter.addPrompts(curriculum.id, category.id, ['Read a book with a red cover']);
@@ -73,14 +72,13 @@ describe('Book completion cascade', () => {
 
     expect(result).not.toBeNull();
     expect(result.movedQuests).toEqual([]);
-    expect(result.synergyRewards.paperScraps).toBe(5);
-    expect(result.synergyRewards.inkDrops).toBe(0);
+    expect(result).not.toHaveProperty('synergyRewards'); // book completion pays no money
     const data = state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
     const prompt = data.curriculums[curriculum.id].categories[category.id].prompts[promptId];
     expect(prompt.completedAt).toBeDefined();
   });
 
-  it('both quest and curriculum: quest moves, prompts complete, +5 Paper Scraps and +10 Ink Drops synergy', () => {
+  it('both quest and curriculum: quest moves, prompts complete, no currency synergy', () => {
     const questId = 'q-both';
     adapter.addActiveQuests({ id: questId, type: 'Genre', prompt: 'Read it', book: 'Both Book' });
     const curriculum = adapter.addCurriculum('List');
@@ -99,8 +97,7 @@ describe('Book completion cascade', () => {
     expect(result).not.toBeNull();
     expect(result.movedQuests).toHaveLength(1);
     expect(result.movedQuests[0].id).toBe(questId);
-    expect(result.synergyRewards.paperScraps).toBe(5);
-    expect(result.synergyRewards.inkDrops).toBe(10);
+    expect(result).not.toHaveProperty('synergyRewards'); // book completion pays no money
     const data = state[STORAGE_KEYS.EXTERNAL_CURRICULUM];
     const prompt = data.curriculums[curriculum.id].categories[category.id].prompts[promptId];
     expect(prompt.completedAt).toBeDefined();

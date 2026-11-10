@@ -2,11 +2,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { MODIFIER_TYPES, TRIGGERS, validateEffect } from '../assets/js/services/effectSchema.js';
 import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
+import * as dataModule from '../assets/js/character-sheet/data.js';
 
 function loadJson(filename) {
     const repoRoot = path.resolve(process.cwd(), '..');
     const fullPath = path.join(repoRoot, 'assets', 'data', filename);
     return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+}
+
+/** Collect every `effects` entry found anywhere inside a parsed catalog JSON value. */
+function collectEffects(node, out = []) {
+    if (Array.isArray(node)) {
+        node.forEach((child) => collectEffects(child, out));
+    } else if (node && typeof node === 'object') {
+        for (const [key, value] of Object.entries(node)) {
+            if (key === 'effects' && Array.isArray(value)) {
+                out.push(...value);
+            }
+            collectEffects(value, out);
+        }
+    }
+    return out;
 }
 
 function expectString(value) {
@@ -23,8 +39,9 @@ function expectNonNegativeNumber(value) {
 function expectRewardObject(rewards) {
     expect(rewards).toBeDefined();
     expectNonNegativeNumber(rewards.xp);
-    expectNonNegativeNumber(rewards.inkDrops);
-    expectNonNegativeNumber(rewards.paperScraps);
+    // Dollars come from the flat quest base; authored rewards carry no retired currencies.
+    expect(rewards).not.toHaveProperty('inkDrops');
+    expect(rewards).not.toHaveProperty('paperScraps');
     expect(Array.isArray(rewards.items)).toBe(true);
 }
 
@@ -38,7 +55,6 @@ function parseDisplayRewardValue(displayText, resourceLabel) {
 describe('Data contracts for assets/data JSON catalogs', () => {
     const allItems = loadJson('allItems.json');
     const atmosphericBuffs = loadJson('atmosphericBuffs.json');
-    const curseTableDetailed = loadJson('curseTableDetailed.json');
     const dungeonCompletionRewards = loadJson('dungeonCompletionRewards.json');
     const dungeonRewards = loadJson('dungeonRewards.json');
     const dungeonRooms = loadJson('dungeonRooms.json');
@@ -54,7 +70,6 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     const sanctumBenefits = loadJson('sanctumBenefits.json');
     const schoolBenefits = loadJson('schoolBenefits.json');
     const seriesCompletionRewards = loadJson('seriesCompletionRewards.json');
-    const shoppingOptions = loadJson('shoppingOptions.json');
     const sideQuestsDetailed = loadJson('sideQuestsDetailed.json');
     const temporaryBuffs = loadJson('temporaryBuffs.json');
     const temporaryBuffsFromRewards = loadJson('temporaryBuffsFromRewards.json');
@@ -100,7 +115,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
     });
 
     test('schoolBenefits.json contract', () => {
-        Object.values(schoolBenefits).forEach((school) => {
+        Object.entries(schoolBenefits).forEach(([schoolName, school]) => {
             expectString(school.description);
             expectString(school.benefit);
             expect(Array.isArray(school.effects)).toBe(true);
@@ -131,18 +146,32 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         });
     });
 
-    test('curseTableDetailed.json has unique contiguous numbers and required strings', () => {
-        expect(Array.isArray(curseTableDetailed)).toBe(true);
-        const numbers = curseTableDetailed.map(entry => entry.number).sort((a, b) => a - b);
-        const uniqueNumbers = new Set(numbers);
-        expect(uniqueNumbers.size).toBe(numbers.length);
-        numbers.forEach((n, idx) => {
-            expect(n).toBe(idx + 1);
+    test('no catalog effect targets worn_page and no curse data export exists', () => {
+        expect(dataModule.curseTable).toBeUndefined();
+        expect(dataModule.cursesById).toBeUndefined();
+        expect(dataModule.getCurse).toBeUndefined();
+
+        const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
+        const catalogFiles = fs.readdirSync(dataDir).filter((name) => name.endsWith('.json'));
+        expect(catalogFiles.length).toBeGreaterThan(0);
+        expect(catalogFiles).not.toContain('curseTableDetailed.json');
+
+        catalogFiles.forEach((filename) => {
+            const wornPageEffects = collectEffects(loadJson(filename))
+                .filter((effect) => effect?.modifier?.target === 'worn_page');
+            expect({ filename, wornPageEffects }).toEqual({ filename, wornPageEffects: [] });
         });
-        curseTableDetailed.forEach((entry) => {
-            expectString(entry.id);
-            expectString(entry.name);
-            expectString(entry.description);
+    });
+
+    test('no catalog effect uses ON_JOURNAL_ENTRY', () => {
+        const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
+        const catalogFiles = fs.readdirSync(dataDir).filter((name) => name.endsWith('.json'));
+        expect(catalogFiles.length).toBeGreaterThan(0);
+
+        catalogFiles.forEach((filename) => {
+            const journalEffects = collectEffects(loadJson(filename))
+                .filter((effect) => effect?.trigger === 'ON_JOURNAL_ENTRY');
+            expect({ filename, journalEffects }).toEqual({ filename, journalEffects: [] });
         });
     });
 
@@ -237,11 +266,33 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         const keys = Object.keys(levelRewards).map(Number).sort((a, b) => a - b);
         expect(keys).toEqual(Array.from({ length: 20 }, (_, idx) => idx + 1));
         Object.values(levelRewards).forEach((reward) => {
-            expectNonNegativeNumber(reward.inkDrops);
-            expectNonNegativeNumber(reward.paperScraps);
+            expect(Object.keys(reward).sort()).toEqual(['blueprints', 'dollars', 'inventorySlot', 'smp']);
+            expectNonNegativeNumber(reward.dollars);
+            expectNonNegativeNumber(reward.blueprints);
             expectNonNegativeNumber(reward.smp);
             expectNonNegativeNumber(reward.inventorySlot);
         });
+    });
+
+    test('levelRewards.json matches the spec Levels table', () => {
+        const expectedFor = (level) => {
+            if (level === 1) return { dollars: 0, blueprints: 0 };
+            if (level <= 4) return { dollars: 10, blueprints: 10 };
+            if (level <= 9) return { dollars: 15, blueprints: 10 };
+            if (level <= 14) return { dollars: 20, blueprints: 15 };
+            if (level <= 19) return { dollars: 25, blueprints: 15 };
+            return { dollars: 50, blueprints: 25 };
+        };
+        const smpLevels = [3, 5, 7, 10, 13, 15, 17, 20];
+        const slotLevels = [4, 8, 12, 16, 19];
+        for (let level = 1; level <= 20; level += 1) {
+            const reward = levelRewards[String(level)];
+            expect({ level, dollars: reward.dollars, blueprints: reward.blueprints }).toEqual({ level, ...expectedFor(level) });
+            expect({ level, smp: reward.smp }).toEqual({ level, smp: smpLevels.includes(level) ? 1 : 0 });
+            expect({ level, slot: reward.inventorySlot }).toEqual({ level, slot: slotLevels.includes(level) ? 1 : 0 });
+        }
+        const totalSmp = Object.values(levelRewards).reduce((sum, r) => sum + r.smp, 0);
+        expect(totalSmp).toBe(8);
     });
 
     test('genreQuests.json has required fields, unique id, and blueprint reward numbers', () => {
@@ -305,7 +356,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         });
     });
 
-    test('Enchanted Focus carries useCount:3 for per-book countdown tracking', () => {
+    test('Enchanted Focus carries useCount:3 for per-quest countdown tracking', () => {
         const enchanted = temporaryBuffs['Enchanted Focus'];
         expect(enchanted).toBeDefined();
         expect(enchanted.useCount).toBe(3);
@@ -332,22 +383,6 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             if (Object.prototype.hasOwnProperty.call(temporaryBuffsFromRewards, key)) {
                 expect(mergedByKey[key]).toEqual(temporaryBuffs[key]);
             }
-        });
-    });
-
-    test('shoppingOptions.json has unique ids and valid option shape', () => {
-        const validTypes = new Set(['book-purchase', 'item', 'subscription-month', 'special-edition']);
-        const ids = new Set();
-        Object.values(shoppingOptions).forEach((option) => {
-            expectString(option.id);
-            expect(ids.has(option.id)).toBe(false);
-            ids.add(option.id);
-            expectString(option.label);
-            expectString(option.description);
-            expectNonNegativeNumber(option.inkDrops);
-            expectNonNegativeNumber(option.paperScraps);
-            expect(typeof option.allowQuantity).toBe('boolean');
-            expect(validTypes.has(option.type)).toBe(true);
         });
     });
 
@@ -394,8 +429,7 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         expectString(extraCreditRewards._note);
         expect(extraCreditRewards._note.toLowerCase()).toContain('display');
         expect(extraCreditRewards.rewards.xp).toBe(0);
-        expect(extraCreditRewards.rewards.inkDrops).toBe(0);
-        expect(extraCreditRewards.rewards.paperScraps).toBe(GAME_CONFIG.rewards.extraCredit.paperScraps);
+        expect(extraCreditRewards.rewards.dollars).toBe(GAME_CONFIG.rewards.questBase.dollars);
         expect(extraCreditRewards.rewards.items).toEqual([]);
     });
 
@@ -411,21 +445,20 @@ describe('Data contracts for assets/data JSON catalogs', () => {
         expect(parseDisplayRewardValue(dungeonRewards.monster.reward, 'XP')).toBe(
             GAME_CONFIG.rewards.encounter.monster.xp
         );
-        expect(parseDisplayRewardValue(dungeonRewards.friendlyCreature.reward, 'Ink Drops')).toBe(
-            GAME_CONFIG.rewards.encounter.friendlyCreature.inkDrops
-        );
-        expect(parseDisplayRewardValue(dungeonRewards.familiar.reward, 'Paper Scraps')).toBe(
-            GAME_CONFIG.rewards.encounter.familiar.paperScraps
-        );
     });
 
-    test('genreQuests.json display rewards align with organize-the-stacks runtime config', () => {
+    test('genreQuests.json display XP aligns with organize-the-stacks runtime config', () => {
         expectString(genreQuests['1']._note);
         Object.values(genreQuests).forEach((quest) => {
             expect(quest.rewards.xp).toBe(GAME_CONFIG.rewards.organizeTheStacks.xp);
-            expect(quest.rewards.inkDrops).toBe(GAME_CONFIG.rewards.organizeTheStacks.inkDrops);
-            expect(quest.rewards.paperScraps).toBe(0);
             expect(quest.rewards.items).toEqual([]);
+        });
+    });
+
+    test('genreQuests.json display rewards carry no Ink/Paper', () => {
+        Object.values(genreQuests).forEach((quest) => {
+            expect(quest.rewards).not.toHaveProperty('inkDrops');
+            expect(quest.rewards).not.toHaveProperty('paperScraps');
         });
     });
 
@@ -500,15 +533,10 @@ describe('Data contracts for assets/data JSON catalogs', () => {
             expectString(benefit.name);
             expectString(benefit.description);
             expectString(benefit.benefit);
-            expect(Array.isArray(benefit.effects)).toBe(true);
-            expect(benefit.effects.length).toBeGreaterThan(0);
-            benefit.effects.forEach((effect) => {
-                expect(validateEffect(effect).valid).toBe(true);
-                const atmosphericRef = effect?.condition?.hasAtmosphericBuff;
-                expectString(atmosphericRef);
-                expect(atmosphericBuffRefs.has(atmosphericRef)).toBe(true);
-            });
+            // associatedBuffs alone selects the sanctum's buffs; the old MULTIPLY selector effects are gone.
+            expect(benefit.effects).toEqual([]);
             expect(Array.isArray(benefit.associatedBuffs)).toBe(true);
+            expect(benefit.associatedBuffs.length).toBeGreaterThan(0);
             benefit.associatedBuffs.forEach((buffName) => {
                 expectString(buffName);
                 expect(atmosphericBuffRefs.has(buffName)).toBe(true);
@@ -594,15 +622,6 @@ describe('4yqq expansion items', () => {
         }
     });
 
-    test('no expansion item grants Ink Drops', () => {
-        const items = loadJson('allItems.json');
-        for (const name of EXPANSION_ITEMS) {
-            for (const effect of items[name].effects) {
-                expect(effect.modifier.resource).not.toBe('inkDrops');
-            }
-        }
-    });
-
     test('every tag an expansion item matches on exists in bookTags.json', () => {
         const items = loadJson('allItems.json');
         const tagIds = new Set(loadJson('bookTags.json').map(tag => tag.id));
@@ -620,16 +639,6 @@ describe('4yqq expansion items', () => {
 
 describe('4yqq currency and collision contracts', () => {
     const NEW_QUEST_KEYS = ['9', '10', '11', '12', '13', '14', '15', '16', '17', '18'];
-
-    test('no new side quest, branch, or expansion item grants Ink Drops', () => {
-        const quests = loadJson('sideQuestsDetailed.json');
-        for (const key of NEW_QUEST_KEYS) {
-            expect(quests[key].rewards.inkDrops).toBe(0);
-            for (const branch of quests[key].branches) {
-                expect(branch.rewards.inkDrops).toBe(0);
-            }
-        }
-    });
 
     test('no new prompt reaches for a Worn Page penalty verb', () => {
         // Reward tables and penalty tables must never name the same action: an action that

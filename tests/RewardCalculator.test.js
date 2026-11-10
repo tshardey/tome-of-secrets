@@ -5,58 +5,72 @@
 import { Reward, RewardCalculator } from '../assets/js/services/RewardCalculator.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
-import { MODIFIER_TYPES, TRIGGERS } from '../assets/js/services/effectSchema.js';
+import { TRIGGERS, MODIFIER_TYPES } from '../assets/js/services/effectSchema.js';
+import * as data from '../assets/js/character-sheet/data.js';
 
 describe('Reward Class', () => {
     test('should create a reward with default values', () => {
         const reward = new Reward();
-        
+
         expect(reward.xp).toBe(0);
-        expect(reward.inkDrops).toBe(0);
-        expect(reward.paperScraps).toBe(0);
+        expect(reward.dollars).toBe(0);
+        expect(reward.blueprints).toBe(0);
         expect(reward.items).toEqual([]);
         expect(reward.modifiedBy).toEqual([]);
+        expect(reward.receipt.base).toEqual({ xp: 0, dollars: 0, blueprints: 0 });
     });
 
     test('should create a reward with custom values', () => {
         const reward = new Reward({
             xp: 15,
-            inkDrops: 20,
-            paperScraps: 5,
+            dollars: 20,
+            blueprints: 5,
             items: ['Test Item']
         });
-        
+
         expect(reward.xp).toBe(15);
-        expect(reward.inkDrops).toBe(20);
-        expect(reward.paperScraps).toBe(5);
+        expect(reward.dollars).toBe(20);
+        expect(reward.blueprints).toBe(5);
         expect(reward.items).toEqual(['Test Item']);
     });
 
+    test('has no inkDrops/paperScraps fields, even when given them', () => {
+        const reward = new Reward({ xp: 1, inkDrops: 20, paperScraps: 5 });
+        expect(reward).not.toHaveProperty('inkDrops');
+        expect(reward).not.toHaveProperty('paperScraps');
+        expect(reward.toJSON()).not.toHaveProperty('inkDrops');
+    });
+
+    test('fromAuthored keeps XP, blueprints and items and ignores legacy currency', () => {
+        const reward = Reward.fromAuthored({ xp: 30, inkDrops: 10, paperScraps: 5, blueprints: 4, items: ['A'] });
+        expect(reward.xp).toBe(30);
+        expect(reward.blueprints).toBe(4);
+        expect(reward.items).toEqual(['A']);
+        expect(reward.dollars).toBe(0);
+    });
+
     test('should clone a reward', () => {
-        const original = new Reward({ xp: 10, inkDrops: 15 });
+        const original = new Reward({ xp: 10, dollars: 15 });
         original.modifiedBy = ['Test Modifier'];
-        
+
         const cloned = original.clone();
-        
+
         expect(cloned.xp).toBe(10);
-        expect(cloned.inkDrops).toBe(15);
+        expect(cloned.dollars).toBe(15);
         expect(cloned.modifiedBy).toEqual(['Test Modifier']);
-        
+
         // Verify it's a deep clone
         cloned.xp = 20;
         expect(original.xp).toBe(10);
     });
 
     test('should convert to JSON', () => {
-        const reward = new Reward({ xp: 15, inkDrops: 20, items: ['Item1'] });
+        const reward = new Reward({ xp: 15, dollars: 20, items: ['Item1'] });
         reward.modifiedBy = ['Modifier1'];
-        
-        const json = reward.toJSON();
-        
-        expect(json).toEqual({
+
+        expect(reward.toJSON()).toEqual({
             xp: 15,
-            inkDrops: 20,
-            paperScraps: 0,
+            dollars: 20,
             blueprints: 0,
             items: ['Item1'],
             modifiedBy: ['Modifier1']
@@ -65,37 +79,59 @@ describe('Reward Class', () => {
 });
 
 describe('RewardCalculator - Base Rewards', () => {
+    const QUEST_TYPES = {
+        genre: ['♥ Organize the Stacks', 'Fantasy', {}],
+        side: ['♣ Side Quest', 'The Arcane Grimoire', {}],
+        dungeonRoom: ['♠ Dungeon Crawl', '', { isEncounter: false, roomNumber: '1' }],
+        dungeonEncounter: ['♠ Dungeon Crawl', '', { isEncounter: true, roomNumber: '1', encounterName: 'Will-o-wisps' }],
+        extraCredit: ['⭐ Extra Credit', '', {}],
+        restoration: ['🔨 Restoration Project', 'Some project: restore it', {}]
+    };
+
+    test.each(['genre', 'side', 'dungeonRoom', 'dungeonEncounter', 'extraCredit', 'restoration'])(
+        '%s quest pays $15 base',
+        (key) => {
+            const [type, prompt, options] = QUEST_TYPES[key];
+            const reward = RewardCalculator.calculateFinalRewards(type, prompt, {
+                ...options,
+                quest: { type }
+            });
+            expect(reward.dollars).toBe(15);
+            expect(reward.receipt.base.dollars).toBe(15);
+            expect(reward.receipt.final.dollars).toBe(15);
+        }
+    );
+
     test('should calculate Extra Credit rewards', () => {
         const rewards = RewardCalculator.getBaseRewards('⭐ Extra Credit', '');
-        
+
         expect(rewards.xp).toBe(0);
-        expect(rewards.inkDrops).toBe(0);
-        expect(rewards.paperScraps).toBe(10);
+        expect(rewards.dollars).toBe(15);
     });
 
     test('should calculate Organize the Stacks rewards', () => {
         const rewards = RewardCalculator.getBaseRewards('♥ Organize the Stacks', 'Fantasy');
-        
+
         expect(rewards.xp).toBe(15);
-        expect(rewards.inkDrops).toBe(10);
-        expect(rewards.paperScraps).toBe(0);
+        expect(rewards.dollars).toBe(15);
     });
 
     test('should calculate Side Quest rewards', () => {
         const rewards = RewardCalculator.getBaseRewards('♣ Side Quest', 'The Arcane Grimoire');
-        
+
         // Based on data.js sideQuestsDetailed
         expect(rewards.items).toContain('Long Read Focus');
+        expect(rewards.dollars).toBe(15);
     });
 
-    test('should calculate Dungeon room rewards', () => {
+    test('should ignore authored room Ink/Paper and pay the flat dollar base', () => {
         const rewards = RewardCalculator.getBaseRewards('♠ Dungeon Crawl', '', {
             isEncounter: false,
             roomNumber: '1'
         });
-        
-        // Room 1 (The Hall of Whispers) gives 5 paper scraps
-        expect(rewards.paperScraps).toBe(5);
+
+        expect(rewards.dollars).toBe(15);
+        expect(rewards.xp).toBe(0);
     });
 
     test('should calculate Dungeon monster encounter rewards', () => {
@@ -104,171 +140,159 @@ describe('RewardCalculator - Base Rewards', () => {
             roomNumber: '1',
             encounterName: 'Will-o-wisps'
         });
-        
+
         // Monster encounters give 30 XP
         expect(rewards.xp).toBe(30);
+        expect(rewards.dollars).toBe(15);
     });
 
-    test('should calculate Dungeon friendly creature rewards', () => {
+    test('should pay the dollar base for a friendly creature encounter', () => {
         const rewards = RewardCalculator.getBaseRewards('♠ Dungeon Crawl', '', {
             isEncounter: true,
             roomNumber: '1',
             encounterName: "Librarian's Spirit"
         });
-        
-        // Friendly creatures give 10 ink drops
-        expect(rewards.inkDrops).toBe(10);
+
+        expect(rewards.dollars).toBe(15);
+        expect(rewards.xp).toBe(0);
     });
 
-    test('should return default rewards for unknown quest type', () => {
+    test('should return the dollar base for unknown quest type', () => {
         const rewards = RewardCalculator.getBaseRewards('Unknown Type', '');
-        
-        expect(rewards.inkDrops).toBe(10);
+
+        expect(rewards.dollars).toBe(15);
+        expect(rewards.xp).toBe(0);
     });
 });
 
-describe('RewardCalculator - Apply Modifiers', () => {
-    test('should return unmodified rewards when no buffs applied', () => {
-        const base = new Reward({ xp: 10, inkDrops: 15 });
-        const modified = RewardCalculator.applyModifiers(base, []);
-        
-        expect(modified.xp).toBe(10);
-        expect(modified.inkDrops).toBe(15);
-        expect(modified.modifiedBy).toEqual([]);
+describe('RewardCalculator - buff card modifiers', () => {
+    afterEach(() => {
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
     });
 
-    test('should apply additive paper scrap bonuses from items', () => {
-        const base = new Reward({ inkDrops: 10 });
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting' // +2 paper scraps
+    test('legacy rewardModifier dollars/xp/blueprints become flat ADD_FLAT pipeline effects', () => {
+        const effects = RewardCalculator._modifierToBuffCardEffects({ dollars: 3, xp: 5, blueprints: 0 }, 'Test Buff');
+        expect(effects.map(e => e.effect.modifier)).toEqual([
+            { type: MODIFIER_TYPES.ADD_FLAT, resource: 'xp', value: 5 },
+            { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 3 }
         ]);
-
-        expect(modified.inkDrops).toBe(10);
-        expect(modified.paperScraps).toBe(2);
-        expect(modified.modifiedBy).toContain('Gilded Painting');
+        expect(effects.every(e => e.effect.trigger === TRIGGERS.ON_QUEST_COMPLETED)).toBe(true);
     });
 
-    test('should apply multiplier bonuses', () => {
-        const base = new Reward({ inkDrops: 10 });
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Scatter Brain Scarab' // x3 multiplier
-        ]);
-
-        expect(modified.inkDrops).toBe(30);
-        expect(modified.modifiedBy).toContain('Scatter Brain Scarab');
+    test('legacy Ink/Paper rewardModifier keys produce no pipeline effects', () => {
+        const effects = RewardCalculator._modifierToBuffCardEffects(
+            { inkDrops: 10, paperScraps: 2, inkDropsMultiplier: 3 },
+            'Legacy Buff'
+        );
+        expect(effects).toEqual([]);
     });
 
-    test('should apply additive bonuses before multipliers', () => {
-        const base = new Reward({ inkDrops: 10 });
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Background] Archivist Bonus', // +15 = 25 total
-            '[Item] Scatter Brain Scarab'   // x3 = 75 total
-        ]);
-
-        expect(modified.inkDrops).toBe(75); // (10 + 15) * 3
+    test('background cards contribute no legacy modifier (EffectRegistry owns backgrounds)', () => {
+        expect(RewardCalculator._getModifier('Archivist Bonus', false, true)).toEqual({ modifier: null });
     });
 
-    test('should apply background bonuses', () => {
-        const base = new Reward({ inkDrops: 10 });
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Background] Archivist Bonus'
-        ]);
-        
-        expect(modified.inkDrops).toBe(25);
-        expect(modified.modifiedBy).toContain('Archivist Bonus');
+    test('should check both temporaryBuffs and temporaryBuffsFromRewards', () => {
+        const result = RewardCalculator._getModifier('Long Read Focus', false, false);
+        expect(result.modifier).toBeDefined();
     });
 
-    test('should apply paper scrap bonuses from atmospheric items', () => {
-        const base = new Reward({ inkDrops: 0 });
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting' // +2 paper scraps
-        ]);
+    test('should use passiveRewardModifier for items in passive slots', () => {
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [{ itemName: 'Gilded Painting' }];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
-        expect(modified.inkDrops).toBe(0);
-        expect(modified.paperScraps).toBe(2);
-        expect(modified.modifiedBy).toContain('Gilded Painting');
+        const { modifier } = RewardCalculator._getModifier('Gilded Painting', true, false);
+        expect(modifier).toEqual(data.allItems['Gilded Painting'].passiveRewardModifier);
     });
 
-    test('should handle multiple modifiers', () => {
-        const base = new Reward({ xp: 10, inkDrops: 10, paperScraps: 5 });
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting',      // +2 paper scraps
-            '[Background] Prophet Bonus'   // +15 ink drops
-        ]);
+    test('should use active rewardModifier for equipped items, even if also in passive slot', () => {
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [{ itemName: 'Gilded Painting' }];
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Gilded Painting' }];
 
-        expect(modified.xp).toBe(10);
-        expect(modified.inkDrops).toBe(25); // 10 + 15
-        expect(modified.paperScraps).toBe(7); // 5 + 2
-        expect(modified.modifiedBy).toContain('Gilded Painting');
-        expect(modified.modifiedBy).toContain('Prophet Bonus');
+        const { modifier } = RewardCalculator._getModifier('Gilded Painting', true, false);
+        expect(modifier).toEqual(data.allItems['Gilded Painting'].rewardModifier);
+    });
+
+    test('should use active modifier for items not in passive slots', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Gilded Painting' }];
+
+        const { modifier } = RewardCalculator._getModifier('Gilded Painting', true, false);
+        expect(modifier).toEqual(data.allItems['Gilded Painting'].rewardModifier);
+    });
+
+    test('a dollar buff card adds a flat dollar line on top of the $15 base', () => {
+        const spy = jest.spyOn(RewardCalculator, '_getModifier').mockReturnValue({ modifier: { dollars: 3 } });
+        try {
+            const final = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+                appliedBuffs: ['[Buff] Test Dollar Buff'],
+                quest: { type: '♥ Organize the Stacks' }
+            });
+            expect(final.dollars).toBe(18);
+            expect(final.modifiedBy).toContain('Test Dollar Buff');
+            const line = final.receipt.modifiers.find(m => m.source === 'Test Dollar Buff');
+            expect(line).toMatchObject({ currency: 'dollars', value: 3, description: '+$3' });
+        } finally {
+            spy.mockRestore();
+        }
     });
 });
 
 describe('RewardCalculator - Background bonuses via ModifierPipeline', () => {
     test('should not double-apply Archivist when legacy background card is selected', () => {
-        const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
-            baseRewardOverride: base,
             appliedBuffs: ['[Background] Archivist Bonus'],
             background: 'archivist',
             quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction'] }
         });
 
-        expect(modified.inkDrops).toBe(20);
+        expect(modified.dollars).toBe(17);
         expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
         expect(modified.modifiedBy).not.toContain('Archivist Bonus');
     });
 
     test('should still apply non-background buff cards with pipeline backgrounds', () => {
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
-        const base = new Reward({ inkDrops: 10 });
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Non-Fiction: Archive work', {
-            baseRewardOverride: base,
             appliedBuffs: ['[Background] Archivist Bonus', '[Item] Coffee Elemental'],
             background: 'archivist',
             quest: { type: '♥ Organize the Stacks', genre: 'Non-Fiction', tags: ['non-fiction', 'cozy'] }
         });
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
-        expect(modified.inkDrops).toBe(30); // 10 base + 10 Archivist pipeline + 10 Coffee pipeline
+        expect(modified.dollars).toBe(19);
         expect(modified.modifiedBy).toContain("The Archivist's Apprentice");
-        expect(modified.modifiedBy).toContain("Coffee Elemental");
+        expect(modified.modifiedBy).toContain('Coffee Elemental');
         expect(modified.modifiedBy).not.toContain('Archivist Bonus');
     });
 
     test('should apply Biblioslinker bonus to dungeon crawls', () => {
-        const base = new Reward({ paperScraps: 5 });
         const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
-            baseRewardOverride: base,
             background: 'biblioslinker',
             quest: { type: '♠ Dungeon Crawl' }
         });
 
-        expect(modified.paperScraps).toBe(15);
+        expect(modified.dollars).toBe(18);
         expect(modified.modifiedBy).toContain('The Biblioslinker');
     });
 
     test('should not apply Biblioslinker bonus to non-dungeon quests', () => {
-        const base = new Reward({ paperScraps: 5 });
         const modified = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
-            baseRewardOverride: base,
             background: 'biblioslinker',
             quest: { type: '♥ Organize the Stacks' }
         });
 
-        expect(modified.paperScraps).toBe(5);
+        expect(modified.dollars).toBe(15);
         expect(modified.modifiedBy).toEqual([]);
     });
 
     test('should not apply background effects when no background selected', () => {
-        const base = new Reward({ paperScraps: 5 });
         const modified = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
-            baseRewardOverride: base,
             background: '',
             quest: { type: '♠ Dungeon Crawl' }
         });
 
-        expect(modified.paperScraps).toBe(5);
+        expect(modified.dollars).toBe(15);
+        expect(modified.modifiedBy).toEqual([]);
     });
 });
 
@@ -286,50 +310,41 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
         );
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
 
-        expect(final.xp).toBe(15); // Base genre quest XP
-        expect(final.inkDrops).toBe(20); // 10 base + 10 from Coffee Elemental pipeline
+        expect(final.xp).toBe(15);
+        expect(final.dollars).toBe(17);
         expect(final.modifiedBy).toContain('Coffee Elemental');
     });
 
-    test('should calculate dungeon rewards with background bonus', () => {
-        const final = RewardCalculator.calculateFinalRewards(
-            '♠ Dungeon Crawl',
-            'Room challenge',
-            {
-                isEncounter: false,
-                roomNumber: '1',
-                appliedBuffs: [],
-                background: 'biblioslinker',
-                quest: { type: '♠ Dungeon Crawl' }
-            }
-        );
-        
-        expect(final.paperScraps).toBe(15); // 5 from room + 10 from biblioslinker
-        expect(final.modifiedBy).toContain('The Biblioslinker');
-    });
-
-    test('should handle complex reward calculation', () => {
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
-        const final = RewardCalculator.calculateFinalRewards(
-            '♠ Dungeon Crawl',
-            '',
-            {
-                isEncounter: true,
-                roomNumber: '1',
-                encounterName: 'Will-o-wisps',
-                appliedBuffs: [
-                    '[Item] Coffee Elemental', // +10 ink drops (pipeline, needs cozy tag)
-                    '[Background] Cartographer Bonus' // +10 ink drops (legacy, intentionally skipped)
-                ],
-                background: 'biblioslinker',
-                quest: { type: '♠ Dungeon Crawl', tags: ['cozy'] }
-            }
-        );
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    test('should handle a monster encounter calculation', () => {
+        const final = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
+            isEncounter: true,
+            roomNumber: '1',
+            encounterName: 'Will-o-wisps',
+            appliedBuffs: ['[Background] Cartographer Bonus'], // legacy card, intentionally skipped
+            quest: { type: '♠ Dungeon Crawl' }
+        });
 
         expect(final.xp).toBe(30); // Monster base XP
-        expect(final.inkDrops).toBe(10); // 0 + 10 from Coffee Elemental pipeline
-        expect(final.modifiedBy.length).toBeGreaterThan(0);
+        expect(final.dollars).toBe(15);
+        expect(final.modifiedBy).not.toContain('Cartographer Bonus');
+    });
+
+    test('flat dollar effects from the registry stack on the $15 base', () => {
+        const effects = [
+            { effect: { trigger: TRIGGERS.ON_QUEST_COMPLETED, modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 3 } }, source: { name: 'A' } },
+            { effect: { trigger: TRIGGERS.ON_QUEST_COMPLETED, modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 2 } }, source: { name: 'B' } }
+        ];
+        const { EffectRegistry } = jest.requireActual('../assets/js/services/EffectRegistry.js');
+        const spy = jest.spyOn(EffectRegistry, 'getActiveEffects').mockReturnValue(effects);
+        try {
+            const final = RewardCalculator.calculateFinalRewards('♣ Side Quest', 'The Arcane Grimoire', {
+                quest: { type: '♣ Side Quest' }
+            });
+            expect(final.dollars).toBe(20);
+            expect(final.receipt.final.dollars).toBe(20);
+        } finally {
+            spy.mockRestore();
+        }
     });
 
     describe('ON_QUEST_COMPLETED auto-apply (EffectRegistry)', () => {
@@ -344,7 +359,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
             characterState[STORAGE_KEYS.LEARNED_ABILITIES] = [...prevLearned];
         });
 
-        test('School of Enchantment multiplies XP on monster dungeon encounters without buff cards', () => {
+        test('School of Enchantment adds a flat +10 XP on monster dungeon encounters without buff cards', () => {
             const final = RewardCalculator.calculateFinalRewards('♠ Dungeon Crawl', '', {
                 appliedBuffs: [],
                 wizardSchool: 'Enchantment',
@@ -355,22 +370,22 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
                 isBefriend: false
             });
 
-            expect(final.xp).toBe(45);
+            expect(final.xp).toBe(40); // 30 monster base + 10 flat (no multiplier)
             expect(final.modifiedBy).toContain('School of Enchantment');
         });
 
-        test('Silver Tongue adds paper scraps on any quest type when learned', () => {
+        test('Silver Tongue adds dollars on any quest type when learned', () => {
             characterState[STORAGE_KEYS.LEARNED_ABILITIES] = ['Silver Tongue'];
             const genre = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
                 quest: { type: '♥ Organize the Stacks' }
             });
-            expect(genre.paperScraps).toBe(5);
+            expect(genre.dollars).toBe(16);
             expect(genre.modifiedBy).toContain('Silver Tongue');
 
             const side = RewardCalculator.calculateFinalRewards('♣ Side Quest', 'The Arcane Grimoire', {
                 quest: { type: '♣ Side Quest' }
             });
-            expect(side.paperScraps).toBeGreaterThanOrEqual(5);
+            expect(side.dollars).toBeGreaterThanOrEqual(16);
             expect(side.modifiedBy).toContain('Silver Tongue');
         });
 
@@ -380,6 +395,7 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
                 quest: { type: '⭐ Extra Credit' }
             });
             expect(final.xp).toBe(5);
+            expect(final.dollars).toBe(15);
             expect(final.modifiedBy).toContain('Alchemic Focus');
         });
 
@@ -389,132 +405,71 @@ describe('RewardCalculator - Calculate Final Rewards', () => {
                 wizardSchool: 'Conjuration',
                 quest: { type: '♥ Organize the Stacks' }
             });
-            expect(final.inkDrops).toBe(10);
+            expect(final.dollars).toBe(15);
             expect(final.modifiedBy).not.toContain('School of Conjuration');
             characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
         });
     });
+});
 
-    test('should check both temporaryBuffs and temporaryBuffsFromRewards', () => {
-        // This test verifies that the RewardCalculator checks both sources
-        const result = RewardCalculator._getModifier('Long Read Focus', false, false);
-        
-        // Long Read Focus should exist in temporaryBuffsFromRewards (legacy)
-        // or temporaryBuffs (new)
-        expect(result.modifier).toBeDefined();
-    });
+describe('RewardCalculator - secondary quest base (one book, two quests)', () => {
+    const book = { id: 'book-2q', title: 'Two Quest Book', links: { questIds: ['q-first', 'q-second'], curriculumPromptIds: [] } };
+    const getBook = (id) => (id === book.id ? book : null);
 
-    test('should use passiveRewardModifier for items in passive slots', () => {
-        // Setup: Add an atmospheric item to a passive slot
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "Gilded Painting" }
-        ];
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-
-        const base = new Reward({ inkDrops: 10 });
-        // Gilded Painting in passive slot should give +1 paper scrap (passive), not +2 (active)
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting'
-        ]);
-
-        expect(modified.inkDrops).toBe(10);
-        expect(modified.paperScraps).toBe(1); // 0 base + 1 passive bonus
-        expect(modified.modifiedBy).toContain("Gilded Painting");
-
-        // Cleanup
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
-    });
-
-    test('should use active rewardModifier for equipped items, even if also in passive slot', () => {
-        // Setup: Item in both passive slot AND equipped
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "Gilded Painting" }
-        ];
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-            { name: "Gilded Painting" }
-        ];
-
-        const base = new Reward({ inkDrops: 10 });
-        // When equipped, should use active modifier (+2), not passive (+1)
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting'
-        ]);
-
-        expect(modified.inkDrops).toBe(10);
-        expect(modified.paperScraps).toBe(2); // 0 base + 2 active bonus
-        expect(modified.modifiedBy).toContain("Gilded Painting");
-
-        // Cleanup
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+    afterEach(() => {
         characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
     });
 
-    test('should use passiveRewardModifier for items in passive item slots (via PASSIVE_ITEM_SLOTS)', () => {
-        // Setup: Add an item to a passive item slot
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: "Gilded Painting" }
-        ];
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    test('secondary quest for a book pays $10 base, item bonuses still apply', () => {
+        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [{ name: 'Coffee Elemental', type: 'Familiar' }];
+        const quest = { id: 'q-second', bookId: book.id, type: '♥ Organize the Stacks', tags: ['cozy'] };
+        const final = RewardCalculator.calculateFinalRewards('♥ Organize the Stacks', 'Fantasy', {
+            appliedBuffs: ['[Item] Coffee Elemental'],
+            quest,
+            getBook
+        });
 
-        const base = new Reward({ inkDrops: 10 });
-        // Gilded Painting in passive slot should give +1 paper scrap (passive), not +2 (active)
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting'
-        ]);
-
-        expect(modified.inkDrops).toBe(10);
-        expect(modified.paperScraps).toBe(1); // 0 base + 1 passive bonus
-        expect(modified.modifiedBy).toContain('Gilded Painting');
-
-        // Cleanup
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+        expect(final.receipt.base.dollars).toBe(10);
+        expect(final.dollars).toBe(12); // $10 secondary base + Coffee Elemental $2
+        expect(final.receipt.final.dollars).toBe(12);
+        expect(final.modifiedBy).toContain('Coffee Elemental');
     });
 
-    test('should use active modifier for items not in passive slots', () => {
-        // Setup: No passive slots, item is just equipped
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [
-            { name: "Gilded Painting" }
-        ];
-
-        const base = new Reward({ inkDrops: 10 });
-        // Should use active modifier (+2)
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Gilded Painting'
-        ]);
-
-        expect(modified.inkDrops).toBe(10);
-        expect(modified.paperScraps).toBe(2); // 0 base + 2 active bonus
-        expect(modified.modifiedBy).toContain("Gilded Painting");
-
-        // Cleanup
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
+    test('the first quest on the same book keeps the $15 base', () => {
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { id: 'q-first', bookId: book.id, type: '⭐ Extra Credit' },
+            getBook
+        });
+        expect(final.dollars).toBe(15);
+        expect(final.receipt.base.dollars).toBe(15);
     });
 
-    test('should handle passive multiplier modifiers correctly', () => {
-        // Setup: Add an item with a passive multiplier to a passive slot
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
-            { itemName: 'Scatter Brain Scarab' }
-        ];
-        characterState[STORAGE_KEYS.EQUIPPED_ITEMS] = [];
-
-        const base = new Reward({ inkDrops: 10 });
-        // Scatter Brain Scarab passive: x1.5 multiplier (active is x3)
-        const modified = RewardCalculator.applyModifiers(base, [
-            '[Item] Scatter Brain Scarab'
-        ]);
-
-        expect(modified.inkDrops).toBe(15); // 10 * 1.5 = 15
-        expect(modified.modifiedBy).toContain('Scatter Brain Scarab');
-
-        // Cleanup
-        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+    test('quest without bookId pays $15', () => {
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { id: 'q-second', type: '⭐ Extra Credit' },
+            getBook
+        });
+        expect(final.dollars).toBe(15);
     });
 
-    // Note: page-count-aware item modifier tests removed during effects migration (Task 4).
-    // Items like Bookwyrm's Scale, Tome of Potential, and Page Sprite now use the effects
-    // pipeline with pageCount conditions instead of legacy rewardModifier + pageCondition.
-    // Effects-based page-count tests are covered in the ModifierPipeline test suite.
+    test('prefers the state adapter verdict (which ignores stale links) over raw book links', () => {
+        const stateAdapter = { state: characterState, formData: {}, isSecondaryQuestForBook: jest.fn(() => false) };
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { id: 'q-second', bookId: book.id, type: '⭐ Extra Credit' },
+            getBook,
+            stateAdapter
+        });
+        expect(stateAdapter.isSecondaryQuestForBook).toHaveBeenCalledWith(book.id, 'q-second');
+        expect(final.dollars).toBe(15);
+    });
+
+    test('an explicit isSecondaryQuest verdict overrides the stored links', () => {
+        const final = RewardCalculator.calculateFinalRewards('⭐ Extra Credit', '', {
+            quest: { bookId: 'unknown-book', type: '⭐ Extra Credit' },
+            isSecondaryQuest: true
+        });
+        expect(final.dollars).toBe(10);
+    });
 });
 
 describe('RewardCalculator - Book tags in TriggerPayload', () => {
@@ -524,7 +479,6 @@ describe('RewardCalculator - Book tags in TriggerPayload', () => {
             if (id === 'book-123') return { title: 'Test Book', tags: ['fantasy', 'dragons'], genre: 'Fantasy' };
             return null;
         };
-        // Use the internal method to verify tags reach the payload
         const payload = RewardCalculator._buildQuestCompletedPayload(
             '♥ Organize the Stacks', 'Fantasy', quest,
             { isEncounter: false, roomNumber: null, encounterName: null, isBefriend: true, getBook, state: {} }
@@ -572,136 +526,59 @@ describe('RewardCalculator - Book tags in TriggerPayload', () => {
 
 describe('RewardCalculator - End of Month Calculations', () => {
     describe('calculateBookCompletionRewards', () => {
+        test('library book completion grants 15 XP and 0 dollars', () => {
+            const rewards = RewardCalculator.calculateBookCompletionRewards(1);
+
+            expect(rewards.xp).toBe(15);
+            expect(rewards.dollars).toBe(0);
+            expect(rewards.receipt.final.dollars).toBe(0);
+        });
+
         test('should calculate XP for completed books', () => {
             const rewards = RewardCalculator.calculateBookCompletionRewards(3);
-            
+
             expect(rewards.xp).toBe(45); // 3 × 15
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.dollars).toBe(0);
             expect(rewards.items).toEqual([]);
         });
 
         test('should return zero XP for zero books', () => {
             const rewards = RewardCalculator.calculateBookCompletionRewards(0);
-            
+
             expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.dollars).toBe(0);
         });
 
         test('should handle negative input gracefully', () => {
             const rewards = RewardCalculator.calculateBookCompletionRewards(-5);
-            
+
             expect(rewards.xp).toBe(0); // Math.max(0, -5) × 15 = 0
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.dollars).toBe(0);
         });
 
         test('should handle large numbers', () => {
             const rewards = RewardCalculator.calculateBookCompletionRewards(100);
-            
+
             expect(rewards.xp).toBe(1500); // 100 × 15
         });
     });
 
-    describe('calculateJournalEntryRewards', () => {
-        const emptyPipelineCtx = {
-            stateAdapter: {
-                state: {
-                    [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-                    [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-                    [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-                },
-                formData: { keeperBackground: '', wizardSchool: '' }
-            },
-            dataModule: {
-                keeperBackgrounds: {},
-                schoolBenefits: {},
-                masteryAbilities: {},
-                allItems: {}
-            }
-        };
-
-        test('should calculate paper scraps for journal entries without pipeline bonuses', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, emptyPipelineCtx);
-
-            expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(25); // 5 × 5
-            expect(rewards.items).toEqual([]);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-
-        test('should apply Scribe background via ON_JOURNAL_ENTRY pipeline', () => {
-            const ctx = {
-                stateAdapter: {
-                    state: {
-                        [STORAGE_KEYS.LEARNED_ABILITIES]: [],
-                        [STORAGE_KEYS.EQUIPPED_ITEMS]: [],
-                        [STORAGE_KEYS.TEMPORARY_BUFFS]: []
-                    },
-                    formData: { keeperBackground: 'scribe', wizardSchool: '' }
-                },
-                dataModule: {
-                    keeperBackgrounds: {
-                        scribe: {
-                            name: "The Scribe's Acolyte",
-                            effects: [
-                                {
-                                    trigger: TRIGGERS.ON_JOURNAL_ENTRY,
-                                    modifier: {
-                                        type: MODIFIER_TYPES.ADD_FLAT,
-                                        resource: 'paperScraps',
-                                        value: 3
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    schoolBenefits: {},
-                    masteryAbilities: {},
-                    allItems: {}
-                }
-            };
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, ctx);
-
-            expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(40); // 5 × (5 + 3)
-            expect(rewards.modifiedBy).toContain("The Scribe's Acolyte");
-        });
-
-        test('should return zero for zero entries', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(0, emptyPipelineCtx);
-
-            expect(rewards.paperScraps).toBe(0);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-
-        test('should handle negative input gracefully', () => {
-            const rewards = RewardCalculator.calculateJournalEntryRewards(-3, emptyPipelineCtx);
-
-            expect(rewards.paperScraps).toBe(0);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-
-        test('should not apply Scribe bonus for non-scribe backgrounds', () => {
-            const ctx = {
-                ...emptyPipelineCtx,
-                stateAdapter: {
-                    ...emptyPipelineCtx.stateAdapter,
-                    formData: { keeperBackground: 'archivist', wizardSchool: '' }
-                }
-            };
-            const rewards = RewardCalculator.calculateJournalEntryRewards(5, ctx);
-
-            expect(rewards.paperScraps).toBe(25);
-            expect(rewards.modifiedBy).toEqual([]);
-        });
-    });
-
     describe('calculateAtmosphericBuffRewards', () => {
-        test('should calculate paper scraps for active atmospheric buffs', () => {
+        test('atmospheric pays $1/day and sanctum-associated $2/day', () => {
+            const atmosphericBuffs = {
+                'The Candlight Study': { daysUsed: 3, isActive: true },
+                'The Soaking in Nature': { daysUsed: 2, isActive: true }
+            };
+
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, ['The Soaking in Nature']);
+
+            expect(rewards.dollars).toBe(7); // 3 × $1 + 2 × $2
+            expect(rewards.receipt.final.dollars).toBe(7);
+            const lines = rewards.getReceipt().modifiers.map(m => m.description);
+            expect(lines).toEqual(['3 days × $1', '2 days × $2 (Sanctum bonus)']);
+        });
+
+        test('should calculate dollars for active atmospheric buffs', () => {
             const atmosphericBuffs = {
                 'The Candlight Study': { daysUsed: 10, isActive: true },
                 'The Soaking in Nature': { daysUsed: 5, isActive: true },
@@ -711,8 +588,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
 
             expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0);
-            expect(rewards.paperScraps).toBe(30); // (10 + 5) × 2
+            expect(rewards.dollars).toBe(15); // (10 + 5) × $1
             expect(rewards.modifiedBy).toContain('The Candlight Study');
             expect(rewards.modifiedBy).toContain('The Soaking in Nature');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
@@ -723,11 +599,10 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'The Candlight Study': { daysUsed: 10, isActive: true },
                 'The Soaking in Nature': { daysUsed: 5, isActive: true }
             };
-            const associatedBuffs = ['The Candlight Study'];
 
-            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, ['The Candlight Study']);
 
-            expect(rewards.paperScraps).toBe(40); // (10 × 3) + (5 × 2) = 40
+            expect(rewards.dollars).toBe(25); // (10 × 2) + (5 × 1)
         });
 
         test('should ignore buffs with zero days used', () => {
@@ -738,14 +613,14 @@ describe('RewardCalculator - End of Month Calculations', () => {
 
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
 
-            expect(rewards.paperScraps).toBe(10); // Only 5 × 2
+            expect(rewards.dollars).toBe(5);
             expect(rewards.modifiedBy).not.toContain('The Candlight Study');
         });
 
         test('should handle empty atmospheric buffs object', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards({}, []);
 
-            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.dollars).toBe(0);
             expect(rewards.modifiedBy).toEqual([]);
         });
 
@@ -755,11 +630,10 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 'Buff 2': { daysUsed: 4, isActive: true },
                 'Buff 3': { daysUsed: 5, isActive: true }
             };
-            const associatedBuffs = ['Buff 1', 'Buff 3'];
 
-            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, associatedBuffs);
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, ['Buff 1', 'Buff 3']);
 
-            expect(rewards.paperScraps).toBe(32); // (3 × 3) + (4 × 2) + (5 × 3) = 9 + 8 + 15 = 32
+            expect(rewards.dollars).toBe(20); // (3 × 2) + (4 × 1) + (5 × 2)
         });
 
         test('should only process active buffs', () => {
@@ -770,149 +644,106 @@ describe('RewardCalculator - End of Month Calculations', () => {
 
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, []);
 
-            expect(rewards.paperScraps).toBe(20); // Only active buff counted
+            expect(rewards.dollars).toBe(10);
             expect(rewards.modifiedBy).toContain('Active Buff');
             expect(rewards.modifiedBy).not.toContain('Inactive Buff');
         });
 
         test('should count buffs in forcedActiveBuffNames even when isActive is false', () => {
-            const atmosphericBuffs = {
-                'The Soaking in Nature': { daysUsed: 7, isActive: false }
-            };
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
+                { 'The Soaking in Nature': { daysUsed: 7, isActive: false } },
                 [],
                 ['The Soaking in Nature']
             );
-            expect(rewards.paperScraps).toBe(14);
+            expect(rewards.dollars).toBe(7);
             expect(rewards.modifiedBy).toContain('The Soaking in Nature');
         });
 
-        test('should apply an atmospheric multiplier to the total', () => {
-            const atmosphericBuffs = {
-                'The Candlight Study': { daysUsed: 10, isActive: true }
-            };
-
+        test('Tome-Bound Cat adds +$1 per atmospheric buff day (4 days -> +$4)', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
+                { 'The Candlight Study': { daysUsed: 4, isActive: true } },
                 [],
                 [],
-                { multiplier: 2, multiplierSource: 'Tome-Bound Cat' }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
             );
 
-            expect(rewards.paperScraps).toBe(40); // 10 × 2 base, then × 2
+            expect(rewards.dollars).toBe(8); // 4 × $1 base + 4 × $1 cat
         });
 
-        test('should record the multiplier as its own receipt line', () => {
-            const atmosphericBuffs = {
-                'The Candlight Study': { daysUsed: 10, isActive: true }
-            };
-
+        test('should record the daily bonus as its own receipt line', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
+                { 'The Candlight Study': { daysUsed: 10, isActive: true } },
                 [],
                 [],
-                { multiplier: 2, multiplierSource: 'Tome-Bound Cat' }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
             );
             const receipt = rewards.getReceipt();
 
             const catLine = receipt.modifiers.find((m) => m.source === 'Tome-Bound Cat');
-            expect(catLine).toBeDefined();
-            expect(catLine.value).toBe(20); // the added half
-            expect(receipt.final.paperScraps).toBe(40);
+            expect(catLine).toMatchObject({ type: 'atmospheric-bonus', value: 10, currency: 'dollars' });
+            expect(receipt.final.dollars).toBe(20);
         });
 
-        test('should floor a fractional multiplied total', () => {
-            const atmosphericBuffs = {
-                'The Candlight Study': { daysUsed: 5, isActive: true }
-            };
-
-            // Use a sanctum-associated buff so the base (15) is odd and the
-            // multiplied total (22.5) is genuinely fractional — Math.floor at
-            // RewardCalculator.js:928 is untested otherwise.
+        test('the daily bonus pays nothing when no atmospheric day paid out', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
-                ['The Candlight Study'],
+                { 'The Candlight Study': { daysUsed: 5, isActive: false } },
                 [],
-                { multiplier: 1.5, multiplierSource: 'Tome-Bound Cat' }
+                [],
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
             );
 
-            expect(rewards.paperScraps).toBe(22); // 5 × 3 (sanctum) = 15, × 1.5 = 22.5, floored to 22
+            expect(rewards.dollars).toBe(0);
+            expect(rewards.getReceipt().modifiers).toEqual([]);
         });
 
-        test('should leave the total alone when there is no multiplier', () => {
-            const atmosphericBuffs = {
-                'The Candlight Study': { daysUsed: 10, isActive: true }
-            };
+        test('should leave the total alone when there is no daily bonus', () => {
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                { 'The Candlight Study': { daysUsed: 10, isActive: true } },
+                [],
+                [],
+                {}
+            );
 
-            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(atmosphericBuffs, [], [], {});
-
-            expect(rewards.paperScraps).toBe(20);
+            expect(rewards.dollars).toBe(10);
             expect(rewards.getReceipt().modifiers.length).toBe(1);
         });
 
         test('should pay trackable items at their own per-day value even when isActive is false', () => {
-            const atmosphericBuffs = {
-                'Garden Gnome': { daysUsed: 10, isActive: false }
-            };
-
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
+                { 'Garden Gnome': { daysUsed: 10, isActive: false } },
                 [],
                 [],
-                { trackableItemValues: { 'Garden Gnome': 2 } }
+                { trackableItemValues: { 'Garden Gnome': 1 } }
             );
 
-            expect(rewards.paperScraps).toBe(20); // 10 days × the item's own 2/day
+            expect(rewards.dollars).toBe(10); // 10 days × the item's own $1/day
             expect(rewards.modifiedBy).toContain('Garden Gnome');
         });
 
-        test('should use the passive per-day value when the item is displayed not equipped', () => {
-            const atmosphericBuffs = {
-                'Gilded Painting': { daysUsed: 10, isActive: false }
-            };
-
+        test('the daily bonus counts trackable item days alongside buff days', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
+                {
+                    'The Candlight Study': { daysUsed: 5, isActive: true },
+                    'Garden Gnome': { daysUsed: 5, isActive: false }
+                },
                 [],
                 [],
-                { trackableItemValues: { 'Gilded Painting': 1 } }
+                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 1 } }
             );
 
-            expect(rewards.paperScraps).toBe(10);
-        });
-
-        test('should multiply trackable item totals alongside buff totals', () => {
-            const atmosphericBuffs = {
-                'The Candlight Study': { daysUsed: 5, isActive: true },
-                'Garden Gnome': { daysUsed: 5, isActive: false }
-            };
-
-            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
-                [],
-                [],
-                { multiplier: 2, multiplierSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 2 } }
-            );
-
-            expect(rewards.paperScraps).toBe(40); // (5×2 buff + 5×2 gnome) = 20, × 2 = 40
+            expect(rewards.dollars).toBe(20); // (5×$1 buff + 5×$1 gnome) + 10 days × $1 cat
         });
 
         test('should not pay a trackable item with zero days used', () => {
-            const atmosphericBuffs = {
-                'Garden Gnome': { daysUsed: 0, isActive: false }
-            };
-
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
-                atmosphericBuffs,
+                { 'Garden Gnome': { daysUsed: 0, isActive: false } },
                 [],
                 [],
-                { trackableItemValues: { 'Garden Gnome': 2 } }
+                { trackableItemValues: { 'Garden Gnome': 1 } }
             );
 
-            expect(rewards.paperScraps).toBe(0);
+            expect(rewards.dollars).toBe(0);
             expect(rewards.modifiedBy).not.toContain('Garden Gnome');
         });
     });
 });
-

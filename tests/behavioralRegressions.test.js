@@ -14,7 +14,9 @@ import {
     applyTypedReward
 } from '../assets/js/services/SeriesCompletionService.js';
 import { buildQuestDrawHelperList } from '../assets/js/character-sheet/questDrawHelperDiscovery.js';
-import { RewardCalculator } from '../assets/js/services/RewardCalculator.js';
+import { RewardCalculator, Reward } from '../assets/js/services/RewardCalculator.js';
+import { BaseQuestHandler } from '../assets/js/quest-handlers/BaseQuestHandler.js';
+import { QuestController } from '../assets/js/controllers/QuestController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import * as data from '../assets/js/character-sheet/data.js';
@@ -122,7 +124,7 @@ describe('Behavioral regressions - named game entities', () => {
             expect(updateCurrency).not.toHaveBeenCalled();
         });
 
-        test('stop 5 is a passive-rule-modifier (no direct state mutation)', () => {
+        test('stop 5 (Midnight Waystation) pays a flat +$10', () => {
             const stop5 = getStopByOrder(5);
             const updateCurrency = jest.fn();
             const result = applyTypedReward(stop5.reward, {
@@ -130,9 +132,9 @@ describe('Behavioral regressions - named game entities', () => {
                 updateCurrency
             });
 
-            expect(stop5.reward.type).toBe('passive-rule-modifier');
+            expect(stop5.reward.type).toBe('currency');
             expect(result.applied).toBe(true);
-            expect(updateCurrency).not.toHaveBeenCalled();
+            expect(updateCurrency).toHaveBeenCalledWith({ xp: 0, dollars: 10 });
         });
 
         test('stop 7 is a passive-rule-modifier (no direct state mutation)', () => {
@@ -181,28 +183,120 @@ describe('Behavioral regressions - named game entities', () => {
             expect(namesAfter).not.toContain('Unwavering Resolve');
             expect(namesAfter).toContain('Enchanted Focus');
         });
+    });
 
-        test.skip(
-            "The Archivist's Favor choice handling (reroll / +100 XP / 50% off) is not yet encoded in state",
-            () => {}
-        );
+    describe('Use-count temporary buffs pay once per completed quest', () => {
+        // Completes `count` genre quests that each carry the buff's bonus card, through the same
+        // reward path as QuestController (BaseQuestHandler.completeActiveQuest, then
+        // QuestController.spendUseCountBuffsForQuest), and returns how many quests the buff paid on.
+        function completeQuestsWithBuff(adapter, buffName, count) {
+            const controllerLike = { stateAdapter: adapter, dependencies: { ui: {} } };
+            let paid = 0;
+            const dollars = [];
+            for (let i = 0; i < count; i += 1) {
+                const quest = {
+                    type: '♥ Organize the Stacks',
+                    prompt: 'Fantasy',
+                    book: `Book ${i}`,
+                    month: 'January',
+                    year: '2026',
+                    buffs: [`[Buff] ${buffName}`],
+                    rewards: { xp: 15, dollars: 15, blueprints: 0, items: [], modifiedBy: [] }
+                };
+                const completed = BaseQuestHandler.completeActiveQuest(quest, '', '', adapter);
+                QuestController.prototype.spendUseCountBuffsForQuest.call(controllerLike, completed);
+                if (completed.rewards.modifiedBy.includes(buffName)) paid += 1;
+                dollars.push(completed.rewards.dollars);
+            }
+            return { paid, dollars };
+        }
 
-        test('Enchanted Focus usesLeft decrements on book complete and removes after 3 books', () => {
+        function adapterWithBuff(entry) {
             const state = createEmptyCharacterState();
-            state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
+            state[STORAGE_KEYS.TEMPORARY_BUFFS] = [entry];
+            return new StateAdapter(state);
+        }
+
+        test('Enchanted Focus pays +$2 on exactly three completed quests, then is marked used', () => {
+            const adapter = adapterWithBuff(
                 { name: 'Enchanted Focus', duration: 'one-time', status: 'active', usesLeft: 3 }
-            ];
-            const adapter = new StateAdapter(state);
+            );
 
-            adapter.decrementUseCountBuffsOnBookComplete();
-            expect(adapter.getTemporaryBuffs()[0].usesLeft).toBe(2);
+            const { paid, dollars } = completeQuestsWithBuff(adapter, 'Enchanted Focus', 5);
 
-            adapter.decrementUseCountBuffsOnBookComplete();
+            expect(paid).toBe(3);
+            expect(dollars).toEqual([17, 17, 17, 15, 15]);
+            expect(adapter.getTemporaryBuffs()).toEqual([
+                expect.objectContaining({ name: 'Enchanted Focus', status: 'used', usesLeft: 0 })
+            ]);
+        });
+
+        test('Story Surge pays +$2 on exactly five completed quests', () => {
+            const adapter = adapterWithBuff(
+                { name: 'Story Surge', duration: 'one-time', status: 'active', usesLeft: 5 }
+            );
+
+            const { paid, dollars } = completeQuestsWithBuff(adapter, 'Story Surge', 7);
+
+            expect(paid).toBe(5);
+            expect(dollars).toEqual([17, 17, 17, 17, 17, 15, 15]);
+            expect(adapter.getTemporaryBuffs()[0]).toMatchObject({ status: 'used', usesLeft: 0 });
+        });
+
+        test('a buff entry saved without usesLeft counts down from the catalog useCount', () => {
+            const adapter = adapterWithBuff(
+                { name: "Librarian's Blessing", duration: 'one-time', status: 'active' }
+            );
+
+            const { paid, dollars } = completeQuestsWithBuff(adapter, "Librarian's Blessing", 3);
+
+            expect(paid).toBe(2);
+            expect(dollars).toEqual([20, 20, 15]);
+        });
+
+        test('Long Read Focus pays on one quest only', () => {
+            const adapter = adapterWithBuff(
+                { name: 'Long Read Focus', duration: 'one-time', status: 'active', usesLeft: 1 }
+            );
+
+            const { paid } = completeQuestsWithBuff(adapter, 'Long Read Focus', 2);
+
+            expect(paid).toBe(1);
+        });
+
+        test('a batch added as completed pays the last use only once', () => {
+            const adapter = adapterWithBuff(
+                { name: 'Enchanted Focus', duration: 'one-time', status: 'active', usesLeft: 1 }
+            );
+            const handler = new BaseQuestHandler({}, { rewardStateAdapter: adapter });
+            const buffs = ['[Buff] Enchanted Focus'];
+            const makeQuest = (book) => ({
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                book,
+                buffs,
+                rewards: new Reward({ xp: 15, dollars: 15 })
+            });
+
+            const quests = handler.processCompletedQuests([makeQuest('A'), makeQuest('B')], buffs, '', '');
+
+            expect(quests.map(q => q.rewards.dollars)).toEqual([17, 15]);
+            // The live state is untouched until QuestController spends the uses after storing the batch.
             expect(adapter.getTemporaryBuffs()[0].usesLeft).toBe(1);
+        });
 
-            const { expired } = adapter.decrementUseCountBuffsOnBookComplete();
-            expect(adapter.getTemporaryBuffs()).toHaveLength(0);
-            expect(expired).toContain('Enchanted Focus');
+        test('a quest without the bonus card does not spend a use', () => {
+            const adapter = adapterWithBuff(
+                { name: 'Enchanted Focus', duration: 'one-time', status: 'active', usesLeft: 3 }
+            );
+
+            const { changed } = adapter.consumeUseCountBuffsForQuest(
+                ["[Item] Librarian's Compass"],
+                name => data.getTemporaryBuffData(name)?.useCount || 0
+            );
+
+            expect(changed).toBe(false);
+            expect(adapter.getTemporaryBuffs()[0].usesLeft).toBe(3);
         });
     });
 

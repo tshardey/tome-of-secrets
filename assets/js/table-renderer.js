@@ -6,7 +6,6 @@ import {
     allGenres,
     atmosphericBuffs,
     sideQuestsDetailed,
-    curseTableDetailed,
     allItems,
     levelRewards,
     xpLevels,
@@ -17,6 +16,7 @@ import { escapeHtml } from './utils/sanitize.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { characterState, loadState } from './character-sheet/state.js';
 import { safeGetJSON } from './utils/storage.js';
+import { GAME_CONFIG } from './config/gameConfig.js';
 
 function escapeRegExp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -285,8 +285,7 @@ export function renderDungeonRoomsTable() {
         if (room.roomRewards) {
             const rewards = [];
             if (room.roomRewards.xp > 0) rewards.push(`+${room.roomRewards.xp} XP`);
-            if (room.roomRewards.inkDrops > 0) rewards.push(`+${room.roomRewards.inkDrops} Ink Drops`);
-            if (room.roomRewards.paperScraps > 0) rewards.push(`+${room.roomRewards.paperScraps} Paper Scraps`);
+            rewards.push(`+$${GAME_CONFIG.rewards.questBase.dollars}`);
             if (room.roomRewards.items && room.roomRewards.items.length > 0) {
                 room.roomRewards.items.forEach(item => {
                     // Check if item exists in allItems and create a link
@@ -580,22 +579,6 @@ export function renderSideQuestsTable() {
 }
 
 /**
- * Renders curse table as a numbered list
- */
-export function renderCurseTable() {
-    let html = '<ol>';
-    
-    curseTableDetailed.forEach(curse => {
-        html += `
-  <li><strong>${curse.name}:</strong> ${curse.description}</li>`;
-    });
-    
-    html += '\n</ol>';
-    
-    return html;
-}
-
-/**
  * Renders leveling rewards table
  */
 export function renderLevelingRewardsTable() {
@@ -605,8 +588,8 @@ export function renderLevelingRewardsTable() {
     <tr>
       <th>Level</th>
       <th>XP Needed (Cumulative)</th>
-      <th>Ink Drops Reward</th>
-      <th>Paper Scraps Reward</th>
+      <th>Fund Reward</th>
+      <th>Dusty Blueprints</th>
       <th>New Item/Familiar Slot</th>
       <th>School Mastery Point (SMP)</th>
     </tr>
@@ -637,11 +620,8 @@ export function renderLevelingRewardsTable() {
             xpDisplay = xpNeeded === "Max" ? "Max" : xpNeeded.toLocaleString();
         }
         
-        // Format ink drops
-        const inkDisplay = rewards.inkDrops > 0 ? `+${rewards.inkDrops}` : '0';
-        
-        // Format paper scraps
-        const paperDisplay = rewards.paperScraps > 0 ? `+${rewards.paperScraps}` : '0';
+        const dollarsDisplay = rewards.dollars > 0 ? `+$${rewards.dollars}` : '-';
+        const blueprintsDisplay = rewards.blueprints > 0 ? `+${rewards.blueprints}` : '-';
         
         // Format slot (show total if slot was added, otherwise "-")
         let slotDisplay = '-';
@@ -658,8 +638,8 @@ export function renderLevelingRewardsTable() {
     <tr>
       <td>${level}</td>
       <td>${xpDisplay}</td>
-      <td>${inkDisplay}</td>
-      <td>${paperDisplay}</td>
+      <td>${dollarsDisplay}</td>
+      <td>${blueprintsDisplay}</td>
       <td>${slotDisplay}</td>
       <td>${smpDisplay}</td>
     </tr>
@@ -747,12 +727,6 @@ async function initializeTablesAsync() {
     const registerEl = document.getElementById('exchange-register-container');
     if (registerEl) {
         registerEl.innerHTML = renderExchangeRegister();
-    }
-    
-    // Shroud page
-    const curseTableEl = document.getElementById('curse-table');
-    if (curseTableEl) {
-        curseTableEl.innerHTML = processLinks(renderCurseTable());
     }
     
     // Leveling page

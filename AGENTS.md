@@ -4,7 +4,7 @@ This document provides instructions for AI agents on how to interact with, modif
 
 ## Project Overview
 
-This repository contains the source code for "Tome of Secrets," a solo TBR (To Be Read) journaling game. The project is a static website built using Jekyll and is hosted on GitHub Pages.
+This repository contains the source code for "Tome of Secrets," a solo TBR (To Be Read) reading game. The project is a static website built using Jekyll and is hosted on GitHub Pages.
 
 The primary components are:
 1.  **Game Rules**: A collection of Markdown files that detail the rules and mechanics of the game.
@@ -43,7 +43,7 @@ The repository is organized as a standard Jekyll project.
 *   `assets/`: Contains all static assets.
     *   `css/`: Stylesheets for the website's "Dark Academia" theme.
     *   `js/`: JavaScript files for site interactivity.
-        *   `character-sheet/data.js`: Re-exports auto-generated data from JSON (see `assets/data/`). Some legacy shapes (e.g., `sideQuests`, `curseTable`) are derived here from detailed JSON to maintain backward compatibility without duplicating data.
+        *   `character-sheet/data.js`: Re-exports auto-generated data from JSON (see `assets/data/`). Some legacy shapes (e.g., `sideQuests`) are derived here from detailed JSON to maintain backward compatibility without duplicating data.
         *   `character-sheet.js`: Main initialization file using controller-based architecture. Orchestrates all feature controllers.
         *   `controllers/`: Feature controllers for character sheet functionality (full list and deck controllers in [`project-docs/EXTENDING-THE-CODEBASE.md`](project-docs/EXTENDING-THE-CODEBASE.md)):
             * `BaseController.js` - Base class with common patterns (event listener cleanup, saveState helper)
@@ -51,7 +51,6 @@ The repository is organized as a standard Jekyll project.
             * `AbilityController.js` - Ability learning/forgetting
             * `InventoryController.js` - Inventory/equipment management
             * `QuestController.js` - Quest management (adding, editing, completing, discarding)
-            * `CurseController.js` - Curse functionality
             * `BuffController.js` - Temporary and atmospheric buffs
             * `EndOfMonthController.js` - End of month processing
             * …plus deck/draw controllers (dungeon, atmospheric buff, genre quest, side quest decks — see extending guide)
@@ -59,10 +58,10 @@ The repository is organized as a standard Jekyll project.
             * `rewardsRenderer.js` (hydrates `rewards.md`)
             * `sanctumRenderer.js` (hydrates `sanctum.md`)
             * `keeperRenderer.js` (hydrates `keeper.md`)
-        *   `table-renderer.js`: Renders rules tables for pages like `shroud.md`, and also supports Character Sheet overlays/drawers.
+        *   `table-renderer.js`: Renders rules tables for rules pages, and also supports Character Sheet overlays/drawers.
     *   `images/`: All images used on the site.
 *   `assets/data/`: JSON source of truth for game data. Edit these files and run the generator to update the site data:
-    * `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`, `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`, `masteryAbilities.json`, `dungeonRewards.json`, `dungeonCompletionRewards.json`, `allGenres.json`, `genreQuests.json`, `extraCreditRewards.json`, `sideQuestsDetailed.json`, `curseTableDetailed.json`, `temporaryBuffsFromRewards.json`
+    * `xpLevels.json`, `permanentBonuses.json`, `atmosphericBuffs.json`, `schoolBenefits.json`, `sanctumBenefits.json`, `keeperBackgrounds.json`, `allItems.json`, `dungeonRooms.json`, `masteryAbilities.json`, `dungeonRewards.json`, `dungeonCompletionRewards.json`, `allGenres.json`, `genreQuests.json`, `extraCreditRewards.json`, `sideQuestsDetailed.json`, `temporaryBuffsFromRewards.json`
 *   `.md` files (root directory): These are the core content files for the game rules (e.g., `core-mechanics.md`, `rewards.md`). Some previously-standalone rules pages (like quests/leveling) have moved into the Character Sheet UI.
 *   `character-sheet.html`: The HTML file for the interactive character sheet.
 *   `README.md`: Contains detailed instructions for setting up a local development environment and running tests.
@@ -212,7 +211,7 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 ## Important Directives
 
 1.  **Task tracking (Beads):** Create and claim tasks *before* starting work; keep them granular; mark them **done** only after tests pass and subagent review passes (for code). Use **`bd` only** for issue CRUD (see Task Tracking section — no manual `.beads` storage edits). See [`.beads/README.md`](.beads/README.md) and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md).
-2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
+2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
 3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed inside the Docker Compose environment (`docker compose up jekyll`, `docker compose run --rm dev ...`) to ensure all dependencies are available.
 4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
 5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.

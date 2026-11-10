@@ -80,8 +80,6 @@ function consumeCooldownsForAppliedDraftEffects(filteredActive, reward, stateAda
 
 function resourceToastLabel(resource) {
     const map = {
-        inkDrops: 'Ink Drops',
-        paperScraps: 'Paper Scraps',
         xp: 'XP',
         blueprints: 'Blueprints'
     };
@@ -89,7 +87,7 @@ function resourceToastLabel(resource) {
 }
 
 /**
- * Apply ON_QUEST_DRAFTED effects (e.g. Cartographer's Guild ink) when quests enter the active pool.
+ * Apply ON_QUEST_DRAFTED effects (e.g. Cartographer's Guild +$3) when quests enter the active pool.
  * @param {{ state: Object }} stateAdapter
  * @param {Object[]} quests
  * @param {{ updateCurrency?: Function, dataModule?: Object, toast?: { info: Function }, form?: HTMLFormElement|null, formData?: { keeperBackground?: string, wizardSchool?: string }, month?: string, year?: string }} options
@@ -128,15 +126,13 @@ export function applyQuestDraftedEffects(stateAdapter, quests, options = {}) {
         const filteredActive = filterDraftEffectsByCooldown(active, stateAdapter, monthVal, yearVal);
         const reward = ModifierPipeline.resolve(TRIGGERS.ON_QUEST_DRAFTED, payload, filteredActive, new Reward());
 
-        const ink = Number(reward.inkDrops) || 0;
-        const scraps = Number(reward.paperScraps) || 0;
+        const dollars = Number(reward.dollars) || 0;
         const xp = Number(reward.xp) || 0;
         const bp = Number(reward.blueprints) || 0;
-        if (ink || scraps || xp || bp) {
+        if (dollars || xp || bp) {
             updateCurrency({
                 xp,
-                inkDrops: ink,
-                paperScraps: scraps,
+                dollars,
                 blueprints: bp,
                 items: []
             });
@@ -145,7 +141,10 @@ export function applyQuestDraftedEffects(stateAdapter, quests, options = {}) {
         if (toast?.info) {
             for (const mod of reward.receipt?.modifiers || []) {
                 if (mod.type === 'effect:grant_resource' && mod.currency && mod.value) {
-                    toast.info(`${mod.source}: +${mod.value} ${resourceToastLabel(mod.currency)}`);
+                    const amount = mod.currency === 'dollars'
+                        ? `+$${mod.value}`
+                        : `+${mod.value} ${resourceToastLabel(mod.currency)}`;
+                    toast.info(`${mod.source}: ${amount}`);
                 }
             }
         }

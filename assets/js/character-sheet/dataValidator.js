@@ -10,6 +10,7 @@
 import { STORAGE_KEYS, createEmptyCharacterState } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
+import { validateHelperState } from './helperDiscoveryShared.js';
 
 /**
  * Current schema version - increment when data structure changes
@@ -22,15 +23,16 @@ import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js
  * Version 8: Series publication metadata (releasedCount, expectedCount, isCompletedSeries)
  * Version 9: Series expedition progress (seriesExpeditionProgress) for deterministic map advancement
  * Version 10: Shopping/subscription state (shoppingLog, bookBoxSubscriptions, bookBoxHistory) and book shelfCategory
- * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState: usage/cooldown per source)
- * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: same shape as curse helpers)
+ * Version 11: Curse tab – Worn Page mitigation helpers (curseHelperState; retired with the Shroud, migration is now a pass-through)
+ * Version 12: Quest tab – monthly draw / dice helpers (questDrawHelperState: { [sourceId]: { used, cooldownCyclesRemaining? } })
  * Version 13: Modifier pipeline effect cooldowns (effectCooldowns: last-used month/year per effect source key)
  * Version 14: Quest draw helper UI prefs (questDrawHelperSettings: { autoApplyOnDraw })
  * Version 15: Sanctum/buff ID stabilization and side quest ID backfill
  * Version 16: Book tags (tags: [] on each book)
  * Version 17: The Exchange's register (claimedCountries: countries struck off once, ever)
+ * Version 18: Dollar economy (retired curse/shopping/book-box keys and the inkDrops, paperScraps and journal-entries-completed form fields are removed; Fund starts at $0)
  */
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 /**
  * Schema version key in localStorage
@@ -149,18 +151,25 @@ function validateRewards(rewards, context = 'rewards') {
     if (!rewards || typeof rewards !== 'object') {
         return {
             xp: 0,
-            inkDrops: 0,
-            paperScraps: 0,
+            dollars: 0,
             blueprints: 0,
             items: [],
             modifiedBy: []
         };
     }
 
+    const nonNegative = (value) => (typeof value === 'number' && !isNaN(value) ? Math.max(0, value) : 0);
+    // Legacy history: quests completed before the dollar economy stored Ink/Paper amounts.
+    // Keep them (never invent them) so history is preserved; renderers hide them.
+    const legacyCurrency = {};
+    ['inkDrops', 'paperScraps'].forEach((key) => {
+        if (key in rewards) legacyCurrency[key] = nonNegative(rewards[key]);
+    });
+
     return {
-        xp: typeof rewards.xp === 'number' && !isNaN(rewards.xp) ? Math.max(0, rewards.xp) : 0,
-        inkDrops: typeof rewards.inkDrops === 'number' && !isNaN(rewards.inkDrops) ? Math.max(0, rewards.inkDrops) : 0,
-        paperScraps: typeof rewards.paperScraps === 'number' && !isNaN(rewards.paperScraps) ? Math.max(0, rewards.paperScraps) : 0,
+        xp: nonNegative(rewards.xp),
+        dollars: nonNegative(rewards.dollars),
+        ...legacyCurrency,
         // Side quests are the first quest type to carry authored Blueprints on the quest
         // itself. Omitting this key stripped them on every load, so the reward rendered
         // on the card and was never paid.
@@ -192,30 +201,6 @@ function validateItem(item, context = 'item') {
         type: typeof item.type === 'string' ? item.type : '',
         img: typeof item.img === 'string' ? item.img : '',
         bonus: typeof item.bonus === 'string' ? item.bonus : ''
-    };
-}
-
-/**
- * Validate and fix a curse object
- * @param {*} curse - Curse object to validate
- * @param {string} context - Context for error messages
- * @returns {Object|null} - Validated curse object, or null if unfixable
- */
-function validateCurse(curse, context = 'curse') {
-    if (!curse || typeof curse !== 'object') {
-        console.warn(`Invalid curse in ${context}: not an object`);
-        return null;
-    }
-
-    if (typeof curse.name !== 'string' || !curse.name.trim()) {
-        console.warn(`Invalid curse in ${context}: missing or invalid name`);
-        return null;
-    }
-
-    return {
-        name: curse.name.trim(),
-        requirement: typeof curse.requirement === 'string' ? curse.requirement : '',
-        book: typeof curse.book === 'string' ? curse.book : ''
     };
 }
 
@@ -360,30 +345,6 @@ function validateItemArray(items, context = 'items') {
             validated.push(validatedItem);
         } else {
             console.warn(`Skipping invalid item at ${context}[${index}]`);
-        }
-    });
-    return validated;
-}
-
-/**
- * Validate and fix an array of curses
- * @param {Array} curses - Array of curse objects
- * @param {string} context - Context for error messages
- * @returns {Array} - Array of validated curse objects
- */
-function validateCurseArray(curses, context = 'curses') {
-    if (!Array.isArray(curses)) {
-        console.warn(`Invalid ${context}: not an array, using empty array`);
-        return [];
-    }
-
-    const validated = [];
-    curses.forEach((curse, index) => {
-        const validatedCurse = validateCurse(curse, `${context}[${index}]`);
-        if (validatedCurse) {
-            validated.push(validatedCurse);
-        } else {
-            console.warn(`Skipping invalid curse at ${context}[${index}]`);
         }
     });
     return validated;
@@ -756,116 +717,52 @@ function validateSeriesExpeditionProgress(progress, context = STORAGE_KEYS.SERIE
 }
 
 /**
- * Validate a single shopping log entry (Schema v10).
- * Shape: { id?, optionId?, linkedBookIds?, actualMoneySpent?, storeName?, logDate?, inkDrops?, paperScraps?, ... }
+ * Validate the Fund balance: a finite integer number of cents, otherwise 0.
+ * May be negative (overdraft is allowed after a confirm).
  */
-function validateShoppingLogEntry(entry, context = 'shoppingLogEntry') {
-    if (!entry || typeof entry !== 'object') return null;
-    const id = typeof entry.id === 'string' && entry.id.trim() ? entry.id.trim() : (typeof entry.logDate === 'string' ? `${entry.logDate}-${Math.random().toString(36).slice(2, 9)}` : `log-${Math.random().toString(36).slice(2, 11)}`);
-    return {
-        id,
-        optionId: typeof entry.optionId === 'string' ? entry.optionId : (typeof entry.option === 'string' ? entry.option : ''),
-        linkedBookIds: Array.isArray(entry.linkedBookIds) ? entry.linkedBookIds.filter(x => typeof x === 'string' && x.trim()) : [],
-        actualMoneySpent: typeof entry.actualMoneySpent === 'number' && !isNaN(entry.actualMoneySpent) ? entry.actualMoneySpent : null,
-        storeName: typeof entry.storeName === 'string' ? entry.storeName : (typeof entry.store === 'string' ? entry.store : null),
-        logDate: typeof entry.logDate === 'string' ? entry.logDate : new Date().toISOString().slice(0, 10),
-        inkDrops: typeof entry.inkDrops === 'number' && !isNaN(entry.inkDrops) ? Math.max(0, Math.floor(entry.inkDrops)) : 0,
-        paperScraps: typeof entry.paperScraps === 'number' && !isNaN(entry.paperScraps) ? Math.max(0, Math.floor(entry.paperScraps)) : 0
-    };
+function validateFundBalanceCents(value) {
+    if (typeof value === 'number' && Number.isInteger(value)) {
+        return value;
+    }
+    if (value !== undefined) {
+        console.warn(`Invalid ${STORAGE_KEYS.FUND_BALANCE_CENTS}: not a finite integer, using 0`);
+    }
+    return 0;
 }
 
+const FUND_LEDGER_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * Validate shopping log array (Schema v10)
+ * Validate the Fund deduction ledger. Drops malformed entries.
+ * Entry shape: { id: string, date: 'YYYY-MM-DD', amountCents: positive integer, note: string }
  */
-function validateShoppingLog(log, context = STORAGE_KEYS.SHOPPING_LOG) {
-    if (!Array.isArray(log)) {
-        console.warn(`Invalid ${context}: not an array, using empty array`);
+function validateFundLedger(ledger) {
+    if (!Array.isArray(ledger)) {
+        if (ledger !== undefined) {
+            console.warn(`Invalid ${STORAGE_KEYS.FUND_LEDGER}: not an array, using empty array`);
+        }
         return [];
     }
     const validated = [];
-    log.forEach((entry, index) => {
-        const v = validateShoppingLogEntry(entry, `${context}[${index}]`);
-        if (v) validated.push(v);
+    ledger.forEach((entry, index) => {
+        if (!entry || typeof entry !== 'object') return;
+        const id = typeof entry.id === 'string' ? entry.id.trim() : '';
+        const date = typeof entry.date === 'string' ? entry.date.trim() : '';
+        const amountCents = entry.amountCents;
+        if (!id || !FUND_LEDGER_DATE_PATTERN.test(date) || !Number.isInteger(amountCents) || amountCents <= 0) {
+            console.warn(`Invalid ${STORAGE_KEYS.FUND_LEDGER}[${index}]: dropping malformed entry`);
+            return;
+        }
+        validated.push({
+            id,
+            date,
+            amountCents,
+            note: typeof entry.note === 'string' ? entry.note : ''
+        });
     });
     return validated;
 }
 
-/**
- * Validate a single book box subscription (Schema v10).
- * Shape: { id, company, tier, defaultMonthlyCost?, skipsAllowedPerYear? }
- */
-function validateBookBoxSubscription(sub, context = 'bookBoxSubscription') {
-    if (!sub || typeof sub !== 'object') return null;
-    const id = typeof sub.id === 'string' && sub.id.trim() ? sub.id.trim() : null;
-    if (!id) return null;
-    return {
-        id,
-        company: typeof sub.company === 'string' ? sub.company.trim() : '',
-        tier: typeof sub.tier === 'string' ? sub.tier.trim() : '',
-        defaultMonthlyCost: typeof sub.defaultMonthlyCost === 'number' && !isNaN(sub.defaultMonthlyCost) && sub.defaultMonthlyCost >= 0 ? sub.defaultMonthlyCost : null,
-        skipsAllowedPerYear: typeof sub.skipsAllowedPerYear === 'number' && !isNaN(sub.skipsAllowedPerYear) && sub.skipsAllowedPerYear >= 0 ? Math.floor(sub.skipsAllowedPerYear) : 0
-    };
-}
-
-/**
- * Validate bookBoxSubscriptions object (Schema v10)
- */
-function validateBookBoxSubscriptions(subs, context = STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS) {
-    if (!subs || typeof subs !== 'object' || Array.isArray(subs)) {
-        return {};
-    }
-    const validated = {};
-    for (const id in subs) {
-        const s = validateBookBoxSubscription(subs[id], `${context}[${id}]`);
-        if (s && s.id) validated[s.id] = s;
-    }
-    return validated;
-}
-
-/**
- * Validate a single book box history entry (Schema v10).
- * Shape: { id?, subscriptionId, month, year?, type: 'purchased'|'skipped', actualSpend?, inkDrops?, paperScraps?, bookIds?, reaction? }
- */
-function validateBookBoxHistoryEntry(entry, context = 'bookBoxHistoryEntry') {
-    if (!entry || typeof entry !== 'object') return null;
-    const subscriptionId = typeof entry.subscriptionId === 'string' && entry.subscriptionId.trim() ? entry.subscriptionId.trim() : null;
-    if (!subscriptionId) return null;
-    const type = entry.type === 'purchased' || entry.type === 'skipped' ? entry.type : 'purchased';
-    const id = typeof entry.id === 'string' && entry.id.trim() ? entry.id.trim() : null;
-    return {
-        id: id || `${subscriptionId}-${entry.month || ''}-${entry.year || ''}-${Math.random().toString(36).slice(2, 9)}`,
-        subscriptionId,
-        month: typeof entry.month === 'string' ? entry.month : (typeof entry.month === 'number' ? String(entry.month) : ''),
-        year: typeof entry.year === 'string' ? entry.year : (typeof entry.year === 'number' ? String(entry.year) : ''),
-        type,
-        actualSpend: typeof entry.actualSpend === 'number' && !isNaN(entry.actualSpend) ? entry.actualSpend : null,
-        inkDrops: typeof entry.inkDrops === 'number' && !isNaN(entry.inkDrops) ? Math.max(0, Math.floor(entry.inkDrops)) : 0,
-        paperScraps: typeof entry.paperScraps === 'number' && !isNaN(entry.paperScraps) ? Math.max(0, Math.floor(entry.paperScraps)) : 0,
-        bookIds: Array.isArray(entry.bookIds) ? entry.bookIds.filter(x => typeof x === 'string' && x.trim()) : [],
-        reaction: entry.reaction === 'thumbsUp' || entry.reaction === 'thumbsDown' ? entry.reaction : null
-    };
-}
-
-/**
- * Validate bookBoxHistory array (Schema v10)
- */
-function validateBookBoxHistory(history, context = STORAGE_KEYS.BOOK_BOX_HISTORY) {
-    if (!Array.isArray(history)) {
-        console.warn(`Invalid ${context}: not an array, using empty array`);
-        return [];
-    }
-    const validated = [];
-    history.forEach((entry, index) => {
-        const v = validateBookBoxHistoryEntry(entry, `${context}[${index}]`);
-        if (v) validated.push(v);
-    });
-    return validated;
-}
-
-/**
- * Validate curse helper state (Schema v11).
- * Shape: { [sourceId: string]: { used: boolean, cooldownCyclesRemaining?: number } }
- */
 /**
  * Validate effect cooldown state (Schema v13).
  * Shape: { [sourceKey: string]: { month: string, year: string } }
@@ -884,28 +781,6 @@ function validateEffectCooldownState(raw) {
         const year = typeof entry.year === 'string' ? entry.year.trim() : '';
         if (!month || !year) continue;
         validated[sourceKey] = { month, year };
-    }
-    return validated;
-}
-
-function validateCurseHelperState(raw) {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-        return {};
-    }
-    const validated = {};
-    for (const key of Object.keys(raw)) {
-        const sourceId = typeof key === 'string' && key.trim() ? key.trim() : null;
-        if (!sourceId) continue;
-        const entry = raw[key];
-        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
-        const used = typeof entry.used === 'boolean' ? entry.used : false;
-        const cooldownCyclesRemaining = typeof entry.cooldownCyclesRemaining === 'number' && !isNaN(entry.cooldownCyclesRemaining) && entry.cooldownCyclesRemaining >= 0
-            ? Math.floor(entry.cooldownCyclesRemaining)
-            : undefined;
-        validated[sourceId] = { used };
-        if (cooldownCyclesRemaining !== undefined) {
-            validated[sourceId].cooldownCyclesRemaining = cooldownCyclesRemaining;
-        }
     }
     return validated;
 }
@@ -980,14 +855,6 @@ export function validateCharacterState(state) {
     validated[STORAGE_KEYS.ATMOSPHERIC_BUFFS] = validateAtmosphericBuffs(
         state[STORAGE_KEYS.ATMOSPHERIC_BUFFS]
     );
-    validated[STORAGE_KEYS.ACTIVE_CURSES] = validateCurseArray(
-        state[STORAGE_KEYS.ACTIVE_CURSES],
-        STORAGE_KEYS.ACTIVE_CURSES
-    );
-    validated[STORAGE_KEYS.COMPLETED_CURSES] = validateCurseArray(
-        state[STORAGE_KEYS.COMPLETED_CURSES],
-        STORAGE_KEYS.COMPLETED_CURSES
-    );
     validated[STORAGE_KEYS.TEMPORARY_BUFFS] = validateTemporaryBuffArray(
         state[STORAGE_KEYS.TEMPORARY_BUFFS],
         STORAGE_KEYS.TEMPORARY_BUFFS
@@ -1057,11 +924,9 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.CLAIMED_COUNTRIES],
         STORAGE_KEYS.CLAIMED_COUNTRIES
     );
-    validated[STORAGE_KEYS.SHOPPING_LOG] = validateShoppingLog(state[STORAGE_KEYS.SHOPPING_LOG], STORAGE_KEYS.SHOPPING_LOG);
-    validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = validateBookBoxSubscriptions(state[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS], STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS);
-    validated[STORAGE_KEYS.BOOK_BOX_HISTORY] = validateBookBoxHistory(state[STORAGE_KEYS.BOOK_BOX_HISTORY], STORAGE_KEYS.BOOK_BOX_HISTORY);
-    validated[STORAGE_KEYS.CURSE_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.CURSE_HELPER_STATE]);
-    validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateCurseHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
+    validated[STORAGE_KEYS.FUND_BALANCE_CENTS] = validateFundBalanceCents(state[STORAGE_KEYS.FUND_BALANCE_CENTS]);
+    validated[STORAGE_KEYS.FUND_LEDGER] = validateFundLedger(state[STORAGE_KEYS.FUND_LEDGER]);
+    validated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE] = validateHelperState(state[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]);
     validated[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS] = validateQuestDrawHelperSettings(
         state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]
     );

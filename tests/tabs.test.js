@@ -198,20 +198,18 @@ describe('Tab Navigation System', () => {
                     <button data-tab-target="inventory">🎒 Inventory</button>
                     <button data-tab-target="quests">📅 Quests</button>
                     <button data-tab-target="archived">📦 Archived</button>
-                    <button data-tab-target="curses">💀 Curses</button>
                 </nav>
                 <div data-tab-panel="character">Character Tab</div>
                 <div data-tab-panel="abilities">Abilities Tab</div>
                 <div data-tab-panel="inventory">Inventory Tab</div>
                 <div data-tab-panel="quests">Quests Tab</div>
                 <div data-tab-panel="archived">Archived Tab</div>
-                <div data-tab-panel="curses">Curses Tab</div>
             `;
 
             initializeTabs();
 
             // Test switching through all tabs
-            const tabs = ['character', 'abilities', 'inventory', 'quests', 'archived', 'curses'];
+            const tabs = ['character', 'abilities', 'inventory', 'quests', 'archived'];
             
             tabs.forEach(tabId => {
                 switchToTab(tabId);

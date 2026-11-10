@@ -17,11 +17,9 @@ import {
     genreQuests,
     extraCreditRewards,
     sideQuestsDetailed,
-    curseTableDetailed,
     temporaryBuffsFromRewards,
     temporaryBuffs,
     levelRewards,
-    shoppingOptions,
     wings,
     restorationProjects,
     roomThemes,
@@ -40,7 +38,7 @@ export const allGenres = (() => {
 })();
 
 // Re-export JSON data for backward compatibility
-export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, seriesCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, curseTableDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, shoppingOptions, wings, restorationProjects, roomThemes, bookTags };
+export { expansions, xpLevels, permanentBonuses, atmosphericBuffs, schoolBenefits, sanctumBenefits, keeperBackgrounds, allItems, dungeonRooms, masteryAbilities, dungeonRewards, dungeonCompletionRewards, seriesCompletionRewards, genreQuests, extraCreditRewards, sideQuestsDetailed, temporaryBuffsFromRewards, temporaryBuffs, levelRewards, wings, restorationProjects, roomThemes, bookTags };
 
 // atmosphericBuffs and other data are now imported from JSON exports above
 
@@ -130,29 +128,6 @@ export const sideQuestsById = (() => {
 
 export function getSideQuest(idOrKeyOrName) {
     return sideQuestsById.get(idOrKeyOrName) || sideQuestsDetailed[idOrKeyOrName] || null;
-}
-
-// Curse lookup maps
-export const cursesById = (() => {
-    const map = new Map();
-    if (Array.isArray(curseTableDetailed)) {
-        curseTableDetailed.forEach((curse) => {
-            if (curse.id) {
-                map.set(curse.id, curse);
-            }
-            if (curse.name) {
-                map.set(curse.name, curse);
-            }
-            if (curse.number) {
-                map.set(curse.number.toString(), curse);
-            }
-        });
-    }
-    return map;
-})();
-
-export function getCurse(idOrNameOrNumber) {
-    return cursesById.get(idOrNameOrNumber) || null;
 }
 
 // Ability lookup maps
@@ -294,36 +269,21 @@ export const sideQuests = (() => {
     return result;
 })();
 
-export const curseTable = (() => {
-    // Convert detailed array into keyed object with requirement pulled from description semantics
-    // Our detailed format does not carry a separate "requirement" field, so we infer from description
-    // For backward compatibility, we map requirement to the sentence after the first period if present,
-    // and normalize it by removing a leading "You must " and trailing punctuation.
-    const result = {};
-    const normalizeRequirement = (text) => {
-        let req = (text || '').trim();
-        const lower = req.toLowerCase();
-        if (lower.startsWith('you must ')) {
-            req = req.substring(9);
-        }
-        if (req.endsWith('.')) {
-            req = req.substring(0, req.length - 1);
-        }
-        return req.trim();
-    };
-    for (const entry of curseTableDetailed) {
-        const { name, description } = entry;
-        let requirementText = description;
-        const periodIndex = description.indexOf('. ');
-        if (periodIndex !== -1) {
-            requirementText = description.substring(periodIndex + 2);
-        }
-        const requirement = normalizeRequirement(requirementText);
-        result[name] = {
-            name,
-            requirement,
-            description
-        };
-    }
-    return result;
-})();
+/**
+ * Catalog data for a temporary buff (current or legacy source).
+ * @param {string} name
+ * @returns {Object|undefined}
+ */
+export function getTemporaryBuffData(name) {
+    return temporaryBuffs?.[name] || temporaryBuffsFromRewards?.[name];
+}
+
+/**
+ * The "choose one" options authored on a temporary buff, or [] when it has none.
+ * @param {string} name
+ * @returns {Array<{ id: string, label: string, rewardModifier?: Object }>}
+ */
+export function getTemporaryBuffChoices(name) {
+    const choices = getTemporaryBuffData(name)?.choices;
+    return Array.isArray(choices) ? choices : [];
+}

@@ -5,16 +5,16 @@ import { applyQuestDraftedEffects } from '../assets/js/services/QuestDraftEffect
 import * as data from '../assets/js/character-sheet/data.js';
 
 describe('QuestDraftEffectService', () => {
-    test('Cartographer background grants 15 ink when dungeon quest is drafted', () => {
+    test('Cartographer background grants  when dungeon quest is drafted', () => {
         const updateCurrency = jest.fn();
         const state = {};
         const adapter = { state };
-        const cartographerBackground = (data.keeperBackgrounds && data.keeperBackgrounds.cartographer) || {
+        const cartographerBackground = { // synthetic: mechanism test, not catalog values
             effects: [
                 {
                     trigger: 'ON_QUEST_DRAFTED',
                     condition: { questType: 'dungeon_crawl' },
-                    modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 }
+                    modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 3 }
                 }
             ]
         };
@@ -35,19 +35,19 @@ describe('QuestDraftEffectService', () => {
         });
 
         expect(updateCurrency).toHaveBeenCalledWith(
-            expect.objectContaining({ inkDrops: 15, xp: 0, paperScraps: 0 })
+            expect.objectContaining({ dollars: 3, xp: 0 })
         );
     });
 
-    test('non-dungeon quest does not grant Cartographer ink', () => {
+    test('non-dungeon quest does not grant Cartographer dollars', () => {
         const updateCurrency = jest.fn();
         const adapter = { state: {} };
-        const cartographerBackground = (data.keeperBackgrounds && data.keeperBackgrounds.cartographer) || {
+        const cartographerBackground = { // synthetic: mechanism test, not catalog values
             effects: [
                 {
                     trigger: 'ON_QUEST_DRAFTED',
                     condition: { questType: 'dungeon_crawl' },
-                    modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 }
+                    modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 3 }
                 }
             ]
         };
@@ -73,7 +73,7 @@ describe('QuestDraftEffectService', () => {
         expect(updateCurrency).not.toHaveBeenCalled();
     });
 
-    test('non-Cartographer does not grant ink on dungeon draft', () => {
+    test('non-Cartographer does not grant dollars on dungeon draft', () => {
         const updateCurrency = jest.fn();
         const adapter = { state: {} };
         const dataModule = {
@@ -109,13 +109,13 @@ describe('QuestDraftEffectService', () => {
                 return true;
             }
         };
-        const cartographerBackground = (data.keeperBackgrounds && data.keeperBackgrounds.cartographer) || {
+        // No cooldown on the effect (like the catalog Cartographer): every draft pays.
+        const cartographerBackground = { // synthetic: mechanism test, not catalog values
             effects: [
                 {
                     trigger: 'ON_QUEST_DRAFTED',
                     condition: { questType: 'dungeon_crawl' },
-                    modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 },
-                    cooldown: 'monthly'
+                    modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 3 }
                 }
             ]
         };
@@ -139,7 +139,7 @@ describe('QuestDraftEffectService', () => {
         applyQuestDraftedEffects(adapter, [quest], opts);
         expect(updateCurrency).toHaveBeenCalledTimes(1);
         expect(updateCurrency).toHaveBeenCalledWith(
-            expect.objectContaining({ inkDrops: 15, xp: 0, paperScraps: 0 })
+            expect.objectContaining({ dollars: 3, xp: 0 })
         );
 
         applyQuestDraftedEffects(adapter, [quest], opts);
@@ -161,13 +161,12 @@ describe('QuestDraftEffectService', () => {
                 return true;
             }
         };
-        const cartographerBackground = (data.keeperBackgrounds && data.keeperBackgrounds.cartographer) || {
+        const cartographerBackground = { // synthetic: mechanism test, not catalog values
             effects: [
                 {
                     trigger: 'ON_QUEST_DRAFTED',
                     condition: { questType: 'dungeon_crawl' },
-                    modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 },
-                    cooldown: 'monthly'
+                    modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 3 }
                 }
             ]
         };
@@ -192,7 +191,7 @@ describe('QuestDraftEffectService', () => {
 
         expect(updateCurrency).toHaveBeenCalledTimes(2);
         expect(updateCurrency).toHaveBeenCalledWith(
-            expect.objectContaining({ inkDrops: 15, xp: 0, paperScraps: 0 })
+            expect.objectContaining({ dollars: 3, xp: 0 })
         );
     });
 
@@ -219,7 +218,7 @@ describe('QuestDraftEffectService', () => {
                         {
                             trigger: 'ON_QUEST_DRAFTED',
                             condition: { questType: 'dungeon_crawl' },
-                            modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 },
+                            modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 3 },
                             cooldown: 'monthly'
                         }
                     ]
@@ -243,7 +242,7 @@ describe('QuestDraftEffectService', () => {
 
         expect(updateCurrency).toHaveBeenCalledTimes(1);
         expect(updateCurrency).toHaveBeenCalledWith(
-            expect.objectContaining({ inkDrops: 15, xp: 0, paperScraps: 0 })
+            expect.objectContaining({ dollars: 3, xp: 0 })
         );
     });
 });

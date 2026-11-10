@@ -5,7 +5,7 @@
  */
 
 import { BaseQuestHandler } from './BaseQuestHandler.js';
-import { RewardCalculator, Reward } from '../services/RewardCalculator.js';
+import { RewardCalculator } from '../services/RewardCalculator.js';
 import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
@@ -129,15 +129,9 @@ export class RestorationQuestHandler extends BaseQuestHandler {
         // Build the prompt from the project's completion prompt
         const prompt = `${project.name}: ${project.completionPrompt}`;
 
-        // Restoration projects don't have standard rewards (XP, Ink Drops, etc.)
-        // Instead they unlock passive slots
-        const rewards = new Reward({
-            xp: 0,
-            inkDrops: 0,
-            paperScraps: 0,
-            blueprints: 0,
-            items: []
-        });
+        // Restoration projects pay the flat dollar quest base like every other quest type;
+        // their main reward is the passive slot they unlock.
+        const rewards = RewardCalculator.getBaseRewards(this.type, prompt);
 
         const quest = {
             month: common.month,

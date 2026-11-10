@@ -9,44 +9,44 @@ jest.mock('../assets/js/character-sheet/data.js', () => {
         allItems: {
             "Librarian's Compass": {
                 name: "Librarian's Compass",
-                bonus: '+5 Ink Drops for new authors',
+                bonus: '+$5 for new authors',
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['new-author']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
                 }]
             },
             'Scatter Brain Scarab': {
                 name: 'Scatter Brain Scarab',
                 bonus: 'Bonus for reading multiple books',
-                rewardModifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                rewardModifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
             },
             'Cloak of Story-Weaver': {
                 name: 'Cloak of Story-Weaver',
-                bonus: '+5 Ink Drops for series books',
+                bonus: '+$5 for series books',
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['series']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
                 }]
             },
             "Bookwyrm's Scale": {
                 name: "Bookwyrm's Scale",
-                bonus: '+10 Ink Drops for long books',
+                bonus: '+$10 for long books',
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { min: 500 } },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 },
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 },
                     slot: 'equipped'
                 }]
             },
             'Page Sprite': {
                 name: 'Page Sprite',
-                bonus: 'x2 Ink Drops for short books',
+                bonus: 'Books under 300 pages grant +$3.',
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { max: 299 } },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 },
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 3 },
                     slot: 'equipped'
                 }]
             }
@@ -58,7 +58,7 @@ jest.mock('../assets/js/character-sheet/data.js', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['non-fiction'], ['historical-fiction']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             },
             cartographer: {
@@ -66,7 +66,7 @@ jest.mock('../assets/js/character-sheet/data.js', () => {
                 effects: [{
                     trigger: 'ON_QUEST_DRAFTED',
                     condition: { questType: 'dungeon_crawl' },
-                    modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 }
+                    modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 15 }
                 }]
             }
         }
@@ -87,7 +87,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['new-author']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
                 }]
             }
         };
@@ -101,7 +101,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['new-author']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
                 }]
             }
         };
@@ -112,7 +112,7 @@ describe('classifyBonusCardState', () => {
         const bonus = {
             type: 'item',
             itemData: {
-                rewardModifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                rewardModifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
             }
         };
         expect(classifyBonusCardState(bonus, ['fantasy'])).toBe('subjective');
@@ -132,7 +132,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['new-author']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
                 }]
             }
         };
@@ -146,7 +146,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['new-author']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 5 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 5 }
                 }]
             }
         };
@@ -160,7 +160,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['non-fiction'], ['historical-fiction']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };
@@ -174,7 +174,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['non-fiction'], ['historical-fiction']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };
@@ -188,7 +188,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_DRAFTED',
                     condition: { questType: 'dungeon_crawl' },
-                    modifier: { type: 'GRANT_RESOURCE', resource: 'inkDrops', value: 15 }
+                    modifier: { type: 'GRANT_RESOURCE', resource: 'dollars', value: 15 }
                 }]
             }
         };
@@ -202,7 +202,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { tagMatch: [['non-fiction'], ['historical-fiction']] },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };
@@ -216,7 +216,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { min: 500 } },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };
@@ -230,7 +230,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { min: 500 } },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };
@@ -244,7 +244,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { max: 299 } },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 3 }
                 }]
             }
         };
@@ -258,7 +258,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { max: 299 } },
-                    modifier: { type: 'MULTIPLY', resource: 'inkDrops', value: 2 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 3 }
                 }]
             }
         };
@@ -272,7 +272,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { min: 500 } },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };
@@ -286,7 +286,7 @@ describe('classifyBonusCardState', () => {
                 effects: [{
                     trigger: 'ON_QUEST_COMPLETED',
                     condition: { pageCount: { min: 500 } },
-                    modifier: { type: 'ADD_FLAT', resource: 'inkDrops', value: 10 }
+                    modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 }
                 }]
             }
         };

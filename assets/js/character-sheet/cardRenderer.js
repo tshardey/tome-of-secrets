@@ -7,6 +7,7 @@
 
 import { createElement } from '../utils/domHelpers.js';
 import { escapeHtml } from '../utils/sanitize.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 
 /**
  * Wrap a card element so it can be selected via click / Ctrl+click.
@@ -284,7 +285,9 @@ export function renderGenreQuestCard(questCardData) {
     const questData = questCardData.questData;
     const rewards = questData?.rewards || {};
     const blueprintReward = questData?.blueprintReward ?? 0;
-    const hasRewards = (rewards.xp > 0) || (rewards.inkDrops > 0) || (rewards.paperScraps > 0) || (blueprintReward > 0);
+    // Every quest pays the flat dollar base; the catalog only authors XP and blueprints.
+    const dollars = GAME_CONFIG.rewards.questBase.dollars;
+    const hasRewards = (rewards.xp > 0) || (dollars > 0) || (blueprintReward > 0);
     if (hasRewards) {
         const rewardsSection = createElement('div', { class: 'quest-card-rewards' });
         const rewardsTitle = createElement('h4', { class: 'quest-rewards-title' });
@@ -296,15 +299,10 @@ export function renderGenreQuestCard(questCardData) {
             xpReward.innerHTML = `<span class="reward-label">XP</span><span class="reward-value">+${rewards.xp}</span>`;
             rewardsGrid.appendChild(xpReward);
         }
-        if (rewards.inkDrops > 0) {
-            const idReward = createElement('div', { class: 'reward-item ink-drops-reward' });
-            idReward.innerHTML = `<span class="reward-label">💧</span><span class="reward-value">+${rewards.inkDrops}</span>`;
-            rewardsGrid.appendChild(idReward);
-        }
-        if (rewards.paperScraps > 0) {
-            const psReward = createElement('div', { class: 'reward-item paper-scraps-reward' });
-            psReward.innerHTML = `<span class="reward-label">📄</span><span class="reward-value">+${rewards.paperScraps}</span>`;
-            rewardsGrid.appendChild(psReward);
+        if (dollars > 0) {
+            const dollarReward = createElement('div', { class: 'reward-item dollars-reward' });
+            dollarReward.innerHTML = `<span class="reward-label">💰</span><span class="reward-value">+$${dollars}</span>`;
+            rewardsGrid.appendChild(dollarReward);
         }
         if (blueprintReward > 0) {
             const bpReward = createElement('div', { class: 'reward-item blueprints-reward' });
@@ -698,14 +696,13 @@ export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle) {
     }
 
     const rewards = quest.rewards && typeof quest.rewards === 'object' ? quest.rewards : {};
-    const hasRewards = (rewards.xp > 0) || (rewards.inkDrops > 0) ||
-        (rewards.paperScraps > 0) || (rewards.blueprints > 0);
+    // Legacy inkDrops/paperScraps on old completed quests are intentionally not shown.
+    const hasRewards = (rewards.xp > 0) || (rewards.dollars > 0) || (rewards.blueprints > 0);
     if (hasRewards) {
         const rewardsRow = createElement('div', { class: 'tome-card-stat-rewards' });
         const parts = [];
         if (rewards.xp > 0) parts.push(`+${rewards.xp} XP`);
-        if (rewards.inkDrops > 0) parts.push(`+${rewards.inkDrops} 💧`);
-        if (rewards.paperScraps > 0) parts.push(`+${rewards.paperScraps} 📄`);
+        if (rewards.dollars > 0) parts.push(`+$${rewards.dollars}`);
         // Side quests are the first content to pay Blueprints, and the archive card
         // silently omitted them while the active card showed them.
         if (rewards.blueprints > 0) parts.push(`+${rewards.blueprints} 📜`);

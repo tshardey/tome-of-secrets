@@ -13,7 +13,7 @@ import {
     calculateBuffTotal,
     getAssociatedBuffs,
     getBuffState,
-    getAtmosphericBuffMultiplier,
+    getAtmosphericDailyBonus,
     getTrackableAtmosphericItemValues
 } from '../services/AtmosphericBuffService.js';
 
@@ -55,7 +55,7 @@ function getEquippedAtmosphericRewardItems(state) {
 export function createAtmosphericBuffViewModel(state, selectedSanctum, background) {
     const associatedBuffs = getAssociatedBuffs(selectedSanctum);
     const atmosphericBuffsState = state.atmosphericBuffs || {};
-    const { multiplier: atmosphericMultiplier } = getAtmosphericBuffMultiplier(state);
+    const { bonusPerDay } = getAtmosphericDailyBonus(state);
     const trackableItemValues = getTrackableAtmosphericItemValues(state);
 
     const buffViewModels = [];
@@ -80,14 +80,11 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             isActive = true; // Always active for Grove Tender
         }
 
-        // Calculate total; apply multiplier from item data (e.g. Tome-Bound Cat x2 equipped or x1.5 adopted)
+        // Calculate total; an item's flat per-day bonus (e.g. Tome-Bound Cat +$1/day) is added to
+        // each paying day, matching RewardCalculator.calculateAtmosphericBuffRewards().
         let total = calculateBuffTotal(buffState.daysUsed, dailyValue);
-        if (atmosphericMultiplier !== 1 && isActive && total > 0) {
-            // NOTE: floors per-row here, while RewardCalculator.js floors the aggregate
-            // month-end total. With a fractional multiplier (e.g. Tome-Bound Cat's x1.5)
-            // these can diverge from the displayed total — a deliberately deferred
-            // balance decision, not a bug. See RewardCalculator.calculateAtmosphericBuffRewards().
-            total = Math.floor(total * atmosphericMultiplier);
+        if (bonusPerDay > 0 && isActive && total > 0) {
+            total += calculateBuffTotal(buffState.daysUsed, bonusPerDay);
         }
 
         // Determine if row should be highlighted
@@ -103,7 +100,9 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             isHighlighted,
             isGroveBuff,
             isAssociated,
-            isDisabled: isGroveBuff // Grove buff checkbox is disabled
+            isDisabled: isGroveBuff, // Grove buff checkbox is disabled
+            // Item per-day bonus (Tome-Bound Cat) the live total adds when days are edited
+            dailyBonus: isActive ? bonusPerDay : 0
         });
     }
 
@@ -117,13 +116,8 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
             const dailyValue = trackableItemValues[name] ?? 0;
             let total = calculateBuffTotal(daysUsed, dailyValue);
-            if (atmosphericMultiplier !== 1 && total > 0) {
-                // NOTE: floors per-row here, while RewardCalculator.js floors the aggregate
-                // month-end total (across all rows, buffs and trackable items combined).
-                // With a fractional multiplier these can diverge from the displayed total —
-                // a deliberately deferred balance decision, not a bug. See
-                // RewardCalculator.calculateAtmosphericBuffRewards().
-                total = Math.floor(total * atmosphericMultiplier);
+            if (bonusPerDay > 0 && total > 0) {
+                total += calculateBuffTotal(daysUsed, bonusPerDay);
             }
             buffViewModels.push({
                 key: name,
@@ -137,24 +131,25 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
                 isAssociated: false,
                 isDisabled: true, // Checkbox disabled; can't turn off while item is equipped/displayed
                 isTrackableItem: true,
+                dailyBonus: bonusPerDay,
                 bonus
             });
         } else {
-            // Modifier item (e.g. Tome-Bound Cat): multiplier from getAtmosphericBuffMultiplier, no days tracked
-            const multLabel = atmosphericMultiplier !== 1 ? `x${atmosphericMultiplier}` : '—';
+            // Modifier item (e.g. Tome-Bound Cat): flat per-day bonus from getAtmosphericDailyBonus, no days tracked
+            const bonusLabel = bonusPerDay > 0 ? `+$${bonusPerDay}/day` : '—';
             buffViewModels.push({
                 key: name,
                 name,
-                dailyValue: multLabel,
+                dailyValue: bonusLabel,
                 daysUsed: 0,
                 isActive: true,
-                total: atmosphericMultiplier !== 1 ? `x${atmosphericMultiplier} to active buffs` : '—',
+                total: bonusPerDay > 0 ? `+$${bonusPerDay} per paying day` : '—',
                 isHighlighted: false,
                 isGroveBuff: false,
                 isAssociated: false,
                 isDisabled: true,
                 isModifierItem: true,
-                modifierMultiplier: atmosphericMultiplier,
+                modifierBonusPerDay: bonusPerDay,
                 bonus
             });
         }

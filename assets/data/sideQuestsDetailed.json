@@ -4,11 +4,9 @@
         "name": "The Arcane Grimoire",
         "description": "An ancient spellbook writes a new page.",
         "prompt": "Read the book on your TBR the longest.",
-        "reward": "Temp buff: Long Read Focus (+10 Ink Drops on your next completed book).",
+        "reward": "Temp buff: Long Read Focus (+$3 on your next completed quest).",
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Long Read Focus"
             ]
@@ -27,8 +25,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Blood Fury Tattoo"
             ]
@@ -47,8 +43,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Scatter Brain Scarab"
             ]
@@ -67,8 +61,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Librarian's Compass"
             ]
@@ -79,7 +71,7 @@
         "name": "The Glimmering Pools' Gift",
         "description": "A nymph rises from glowing waters.",
         "prompt": "Read a book about transformation.",
-        "reward": "Roll a die: on even gain an Amulet of Duality; on odd gain one Worn Page curse.",
+        "reward": "Roll a die: on even gain an Amulet of Duality; on odd, no bonus.",
         "hasLink": true,
         "link": {
             "text": "Amulet of Duality",
@@ -87,8 +79,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Amulet of Duality"
             ]
@@ -107,8 +97,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Key of the Archive"
             ]
@@ -119,11 +107,9 @@
         "name": "The Scarecrow's Cornfield",
         "description": "Rustling stalks and a grim figure loom.",
         "prompt": "Read a book with an unreliable narrator.",
-        "reward": "Temp buff: Disjointed Perception (+10 Ink Drops, +5 Page Scraps).",
+        "reward": "Temp buff: Disjointed Perception (+$3).",
         "rewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 5,
             "items": []
         }
     },
@@ -140,8 +126,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Tome of Potential"
             ]
@@ -161,8 +145,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "blueprints": 10,
             "items": [
                 "The Haggler's Ledger"
@@ -179,8 +161,6 @@
                 "reward": "Receive The Haggler's Ledger. +10 Dusty Blueprints.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 10,
                     "items": [
                         "The Haggler's Ledger"
@@ -195,8 +175,6 @@
                 "reward": "Receive The Haggler's Ledger. +15 Dusty Blueprints.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 15,
                     "items": [
                         "The Haggler's Ledger"
@@ -211,8 +189,6 @@
                 "reward": "Receive The Haggler's Ledger. +20 Dusty Blueprints.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 20,
                     "items": [
                         "The Haggler's Ledger"
@@ -225,9 +201,7 @@
             "declareBefore": true,
             "condition": "rating >= 4",
             "onSuccess": {
-                "multiply": {
-                    "blueprints": 2
-                }
+                "blueprints": 10
             },
             "onFailure": {
                 "blueprints": -10,
@@ -241,11 +215,9 @@
         "locale": "the-ninefold-bazaar",
         "description": "The merchant at the end of the ninth row sells her books wrapped in butcher's paper and string.",
         "prompt": "Pick a book from its title only. No blurb, no cover, no reviews, no one's opinion. Commit before you look at anything else.",
-        "reward": "+40 XP, +10 Paper Scraps.",
+        "reward": "+40 XP.",
         "rewards": {
             "xp": 40,
-            "inkDrops": 0,
-            "paperScraps": 10,
             "blueprints": 0,
             "items": []
         },
@@ -257,11 +229,9 @@
                 "roll": "1-2",
                 "name": "Sold by title alone",
                 "prompt": "Pick a book from its title only. No blurb, no cover, no reviews, no one's opinion. Commit before you look at anything else.",
-                "reward": "+40 XP, +10 Paper Scraps.",
+                "reward": "+40 XP.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 10,
                     "blueprints": 0,
                     "items": []
                 }
@@ -271,11 +241,9 @@
                 "roll": "3",
                 "name": "Sold by the spine",
                 "prompt": "Stand at a shelf — yours, a store's, a library's — and choose a book touching nothing but spines. No pulling it out to read the back first.",
-                "reward": "+45 XP, +15 Paper Scraps.",
+                "reward": "+45 XP.",
                 "rewards": {
                     "xp": 45,
-                    "inkDrops": 0,
-                    "paperScraps": 15,
                     "blueprints": 0,
                     "items": []
                 }
@@ -285,11 +253,9 @@
                 "roll": "4-5",
                 "name": "Sold by the first line",
                 "prompt": "Read the opening sentence of a book and nothing else — not the blurb, not the cover copy, not the second sentence. Commit or walk away on that one line.",
-                "reward": "+50 XP, +10 Paper Scraps.",
+                "reward": "+50 XP.",
                 "rewards": {
                     "xp": 50,
-                    "inkDrops": 0,
-                    "paperScraps": 10,
                     "blueprints": 0,
                     "items": []
                 }
@@ -299,11 +265,9 @@
                 "roll": "6",
                 "name": "Sold in a lot",
                 "prompt": "She won't split the bundle. Read two short works by the same author, or a book plus its companion novella.",
-                "reward": "+80 XP, +20 Paper Scraps.",
+                "reward": "+80 XP.",
                 "rewards": {
                     "xp": 80,
-                    "inkDrops": 0,
-                    "paperScraps": 20,
                     "blueprints": 0,
                     "items": []
                 }
@@ -338,8 +302,6 @@
         },
         "rewards": {
             "xp": 25,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "blueprints": 0,
             "items": [
                 "The Reveler's Mask"
@@ -356,8 +318,6 @@
                 "reward": "Receive The Reveler's Mask. +25 XP.",
                 "rewards": {
                     "xp": 25,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 0,
                     "items": [
                         "The Reveler's Mask"
@@ -369,11 +329,9 @@
                 "roll": null,
                 "name": "The Other Life",
                 "prompt": "Read a book whose narrator's ordinary day has nothing in common with yours — different work, different body, different century, different belief about what a day is for.",
-                "reward": "Receive The Reveler's Mask. +20 XP, +5 Paper Scraps.",
+                "reward": "Receive The Reveler's Mask. +20 XP.",
                 "rewards": {
                     "xp": 20,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "blueprints": 0,
                     "items": [
                         "The Reveler's Mask"
@@ -388,8 +346,6 @@
                 "reward": "Receive The Reveler's Mask. +30 XP.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 0,
                     "items": [
                         "The Reveler's Mask"
@@ -400,9 +356,9 @@
         "stake": {
             "name": "Unmasking",
             "declareBefore": false,
-            "condition": "journal >= 3 sentences",
+            "condition": "you guessed a hidden identity before the reveal",
             "onSuccess": {
-                "paperScraps": 10
+                "dollars": 3
             },
             "onFailure": {}
         }
@@ -413,11 +369,9 @@
         "locale": "the-festival-of-turning",
         "description": "One table runs the length of the square, end to end. Nobody eats alone at the Festival of Turning — that is the entire body of festival law, and it is enforced by grandmothers.",
         "prompt": "Buddy read: read a book at the same time as someone else and talk to them about it at least once before either of you finishes.",
-        "reward": "+60 XP, +20 Paper Scraps.",
+        "reward": "+60 XP.",
         "rewards": {
             "xp": 60,
-            "inkDrops": 0,
-            "paperScraps": 20,
             "blueprints": 0,
             "items": []
         },
@@ -429,11 +383,9 @@
                 "roll": null,
                 "name": "The shared plate",
                 "prompt": "Buddy read: read a book at the same time as someone else and talk to them about it at least once before either of you finishes.",
-                "reward": "+60 XP, +20 Paper Scraps.",
+                "reward": "+60 XP.",
                 "rewards": {
                     "xp": 60,
-                    "inkDrops": 0,
-                    "paperScraps": 20,
                     "blueprints": 0,
                     "items": []
                 }
@@ -443,11 +395,9 @@
                 "roll": null,
                 "name": "The long meal",
                 "prompt": "Read a book aloud to someone, or be read to — a partner, a child, a friend on a call. Any length counts; a picture book counts.",
-                "reward": "+50 XP, +15 Paper Scraps.",
+                "reward": "+50 XP.",
                 "rewards": {
                     "xp": 50,
-                    "inkDrops": 0,
-                    "paperScraps": 15,
                     "blueprints": 0,
                     "items": []
                 }
@@ -457,11 +407,9 @@
                 "roll": null,
                 "name": "The recipe",
                 "prompt": "Read a book with a meal at its center, then cook or make something that actually appears in it.",
-                "reward": "+40 XP, +10 Paper Scraps, +10 Dusty Blueprints.",
+                "reward": "+40 XP, +10 Dusty Blueprints.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 10,
                     "blueprints": 10,
                     "items": []
                 }
@@ -473,9 +421,7 @@
             "condition": "partner did not follow through",
             "onSuccess": {},
             "onFailure": {
-                "halve": [
-                    "xp"
-                ],
+                "xp": -30,
                 "floorAtZero": true
             }
         }
@@ -494,8 +440,6 @@
         },
         "rewards": {
             "xp": 20,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "blueprints": 0,
             "items": [
                 "Visiting Scholar's Sigil"
@@ -512,8 +456,6 @@
                 "reward": "Receive the Visiting Scholar's Sigil. +20 XP.",
                 "rewards": {
                     "xp": 20,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 0,
                     "items": [
                         "Visiting Scholar's Sigil"
@@ -525,11 +467,9 @@
                 "roll": null,
                 "name": "Enrollment record",
                 "prompt": "Read a book by an author from a country you have never read a book from — and strike that country off the Exchange's register. Each country can be claimed once, ever.",
-                "reward": "Receive the Visiting Scholar's Sigil. +25 XP, +5 Paper Scraps.",
+                "reward": "Receive the Visiting Scholar's Sigil. +25 XP.",
                 "rewards": {
                     "xp": 25,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "blueprints": 0,
                     "items": [
                         "Visiting Scholar's Sigil"
@@ -542,11 +482,9 @@
                 "roll": null,
                 "name": "The untranslated",
                 "prompt": "Read a book that leaves words from another language standing in the text — italicised terms, a glossary, an untranslated song, dialect the author refuses to gloss. Log three words you learned.",
-                "reward": "Receive the Visiting Scholar's Sigil. +20 XP, +10 Paper Scraps.",
+                "reward": "Receive the Visiting Scholar's Sigil. +20 XP.",
                 "rewards": {
                     "xp": 20,
-                    "inkDrops": 0,
-                    "paperScraps": 10,
                     "blueprints": 0,
                     "items": [
                         "Visiting Scholar's Sigil"
@@ -561,11 +499,9 @@
         "locale": "the-exchange",
         "description": "The Exchange grades on output, not on hours. Reading is the prerequisite for the coursework here, not the coursework itself.",
         "prompt": "Read anything, then teach one idea out of it to another person, out loud, for five minutes. They're allowed to ask questions. You're not allowed to read from the book.",
-        "reward": "+80 XP, +15 Paper Scraps.",
+        "reward": "+80 XP.",
         "rewards": {
             "xp": 80,
-            "inkDrops": 0,
-            "paperScraps": 15,
             "blueprints": 0,
             "items": []
         },
@@ -577,11 +513,9 @@
                 "roll": "1",
                 "name": "The lecture",
                 "prompt": "Read anything, then teach one idea out of it to another person, out loud, for five minutes. They're allowed to ask questions. You're not allowed to read from the book.",
-                "reward": "+80 XP, +15 Paper Scraps.",
+                "reward": "+80 XP.",
                 "rewards": {
                     "xp": 80,
-                    "inkDrops": 0,
-                    "paperScraps": 15,
                     "blueprints": 0,
                     "items": []
                 }
@@ -594,8 +528,6 @@
                 "reward": "+70 XP, +20 Dusty Blueprints.",
                 "rewards": {
                     "xp": 70,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 20,
                     "items": []
                 }
@@ -605,11 +537,9 @@
                 "roll": "3",
                 "name": "The seminar",
                 "prompt": "Read two books that disagree about the same subject, and write a paragraph on exactly where they part ways.",
-                "reward": "+120 XP, +20 Paper Scraps.",
+                "reward": "+120 XP.",
                 "rewards": {
                     "xp": 120,
-                    "inkDrops": 0,
-                    "paperScraps": 20,
                     "blueprints": 0,
                     "items": []
                 }
@@ -619,25 +549,14 @@
                 "roll": "4",
                 "name": "The primary source",
                 "prompt": "Read a diary, collected letters, an oral history, or first-hand testimony from someone who was there. Not memoir — the Philosophy Alcove already takes memoir. This is unshaped material: documents rather than a narrative built out of them.",
-                "reward": "+90 XP, +10 Paper Scraps.",
+                "reward": "+90 XP.",
                 "rewards": {
                     "xp": 90,
-                    "inkDrops": 0,
-                    "paperScraps": 10,
                     "blueprints": 0,
                     "items": []
                 }
             }
-        ],
-        "stake": {
-            "name": "Credit transfer",
-            "declareBefore": false,
-            "condition": "assignment output logged as a journal entry",
-            "onSuccess": {
-                "countsAsJournalEntry": true
-            },
-            "onFailure": {}
-        }
+        ]
     },
     "15": {
         "id": "side-quest-the-crossroads-inn",
@@ -653,8 +572,6 @@
         },
         "rewards": {
             "xp": 20,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "blueprints": 0,
             "items": [
                 "The Crossroads Fox"
@@ -671,8 +588,6 @@
                 "reward": "Receive The Crossroads Fox. +20 XP.",
                 "rewards": {
                     "xp": 20,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 0,
                     "items": [
                         "The Crossroads Fox"
@@ -684,11 +599,9 @@
                 "roll": null,
                 "name": "The Server",
                 "prompt": "He brings what the kitchen sent out; nobody consulted you. Read a book pressed on you by a stranger whose taste you have no reason to trust — a shelf card, a note left inside a used copy, a list you stumbled into.",
-                "reward": "Receive The Crossroads Fox. +20 XP, +5 Paper Scraps.",
+                "reward": "Receive The Crossroads Fox. +20 XP.",
                 "rewards": {
                     "xp": 20,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "blueprints": 0,
                     "items": [
                         "The Crossroads Fox"
@@ -703,8 +616,6 @@
                 "reward": "Receive The Crossroads Fox. +30 XP.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 0,
                     "items": [
                         "The Crossroads Fox"
@@ -719,11 +630,9 @@
         "locale": "the-open-road",
         "description": "The ferry runs the narrows in well under an hour. Whatever you brought needs to be finished before the far bank.",
         "prompt": "A collection, a chapbook, or a novel in verse.",
-        "reward": "+40 XP, +25 Paper Scraps.",
+        "reward": "+40 XP.",
         "rewards": {
             "xp": 40,
-            "inkDrops": 0,
-            "paperScraps": 25,
             "blueprints": 0,
             "items": []
         },
@@ -735,11 +644,9 @@
                 "roll": "1",
                 "name": "Poetry",
                 "prompt": "A collection, a chapbook, or a novel in verse.",
-                "reward": "+40 XP, +25 Paper Scraps.",
+                "reward": "+40 XP.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 25,
                     "blueprints": 0,
                     "items": []
                 }
@@ -749,11 +656,9 @@
                 "roll": "2",
                 "name": "Illustrated",
                 "prompt": "A graphic novel, comic, manga, or an illustrated edition where the pictures are doing real work.",
-                "reward": "+40 XP, +20 Paper Scraps, +10 Dusty Blueprints.",
+                "reward": "+40 XP, +10 Dusty Blueprints.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 20,
                     "blueprints": 10,
                     "items": []
                 }
@@ -763,11 +668,9 @@
                 "roll": "3",
                 "name": "Short form",
                 "prompt": "A short story collection, an essay collection, or a novella.",
-                "reward": "+50 XP, +20 Paper Scraps.",
+                "reward": "+50 XP.",
                 "rewards": {
                     "xp": 50,
-                    "inkDrops": 0,
-                    "paperScraps": 20,
                     "blueprints": 0,
                     "items": []
                 }
@@ -777,11 +680,9 @@
                 "roll": "4",
                 "name": "Spoken",
                 "prompt": "A full-cast audiobook, or one read by the author.",
-                "reward": "+40 XP, +15 Paper Scraps, +10 Dusty Blueprints.",
+                "reward": "+40 XP, +10 Dusty Blueprints.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 15,
                     "blueprints": 10,
                     "items": []
                 }
@@ -811,8 +712,6 @@
         },
         "rewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "blueprints": 25,
             "items": [
                 "The Mender's Thread"
@@ -829,8 +728,6 @@
                 "reward": "Receive The Mender's Thread. +25 Dusty Blueprints.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 25,
                     "items": [
                         "The Mender's Thread"
@@ -842,11 +739,9 @@
                 "roll": null,
                 "name": "The re-read",
                 "prompt": "Re-read a book you loved at least five years ago, and log one thing you noticed this time that you missed then. The previous reader is you.",
-                "reward": "Receive The Mender's Thread. +15 Dusty Blueprints, +10 Paper Scraps.",
+                "reward": "Receive The Mender's Thread. +15 Dusty Blueprints.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 10,
                     "blueprints": 15,
                     "items": [
                         "The Mender's Thread"
@@ -861,8 +756,6 @@
                 "reward": "Receive The Mender's Thread. +20 Dusty Blueprints.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "blueprints": 20,
                     "items": [
                         "The Mender's Thread"
@@ -877,11 +770,9 @@
         "locale": "the-open-road",
         "description": "A staging post where letters wait for riders. The postmaster will carry absolutely anything, provided it is addressed to somebody.",
         "prompt": "Read an epistolary novel, or a book told through documents, transcripts, case files, or found records.",
-        "reward": "+50 XP, +25 Paper Scraps.",
+        "reward": "+50 XP.",
         "rewards": {
             "xp": 50,
-            "inkDrops": 0,
-            "paperScraps": 25,
             "blueprints": 0,
             "items": []
         },
@@ -893,11 +784,9 @@
                 "roll": null,
                 "name": "Letters received",
                 "prompt": "Read an epistolary novel, or a book told through documents, transcripts, case files, or found records.",
-                "reward": "+50 XP, +25 Paper Scraps.",
+                "reward": "+50 XP.",
                 "rewards": {
                     "xp": 50,
-                    "inkDrops": 0,
-                    "paperScraps": 25,
                     "blueprints": 0,
                     "items": []
                 }
@@ -907,11 +796,9 @@
                 "roll": null,
                 "name": "Letters sent",
                 "prompt": "Read anything, then write to someone about it — an actual letter, a long message, a review posted where strangers can read it.",
-                "reward": "+40 XP, +30 Paper Scraps.",
+                "reward": "+40 XP.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 30,
                     "blueprints": 0,
                     "items": []
                 }
@@ -921,11 +808,9 @@
                 "roll": null,
                 "name": "Letters left",
                 "prompt": "Read a book and leave something in it for whoever reads it next — an annotation, a pressed note, a copy handed on with a message tucked inside.",
-                "reward": "+40 XP, +25 Paper Scraps, +10 Dusty Blueprints.",
+                "reward": "+40 XP, +10 Dusty Blueprints.",
                 "rewards": {
                     "xp": 40,
-                    "inkDrops": 0,
-                    "paperScraps": 25,
                     "blueprints": 10,
                     "items": []
                 }

@@ -10,7 +10,8 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { getStoredSchemaVersion, SCHEMA_VERSION, saveSchemaVersion } from './dataValidator.js';
-import { safeGetJSON } from '../utils/storage.js';
+import { safeGetJSON, safeRemoveJSON } from '../utils/storage.js';
+import { purgeStateKey } from './persistence.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import * as data from './data.js';
 
@@ -31,24 +32,22 @@ function migrateQuestRewards(quest) {
     // Generate default rewards based on quest type
     const defaultRewards = {
         xp: 0,
-        inkDrops: 0,
-        paperScraps: 0,
+        // Historical quests never show invented dollars; active quests are recomputed at completion.
+        dollars: 0,
         items: [],
         modifiedBy: []
     };
 
     if (quest.type === '♥ Organize the Stacks') {
         defaultRewards.xp = GAME_CONFIG.rewards.organizeTheStacks.xp;
-        defaultRewards.inkDrops = GAME_CONFIG.rewards.organizeTheStacks.inkDrops;
     } else if (quest.type === '⭐ Extra Credit') {
-        defaultRewards.paperScraps = GAME_CONFIG.rewards.extraCredit.paperScraps;
+        // Extra credit carries no XP
     } else if (quest.type === '♠ Dungeon Crawl' && quest.isEncounter) {
         // Default encounter rewards
         defaultRewards.xp = GAME_CONFIG.rewards.encounter.monster.xp;
     } else {
         // Default quest completion rewards
         defaultRewards.xp = GAME_CONFIG.rewards.defaultQuestCompletion.xp;
-        defaultRewards.inkDrops = GAME_CONFIG.rewards.defaultQuestCompletion.inkDrops;
     }
 
     return {
@@ -247,21 +246,12 @@ function migrateToVersion9(state) {
 
 /**
  * Migration from schema version 9 to version 10
- * - Adds shoppingLog ([]), bookBoxSubscriptions ({}), bookBoxHistory ([])
+ * - Originally also added shoppingLog, bookBoxSubscriptions and bookBoxHistory. The shopping
+ *   page has been removed (v18 deletes those keys), so they are no longer created here.
  * - Adds shelfCategory to each book; existing books get 'general'
  */
 function migrateToVersion10(state) {
     const migrated = { ...state };
-
-    if (!(STORAGE_KEYS.SHOPPING_LOG in migrated) || !Array.isArray(migrated[STORAGE_KEYS.SHOPPING_LOG])) {
-        migrated[STORAGE_KEYS.SHOPPING_LOG] = [];
-    }
-    if (!(STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS in migrated) || typeof migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] !== 'object' || Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS])) {
-        migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS] = {};
-    }
-    if (!(STORAGE_KEYS.BOOK_BOX_HISTORY in migrated) || !Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY])) {
-        migrated[STORAGE_KEYS.BOOK_BOX_HISTORY] = [];
-    }
 
     const books = migrated[STORAGE_KEYS.BOOKS];
     if (books && typeof books === 'object' && !Array.isArray(books)) {
@@ -282,15 +272,11 @@ function migrateToVersion10(state) {
 
 /**
  * Migration from schema version 10 to version 11
- * - Adds curseHelperState ({}) for Worn Page mitigation helper usage / cooldown tracking
+ * - Originally added curseHelperState for Worn Page helpers. The Shroud/curse system has been
+ *   removed, so this step is now a pass-through (the retired key is no longer created).
  */
 function migrateToVersion11(state) {
-    const migrated = { ...state };
-    const key = STORAGE_KEYS.CURSE_HELPER_STATE;
-    if (!(key in migrated) || typeof migrated[key] !== 'object' || Array.isArray(migrated[key])) {
-        migrated[key] = {};
-    }
-    return migrated;
+    return { ...state };
 }
 
 /**
@@ -436,6 +422,93 @@ function migrateToVersion17(state) {
         migrated[STORAGE_KEYS.CLAIMED_COUNTRIES] = [];
     }
     return migrated;
+}
+
+/**
+ * State keys retired by the dollar economy (Shroud curses, Worn Page helpers, shopping page,
+ * book boxes). Local string literals on purpose: the STORAGE_KEYS constants are gone, and
+ * this list must keep matching what old saves actually contain.
+ */
+export const RETIRED_STATE_KEYS = Object.freeze([
+    'activeCurses',
+    'completedCurses',
+    'curseHelperState',
+    'shoppingLog',
+    'bookBoxSubscriptions',
+    'bookBoxHistory'
+]);
+
+/** Character-sheet form fields retired by the dollar economy (Ink Drops, Paper Scraps, journaling). */
+export const RETIRED_FORM_FIELDS = Object.freeze([
+    'inkDrops',
+    'paperScraps',
+    'journal-entries-completed'
+]);
+
+/** Schema version that retired the state keys and form fields above. */
+export const RETIREMENT_SCHEMA_VERSION = 18;
+
+/**
+ * Remove retired fields from a character-sheet form blob. Pure and idempotent; returns a
+ * new object. Runs on every form-blob load and on every cloud snapshot apply.
+ * @param {Object} formData
+ * @returns {Object}
+ */
+export function stripRetiredFormFields(formData) {
+    if (!formData || typeof formData !== 'object' || Array.isArray(formData)) {
+        return {};
+    }
+    const stripped = { ...formData };
+    RETIRED_FORM_FIELDS.forEach((field) => {
+        delete stripped[field];
+    });
+    return stripped;
+}
+
+/**
+ * Migration from schema version 17 to version 18 (dollar economy)
+ * - Deletes the retired curse, shopping and book-box state keys
+ * - Starts the Fund at $0 with an empty deduction ledger, only when they are absent
+ *   (old Ink Drops / Paper Scraps balances are discarded, not converted)
+ * - Refreshes stored temporary-buff descriptions from the catalog (no buff was removed or
+ *   renamed, but their saved text still described Ink Drops, Paper Scraps or Worn Pages).
+ *   Buffs not found in the catalog are kept as they are.
+ * - Leaves every other key untouched
+ */
+function migrateToVersion18(state) {
+    const migrated = { ...state };
+    RETIRED_STATE_KEYS.forEach((key) => {
+        delete migrated[key];
+    });
+    const tempBuffs = migrated[STORAGE_KEYS.TEMPORARY_BUFFS];
+    if (Array.isArray(tempBuffs)) {
+        migrated[STORAGE_KEYS.TEMPORARY_BUFFS] = tempBuffs.map((buff) => {
+            if (!buff || typeof buff !== 'object' || typeof buff.name !== 'string') return buff;
+            const name = buff.name.trim();
+            const catalogBuff = data.getTemporaryBuff(name) || data.getTemporaryBuffFromReward(name);
+            if (!catalogBuff || typeof catalogBuff.description !== 'string') return buff;
+            return { ...buff, description: catalogBuff.description };
+        });
+    }
+    if (!(STORAGE_KEYS.FUND_BALANCE_CENTS in migrated)) {
+        migrated[STORAGE_KEYS.FUND_BALANCE_CENTS] = 0;
+    }
+    if (!(STORAGE_KEYS.FUND_LEDGER in migrated)) {
+        migrated[STORAGE_KEYS.FUND_LEDGER] = [];
+    }
+    return migrated;
+}
+
+/**
+ * Delete the retired state keys from every store (IndexedDB and localStorage).
+ * activeCurses/completedCurses used to be IndexedDB-backed, so old copies may be
+ * orphaned there as well as in localStorage.
+ * @returns {Promise<void>}
+ */
+export async function purgeRetiredStateKeys() {
+    for (const key of RETIRED_STATE_KEYS) {
+        await purgeStateKey(key);
+    }
 }
 
 /**
@@ -607,8 +680,6 @@ function migrateToVersion1(state) {
         [STORAGE_KEYS.INVENTORY_ITEMS]: [],
         [STORAGE_KEYS.LEARNED_ABILITIES]: [],
         [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
-        [STORAGE_KEYS.ACTIVE_CURSES]: [],
-        [STORAGE_KEYS.COMPLETED_CURSES]: [],
         [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
         [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
         [STORAGE_KEYS.SELECTED_GENRES]: [],
@@ -660,10 +731,13 @@ function needsBooksRepair(state) {
 /**
  * Run all necessary migrations to bring data to current schema version
  * @param {Object} state - Current state object
+ * @param {Object} [options]
+ * @param {number} [options.fromVersion] - Schema version the state is at. Defaults to the
+ *   version stored in localStorage (used when applying a cloud snapshot, which carries its own).
  * @returns {Object} - Migrated state object
  */
-export function migrateState(state) {
-    const storedVersion = getStoredSchemaVersion();
+export function migrateState(state, { fromVersion } = {}) {
+    const storedVersion = Number.isInteger(fromVersion) ? fromVersion : getStoredSchemaVersion();
     
     // If already at current version, run idempotent repair for books if needed.
     if (storedVersion === SCHEMA_VERSION) {
@@ -736,6 +810,9 @@ export function migrateState(state) {
             case 17:
                 migratedState = migrateToVersion17(migratedState);
                 break;
+            case 18:
+                migratedState = migrateToVersion18(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -768,8 +845,6 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.INVENTORY_ITEMS,
         STORAGE_KEYS.LEARNED_ABILITIES,
         STORAGE_KEYS.ATMOSPHERIC_BUFFS,
-        STORAGE_KEYS.ACTIVE_CURSES,
-        STORAGE_KEYS.COMPLETED_CURSES,
         STORAGE_KEYS.TEMPORARY_BUFFS,
         STORAGE_KEYS.BUFF_MONTH_COUNTER,
         STORAGE_KEYS.SELECTED_GENRES,
@@ -787,9 +862,8 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.SERIES,
         STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
         STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
-        STORAGE_KEYS.SHOPPING_LOG,
-        STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS,
-        STORAGE_KEYS.BOOK_BOX_HISTORY
+        STORAGE_KEYS.FUND_BALANCE_CENTS,
+        STORAGE_KEYS.FUND_LEDGER
     ];
 
     stateKeys.forEach(key => {
@@ -798,11 +872,7 @@ export function loadAndMigrateState() {
             defaultValue = {};
         } else if (key === STORAGE_KEYS.EXTERNAL_CURRICULUM) {
             defaultValue = { curriculums: {} };
-        } else if (key === STORAGE_KEYS.CLAIMED_SERIES_REWARDS || key === STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS || key === STORAGE_KEYS.SHOPPING_LOG || key === STORAGE_KEYS.BOOK_BOX_HISTORY) {
-            defaultValue = [];
-        } else if (key === STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS) {
-            defaultValue = {};
-        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
+        } else if (key === STORAGE_KEYS.BUFF_MONTH_COUNTER || key === STORAGE_KEYS.DUSTY_BLUEPRINTS || key === STORAGE_KEYS.FUND_BALANCE_CENTS) {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
             defaultValue = 'd6';
@@ -812,6 +882,9 @@ export function loadAndMigrateState() {
         state[key] = safeGetJSON(key, defaultValue);
     });
 
-    // Migrate state to current schema version
-    return migrateState(state);
+    // Migrate state to current schema version, then drop the retired keys from localStorage
+    // (synchronous path; loadState() also purges IndexedDB via purgeRetiredStateKeys()).
+    const migrated = migrateState(state);
+    RETIRED_STATE_KEYS.forEach(key => safeRemoveJSON(key));
+    return migrated;
 }

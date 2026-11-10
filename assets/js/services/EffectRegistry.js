@@ -212,8 +212,8 @@ export class EffectRegistry {
     }
 
     /**
-     * Resolve the atmospheric buff IDs/names that receive a sanctum ON_MONTH_END multiplier.
-     * Prefers structured sanctum effects and falls back to legacy associatedBuffs.
+     * Resolve the atmospheric buff IDs associated with a sanctum (they pay the sanctum daily rate).
+     * Read from the sanctum's associatedBuffs list in sanctumBenefits.json.
      * @param {string} sanctumIdOrName
      * @param {Object} dataModule
      * @returns {string[]}
@@ -235,28 +235,9 @@ export class EffectRegistry {
             return buff?.id || buffNameOrId;
         };
 
-        // These MULTIPLY/inkDrops effects in sanctumBenefits.json are a SELECTOR for which
-        // atmospheric buffs are sanctum-associated, not a reward — never applied as an ink
-        // multiplier. Atmospheric buffs actually pay Paper Scraps (GAME_CONFIG.atmospheric),
-        // so this reads as stale ink data but must NOT be "fixed" to paperScraps: that makes
-        // this filter match nothing and silently fall back to legacy associatedBuffs.
-        // Decoupling tracked as tome-of-secrets-qjbg.
-        const fromEffects = (sanctum.effects || [])
-            .filter((effect) => effect?.trigger === TRIGGERS.ON_MONTH_END)
-            .filter((effect) => effect?.modifier?.type === MODIFIER_TYPES.MULTIPLY)
-            .filter((effect) => effect?.modifier?.resource === 'inkDrops')
-            .filter((effect) => Number(effect?.modifier?.value) > 1)
-            .map((effect) => effect?.condition?.hasAtmosphericBuff)
-            .filter((buffNameOrId) => typeof buffNameOrId === 'string' && buffNameOrId.length)
-            .map(normalizeBuff);
-
-        if (fromEffects.length > 0) {
-            return Array.from(new Set(fromEffects));
-        }
-
-        const legacy = (sanctum.associatedBuffs || [])
+        const associated = (sanctum.associatedBuffs || [])
             .map(normalizeBuff)
             .filter(Boolean);
-        return Array.from(new Set(legacy));
+        return Array.from(new Set(associated));
     }
 }

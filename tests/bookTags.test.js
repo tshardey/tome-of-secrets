@@ -37,11 +37,11 @@ describe('bookTags.json vocabulary', () => {
     test('has expected counts per category', () => {
         const countOf = (category) => bookTags.filter(t => t.category === category).length;
         expect(countOf('genre')).toBe(10);
-        expect(countOf('content')).toBe(19);
-        expect(countOf('provenance')).toBe(6);
+        expect(countOf('content')).toBe(21);
+        expect(countOf('provenance')).toBe(9);
         expect(countOf('agency')).toBe(2);
-        expect(countOf('form')).toBe(5);
-        expect(bookTags).toHaveLength(42);
+        expect(countOf('form')).toBe(6);
+        expect(bookTags).toHaveLength(48);
     });
 });
 

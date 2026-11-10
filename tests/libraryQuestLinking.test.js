@@ -7,6 +7,8 @@ import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
+import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { validateCharacterState } from '../assets/js/character-sheet/dataValidator.js';
 
 jest.mock('../assets/js/services/BookMetadataService.js', () => ({
     searchBooks: jest.fn(() => Promise.resolve([]))
@@ -15,7 +17,7 @@ jest.mock('../assets/js/services/BookMetadataService.js', () => ({
 jest.mock('../assets/js/services/RewardCalculator.js', () => ({
     RewardCalculator: {
         getBaseRewards: jest.fn(() => ({
-            toJSON: () => ({ xp: 0, inkDrops: 0, paperScraps: 10, blueprints: 0, items: [] })
+            toJSON: () => ({ xp: 0, dollars: 0, blueprints: 0, items: [] })
         }))
     }
 }));
@@ -501,7 +503,23 @@ describe('Book Edit Drawer — Links Section', () => {
         expect(ecBtn.textContent).toContain('Create Extra Credit Quest');
     });
 
+    it('selecting a quest for an already-linked book is refused without a multi-quest ability', () => {
+        stateAdapter.getLearnedAbilities = jest.fn(() => []);
+        const controller = initController();
+        controller.handleEditBook('b1');
+        document.getElementById('book-edit-link-quest-btn').click();
+
+        const option = document.getElementById('book-edit-link-quest-dropdown').querySelector('.link-quest-option');
+        option.click();
+
+        expect(stateAdapter.updateActiveQuest).not.toHaveBeenCalled();
+        expect(stateAdapter.linkQuestToBook).not.toHaveBeenCalled();
+        const { toast: toastMock } = require('../assets/js/ui/toast.js');
+        expect(toastMock.error).toHaveBeenCalledWith('This book is already linked to a quest.');
+    });
+
     it('selecting a quest from dropdown links it and refreshes', () => {
+        stateAdapter.getLearnedAbilities = jest.fn(() => ['Quick Shot']);
         const controller = initController();
         controller.handleEditBook('b1');
 
@@ -535,6 +553,7 @@ describe('Book Edit Drawer — Links Section', () => {
     });
 
     it('Create Extra Credit Quest from dropdown creates quest and refreshes', () => {
+        stateAdapter.getLearnedAbilities = jest.fn(() => ['Concussive Blast']);
         const controller = initController();
         controller.handleEditBook('b1');
 
@@ -576,5 +595,92 @@ describe('Book Edit Drawer — Links Section', () => {
 
         const linksSection = document.getElementById('book-edit-links-section');
         expect(linksSection.style.display).toBe('block');
+    });
+});
+
+describe('One book, one quest (StateAdapter link guard)', () => {
+    let adapter;
+
+    // Links only count toward the quota while their quest still exists (active or completed).
+    const liveQuests = (ids) => ids.map((id) => ({ id, type: '⭐ Extra Credit', prompt: '', month: 'March', year: '2026' }));
+
+    beforeEach(() => {
+        localStorage.clear();
+        const state = createEmptyCharacterState();
+        state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = liveQuests(['q1', 'q2', 'q3', 'q4']);
+        adapter = new StateAdapter(state);
+    });
+
+    function addBook(questIds = []) {
+        return adapter.addBook({ title: 'Guarded Book', links: { questIds, curriculumPromptIds: [] } });
+    }
+
+    test('second link refused without a multi-quest ability', () => {
+        const book = addBook();
+        expect(adapter.linkQuestToBook(book.id, 'q1')).toBe(true);
+        expect(adapter.canLinkQuestToBook(book.id, 'q2')).toEqual({ ok: false, reason: 'already-linked' });
+        expect(adapter.linkQuestToBook(book.id, 'q2')).toBe(false);
+        expect(adapter.getBook(book.id).links.questIds).toEqual(['q1']);
+    });
+
+    test('second link allowed with Quick Shot; third refused', () => {
+        adapter.addLearnedAbility('Quick Shot');
+        const book = addBook();
+        expect(adapter.linkQuestToBook(book.id, 'q1')).toBe(true);
+        expect(adapter.linkQuestToBook(book.id, 'q2')).toBe(true);
+        expect(adapter.isSecondaryQuestForBook(book.id, 'q1')).toBe(false);
+        expect(adapter.isSecondaryQuestForBook(book.id, 'q2')).toBe(true);
+        expect(adapter.canLinkQuestToBook(book.id, 'q3')).toEqual({ ok: false, reason: 'max-links' });
+        expect(adapter.linkQuestToBook(book.id, 'q3')).toBe(false);
+        expect(adapter.getBook(book.id).links.questIds).toEqual(['q1', 'q2']);
+    });
+
+    test.each(['Irresistible Charm', 'Concussive Blast'])('%s also allows a second link', (ability) => {
+        adapter.addLearnedAbility(ability);
+        const book = addBook(['q1']);
+        expect(adapter.linkQuestToBook(book.id, 'q2')).toBe(true);
+    });
+
+    test('an activation grant (Evocation) allows the second link but never a third', () => {
+        const book = addBook(['q1']);
+        expect(adapter.linkQuestToBook(book.id, 'q2', { allowSecondLink: true })).toBe(true);
+        expect(adapter.canLinkQuestToBook(book.id, 'q3', { allowSecondLink: true })).toEqual({ ok: false, reason: 'max-links' });
+    });
+
+    test('a link to a discarded or deleted quest does not hold the quota', () => {
+        const book = addBook(['q-gone']);
+        expect(adapter.canLinkQuestToBook(book.id, 'q1')).toEqual({ ok: true });
+        expect(adapter.linkQuestToBook(book.id, 'q1')).toBe(true);
+        expect(adapter.isSecondaryQuestForBook(book.id, 'q1')).toBe(false);
+    });
+
+    test('relinking same quest is idempotent', () => {
+        const book = addBook(['q1']);
+        expect(adapter.canLinkQuestToBook(book.id, 'q1')).toEqual({ ok: true });
+        expect(adapter.linkQuestToBook(book.id, 'q1')).toBe(true);
+        expect(adapter.getBook(book.id).links.questIds).toEqual(['q1']);
+    });
+
+    test('pre-existing multi-linked book is left intact on load', () => {
+        const legacy = createEmptyCharacterState();
+        legacy[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = liveQuests(['q1', 'q2', 'q3', 'q4']);
+        legacy[STORAGE_KEYS.BOOKS] = {
+            'legacy-book': {
+                id: 'legacy-book',
+                title: 'Old Save Book',
+                author: '',
+                cover: null,
+                pageCount: null,
+                status: 'reading',
+                dateAdded: '2025-01-01T00:00:00.000Z',
+                dateCompleted: null,
+                links: { questIds: ['q1', 'q2', 'q3'], curriculumPromptIds: [] }
+            }
+        };
+        const loaded = new StateAdapter(validateCharacterState(legacy));
+        expect(loaded.getBook('legacy-book').links.questIds).toEqual(['q1', 'q2', 'q3']);
+        // New links are still refused; the old ones stay.
+        expect(loaded.linkQuestToBook('legacy-book', 'q4')).toBe(false);
+        expect(loaded.getBook('legacy-book').links.questIds).toEqual(['q1', 'q2', 'q3']);
     });
 });

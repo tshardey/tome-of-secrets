@@ -15,11 +15,11 @@ describe('blueprint payout path', () => {
             type: '♣ Side Quest',
             sideQuestId: 'side-quest-hagglers-row',
             prompt: "Haggler's Row: Read a book you borrowed.",
-            rewards: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 10, items: [] },
+            rewards: { xp: 0, dollars: 0, blueprints: 10, items: [] },
             receipt: {
-                base: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 10 },
+                base: { xp: 0, dollars: 0, blueprints: 10 },
                 modifiers: [],
-                final: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 10 }
+                final: { xp: 0, dollars: 0, blueprints: 10 }
             }
         };
 
@@ -36,11 +36,11 @@ describe('blueprint payout path', () => {
         const quest = {
             type: '♥ Organize the Stacks',
             prompt: 'Fantasy: Read a fantasy novel.',
-            rewards: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 20, items: [] },
+            rewards: { xp: 0, dollars: 0, blueprints: 20, items: [] },
             receipt: {
-                base: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 0 },
+                base: { xp: 0, dollars: 0, blueprints: 0 },
                 modifiers: [],
-                final: { xp: 0, inkDrops: 0, paperScraps: 0, blueprints: 20 }
+                final: { xp: 0, dollars: 0, blueprints: 20 }
             }
         };
 
@@ -56,7 +56,7 @@ describe('blueprint payout path', () => {
         const quest = {
             type: '♠ Dungeon Crawl',
             prompt: 'Room 3',
-            rewards: { xp: 50, inkDrops: 0, paperScraps: 0, blueprints: 0, items: [] }
+            rewards: { xp: 50, dollars: 0, blueprints: 0, items: [] }
         };
 
         expect(applyBlueprintRewardToQuest(quest)).toBe(0);

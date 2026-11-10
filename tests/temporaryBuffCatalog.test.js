@@ -71,9 +71,9 @@ describe('Temporary buff catalog behavior', () => {
         expect(resolved.xp).toBe(7);
     });
 
-    test('Long Read Focus runtime remains flat +10 Ink Drops', () => {
+    test('Long Read Focus pays a flat +$3', () => {
         const modifier = RewardCalculator._getModifier('Long Read Focus', false, false).modifier;
-        expect(modifier).toEqual(expect.objectContaining({ inkDrops: 10 }));
+        expect(modifier).toEqual({ dollars: 3 });
     });
 });
 
@@ -85,7 +85,6 @@ describe('Temporary buff end-of-month lifecycle', () => {
                 <select id="keeperBackground"></select>
                 <select id="wizardSchool"></select>
                 <input id="books-completed-month" value="0" />
-                <input id="journal-entries-completed" value="0" />
                 <input id="wearable-slots" value="0" />
                 <input id="non-wearable-slots" value="0" />
                 <input id="familiar-slots" value="0" />
@@ -97,16 +96,13 @@ describe('Temporary buff end-of-month lifecycle', () => {
         state[STORAGE_KEYS.TEMPORARY_BUFFS] = [
             {
                 name: 'Unwavering Resolve',
-                description: 'For the next month, you are immune to Worn Page penalties.',
+                description: 'For the next month, gain +$3 on every completed quest with a book over 400 pages.',
                 duration: 'until-end-month',
                 monthsRemaining: 1,
                 status: 'active'
             }
         ];
         const stateAdapter = new StateAdapter(state);
-        jest.spyOn(stateAdapter, 'getCurseHelpers').mockReturnValue([]);
-        jest.spyOn(stateAdapter, 'refreshCurseHelpersAtEndOfMonth').mockReturnValue(false);
-        jest.spyOn(stateAdapter, 'removeUsedOneTimeWornPageTempBuffsAtEOM').mockReturnValue(false);
         jest.spyOn(stateAdapter, 'getQuestDrawHelpers').mockReturnValue([]);
         jest.spyOn(stateAdapter, 'refreshQuestDrawHelpersAtEndOfMonth').mockReturnValue(false);
         jest.spyOn(stateAdapter, 'removeUsedOneTimeQuestDrawTempBuffsAtEOM').mockReturnValue(false);
@@ -116,7 +112,6 @@ describe('Temporary buff end-of-month lifecycle', () => {
                 renderAtmosphericBuffs: jest.fn(),
                 renderTemporaryBuffs: jest.fn(),
                 updateQuestBuffsDropdown: jest.fn(),
-                renderWornPageHelpers: jest.fn(),
                 renderQuestDrawHelpers: jest.fn(),
                 renderActivatedAbilities: jest.fn(),
                 renderShelfBooks: jest.fn()

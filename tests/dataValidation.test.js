@@ -10,11 +10,17 @@ import {
     saveSchemaVersion
 } from '../assets/js/character-sheet/dataValidator.js';
 import { 
-    migrateState, 
-    loadAndMigrateState 
+    migrateState,
+    loadAndMigrateState,
+    stripRetiredFormFields,
+    RETIRED_STATE_KEYS,
+    RETIRED_FORM_FIELDS
 } from '../assets/js/character-sheet/dataMigrator.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { findCatalogBanViolations } from '../scripts/catalogBans.js';
 
 describe('Data Validation', () => {
     beforeEach(() => {
@@ -58,7 +64,7 @@ describe('Data Validation', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                        rewards: { xp: 0, dollars: 0, items: [] },
                         restorationData: {
                             wingId: '1',
                             wingName: 'The Scholarly Archives',
@@ -79,22 +85,16 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].restorationData.projectId).toBe('restore-card-catalog');
         });
 
-        test('should validate and default shopping/subscription state (v10)', () => {
+        test('should drop retired shopping/subscription state', () => {
             const state = {
-                [STORAGE_KEYS.SHOPPING_LOG]: [{ optionId: 'opt1', logDate: '2024-01-15', inkDrops: 5 }],
-                [STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]: { sub1: { id: 'sub1', company: 'Acme', tier: 'Standard', skipsAllowedPerYear: 2 } },
-                [STORAGE_KEYS.BOOK_BOX_HISTORY]: [{ subscriptionId: 'sub1', month: 'January', year: '2024', type: 'purchased' }]
+                shoppingLog: [{ optionId: 'opt1', logDate: '2024-01-15' }],
+                bookBoxSubscriptions: { sub1: { id: 'sub1', company: 'Acme' } },
+                bookBoxHistory: [{ subscriptionId: 'sub1', month: 'January', year: '2024', type: 'purchased' }]
             };
             const validated = validateCharacterState(state);
-            expect(Array.isArray(validated[STORAGE_KEYS.SHOPPING_LOG])).toBe(true);
-            expect(validated[STORAGE_KEYS.SHOPPING_LOG].length).toBe(1);
-            expect(validated[STORAGE_KEYS.SHOPPING_LOG][0].optionId).toBe('opt1');
-            expect(validated[STORAGE_KEYS.SHOPPING_LOG][0].inkDrops).toBe(5);
-            expect(typeof validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]).toBe('object');
-            expect(validated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS].sub1.company).toBe('Acme');
-            expect(Array.isArray(validated[STORAGE_KEYS.BOOK_BOX_HISTORY])).toBe(true);
-            expect(validated[STORAGE_KEYS.BOOK_BOX_HISTORY].length).toBe(1);
-            expect(validated[STORAGE_KEYS.BOOK_BOX_HISTORY][0].type).toBe('purchased');
+            expect(validated).not.toHaveProperty('shoppingLog');
+            expect(validated).not.toHaveProperty('bookBoxSubscriptions');
+            expect(validated).not.toHaveProperty('bookBoxHistory');
         });
 
         test('should add shelfCategory to validated books (v10)', () => {
@@ -124,7 +124,7 @@ describe('Data Validation', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] }
+                        rewards: { xp: 0, dollars: 0, items: [] }
                         // No restorationData
                     }
                 ]
@@ -137,10 +137,10 @@ describe('Data Validation', () => {
         test('should filter out invalid quests', () => {
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [
-                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
+                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 10, items: [] } },
                     null, // Invalid
                     'not an object', // Invalid
-                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } }
+                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 10, items: [] } }
                 ]
             };
 
@@ -152,8 +152,8 @@ describe('Data Validation', () => {
             const duplicateId = 'quest-dup-1';
             const state = {
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [
-                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] } },
-                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] } }
+                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, dollars: 5, items: [] } },
+                    { id: duplicateId, type: '🔨 Restoration Project', prompt: 'Front Desk: Restore it', book: 'Book A', month: 'March', year: '2026', rewards: { xp: 10, dollars: 5, items: [] } }
                 ]
             };
 
@@ -174,7 +174,7 @@ describe('Data Validation', () => {
                         month: 'March',
                         year: '2026',
                         restorationData: { projectId: 'repair-front-desk' },
-                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        rewards: { xp: 10, dollars: 5, items: [] }
                     },
                     {
                         id: duplicateId,
@@ -184,7 +184,7 @@ describe('Data Validation', () => {
                         month: 'March',
                         year: '2026',
                         restorationData: { projectId: 'restore-grand-entrance' },
-                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        rewards: { xp: 10, dollars: 5, items: [] }
                     }
                 ]
             };
@@ -201,7 +201,7 @@ describe('Data Validation', () => {
                 month: 'March',
                 year: '2026',
                 dateCompleted: '2026-03-10T10:00:00.000Z',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                rewards: { xp: 10, dollars: 5, items: [] }
             };
             const state = {
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [quest, { ...quest }]
@@ -222,8 +222,9 @@ describe('Data Validation', () => {
                         year: '2024',
                         rewards: {
                             xp: 'not a number', // Invalid
-                            inkDrops: -5, // Invalid (negative)
-                            paperScraps: NaN, // Invalid
+                            dollars: -5, // Invalid (negative)
+                            inkDrops: -5, // Legacy history, invalid (negative)
+                            paperScraps: NaN, // Legacy history, invalid
                             items: 'not an array', // Invalid
                             modifiedBy: null // Invalid
                         }
@@ -234,10 +235,24 @@ describe('Data Validation', () => {
             const validated = validateCharacterState(state);
             const rewards = validated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards;
             expect(rewards.xp).toBe(0);
-            expect(rewards.inkDrops).toBe(0); // Negative values become 0
+            expect(rewards.dollars).toBe(0); // Negative values become 0
+            // Legacy Ink/Paper history is kept (sanitized), never invented
+            expect(rewards.inkDrops).toBe(0);
             expect(rewards.paperScraps).toBe(0);
             expect(Array.isArray(rewards.items)).toBe(true);
             expect(Array.isArray(rewards.modifiedBy)).toBe(true);
+        });
+
+        test('does not add legacy Ink/Paper keys to dollar-era rewards', () => {
+            const state = {
+                [STORAGE_KEYS.COMPLETED_QUESTS]: [
+                    { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 15, items: [] } }
+                ]
+            };
+            const rewards = validateCharacterState(state)[STORAGE_KEYS.COMPLETED_QUESTS][0].rewards;
+            expect(rewards.dollars).toBe(15);
+            expect(rewards).not.toHaveProperty('inkDrops');
+            expect(rewards).not.toHaveProperty('paperScraps');
         });
 
         test('should validate items array', () => {
@@ -378,7 +393,7 @@ describe('Data Validation', () => {
                     year: '2024',
                     coverUrl: 'https://example.com/cover.jpg',
                     pageCountRaw: 350,
-                    rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 10, dollars: 5, items: [], modifiedBy: [] }
                 }
             ];
             const legacyCompletedQuests = [
@@ -391,7 +406,7 @@ describe('Data Validation', () => {
                     year: '2024',
                     coverUrl: 'https://example.com/cover.jpg',
                     pageCountEffective: 350,
-                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 15, dollars: 10, items: [], modifiedBy: [] }
                 }
             ];
 
@@ -428,6 +443,39 @@ describe('Data Validation', () => {
             expect(validated[STORAGE_KEYS.EXTERNAL_CURRICULUM]).toBeDefined();
             expect(validated[STORAGE_KEYS.EXTERNAL_CURRICULUM].curriculums).toBeDefined();
             expect(typeof validated[STORAGE_KEYS.EXTERNAL_CURRICULUM].curriculums).toBe('object');
+        });
+
+        test('Fund: missing keys default to 0 and []', () => {
+            const validated = validateCharacterState({});
+            expect(validated[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validated[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
+        });
+
+        test('Fund: non-integer balance resets to 0; negative integer is kept', () => {
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: 12.5 })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: '500' })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: Infinity })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_BALANCE_CENTS]: -1700 })[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(-1700);
+        });
+
+        test('Fund: ledger drops malformed entries', () => {
+            const good = { id: 'a', date: '2026-11-08', amountCents: 3200, note: 'Legendarium purchase' };
+            const validated = validateCharacterState({
+                [STORAGE_KEYS.FUND_LEDGER]: [
+                    good,
+                    { id: 'b', date: '2026-11-08', amountCents: 0, note: '' },
+                    { id: 'c', date: 'Nov 8', amountCents: 100, note: '' },
+                    { id: '', date: '2026-11-08', amountCents: 100, note: '' },
+                    { id: 'd', date: '2026-11-08', amountCents: 10.5, note: '' },
+                    null,
+                    { id: 'e', date: '2026-11-08', amountCents: 100 }
+                ]
+            });
+            expect(validated[STORAGE_KEYS.FUND_LEDGER]).toEqual([
+                good,
+                { id: 'e', date: '2026-11-08', amountCents: 100, note: '' }
+            ]);
+            expect(validateCharacterState({ [STORAGE_KEYS.FUND_LEDGER]: 'nope' })[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
         });
     });
 
@@ -469,8 +517,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 17', () => {
-            expect(SCHEMA_VERSION).toBe(17);
+        test('schema version should be 18', () => {
+            expect(SCHEMA_VERSION).toBe(18);
         });
     });
 });
@@ -498,7 +546,8 @@ describe('Data Migration', () => {
             const migrated = migrateState(state);
             expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards).toBeDefined();
             expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe(15);
-            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.inkDrops).toBe(10);
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.dollars).toBe(0); // history never shows invented dollars
+            expect(migrated[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards).not.toHaveProperty('inkDrops');
         });
 
         test('should not migrate if already at current version and no repair needed', () => {
@@ -514,13 +563,13 @@ describe('Data Migration', () => {
             expect(migrated).toBe(state); // Same object when at current version and no books repair needed
         });
 
-        test('should initialize curseHelperState (v11) and questDrawHelperState (v12) when upgrading from v10', () => {
+        test('should initialize questDrawHelperState (v12) and not the retired curseHelperState when upgrading from v10', () => {
             localStorage.setItem('tomeOfSecrets_schemaVersion', '10');
             const state = {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: []
             };
             const migrated = migrateState(state);
-            expect(migrated[STORAGE_KEYS.CURSE_HELPER_STATE]).toEqual({});
+            expect(migrated).not.toHaveProperty('curseHelperState');
             expect(migrated[STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]).toEqual({});
             expect(getStoredSchemaVersion()).toBe(SCHEMA_VERSION);
         });
@@ -563,7 +612,7 @@ describe('Data Migration', () => {
                 [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: [{
                     type: '♣ Side Quest',
                     prompt: 'The Arcane Grimoire: Read the book on your TBR the longest.',
-                    rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] }
+                    rewards: { xp: 0, dollars: 0, items: [] }
                 }],
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [],
                 [STORAGE_KEYS.DISCARDED_QUESTS]: []
@@ -599,7 +648,7 @@ describe('Data Migration', () => {
                         bookAuthor: 'Author',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        rewards: { xp: 15, dollars: 10, items: [] }
                     }
                 ],
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [],
@@ -635,7 +684,7 @@ describe('Data Migration', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        rewards: { xp: 15, dollars: 10, items: [] }
                     }
                 ],
                 [STORAGE_KEYS.COMPLETED_QUESTS]: [],
@@ -654,7 +703,57 @@ describe('Data Migration', () => {
             expect(activeQuest.prompt).not.toContain(legacyGenre);
         });
 
-        test('v10: should add shopping/subscription state and book shelfCategory', () => {
+        test('v18: deletes retired keys and starts the Fund at $0 when absent', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '17');
+            const state = {
+                [STORAGE_KEYS.DUSTY_BLUEPRINTS]: 42,
+                [STORAGE_KEYS.LEARNED_ABILITIES]: ['Quick Shot'],
+                activeCurses: [{ name: 'The Unread Tome' }],
+                completedCurses: [],
+                curseHelperState: {},
+                shoppingLog: [{ optionId: 'opt1' }],
+                bookBoxSubscriptions: {},
+                bookBoxHistory: []
+            };
+            const migrated = migrateState(state);
+            RETIRED_STATE_KEYS.forEach((key) => expect(migrated).not.toHaveProperty(key));
+            expect(migrated[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+            expect(migrated[STORAGE_KEYS.FUND_LEDGER]).toEqual([]);
+            expect(migrated[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(42);
+            expect(migrated[STORAGE_KEYS.LEARNED_ABILITIES]).toEqual(['Quick Shot']);
+            expect(state).toHaveProperty('activeCurses'); // input is not mutated
+        });
+
+        test('v18: refreshes stale temporary-buff descriptions from the catalog', () => {
+            const stale = { name: 'Long Read Focus', description: 'Gain +10 Ink Drops on your next completed book.', duration: 'one-time', monthsRemaining: 0, status: 'active' };
+            const unknown = { name: 'Homebrew Buff', description: 'Keeper-authored', duration: 'two-months', monthsRemaining: 2, status: 'active' };
+            const migrated = migrateState({ [STORAGE_KEYS.TEMPORARY_BUFFS]: [stale, unknown] }, { fromVersion: 17 });
+            const [refreshed, kept] = migrated[STORAGE_KEYS.TEMPORARY_BUFFS];
+            expect(refreshed).toEqual({ ...stale, description: 'Gain +$3 on your next completed quest.' });
+            expect(kept).toEqual(unknown);
+        });
+
+        test('v18: keeps a Fund that is already present', () => {
+            const ledger = [{ id: 'f1', date: '2026-11-02', amountCents: 3200, note: '' }];
+            const migrated = migrateState(
+                { [STORAGE_KEYS.FUND_BALANCE_CENTS]: 4250, [STORAGE_KEYS.FUND_LEDGER]: ledger },
+                { fromVersion: 17 }
+            );
+            expect(migrated[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(4250);
+            expect(migrated[STORAGE_KEYS.FUND_LEDGER]).toEqual(ledger);
+        });
+
+        test('stripRetiredFormFields is pure and idempotent', () => {
+            const form = { inkDrops: '300', paperScraps: '40', 'journal-entries-completed': '3', level: '6', smp: '2' };
+            const once = stripRetiredFormFields(form);
+            expect(once).toEqual({ level: '6', smp: '2' });
+            expect(stripRetiredFormFields(once)).toEqual(once);
+            expect(form.inkDrops).toBe('300');
+            expect(stripRetiredFormFields(null)).toEqual({});
+            RETIRED_FORM_FIELDS.forEach((field) => expect(once).not.toHaveProperty(field));
+        });
+
+        test('v10: adds book shelfCategory; the retired shopping state does not survive to v18', () => {
             localStorage.setItem('tomeOfSecrets_schemaVersion', '9');
             const state = {
                 [STORAGE_KEYS.BOOKS]: {
@@ -675,12 +774,9 @@ describe('Data Migration', () => {
 
             const migrated = migrateState(state);
 
-            expect(Array.isArray(migrated[STORAGE_KEYS.SHOPPING_LOG])).toBe(true);
-            expect(migrated[STORAGE_KEYS.SHOPPING_LOG]).toHaveLength(0);
-            expect(typeof migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS]).toBe('object');
-            expect(Object.keys(migrated[STORAGE_KEYS.BOOK_BOX_SUBSCRIPTIONS])).toHaveLength(0);
-            expect(Array.isArray(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY])).toBe(true);
-            expect(migrated[STORAGE_KEYS.BOOK_BOX_HISTORY]).toHaveLength(0);
+            expect(migrated).not.toHaveProperty('shoppingLog');
+            expect(migrated).not.toHaveProperty('bookBoxSubscriptions');
+            expect(migrated).not.toHaveProperty('bookBoxHistory');
             const book = migrated[STORAGE_KEYS.BOOKS].bid1;
             expect(book.shelfCategory).toBe('general');
         });
@@ -705,6 +801,20 @@ describe('Data Migration', () => {
             expect(loaded[STORAGE_KEYS.ACTIVE_ASSIGNMENTS][0].rewards.xp).toBe(15);
         });
 
+        test('removes retired keys from localStorage after migrating', () => {
+            localStorage.setItem('tomeOfSecrets_schemaVersion', '17');
+            localStorage.setItem('activeCurses', JSON.stringify([{ name: 'The Unread Tome' }]));
+            localStorage.setItem('shoppingLog', JSON.stringify([{ optionId: 'opt1' }]));
+            safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, 42);
+
+            const loaded = loadAndMigrateState();
+
+            expect(localStorage.getItem('activeCurses')).toBeNull();
+            expect(localStorage.getItem('shoppingLog')).toBeNull();
+            expect(loaded[STORAGE_KEYS.DUSTY_BLUEPRINTS]).toBe(42);
+            expect(loaded[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(0);
+        });
+
         test('should handle missing localStorage keys', () => {
             localStorage.clear();
             const loaded = loadAndMigrateState();
@@ -723,9 +833,9 @@ describe('Integration: Load State with Validation and Migration', () => {
     test('should handle corrupted quest data gracefully', () => {
         // Set up corrupted data
         safeSetJSON(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, [
-            { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] } },
+            { type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Test', month: 'Jan', year: '2024', rewards: { xp: 15, dollars: 10, items: [] } },
             null, // Corrupted
-            { type: '♣ Side Quest', prompt: 'Test', book: 'Test2', month: 'Jan', year: '2024', rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [] } }
+            { type: '♣ Side Quest', prompt: 'Test', book: 'Test2', month: 'Jan', year: '2024', rewards: { xp: 0, dollars: 5, items: [] } }
         ]);
 
         const loaded = loadAndMigrateState();
@@ -746,7 +856,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                     year: '2024',
                     status: 'active',
                     notes: 'Test notes',
-                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 15, dollars: 10, items: [], modifiedBy: [] }
                 }
             ];
 
@@ -771,7 +881,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                     book: 'Test Book',
                     month: 12, // Numeric month (legacy)
                     year: 2024, // Numeric year (legacy)
-                    rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 15, dollars: 10, items: [], modifiedBy: [] }
                 },
                 {
                     type: '♣ Side Quest',
@@ -779,7 +889,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                     book: 'Test Book 2',
                     month: 3, // Numeric month
                     year: 2025, // Numeric year
-                    rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [], modifiedBy: [] }
+                    rewards: { xp: 0, dollars: 5, items: [], modifiedBy: [] }
                 }
             ];
             
@@ -824,7 +934,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                         book: 'Test Book',
                         month: 'January',
                         year: '2024',
-                        rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] }
+                        rewards: { xp: 10, dollars: 5, items: [] }
                         // No dateAdded or dateCompleted (Schema v2)
                     }
                 ],
@@ -835,7 +945,7 @@ describe('Integration: Load State with Validation and Migration', () => {
                         book: 'Completed Book',
                         month: 'December',
                         year: '2023',
-                        rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] }
+                        rewards: { xp: 15, dollars: 10, items: [] }
                         // No dateAdded or dateCompleted (Schema v2)
                     }
                 ],
@@ -857,3 +967,72 @@ describe('Integration: Load State with Validation and Migration', () => {
         });
     });
 
+describe('Catalog bans (dollar economy)', () => {
+    const dataDir = path.resolve(process.cwd(), '..', 'assets', 'data');
+    const catalogFiles = fs.readdirSync(dataDir)
+        .filter((name) => name.endsWith('.json'));
+    const violationsFor = (predicate) => catalogFiles.flatMap((name) => {
+        const json = JSON.parse(fs.readFileSync(path.join(dataDir, name), 'utf8'));
+        return findCatalogBanViolations(name, json).filter(predicate);
+    });
+
+    test('catalog has no MULTIPLY, inkDrops or paperScraps', () => {
+        expect(catalogFiles.length).toBeGreaterThan(10);
+        expect(violationsFor((message) => !message.includes('retired wording'))).toEqual([]);
+    });
+
+    test('catalog text has no Ink Drop / Paper Scrap / Worn Page / journal wording', () => {
+        expect(violationsFor((message) => message.includes('retired wording'))).toEqual([]);
+    });
+
+    test('the ban flags each banned construct', () => {
+        const violations = findCatalogBanViolations('fixture.json', {
+            item: {
+                bonus: 'Earn +10 Ink Drops.',
+                passiveBonus: 'Remove a Worn Page penalty.',
+                note: 'Write in your Journal.',
+                effects: [
+                    { modifier: { type: 'MULTIPLY', resource: 'xp', value: 2 } },
+                    { modifier: { type: 'ADD_FLAT', resource: 'paperScraps', value: 5 } }
+                ],
+                rewards: { inkDrops: 10 },
+                atmosphericBuffMultiplier: 2
+            },
+            stake: { onSuccess: { multiply: { blueprints: 2 } }, onFailure: { halve: ['xp'] } }
+        });
+        expect(violations).toHaveLength(9);
+    });
+
+    test('the wording ban does not flag journalists, journalism, or ink/paper in ordinary prose', () => {
+        expect(findCatalogBanViolations('fixture.json', {
+            a: 'Read a book with a journalist protagonist.',
+            b: 'A history of journalism.',
+            c: 'Ink-stained desks and paper lanterns.'
+        })).toEqual([]);
+    });
+
+    test('flat dollar content passes the ban', () => {
+        expect(findCatalogBanViolations('fixture.json', {
+            item: {
+                bonus: 'Books over 400 pages grant +$10.',
+                effects: [{ modifier: { type: 'ADD_FLAT', resource: 'dollars', value: 10 } }],
+                rewards: { xp: 15, blueprints: 10 }
+            }
+        })).toEqual([]);
+    });
+
+    test('every tag an effect matches on exists in bookTags.json', () => {
+        const tagIds = new Set(JSON.parse(fs.readFileSync(path.join(dataDir, 'bookTags.json'), 'utf8')).map((t) => t.id));
+        const missing = [];
+        const visit = (value, where) => {
+            if (Array.isArray(value)) return value.forEach((entry) => visit(entry, where));
+            if (!value || typeof value !== 'object') return;
+            for (const group of value.condition?.tagMatch ?? []) {
+                for (const tag of group) if (!tagIds.has(tag)) missing.push(`${where}: ${tag}`);
+            }
+            Object.values(value).forEach((child) => visit(child, where));
+        };
+        catalogFiles.forEach((name) => visit(JSON.parse(fs.readFileSync(path.join(dataDir, name), 'utf8')), name));
+        expect(missing).toEqual([]);
+    });
+});

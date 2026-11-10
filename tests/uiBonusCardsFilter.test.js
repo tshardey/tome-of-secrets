@@ -10,20 +10,20 @@ jest.mock('../assets/js/character-sheet/data.js', () => {
         allItems: {
             'Tome-Bound Cat': {
                 name: 'Tome-Bound Cat',
-                bonus: 'When you choose an Atmospheric Buff for your reading session, earn a x2 Ink Drop bonus on the effect.',
-                passiveBonus: 'Atmospheric Buffs grant +3 Ink Drops (passive, not multiplied).',
+                bonus: 'When you choose an Atmospheric Buff for your reading session, earn +$1 per atmospheric buff day.',
+                passiveBonus: 'Atmospheric Buffs grant +$1 (passive).',
                 excludeFromQuestBonuses: true
             },
             'Gilded Painting': {
                 name: 'Gilded Painting',
-                bonus: 'Earn +2 Ink Drops when reading in an ornate location.',
-                passiveBonus: 'Earn +1 Ink Drop for reading in ornate locations (passive).',
+                bonus: 'Earn +$1 per day when reading in an ornate location.',
+                passiveBonus: 'Earn +$1 for reading in ornate locations (passive).',
                 excludeFromQuestBonuses: true
             },
             'Pocket Dragon': {
                 name: 'Pocket Dragon',
-                bonus: 'Earn a +20 Ink Drop bonus for books in a fantasy series.',
-                passiveBonus: 'Fantasy series books grant +10 Ink Drops (passive).'
+                bonus: 'Earn +$4 for books in a fantasy series.',
+                passiveBonus: 'Fantasy series books grant +$2 (passive).'
             }
         }
     };

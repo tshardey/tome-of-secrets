@@ -6,10 +6,8 @@
       "quests",
       "items",
       "dungeons",
-      "curses",
       "abilities",
-      "atmosphericBuffs",
-      "shopping"
+      "atmosphericBuffs"
     ],
     "dataFiles": [
       "xpLevels.json",
@@ -26,11 +24,9 @@
       "genreQuests.json",
       "extraCreditRewards.json",
       "sideQuestsDetailed.json",
-      "curseTableDetailed.json",
       "temporaryBuffs.json",
       "temporaryBuffsFromRewards.json",
-      "levelRewards.json",
-      "shoppingOptions.json"
+      "levelRewards.json"
     ]
   },
   "expansions": {

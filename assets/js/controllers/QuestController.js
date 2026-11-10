@@ -23,6 +23,7 @@ import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
+import { linkQuestToBookOrNotify, getQuestLinkRefusal, getBatchQuestLinkRefusal } from '../utils/questBookLinker.js';
 import { createBookSelector } from '../utils/bookSelector.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 
@@ -518,8 +519,13 @@ export class QuestController extends BaseController {
         const questId = originalQuest.id || null;
         const previousBookId = originalQuest.bookId || null;
         if (selectedBookId && questId && selectedBookId !== previousBookId) {
+            const linkRefusal = getQuestLinkRefusal(stateAdapter, selectedBookId, questId);
+            if (linkRefusal) {
+                toast.error(linkRefusal);
+                return;
+            }
             if (previousBookId) stateAdapter.unlinkQuestFromBook(previousBookId, questId);
-            stateAdapter.linkQuestToBook(selectedBookId, questId);
+            linkQuestToBookOrNotify(stateAdapter, selectedBookId, questId);
         }
 
         // Preserve restorationData if it exists (for restoration project quests)
@@ -689,12 +695,19 @@ export class QuestController extends BaseController {
                 }
             });
             
+            // One book, one quest: refuse the whole add before anything is stored.
+            const linkRefusal = getBatchQuestLinkRefusal(stateAdapter, quests);
+            if (linkRefusal) {
+                toast.error(linkRefusal);
+                return;
+            }
+
             const status = formElements.statusSelect?.value || 'active';
 
             // Add quests to appropriate list and link each to its book (book-first)
             if (status === 'active') {
                 stateAdapter.addActiveQuests(quests);
-                quests.forEach(q => { if (q.bookId && q.id) stateAdapter.linkQuestToBook(q.bookId, q.id); });
+                quests.forEach(q => { if (q.bookId && q.id) linkQuestToBookOrNotify(stateAdapter, q.bookId, q.id); });
                 uiModule.renderActiveAssignments();
             } else if (status === 'completed') {
                 // Track if this is a new book
@@ -718,10 +731,11 @@ export class QuestController extends BaseController {
 
                 // Add to completed quests and link each to its book (book-first)
                 stateAdapter.addCompletedQuests(quests);
-                quests.forEach(q => { if (q.bookId && q.id) stateAdapter.linkQuestToBook(q.bookId, q.id); });
+                quests.forEach(q => { if (q.bookId && q.id) linkQuestToBookOrNotify(stateAdapter, q.bookId, q.id); });
                 quests.forEach(quest => {
                     // Award blueprints to state (currency)
                     this.awardBlueprintsForQuest(quest);
+                    this.spendUseCountBuffsForQuest(quest);
                     // The Exchange's register: strike the country off, once ever.
                     if (quest.branchCountry) {
                         stateAdapter.addClaimedCountry(quest.branchCountry);
@@ -889,8 +903,6 @@ export class QuestController extends BaseController {
 
         let success = false;
         const xpCurrentInput = document.getElementById('xp-current');
-        const inkDropsInput = document.getElementById('inkDrops');
-        const paperScrapsInput = document.getElementById('paperScraps');
 
         if (action === 'complete_two_quests_one_book') {
             const currentSchool = document.getElementById('wizardSchool')?.value || '';
@@ -991,13 +1003,27 @@ export class QuestController extends BaseController {
             if (selectedBook.bookId) {
                 updates.bookId = selectedBook.bookId;
             }
-            stateAdapter.updateQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, selectedQuestIndex, updates);
-            if (
+            const linkBook = Boolean(
                 selectedBook.bookId &&
                 selectedQuest?.id &&
                 typeof stateAdapter.linkQuestToBook === 'function'
-            ) {
-                stateAdapter.linkQuestToBook(selectedBook.bookId, selectedQuest.id);
+            );
+            // Evocation grants this book its second quest (still capped at two); it pays the $10 base.
+            const evocationLink = { allowSecondLink: true };
+            if (linkBook) {
+                const linkRefusal = getQuestLinkRefusal(stateAdapter, selectedBook.bookId, selectedQuest.id, evocationLink);
+                if (linkRefusal) {
+                    toast.error(linkRefusal);
+                    return;
+                }
+            }
+            const previousBookId = selectedQuest?.bookId || null;
+            if (linkBook && previousBookId && previousBookId !== selectedBook.bookId) {
+                stateAdapter.unlinkQuestFromBook(previousBookId, selectedQuest.id);
+            }
+            stateAdapter.updateQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, selectedQuestIndex, updates);
+            if (linkBook) {
+                linkQuestToBookOrNotify(stateAdapter, selectedBook.bookId, selectedQuest.id, evocationLink);
             }
 
             this.handleCompleteQuest(selectedQuestIndex);
@@ -1010,74 +1036,57 @@ export class QuestController extends BaseController {
             toast.success(`Evocation activated: completed 1 additional quest using "${selectedBook.title}".`);
             success = true;
         } else if (action === 'transmute_currency') {
+            const { blueprints, dollars } = GAME_CONFIG.activations.transmutation;
             const directionRaw = window.prompt(
-                'Transmute direction:\n1 = Ink Drops -> Paper Scraps (3:1)\n2 = Paper Scraps -> Ink Drops (1:3)',
+                `Transmute (once per month):\n1 = ${blueprints} Dusty Blueprints -> $${dollars}\n2 = $${dollars} -> ${blueprints} Dusty Blueprints`,
                 '1'
             );
             const direction = (directionRaw || '').trim();
-            const currentInk = parseIntOr(inkDropsInput?.value, 0);
-            const currentPaper = parseIntOr(paperScrapsInput?.value, 0);
-            const toPaper = direction === '1';
-            const toInk = direction === '2';
-            if (!toPaper && !toInk) {
+            if (direction === '1') {
+                if (!stateAdapter.spendDustyBlueprints(blueprints)) {
+                    toast.error(`Not enough Dusty Blueprints (need ${blueprints}).`);
+                    return;
+                }
+                stateAdapter.addFunds(dollars);
+                toast.success(`Transmuted ${blueprints} Dusty Blueprints into $${dollars}.`);
+            } else if (direction === '2') {
+                const balanceCents = stateAdapter.getFundBalanceCents();
+                if (balanceCents < dollars * 100) {
+                    toast.error(`Not enough in your Fund (need $${dollars}).`);
+                    return;
+                }
+                stateAdapter.setFundBalanceCents(balanceCents - dollars * 100);
+                stateAdapter.addDustyBlueprints(blueprints);
+                toast.success(`Transmuted $${dollars} into ${blueprints} Dusty Blueprints.`);
+            } else {
                 toast.info('Transmutation cancelled.');
                 return;
             }
-
-            const maxUnits = toPaper ? Math.floor(currentInk / 3) : currentPaper;
-            if (maxUnits <= 0) {
-                toast.error(toPaper ? 'Not enough Ink Drops (need at least 3).' : 'Not enough Paper Scraps (need at least 1).');
-                return;
-            }
-
-            const amountRaw = window.prompt(
-                `How many conversion units? (1-${maxUnits})`,
-                '1'
-            );
-            const amount = Number.parseInt((amountRaw || '').trim(), 10);
-            if (!Number.isFinite(amount) || amount < 1 || amount > maxUnits) {
-                toast.error(`Enter a whole number between 1 and ${maxUnits}.`);
-                return;
-            }
-
-            if (toPaper) {
-                if (inkDropsInput) inkDropsInput.value = String(currentInk - amount * 3);
-                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper + amount);
-                toast.success(`Transmuted ${amount * 3} Ink Drops into ${amount} Paper Scrap${amount === 1 ? '' : 's'}.`);
-            } else {
-                if (paperScrapsInput) paperScrapsInput.value = String(currentPaper - amount);
-                if (inkDropsInput) inkDropsInput.value = String(currentInk + amount * 3);
-                toast.success(`Transmuted ${amount} Paper Scrap${amount === 1 ? '' : 's'} into ${amount * 3} Ink Drops.`);
-            }
+            const dustyBlueprintsInput = document.getElementById('dustyBlueprints');
+            if (dustyBlueprintsInput) dustyBlueprintsInput.value = String(stateAdapter.getDustyBlueprints());
             success = true;
         } else if (action === 'sacrifice_xp_for_currency') {
+            const { xpCost, dollars } = GAME_CONFIG.activations.philosophersStone;
             const currentXp = parseIntOr(xpCurrentInput?.value, 0);
-            if (currentXp < 50) {
-                toast.error('Not enough XP (need 50).');
+            if (currentXp < xpCost) {
+                toast.error(`Not enough XP (need ${xpCost}).`);
                 return;
             }
-            if (xpCurrentInput) xpCurrentInput.value = String(currentXp - 50);
-            if (this.updateCurrency) {
-                this.updateCurrency({ xp: 0, inkDrops: 50, paperScraps: 10, items: [] });
-            } else {
-                if (inkDropsInput) inkDropsInput.value = String(parseIntOr(inkDropsInput.value, 0) + 50);
-                if (paperScrapsInput) paperScrapsInput.value = String(parseIntOr(paperScrapsInput.value, 0) + 10);
-            }
+            if (xpCurrentInput) xpCurrentInput.value = String(currentXp - xpCost);
+            stateAdapter.addFunds(dollars);
             if (uiModule.updateXpProgressBar) uiModule.updateXpProgressBar();
-            toast.success("Philosopher's Stone activated: -50 XP, +50 Ink Drops, +10 Paper Scraps.");
+            toast.success(`Philosopher's Stone activated: -${xpCost} XP, +$${dollars}.`);
             success = true;
-        } else if (action === 'remove_all_worn_pages') {
-            const activeCount = (stateAdapter.getActiveCurses() || []).length;
-            if (activeCount === 0) {
-                toast.info('No active Worn Page penalties to remove.');
+        } else if (action === 'claim_dollar_bonus') {
+            // Player-judged monthly bonus (e.g. Grand Dispelling: a completed book over 500 pages).
+            // The amount comes from the ability's effect JSON via the button's data-dollars.
+            const dollars = Number(target.dataset.dollars) || 0;
+            if (dollars <= 0) {
+                toast.error(`${abilityName} has no dollar amount configured.`);
                 return;
             }
-            for (let i = activeCount - 1; i >= 0; i -= 1) {
-                stateAdapter.moveCurseToCompleted(i);
-            }
-            if (uiModule.renderActiveCurses) uiModule.renderActiveCurses();
-            if (uiModule.renderCompletedCurses) uiModule.renderCompletedCurses();
-            toast.success(`Removed ${activeCount} active Worn Page penalt${activeCount === 1 ? 'y' : 'ies'}.`);
+            stateAdapter.addFunds(dollars);
+            toast.success(`${abilityName} claimed: +$${dollars}.`);
             success = true;
         } else {
             toast.success(`${abilityName} activated. Apply its effect to the relevant quest flow now.`);
@@ -1168,8 +1177,9 @@ export class QuestController extends BaseController {
         }
 
         // Ensure the completed quest is linked to its book for cascade / synergy logic
+        // (A legacy quest whose book already holds its quota keeps its bookId; the refusal is shown.)
         if (completedQuest.bookId && completedQuest.id && typeof stateAdapter.linkQuestToBook === 'function') {
-            stateAdapter.linkQuestToBook(completedQuest.bookId, completedQuest.id);
+            linkQuestToBookOrNotify(stateAdapter, completedQuest.bookId, completedQuest.id);
         }
 
         // Snapshot book cover onto quest so archive "Cover" toggle shows it even if the book is later removed
@@ -1190,6 +1200,7 @@ export class QuestController extends BaseController {
 
         // Award blueprints to state (currency)
         this.awardBlueprintsForQuest(completedQuest);
+        this.spendUseCountBuffsForQuest(completedQuest);
         // The Exchange's register: strike the country off, once ever.
         if (completedQuest.branchCountry) {
             stateAdapter.addClaimedCountry(completedQuest.branchCountry);
@@ -1261,6 +1272,30 @@ export class QuestController extends BaseController {
         }
 
         return amount;
+    }
+
+    /**
+     * Spend one use of each use-count temporary buff (Enchanted Focus, Story Surge, ...) that
+     * paid on this completed quest. Call once per completed quest, after its rewards are final.
+     * @param {Object} quest - Completed quest with its bonus cards in `buffs`
+     */
+    spendUseCountBuffsForQuest(quest) {
+        const { stateAdapter } = this;
+        if (typeof stateAdapter.consumeUseCountBuffsForQuest !== 'function') return;
+        const { changed } = stateAdapter.consumeUseCountBuffsForQuest(
+            quest?.buffs || [],
+            name => data.getTemporaryBuffData(name)?.useCount || 0
+        );
+        if (!changed) return;
+        const { ui: uiModule } = this.dependencies;
+        if (uiModule.renderTemporaryBuffs) uiModule.renderTemporaryBuffs();
+        if (uiModule.updateQuestBuffsDropdown) {
+            uiModule.updateQuestBuffsDropdown(
+                document.getElementById('wearable-slots'),
+                document.getElementById('non-wearable-slots'),
+                document.getElementById('familiar-slots')
+            );
+        }
     }
 
     /**
@@ -1359,6 +1394,7 @@ export class QuestController extends BaseController {
         const isNewBook = bookName && this.completedBooksSet && !this.completedBooksSet.has(bookName);
 
         this.awardBlueprintsForQuest(completedQuest);
+        this.spendUseCountBuffsForQuest(completedQuest);
         // The Exchange's register: strike the country off, once ever.
         if (completedQuest.branchCountry) {
             stateAdapter.addClaimedCountry(completedQuest.branchCountry);
@@ -1456,21 +1492,13 @@ export class QuestController extends BaseController {
                 stateAdapter.completeWing(wingId);
 
                 // Award wing completion rewards (currency) if hook available
+                const { xp, dollars } = GAME_CONFIG.restoration.wingCompletionRewards;
                 if (this.updateCurrency) {
-                    this.updateCurrency({
-                        xp: GAME_CONFIG.restoration.wingCompletionRewards.xp,
-                        inkDrops: GAME_CONFIG.restoration.wingCompletionRewards.inkDrops,
-                        paperScraps: GAME_CONFIG.restoration.wingCompletionRewards.paperScraps,
-                        items: []
-                    });
+                    this.updateCurrency({ xp, dollars, items: [] });
                 }
 
                 // Notify
-                this.showRewardNotification(
-                    `Wing Restored! +${GAME_CONFIG.restoration.wingCompletionRewards.xp} XP, ` +
-                    `+${GAME_CONFIG.restoration.wingCompletionRewards.inkDrops} Ink Drops, ` +
-                    `+${GAME_CONFIG.restoration.wingCompletionRewards.paperScraps} Paper Scraps`
-                );
+                this.showRewardNotification(`Wing Restored! +${xp} XP, +$${dollars}`);
             }
         }
         
@@ -1812,8 +1840,15 @@ export class QuestController extends BaseController {
 
         // Update book links: unlink from old, link to new
         if (questId) {
+            const linkRefusal = selectedBookId && selectedBookId !== previousBookId
+                ? getQuestLinkRefusal(this.stateAdapter, selectedBookId, questId)
+                : null;
+            if (linkRefusal) {
+                toast.error(linkRefusal);
+                return;
+            }
             if (previousBookId && previousBookId !== selectedBookId) this.stateAdapter.unlinkQuestFromBook(previousBookId, questId);
-            if (selectedBookId) this.stateAdapter.linkQuestToBook(selectedBookId, questId);
+            if (selectedBookId) linkQuestToBookOrNotify(this.stateAdapter, selectedBookId, questId);
         }
 
         // Update quest (preserve prompt, restorationData, etc. from original). Include coverUrl so archive Cover toggle shows linked book.

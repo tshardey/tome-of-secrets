@@ -12,7 +12,7 @@ import { searchBooks } from '../services/BookMetadataService.js';
 import { bookTags, allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
-import { getUnlinkedActiveQuests, linkExistingQuestToBook, createExtraCreditForBook } from '../utils/questBookLinker.js';
+import { getUnlinkedActiveQuests, linkExistingQuestToBook, createExtraCreditForBook, getQuestLinkRefusal } from '../utils/questBookLinker.js';
 import { toast } from '../ui/toast.js';
 import { getApplicableTagIds } from '../utils/applicableTagIds.js';
 import { buildEffectContext } from '../services/effectContext.js';
@@ -954,7 +954,7 @@ export class LibraryController extends BaseController {
                     const book = this.stateAdapter.getBook(bookId);
                     toast.success(`Quest linked to "${book ? book.title : 'book'}"`);
                 } else {
-                    toast.error('Failed to link quest — check browser console for details');
+                    toast.error(getQuestLinkRefusal(this.stateAdapter, bookId, selectedQuestId) || 'Failed to link quest — check browser console for details');
                 }
                 this._renderDrawerLinksSection(bookId);
                 this.renderBooks();
@@ -966,7 +966,7 @@ export class LibraryController extends BaseController {
                     const book = this.stateAdapter.getBook(bookId);
                     toast.success(`Extra Credit quest created for "${book ? book.title : 'book'}"`);
                 } else {
-                    toast.error('Failed to create quest');
+                    toast.error(getQuestLinkRefusal(this.stateAdapter, bookId, null) || 'Failed to create quest');
                 }
                 this._renderDrawerLinksSection(bookId);
                 this.renderBooks();
@@ -1065,7 +1065,7 @@ export class LibraryController extends BaseController {
                     this.saveState();
                     toast.success(`Quest linked to "${book.title}"`);
                 } else {
-                    toast.error('Failed to link quest');
+                    toast.error(getQuestLinkRefusal(this.stateAdapter, bookId, selectedQuestId) || 'Failed to link quest');
                 }
                 this.renderBooks();
                 this._closeLinkQuestPopover();
@@ -1076,7 +1076,7 @@ export class LibraryController extends BaseController {
                     this.saveState();
                     toast.success(`Extra Credit quest created for "${book.title}"`);
                 } else {
-                    toast.error('Failed to create quest');
+                    toast.error(getQuestLinkRefusal(this.stateAdapter, bookId, null) || 'Failed to create quest');
                 }
                 this.renderBooks();
                 this._closeLinkQuestPopover();

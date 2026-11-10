@@ -10,6 +10,7 @@ import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { loadState, characterState, isStateLoaded } from '../character-sheet/state.js';
 import { parseIntOr } from '../utils/helpers.js';
 import * as data from '../character-sheet/data.js';
+import { formatCents } from '../services/FundLedgerService.js';
 
 // Storage key for widget state (collapsed/expanded)
 const WIDGET_STATE_KEY = 'statusWidgetState';
@@ -56,8 +57,9 @@ function getCharacterData() {
         name: formData.keeperName || '',
         level: parseIntOr(formData.level, 1),
         xpCurrent: parseIntOr(formData['xp-current'], 0),
-        inkDrops: parseIntOr(formData.inkDrops, 0),
-        paperScraps: parseIntOr(formData.paperScraps, 0),
+        fundBalanceCents: Number.isFinite(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS])
+            ? characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]
+            : 0,
         dustyBlueprints: characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] || 0,
         smp: parseIntOr(formData.smp, 0)
     };
@@ -99,8 +101,7 @@ function renderCollapsedState(button, charData) {
     button.innerHTML = `
         <span class="status-widget__level-badge">Lv ${charData.level}</span>
         <span class="status-widget__currency-icons">
-            <span class="status-widget__icon${charData.inkDrops < 0 ? ' currency-negative' : ''}" title="Ink Drops">💧 ${charData.inkDrops}</span>
-            <span class="status-widget__icon${charData.paperScraps < 0 ? ' currency-negative' : ''}" title="Paper Scraps">📄 ${charData.paperScraps}</span>
+            <span class="status-widget__icon${charData.fundBalanceCents < 0 ? ' currency-negative' : ''}" title="Fund">💰 ${formatCents(charData.fundBalanceCents)}</span>
             <span class="status-widget__icon" title="Dusty Blueprints">📜 ${charData.dustyBlueprints}</span>
             <span class="status-widget__icon" title="SMP">🎓 ${charData.smp}</span>
         </span>
@@ -142,14 +143,9 @@ function renderExpandedState(panel, charData) {
             </div>
             <div class="status-widget__currencies">
                 <div class="status-widget__currency">
-                    <span class="status-widget__currency-icon">💧</span>
-                    <span class="status-widget__currency-label">Ink Drops</span>
-                    <span class="status-widget__currency-value${charData.inkDrops < 0 ? ' currency-negative' : ''}">${charData.inkDrops}</span>
-                </div>
-                <div class="status-widget__currency">
-                    <span class="status-widget__currency-icon">📄</span>
-                    <span class="status-widget__currency-label">Paper Scraps</span>
-                    <span class="status-widget__currency-value${charData.paperScraps < 0 ? ' currency-negative' : ''}">${charData.paperScraps}</span>
+                    <span class="status-widget__currency-icon">💰</span>
+                    <span class="status-widget__currency-label">Fund</span>
+                    <span class="status-widget__currency-value${charData.fundBalanceCents < 0 ? ' currency-negative' : ''}">${formatCents(charData.fundBalanceCents)}</span>
                 </div>
                 <div class="status-widget__currency">
                     <span class="status-widget__currency-icon">📜</span>
@@ -270,8 +266,9 @@ export async function initializeStatusWidget() {
     
     // Also listen to storage events for cross-tab updates
     window.addEventListener('storage', (e) => {
-        if (e.key === STORAGE_KEYS.CHARACTER_SHEET_FORM || 
-            e.key === STORAGE_KEYS.DUSTY_BLUEPRINTS) {
+        if (e.key === STORAGE_KEYS.CHARACTER_SHEET_FORM ||
+            e.key === STORAGE_KEYS.DUSTY_BLUEPRINTS ||
+            e.key === STORAGE_KEYS.FUND_BALANCE_CENTS) {
             handleStateChange();
         }
     });

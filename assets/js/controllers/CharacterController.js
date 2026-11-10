@@ -26,9 +26,6 @@ export class CharacterController extends BaseController {
 
         const levelInput = document.getElementById('level');
         const xpNeededInput = document.getElementById('xp-needed');
-        const inkDropsInput = document.getElementById('inkDrops');
-        const paperScrapsInput = document.getElementById('paperScraps');
-        const smpInput = document.getElementById('smp');
         const keeperBackgroundSelect = document.getElementById('keeperBackground');
         const wizardSchoolSelect = document.getElementById('wizardSchool');
         const librarySanctumSelect = document.getElementById('librarySanctum');
@@ -114,51 +111,9 @@ export class CharacterController extends BaseController {
             
             // If level increased, apply rewards for all levels between previous and new
             if (newLevel > previousLevel && data.levelRewards) {
-                let totalInkDrops = 0;
-                let totalPaperScraps = 0;
-                let totalSmp = 0;
-                let totalInventorySlots = 0;
-                
                 // Apply rewards for each level gained
-                for (let level = previousLevel + 1; level <= newLevel; level++) {
-                    const levelStr = String(level);
-                    const rewards = data.levelRewards[levelStr];
-                    if (rewards) {
-                        totalInkDrops += rewards.inkDrops || 0;
-                        totalPaperScraps += rewards.paperScraps || 0;
-                        totalSmp += rewards.smp || 0;
-                        totalInventorySlots += rewards.inventorySlot || 0;
-                    }
-                }
-                
-                // Apply currency rewards
-                if (totalInkDrops > 0 && inkDropsInput) {
-                    const currentInk = parseIntOr(inkDropsInput.value, 0);
-                    inkDropsInput.value = currentInk + totalInkDrops;
-                }
-                
-                if (totalPaperScraps > 0 && paperScrapsInput) {
-                    const currentPaper = parseIntOr(paperScrapsInput.value, 0);
-                    paperScrapsInput.value = currentPaper + totalPaperScraps;
-                }
-                
-                if (totalSmp > 0 && smpInput) {
-                    const currentSmp = parseIntOr(smpInput.value, 0);
-                    smpInput.value = currentSmp + totalSmp;
-                    // Update SMP display
-                    uiModule.renderMasteryAbilities(smpInput);
-                }
-                
-                // Update inventory UI to show unallocated slots note if needed
-                // (Note: unallocated slots are now calculated dynamically in renderLoadout)
-                if (totalInventorySlots > 0) {
-                    uiModule.renderLoadout(
-                        document.getElementById('wearable-slots'),
-                        document.getElementById('non-wearable-slots'),
-                        document.getElementById('familiar-slots')
-                    );
-                }
-                
+                this.applyLevelRewards(previousLevel, newLevel);
+
                 // Update previous level
                 formData.previousLevel = newLevel;
                 safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
@@ -260,53 +215,8 @@ export class CharacterController extends BaseController {
         levelInput.value = newLevel;
         xpCurrentInput.value = remainingXP;
 
-        // Handle automatic level rewards for the new level
-        if (data.levelRewards) {
-            const inkDropsInput = document.getElementById('inkDrops');
-            const paperScrapsInput = document.getElementById('paperScraps');
-            const smpInput = document.getElementById('smp');
-            
-            let totalInkDrops = 0;
-            let totalPaperScraps = 0;
-            let totalSmp = 0;
-            let totalInventorySlots = 0;
-            
-            // Apply rewards for the new level only
-            const levelStr = String(newLevel);
-            const rewards = data.levelRewards[levelStr];
-            if (rewards) {
-                totalInkDrops += rewards.inkDrops || 0;
-                totalPaperScraps += rewards.paperScraps || 0;
-                totalSmp += rewards.smp || 0;
-                totalInventorySlots += rewards.inventorySlot || 0;
-            }
-            
-            // Apply currency rewards
-            if (totalInkDrops > 0 && inkDropsInput) {
-                const currentInk = parseIntOr(inkDropsInput.value, 0);
-                inkDropsInput.value = currentInk + totalInkDrops;
-            }
-            
-            if (totalPaperScraps > 0 && paperScrapsInput) {
-                const currentPaper = parseIntOr(paperScrapsInput.value, 0);
-                paperScrapsInput.value = currentPaper + totalPaperScraps;
-            }
-            
-            if (totalSmp > 0 && smpInput) {
-                const currentSmp = parseIntOr(smpInput.value, 0);
-                smpInput.value = currentSmp + totalSmp;
-                uiModule.renderMasteryAbilities(smpInput);
-            }
-            
-            // Update inventory UI if needed
-            if (totalInventorySlots > 0) {
-                uiModule.renderLoadout(
-                    document.getElementById('wearable-slots'),
-                    document.getElementById('non-wearable-slots'),
-                    document.getElementById('familiar-slots')
-                );
-            }
-        }
+        // Handle automatic level rewards for the new level only
+        this.applyLevelRewards(currentLevel, newLevel);
 
         // Update UI (this will also be called by the change event, but that's fine - it's idempotent)
         uiModule.updateXpNeeded(levelInput, xpNeededInput);
@@ -314,6 +224,52 @@ export class CharacterController extends BaseController {
         uiModule.renderPermanentBonuses(levelInput);
 
         this.saveState();
+    }
+
+    /**
+     * Pay the levelRewards.json rewards for every level in (fromLevel, toLevel]:
+     * dollars into the Fund, Dusty Blueprints, SMP, and inventory slot unlocks.
+     * @param {number} fromLevel - level already rewarded (exclusive)
+     * @param {number} toLevel - new level (inclusive)
+     */
+    applyLevelRewards(fromLevel, toLevel) {
+        const { stateAdapter } = this;
+        const { ui: uiModule } = this.dependencies;
+        if (!data.levelRewards) return;
+
+        const totals = { dollars: 0, blueprints: 0, smp: 0, inventorySlot: 0 };
+        for (let level = fromLevel + 1; level <= toLevel; level++) {
+            const rewards = data.levelRewards[String(level)];
+            if (!rewards) continue;
+            Object.keys(totals).forEach((key) => {
+                totals[key] += Number(rewards[key]) || 0;
+            });
+        }
+
+        if (totals.dollars > 0) {
+            stateAdapter.addFunds(totals.dollars);
+        }
+
+        if (totals.blueprints > 0) {
+            const blueprints = stateAdapter.addDustyBlueprints(totals.blueprints);
+            const dustyBlueprintsInput = document.getElementById('dustyBlueprints');
+            if (dustyBlueprintsInput) dustyBlueprintsInput.value = String(blueprints);
+        }
+
+        const smpInput = document.getElementById('smp');
+        if (totals.smp > 0 && smpInput) {
+            smpInput.value = parseIntOr(smpInput.value, 0) + totals.smp;
+            uiModule.renderMasteryAbilities(smpInput);
+        }
+
+        // Unallocated slots are calculated dynamically in renderLoadout
+        if (totals.inventorySlot > 0) {
+            uiModule.renderLoadout(
+                document.getElementById('wearable-slots'),
+                document.getElementById('non-wearable-slots'),
+                document.getElementById('familiar-slots')
+            );
+        }
     }
 
     /**

@@ -7,8 +7,6 @@
         "challenge": "The Hall of Whispers: Read in a quiet space without music.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 5,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -21,8 +19,6 @@
                 "befriend": "Read a book with a ghost-like being or a mystery.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -34,8 +30,6 @@
                 "defeat": "Read a book that involves fated destiny or a newly revealed path.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -54,11 +48,9 @@
         "name": "The Glimmering Pools",
         "wingId": "4",
         "description": "Shallow pools glow like liquid starlight, each ripple whispering a forgotten secret. Step wrong, and the ink clings like chains.",
-        "challenge": "The Glimmering Pools: Read a book with a beautiful or unique cover (+10 Ink Drops).",
+        "challenge": "The Glimmering Pools: Read a book with a beautiful or unique cover.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -68,11 +60,9 @@
                 "name": "Mysterious Nymph",
                 "type": "Friendly Creature",
                 "description": "Her laughter shimmers across the water.",
-                "befriend": "Read a book that explores allure or transformation. Roll even for Amulet of Duality, odd for Worn Page curse.",
+                "befriend": "Read a book that explores allure or transformation. Roll even for Amulet of Duality; odd, no bonus.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -84,15 +74,13 @@
                 "befriend": "Read a book where a character discovers unexpected magic or hidden talents.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
         ],
         "encounters": {
             "Mysterious Nymph": {
-                "befriend": "Mysterious Nymph: Read a book that explores allure or transformation. Roll even for Amulet of Duality, odd for Worn Page curse."
+                "befriend": "Mysterious Nymph: Read a book that explores allure or transformation. Roll even for Amulet of Duality; odd, no bonus."
             },
             "Mischievous Pixie": {
                 "befriend": "Mischievous Pixie: Read a book where a character discovers unexpected magic or hidden talents."
@@ -107,8 +95,6 @@
         "challenge": "The Lost Garden: Read a book with a magical garden or a hidden realm.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -121,8 +107,6 @@
                 "befriend": "Read a book with a natural or wilderness setting.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -134,8 +118,6 @@
                 "befriend": "Read a book where things aren't what they seem, or the setting is much more than it appears to be.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -157,8 +139,6 @@
         "challenge": "The Cursed Tome: Read a book with a curse or a dark theme.",
         "roomRewards": {
             "xp": 50,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -172,8 +152,6 @@
                 "befriend": "Read a book where a character finds hope or humanity in a dark, hopeless situation.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -186,8 +164,6 @@
                 "befriend": "Read a book with a character that finds a way to move on from a tragic event.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -211,8 +187,6 @@
         "challenge": "The Archivist's Riddle: Read a book that has a mystery or secret at its core (+50 XP).",
         "roomRewards": {
             "xp": 50,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -230,8 +204,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -243,8 +215,6 @@
                 "befriend": "Read a book that teaches you something new.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -263,11 +233,9 @@
         "name": "The Starlit Observatory",
         "wingId": "3",
         "description": "A domed chamber where stars drift across the ceiling like a living sky. Telescopes of brass and crystal point toward unknown worlds.",
-        "challenge": "The Starlit Observatory: Read a book with a cosmic or future setting (+10 Ink Drops).",
+        "challenge": "The Starlit Observatory: Read a book with a cosmic or future setting.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -285,8 +253,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -299,8 +265,6 @@
                 "befriend": "Read a book where power is the main theme.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -323,8 +287,6 @@
         "challenge": "The Neglected Archives: Read a book with a ghost-like being or a death theme.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -338,8 +300,6 @@
                 "befriend": "Read a book where a character finds a way to move on from a tragic event.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -352,8 +312,6 @@
                 "befriend": "Read a book where desire or temptation plays a major role.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -374,11 +332,9 @@
         "name": "The Author's Study",
         "wingId": "1",
         "description": "Candles gutter beside ink-stained desks, their wax frozen mid-drip. Drafts lie unfinished, quills snapped in haste.",
-        "challenge": "The Author's Study: Read a book by the author you think used this study. Optional journaling: describe whose study this might be.",
+        "challenge": "The Author's Study: Read a book by the author you think used this study.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 10,
             "items": []
         },
         "encountersDetailed": [],
@@ -392,8 +348,6 @@
         "challenge": "The Endless Corridor: Read a book that is part of a series you have not started.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 15,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -406,8 +360,6 @@
                 "befriend": "Read a book you've been putting off for a fun, easy-to-read, or relaxing read.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -419,8 +371,6 @@
                 "defeat": "Read a book with a character who overcomes a seemingly impossible obstacle.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -442,8 +392,6 @@
         "challenge": "The Grand Gallery: Read a book you've had on your TBR for over a year.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [
                 "Gilded Painting"
             ]
@@ -463,8 +411,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -476,8 +422,6 @@
                 "defeat": "Read a book with a foiled cover.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -496,13 +440,11 @@
         "name": "The Shroud's Heart",
         "wingId": "5",
         "description": "Here the air is thick, trembling with the Shroud's presence. Shadows twist like ink smoke.",
-        "challenge": "The Shroud's Heart: Read a book you believe will be 5 stars. If correct, remove one Worn Page penalty.",
+        "challenge": "The Shroud's Heart: Read a book you believe will be 5 stars. If correct, gain +$5.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": [],
-            "special": "Remove one Worn Page penalty if book is 5 stars"
+            "special": "+$5 if the book is 5 stars"
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
         "encountersDetailed": [
@@ -515,8 +457,6 @@
                 "befriend": "Read a book where the main character must accept a tragic flaw.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -533,8 +473,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             }
@@ -557,8 +495,6 @@
         "challenge": "The Mimic's Lair: Read a book that subverts a common trope.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 0,
-            "paperScraps": 5,
             "items": []
         },
         "encountersDetailed": [
@@ -569,8 +505,6 @@
                 "defeat": "Read a book that feels deceptive or has a major twist.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -589,8 +523,6 @@
         "challenge": "The Philosophy Alcove: Read a philosophy book, memoir, or thought-provoking non-fiction.",
         "roomRewards": {
             "xp": 50,
-            "inkDrops": 0,
-            "paperScraps": 5,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -608,8 +540,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -621,8 +551,6 @@
                 "defeat": "Read a book with strong arguments or persuasive writing.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -644,8 +572,6 @@
         "challenge": "The Ballroom: Read a romance novel with a ball, party, or social gathering scene.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 5,
             "items": [
                 "Dancing Shoes"
             ]
@@ -660,8 +586,6 @@
                 "befriend": "Read a book featuring fae courts or fae romance.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -674,8 +598,6 @@
                 "befriend": "Read a book that explores heartbreak with compassion.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -698,8 +620,6 @@
         "challenge": "The Tearoom: Read a book set involving a café, restaurant, or domestic setting.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -717,8 +637,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -730,8 +648,6 @@
                 "befriend": "Read a book about a character who had to live up to unrelenting expectations.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -753,8 +669,6 @@
         "challenge": "The Stage: Read a book with high emotional stakes or dramatic conflict.",
         "roomRewards": {
             "xp": 50,
-            "inkDrops": 0,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -767,8 +681,6 @@
                 "befriend": "Read a play or a book based on or inspired by a popular play.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -780,8 +692,6 @@
                 "defeat": "Judge a book by its cover - pick a book you think will be good based solely on the cover.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -803,8 +713,6 @@
         "challenge": "The Laboratory: Read a book featuring scientific discovery, research, or experimentation.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 5,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -822,8 +730,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -835,8 +741,6 @@
                 "defeat": "Read a book where science or technology goes awry.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -858,8 +762,6 @@
         "challenge": "The Clockwork Chamber: Read a book involving time travel, alternate timelines, or temporal paradoxes.",
         "roomRewards": {
             "xp": 50,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -873,8 +775,6 @@
                 "befriend": "Read a book with numbers in the title.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -891,8 +791,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             }
@@ -915,8 +813,6 @@
         "challenge": "The Astral Archives: Read a book set in space or featuring space exploration.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -929,8 +825,6 @@
                 "befriend": "Read a book about characters who are lost.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -942,8 +836,6 @@
                 "defeat": "Read a book where things are not as they seem.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }
@@ -965,8 +857,6 @@
         "challenge": "The Apothecary: Enjoy your favorite brew or potion while reading this book.",
         "roomRewards": {
             "xp": 0,
-            "inkDrops": 10,
-            "paperScraps": 5,
             "items": []
         },
         "rollInstruction": "Roll a d4 to determine the encounter:",
@@ -984,8 +874,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             },
@@ -1002,8 +890,6 @@
                 },
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 0,
-                    "paperScraps": 5,
                     "items": []
                 }
             }
@@ -1025,8 +911,6 @@
         "challenge": "The Throne Room: Read an epic fantasy or romantasy book featuring royalty, courts, or kingdoms.",
         "roomRewards": {
             "xp": 50,
-            "inkDrops": 10,
-            "paperScraps": 0,
             "items": [
                 "Dragon Fang"
             ]
@@ -1041,8 +925,6 @@
                 "befriend": "Read a fantasy that doesn't take itself too seriously or is humorous.",
                 "rewards": {
                     "xp": 0,
-                    "inkDrops": 10,
-                    "paperScraps": 0,
                     "items": []
                 }
             },
@@ -1055,8 +937,6 @@
                 "befriend": "Read a book where characters reject power for something more important.",
                 "rewards": {
                     "xp": 30,
-                    "inkDrops": 0,
-                    "paperScraps": 0,
                     "items": []
                 }
             }

@@ -10,6 +10,7 @@ import {
     getDungeonCompletionRewardCardImage,
     applyDungeonCompletionReward
 } from '../assets/js/services/DungeonRewardService.js';
+import * as data from '../assets/js/character-sheet/data.js';
 
 describe('DungeonRewardService', () => {
     const completedRoom1Quests = [
@@ -70,13 +71,8 @@ describe('DungeonRewardService', () => {
         test('returns rewards object for room with roomRewards', () => {
             const rewards = getRoomRewardsForClaim('1');
             expect(rewards).not.toBeNull();
-            expect(rewards).toHaveProperty('xp');
-            expect(rewards).toHaveProperty('inkDrops');
-            expect(rewards).toHaveProperty('paperScraps');
-            expect(rewards).toHaveProperty('items');
-            expect(Array.isArray(rewards.items)).toBe(true);
-            // Room 1 has 5 paper scraps
-            expect(rewards.paperScraps).toBe(5);
+            // Dollars are not part of the claim: the room pays the flat quest base on completion.
+            expect(rewards).toEqual({ xp: 0, blueprints: 0, items: [] });
         });
 
         test('returns null for invalid room number', () => {
@@ -138,6 +134,11 @@ describe('DungeonRewardService', () => {
             expect(result.applied).toBe(true);
             expect(result.rewardName).toBe("Librarian's Quill");
             expect(addInventoryItem).toHaveBeenCalledWith(expect.objectContaining({ name: "Librarian's Quill" }));
+        });
+
+        // The Hoard is drawn as a one-time temporary buff that pays its rewardModifier when used.
+        test("The Librarian's Hoard pays $20 into the Fund", () => {
+            expect(data.temporaryBuffs["The Librarian's Hoard"].rewardModifier).toEqual({ dollars: 20 });
         });
     });
 });

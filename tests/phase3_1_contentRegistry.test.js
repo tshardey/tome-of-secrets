@@ -9,7 +9,6 @@ import {
     getItem, 
     getGenreQuest, 
     getSideQuest,
-    getCurse,
     getAbility,
     getAtmosphericBuff,
     getTemporaryBuff,
@@ -19,7 +18,6 @@ import {
     allItems,
     genreQuests,
     sideQuestsDetailed,
-    curseTableDetailed,
     masteryAbilities,
     atmosphericBuffs,
     temporaryBuffs,
@@ -209,33 +207,6 @@ describe('Phase 3.1: Content Registry and Stable IDs', () => {
         });
     });
 
-    describe('Curse ID Lookups', () => {
-        test('getCurse should find curse by ID', () => {
-            const curse = getCurse('curse-the-unread-tome');
-            expect(curse).toBeDefined();
-            expect(curse.name).toBe('The Unread Tome');
-        });
-
-        test('getCurse should find curse by name (backward compatibility)', () => {
-            const curse = getCurse('The Unread Tome');
-            expect(curse).toBeDefined();
-            expect(curse.id).toBe('curse-the-unread-tome');
-        });
-
-        test('getCurse should find curse by number (backward compatibility)', () => {
-            const curse = getCurse('1');
-            expect(curse).toBeDefined();
-        });
-
-        test('all curses should have id fields', () => {
-            expect(Array.isArray(curseTableDetailed)).toBe(true);
-            curseTableDetailed.forEach(curse => {
-                expect(curse.id).toBeDefined();
-                expect(curse.name).toBeDefined();
-            });
-        });
-    });
-
     describe('Ability ID Lookups', () => {
         test('getAbility should find ability by ID', () => {
             const ability = getAbility('ward-against-the-shroud');
@@ -385,12 +356,6 @@ describe('Phase 3.1: Content Registry and Stable IDs', () => {
             for (const [key, quest] of Object.entries(sideQuestsDetailed)) {
                 expect(quest.id).toMatch(/^side-quest-[a-z0-9-]+$/);
             }
-        });
-
-        test('curse IDs should be kebab-case based on name', () => {
-            curseTableDetailed.forEach(curse => {
-                expect(curse.id).toMatch(/^curse-[a-z0-9-]+$/);
-            });
         });
 
         test('ability IDs should be kebab-case', () => {

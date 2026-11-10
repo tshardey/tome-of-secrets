@@ -7,7 +7,6 @@
  */
 
 import { seriesCompletionRewards, getItem } from '../character-sheet/data.js';
-import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 
 /**
  * Normalize raw expedition data: ensure stops is an ordered array with id, order, name, story, position, reward.
@@ -142,10 +141,9 @@ export function applyTypedReward(reward, deps) {
     switch (reward.type) {
         case 'currency': {
             const xp = typeof reward.xp === 'number' ? reward.xp : 0;
-            const inkDrops = typeof reward.inkDrops === 'number' ? reward.inkDrops : 0;
-            const paperScraps = typeof reward.paperScraps === 'number' ? reward.paperScraps : 0;
-            if (updateCurrency && (xp !== 0 || inkDrops !== 0 || paperScraps !== 0)) {
-                updateCurrency({ xp, inkDrops, paperScraps });
+            const dollars = typeof reward.dollars === 'number' ? reward.dollars : 0;
+            if (updateCurrency && (xp !== 0 || dollars !== 0)) {
+                updateCurrency({ xp, dollars });
             }
             return { applied: true, rewardText: text };
         }
@@ -160,18 +158,6 @@ export function applyTypedReward(reward, deps) {
             const famSlotId = reward.slotId || `expedition-familiar-${Date.now()}`;
             if (stateAdapter && typeof stateAdapter.addPassiveFamiliarSlot === 'function') {
                 stateAdapter.addPassiveFamiliarSlot(famSlotId, 'series-expedition');
-            }
-            return { applied: true, rewardText: text };
-        }
-        case 'curse-removal': {
-            const activeCurses = stateAdapter && typeof stateAdapter.getActiveCurses === 'function' ? stateAdapter.getActiveCurses() : [];
-            if (activeCurses.length > 0 && stateAdapter && typeof stateAdapter.moveQuest === 'function') {
-                stateAdapter.moveQuest(
-                    STORAGE_KEYS.ACTIVE_CURSES,
-                    0,
-                    STORAGE_KEYS.COMPLETED_CURSES,
-                    (q) => q
-                );
             }
             return { applied: true, rewardText: text };
         }

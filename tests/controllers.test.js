@@ -7,7 +7,6 @@ import { CharacterController } from '../assets/js/controllers/CharacterControlle
 import { AbilityController } from '../assets/js/controllers/AbilityController.js';
 import { InventoryController } from '../assets/js/controllers/InventoryController.js';
 import { QuestController } from '../assets/js/controllers/QuestController.js';
-import { CurseController } from '../assets/js/controllers/CurseController.js';
 import { BuffController } from '../assets/js/controllers/BuffController.js';
 import { EndOfMonthController } from '../assets/js/controllers/EndOfMonthController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
@@ -18,6 +17,10 @@ import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { calculateBlueprintReward } from '../assets/js/services/QuestRewardService.js';
 import { toast } from '../assets/js/ui/toast.js';
+import { FundController } from '../assets/js/controllers/FundController.js';
+import { buildFundLedgerViewModel } from '../assets/js/viewModels/fundLedgerViewModel.js';
+import { todayIsoDate } from '../assets/js/services/FundLedgerService.js';
+import { initializeDelegatedClickHandler } from '../assets/js/character-sheet/delegatedClickHandler.js';
 
 describe('Controllers', () => {
     let stateAdapter;
@@ -31,8 +34,7 @@ describe('Controllers', () => {
                 <input id="keeperName" type="text" />
                 <input id="level" type="number" />
                 <input id="xp-needed" type="text" />
-                <input id="inkDrops" type="number" />
-                <input id="paperScraps" type="number" />
+                <input id="dustyBlueprints" type="number" />
                 <select id="keeperBackground"></select>
                 <select id="wizardSchool"></select>
                 <select id="librarySanctum"></select>
@@ -47,8 +49,6 @@ describe('Controllers', () => {
                 <button id="add-item-button"></button>
                 <button id="add-quest-button"></button>
                 <select id="new-quest-type"></select>
-                <select id="curse-penalty-select"></select>
-                <button id="add-curse-button"></button>
                 <select id="temp-buff-select"></select>
                 <button id="add-temp-buff-from-dropdown-button"></button>
                 <button class="end-of-month-button"></button>
@@ -70,7 +70,6 @@ describe('Controllers', () => {
         stateAdapter.removeInventoryItem = jest.fn();
         stateAdapter.getInventoryItems = jest.fn(() => []);
         stateAdapter.getEquippedItems = jest.fn(() => []);
-        stateAdapter.addActiveCurse = jest.fn();
         stateAdapter.addTemporaryBuff = jest.fn();
         stateAdapter.removeTemporaryBuff = jest.fn();
         stateAdapter.getTemporaryBuffs = jest.fn(() => []);
@@ -87,9 +86,7 @@ describe('Controllers', () => {
                 renderPermanentBonuses: jest.fn(),
                 renderBenefits: jest.fn(),
                 renderAtmosphericBuffs: jest.fn(),
-                renderActiveCurses: jest.fn(),
                 renderTemporaryBuffs: jest.fn(),
-                renderWornPageHelpers: jest.fn(),
                 renderQuestDrawHelpers: jest.fn(),
                 getSlotLimits: jest.fn(() => ({ wearable: 5, nonWearable: 5, familiar: 5 })),
                 populateBackgroundDropdown: jest.fn(),
@@ -163,75 +160,86 @@ describe('Controllers', () => {
             expect(dependencies.ui.renderPermanentBonuses).toHaveBeenCalled();
         });
 
-        it('should apply rewards when level increases', () => {
-            const controller = new CharacterController(stateAdapter, form, dependencies);
-            controller.initialize();
-            
-            const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            const paperScrapsInput = document.getElementById('paperScraps');
-            const smpInput = document.getElementById('smp');
-            
-            // Set initial values
-            levelInput.value = '1';
-            inkDropsInput.value = '10';
-            paperScrapsInput.value = '5';
-            smpInput.value = '0';
-            
-            // Trigger initial load to set previousLevel
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level up to 2
-            levelInput.value = '2';
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level 2 rewards: 25 inkDrops, 10 paperScraps, 0 SMP
-            expect(parseInt(inkDropsInput.value)).toBe(35); // 10 + 25
-            expect(parseInt(paperScrapsInput.value)).toBe(15); // 5 + 10
-            expect(parseInt(smpInput.value)).toBe(0);
-        });
+        describe('level-up payouts', () => {
+            beforeEach(() => {
+                characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 0;
+                characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 0;
+            });
 
-        it('should apply rewards for multiple level increases', () => {
-            const controller = new CharacterController(stateAdapter, form, dependencies);
-            controller.initialize();
-            
-            const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            const paperScrapsInput = document.getElementById('paperScraps');
-            const smpInput = document.getElementById('smp');
-            
-            // Set initial values
-            levelInput.value = '1';
-            inkDropsInput.value = '0';
-            paperScrapsInput.value = '0';
-            smpInput.value = '0';
-            
-            // Trigger initial load to set previousLevel
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level up from 1 to 4 (should get rewards for levels 2, 3, and 4)
-            levelInput.value = '4';
-            levelInput.dispatchEvent(new Event('change'));
-            
-            // Level 2: 25 ink, 10 paper
-            // Level 3: 25 ink, 15 paper
-            // Level 4: 50 ink, 25 paper
-            // Total: 100 ink, 50 paper
-            expect(parseInt(inkDropsInput.value)).toBe(100);
-            expect(parseInt(paperScrapsInput.value)).toBe(50);
+            it('should pay level 2 rewards into the Fund and Blueprints', () => {
+                const controller = new CharacterController(stateAdapter, form, dependencies);
+                controller.initialize();
+
+                const levelInput = document.getElementById('level');
+                const smpInput = document.getElementById('smp');
+                levelInput.value = '1';
+                smpInput.value = '0';
+                levelInput.dispatchEvent(new Event('change'));
+
+                levelInput.value = '2';
+                levelInput.dispatchEvent(new Event('change'));
+
+                // Level 2: $10, +10 Blueprints, no SMP
+                expect(stateAdapter.getFundBalanceCents()).toBe(1000);
+                expect(stateAdapter.getDustyBlueprints()).toBe(10);
+                expect(document.getElementById('dustyBlueprints').value).toBe('10');
+                expect(parseInt(smpInput.value)).toBe(0);
+            });
+
+            it('should pay rewards for every level gained in one jump', () => {
+                const controller = new CharacterController(stateAdapter, form, dependencies);
+                controller.initialize();
+
+                const levelInput = document.getElementById('level');
+                const smpInput = document.getElementById('smp');
+                levelInput.value = '1';
+                smpInput.value = '0';
+                levelInput.dispatchEvent(new Event('change'));
+
+                // Levels 2, 3, 4: $10 each, +10 Blueprints each, SMP at 3
+                levelInput.value = '4';
+                levelInput.dispatchEvent(new Event('change'));
+
+                expect(stateAdapter.getFundBalanceCents()).toBe(3000);
+                expect(stateAdapter.getDustyBlueprints()).toBe(30);
+                expect(parseInt(smpInput.value)).toBe(1);
+            });
+
+            it('handleLevelUp pays only the new level (level 9 -> 10: $20, +15 Blueprints, +1 SMP)', () => {
+                const controller = new CharacterController(stateAdapter, form, dependencies);
+                controller.initialize();
+
+                const levelInput = document.getElementById('level');
+                const smpInput = document.getElementById('smp');
+                const xpInput = document.createElement('input');
+                xpInput.id = 'xp-current';
+                form.appendChild(xpInput);
+                levelInput.value = '9';
+                smpInput.value = '0';
+                xpInput.value = String(data.xpLevels['9']);
+                safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { previousLevel: 9 });
+                dependencies.ui.updateXpProgressBar = jest.fn();
+
+                controller.handleLevelUp();
+
+                expect(levelInput.value).toBe('10');
+                expect(stateAdapter.getFundBalanceCents()).toBe(2000);
+                expect(stateAdapter.getDustyBlueprints()).toBe(15);
+                expect(parseInt(smpInput.value)).toBe(1);
+            });
         });
 
         it('should award SMP when leveling up to levels with SMP rewards', () => {
             const controller = new CharacterController(stateAdapter, form, dependencies);
             controller.initialize();
-            
+
             const levelInput = document.getElementById('level');
             const smpInput = document.getElementById('smp');
-            
+
             levelInput.value = '4';
-            smpInput.value = '0';
             levelInput.dispatchEvent(new Event('change'));
-            
+            smpInput.value = '0';
+
             // Level up to 5 (awards 1 SMP)
             levelInput.value = '5';
             levelInput.dispatchEvent(new Event('change'));
@@ -275,18 +283,17 @@ describe('Controllers', () => {
             controller.initialize();
             
             const levelInput = document.getElementById('level');
-            const inkDropsInput = document.getElementById('inkDrops');
-            
-            // Set current level and currency (no change event to avoid applying rewards)
+            characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 10000;
+
+            // Set current level (no change event to avoid applying rewards)
             levelInput.value = '5';
-            inkDropsInput.value = '100';
-            
+
             // Decrease level
             levelInput.value = '3';
             levelInput.dispatchEvent(new Event('change'));
-            
-            // Should not change currency (rewards only apply on level increase)
-            expect(parseInt(inkDropsInput.value)).toBe(100);
+
+            // Should not change the Fund (rewards only apply on level increase)
+            expect(stateAdapter.getFundBalanceCents()).toBe(10000);
         });
     });
 
@@ -437,66 +444,6 @@ describe('Controllers', () => {
         });
     });
 
-    describe('CurseController', () => {
-        it('should initialize and populate curse dropdown', () => {
-            const controller = new CurseController(stateAdapter, form, dependencies);
-
-            controller.initialize();
-
-            const curseSelect = document.getElementById('curse-penalty-select');
-            expect(curseSelect).toBeTruthy();
-        });
-
-        it('should initialize curse controller with dropdown', () => {
-            const controller = new CurseController(stateAdapter, form, dependencies);
-            controller.initialize();
-
-            const curseSelect = document.getElementById('curse-penalty-select');
-            const addButton = document.getElementById('add-curse-button');
-            expect(curseSelect).toBeTruthy();
-            expect(addButton).toBeTruthy();
-        });
-
-        it('handleClick with mark-helper-used-btn calls markCurseHelperUsed and renderWornPageHelpers', () => {
-            stateAdapter.markCurseHelperUsed = jest.fn(() => true);
-            const controller = new CurseController(stateAdapter, form, dependencies);
-            controller.initialize();
-
-            const button = document.createElement('button');
-            button.className = 'mark-helper-used-btn';
-            button.dataset.sourceId = 'item:equipped:0_Chalice';
-            button.dataset.cadence = 'monthly';
-            document.body.appendChild(button);
-
-            const handled = controller.handleClick(button);
-
-            expect(handled).toBe(true);
-            expect(stateAdapter.markCurseHelperUsed).toHaveBeenCalledWith('item:equipped:0_Chalice', { cadence: 'monthly' });
-            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
-            expect(dependencies.saveState).toHaveBeenCalled();
-            document.body.removeChild(button);
-        });
-
-        it('handleClick with undo-helper-used-btn calls undoCurseHelperUsed and renderWornPageHelpers', () => {
-            stateAdapter.undoCurseHelperUsed = jest.fn(() => true);
-            const controller = new CurseController(stateAdapter, form, dependencies);
-            controller.initialize();
-
-            const button = document.createElement('button');
-            button.className = 'undo-helper-used-btn';
-            button.dataset.sourceId = 'ability:Ward';
-            document.body.appendChild(button);
-
-            const handled = controller.handleClick(button);
-
-            expect(handled).toBe(true);
-            expect(stateAdapter.undoCurseHelperUsed).toHaveBeenCalledWith('ability:Ward');
-            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
-            expect(dependencies.saveState).toHaveBeenCalled();
-            document.body.removeChild(button);
-        });
-    });
-
     describe('BuffController', () => {
         let updateCurrency;
 
@@ -640,6 +587,32 @@ describe('Controllers', () => {
             expect(stateAdapter.removeTemporaryBuff).toHaveBeenCalledWith(0);
         });
 
+        it('marking a one-time dollar buff as used pays its dollars', () => {
+            const updateCurrency = jest.fn();
+            const controller = new BuffController(stateAdapter, form, dependencies);
+            controller.initialize(updateCurrency);
+
+            const original = data.temporaryBuffs['Disjointed Perception'];
+            data.temporaryBuffs['Disjointed Perception'] = { ...original, rewardModifier: { dollars: 3 } };
+            try {
+                stateAdapter.getTemporaryBuffs = jest.fn(() => [{
+                    name: 'Disjointed Perception',
+                    status: 'active',
+                    duration: 'one-time'
+                }]);
+                stateAdapter.updateTemporaryBuff = jest.fn();
+
+                const target = document.createElement('button');
+                target.classList.add('mark-buff-used-btn');
+                target.dataset.index = '0';
+
+                expect(controller.handleClick(target)).toBe(true);
+                expect(updateCurrency).toHaveBeenCalledWith({ xp: 0, dollars: 3, items: [] });
+            } finally {
+                data.temporaryBuffs['Disjointed Perception'] = original;
+            }
+        });
+
         it('should handle marking buff as used', () => {
             const updateCurrency = jest.fn();
             const controller = new BuffController(stateAdapter, form, dependencies);
@@ -664,11 +637,85 @@ describe('Controllers', () => {
                 // Verify currency is applied when buff is marked as used
                 expect(updateCurrency).toHaveBeenCalledWith({
                     xp: 0,
-                    inkDrops: 10,
-                    paperScraps: 5,
+                    dollars: 3,
                     items: []
                 });
             }
+        });
+
+        describe("The Archivist's Favor choices", () => {
+            const markChoice = (controller, choiceId) => {
+                const target = document.createElement('button');
+                target.classList.add('mark-buff-used-btn');
+                target.dataset.index = '0';
+                if (choiceId) target.dataset.choiceId = choiceId;
+                return controller.handleClick(target);
+            };
+
+            let controller;
+            let updateCurrency;
+            beforeEach(() => {
+                updateCurrency = jest.fn();
+                controller = new BuffController(stateAdapter, form, dependencies);
+                controller.initialize(updateCurrency);
+                stateAdapter.getTemporaryBuffs = jest.fn(() => [{
+                    name: "The Archivist's Favor",
+                    status: 'active',
+                    duration: 'one-time'
+                }]);
+                stateAdapter.updateTemporaryBuff = jest.fn();
+            });
+
+            it('the +$10 option pays $10 into the Fund and marks the buff used', () => {
+                const realUpdateCurrency = jest.fn((rewards) => stateAdapter.addFunds(rewards.dollars));
+                controller.updateCurrency = realUpdateCurrency;
+                const before = stateAdapter.getFundBalanceCents();
+
+                expect(markChoice(controller, 'dollars')).toBe(true);
+                expect(realUpdateCurrency).toHaveBeenCalledWith({ xp: 0, dollars: 10, items: [] });
+                expect(stateAdapter.getFundBalanceCents()).toBe(before + 1000);
+                expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+            });
+
+            it('the +100 XP option pays XP and no dollars', () => {
+                expect(markChoice(controller, 'xp')).toBe(true);
+                expect(updateCurrency).toHaveBeenCalledWith({ xp: 100, dollars: 0, items: [] });
+            });
+
+            it('an unknown option id pays nothing and leaves the buff active', () => {
+                expect(markChoice(controller, 'gone')).toBe(true);
+                expect(updateCurrency).not.toHaveBeenCalled();
+                expect(stateAdapter.updateTemporaryBuff).not.toHaveBeenCalled();
+            });
+
+            it('the reroll option, or no option, pays nothing', () => {
+                expect(markChoice(controller, 'reroll')).toBe(true);
+                expect(markChoice(controller)).toBe(true);
+                expect(updateCurrency).not.toHaveBeenCalled();
+                expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledTimes(2);
+            });
+        });
+
+        it('should not pay a use-count buff when it is marked used (it pays per quest instead)', () => {
+            const updateCurrency = jest.fn();
+            const controller = new BuffController(stateAdapter, form, dependencies);
+            controller.initialize(updateCurrency);
+
+            stateAdapter.getTemporaryBuffs = jest.fn(() => [{
+                name: 'Story Surge',
+                status: 'active',
+                duration: 'one-time',
+                usesLeft: 5
+            }]);
+            stateAdapter.updateTemporaryBuff = jest.fn();
+
+            const target = document.createElement('button');
+            target.classList.add('mark-buff-used-btn');
+            target.dataset.index = '0';
+
+            expect(controller.handleClick(target)).toBe(true);
+            expect(stateAdapter.updateTemporaryBuff).toHaveBeenCalledWith(0, { status: 'used' });
+            expect(updateCurrency).not.toHaveBeenCalled();
         });
 
         it('should not apply currency for non-one-time buffs', () => {
@@ -860,7 +907,7 @@ describe('Controllers', () => {
                 bookAuthor: 'Author A',
                 month: 'March',
                 year: '2026',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
                 buffs: []
             }];
             state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{
@@ -871,7 +918,7 @@ describe('Controllers', () => {
                 year: '2026',
                 book: '',
                 bookAuthor: '',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             }];
 
@@ -926,6 +973,11 @@ describe('Controllers', () => {
             expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
             const newest = realStateAdapter.getCompletedQuests()[1];
             expect(newest.bookId).toBe('book-a');
+            // Evocation grants the book its second quest, which pays the $10 secondary base.
+            expect(realStateAdapter.getBook('book-a').links.questIds).toEqual(['quest-completed', 'quest-active']);
+            expect(newest.receipt.base.dollars).toBe(10);
+            expect(newest.rewards.dollars).toBeGreaterThanOrEqual(10);
+            expect(newest.rewards.dollars).toBeLessThan(15);
             expect(realStateAdapter.isCooldownAvailable('school:Evocation', 'March', '2026')).toBe(false);
 
             promptSpy.mockRestore();
@@ -944,6 +996,17 @@ describe('Controllers', () => {
                     dateAdded: new Date().toISOString(),
                     dateCompleted: new Date().toISOString(),
                     links: { questIds: ['quest-completed'], curriculumPromptIds: [] }
+                },
+                'book-b': {
+                    id: 'book-b',
+                    title: 'Book B',
+                    author: 'Author B',
+                    cover: null,
+                    pageCount: 200,
+                    status: 'completed',
+                    dateAdded: new Date().toISOString(),
+                    dateCompleted: new Date().toISOString(),
+                    links: { questIds: ['quest-completed-b'], curriculumPromptIds: [] }
                 }
             };
             state[STORAGE_KEYS.COMPLETED_QUESTS] = [{
@@ -955,7 +1018,18 @@ describe('Controllers', () => {
                 bookAuthor: 'Author A',
                 month: 'March',
                 year: '2026',
-                rewards: { xp: 15, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 15, dollars: 10, items: [] },
+                buffs: []
+            }, {
+                id: 'quest-completed-b',
+                type: '♥ Organize the Stacks',
+                prompt: 'Fantasy',
+                bookId: 'book-b',
+                book: 'Book B',
+                bookAuthor: 'Author B',
+                month: 'March',
+                year: '2026',
+                rewards: { xp: 15, items: [] },
                 buffs: []
             }];
             state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [
@@ -967,7 +1041,7 @@ describe('Controllers', () => {
                     year: '2026',
                     book: '',
                     bookAuthor: '',
-                    rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                    rewards: { xp: 0, dollars: 10, items: [] },
                     buffs: []
                 },
                 {
@@ -978,7 +1052,7 @@ describe('Controllers', () => {
                     year: '2026',
                     book: '',
                     bookAuthor: '',
-                    rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                    rewards: { xp: 0, dollars: 10, items: [] },
                     buffs: []
                 }
             ];
@@ -1017,9 +1091,11 @@ describe('Controllers', () => {
             controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
 
             const promptSpy = jest.spyOn(window, 'prompt')
+                .mockReturnValueOnce('1') // March: Book A
+                .mockReturnValueOnce('1') // March: first active quest
+                .mockReturnValueOnce('1') // April: Book A again (already has two quests)
                 .mockReturnValueOnce('1')
-                .mockReturnValueOnce('1')
-                .mockReturnValueOnce('1')
+                .mockReturnValueOnce('2') // April: Book B
                 .mockReturnValueOnce('1');
 
             const button = document.createElement('button');
@@ -1032,21 +1108,179 @@ describe('Controllers', () => {
 
             // First use in March succeeds
             controller.handleActivateAbility(button);
-            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
 
             // Second use in March is blocked by cooldown
             controller.handleActivateAbility(button);
-            expect(realStateAdapter.getCompletedQuests()).toHaveLength(2);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
 
-            // New month allows activation again
+            // New month: Book A already holds two quests, so a third is refused (cooldown kept)
             monthInput.value = 'April';
             controller.handleActivateAbility(button);
             expect(realStateAdapter.getCompletedQuests()).toHaveLength(3);
+            expect(realStateAdapter.getActiveAssignments()).toHaveLength(1);
+            expect(realStateAdapter.isCooldownAvailable('school:Evocation', 'April', '2026')).toBe(true);
+
+            // ...and Book B can take its second quest
+            controller.handleActivateAbility(button);
+            expect(realStateAdapter.getCompletedQuests()).toHaveLength(4);
             expect(realStateAdapter.getActiveAssignments()).toHaveLength(0);
+            expect(realStateAdapter.getCompletedQuests()[3].receipt.base.dollars).toBe(10);
 
             promptSpy.mockRestore();
+        });
+
+        describe('Transmutation and Philosopher\'s Stone activations', () => {
+            const setupActivation = (state) => {
+                const monthInput = document.createElement('select');
+                monthInput.id = 'quest-month';
+                monthInput.innerHTML = '<option value="March">March</option><option value="April">April</option>';
+                monthInput.value = 'March';
+                form.appendChild(monthInput);
+
+                const yearInput = document.createElement('select');
+                yearInput.id = 'quest-year';
+                yearInput.innerHTML = '<option value="2026">2026</option>';
+                yearInput.value = '2026';
+                form.appendChild(yearInput);
+
+                const realStateAdapter = new StateAdapter(state);
+                const localDependencies = {
+                    ui: {
+                        renderActiveAssignments: jest.fn(),
+                        renderCompletedQuests: jest.fn(),
+                        renderActivatedAbilities: jest.fn(),
+                        updateXpProgressBar: jest.fn()
+                    },
+                    saveState: jest.fn()
+                };
+                const controller = new QuestController(realStateAdapter, form, localDependencies);
+                controller.initialize(new Set(), jest.fn(), jest.fn(), jest.fn());
+                return { controller, realStateAdapter, monthInput };
+            };
+
+            const activationButton = (action, sourceType, sourceId, abilityName) => {
+                const button = document.createElement('button');
+                button.className = 'activate-ability-btn';
+                button.dataset.action = action;
+                button.dataset.sourceType = sourceType;
+                button.dataset.sourceId = sourceId;
+                button.dataset.cooldown = 'monthly';
+                button.dataset.abilityName = abilityName;
+                return button;
+            };
+
+            it('Transmutation converts 20 blueprints to $2 once per month', () => {
+                const state = createEmptyCharacterState();
+                state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 50;
+                const { controller, realStateAdapter, monthInput } = setupActivation(state);
+                const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('1');
+                const button = activationButton('transmute_currency', 'school', 'Transmutation', 'School of Transmutation');
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(30);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(200);
+
+                // Second use in the same month is blocked by the cooldown
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(30);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(200);
+
+                // A new month allows it again
+                monthInput.value = 'April';
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(10);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(400);
+
+                promptSpy.mockRestore();
+            });
+
+            it('Transmutation converts $2 to 20 blueprints and refuses when the Fund is short', () => {
+                const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+                const state = createEmptyCharacterState();
+                state[STORAGE_KEYS.FUND_BALANCE_CENTS] = 150;
+                const { controller, realStateAdapter } = setupActivation(state);
+                const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('2');
+                const button = activationButton('transmute_currency', 'school', 'Transmutation', 'School of Transmutation');
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(150);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(0);
+                expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Not enough in your Fund'));
+                // A refused conversion does not consume the monthly cooldown
+                realStateAdapter.setFundBalanceCents(250);
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(50);
+                expect(realStateAdapter.getDustyBlueprints()).toBe(20);
+
+                promptSpy.mockRestore();
+                errorSpy.mockRestore();
+            });
+
+            it('Transmutation refuses without 20 blueprints', () => {
+                const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+                const state = createEmptyCharacterState();
+                state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = 19;
+                const { controller, realStateAdapter } = setupActivation(state);
+                const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('1');
+
+                controller.handleActivateAbility(activationButton('transmute_currency', 'school', 'Transmutation', 'School of Transmutation'));
+                expect(realStateAdapter.getDustyBlueprints()).toBe(19);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(0);
+                expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('need 20'));
+
+                promptSpy.mockRestore();
+                errorSpy.mockRestore();
+            });
+
+            it('Grand Dispelling claims its $10 once per month', () => {
+                const state = createEmptyCharacterState();
+                const { controller, realStateAdapter, monthInput } = setupActivation(state);
+                const button = activationButton('claim_dollar_bonus', 'ability', 'grand-dispelling', 'Grand Dispelling');
+                button.dataset.dollars = '10';
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(1000);
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(1000);
+
+                monthInput.value = 'April';
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(2000);
+            });
+
+            it('a claim_dollar_bonus button with no amount pays nothing and keeps the cooldown', () => {
+                const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => {});
+                const state = createEmptyCharacterState();
+                const { controller, realStateAdapter } = setupActivation(state);
+                const button = activationButton('claim_dollar_bonus', 'ability', 'ward-against-the-shroud', 'Ward Against the Shroud');
+
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(0);
+                expect(errorSpy).toHaveBeenCalled();
+
+                button.dataset.dollars = '5';
+                controller.handleActivateAbility(button);
+                expect(realStateAdapter.getFundBalanceCents()).toBe(500);
+                errorSpy.mockRestore();
+            });
+
+            it("Philosopher's Stone trades 50 XP for $5", () => {
+                const state = createEmptyCharacterState();
+                const { controller, realStateAdapter } = setupActivation(state);
+                const xpInput = document.createElement('input');
+                xpInput.id = 'xp-current';
+                xpInput.value = '120';
+                form.appendChild(xpInput);
+
+                controller.handleActivateAbility(activationButton('sacrifice_xp_for_currency', 'ability', 'philosophers-stone', "Philosopher's Stone"));
+
+                expect(xpInput.value).toBe('70');
+                expect(realStateAdapter.getFundBalanceCents()).toBe(500);
+            });
         });
 
         it('should reject Evocation activation for non-Evocation school', () => {
@@ -1059,7 +1293,7 @@ describe('Controllers', () => {
                 month: 'March',
                 year: '2026',
                 book: '',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 5, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             }];
 
@@ -1141,7 +1375,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book',
                 prompt: `${project.name}: ${project.completionPrompt}`,
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId: String(project.wingId || ''),
@@ -1206,7 +1440,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
             };
 
@@ -1290,7 +1524,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: '', // Missing book title
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
             };
 
@@ -1344,7 +1578,7 @@ describe('Controllers', () => {
                 book: 'Test Book Title', // Has book title
                 bookId: 'book-1',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
             };
 
@@ -1408,7 +1642,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book',
                 prompt: 'Test Side Quest',
-                rewards: { xp: 0, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 5, items: [] },
                 buffs: []
             };
             
@@ -1433,7 +1667,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book Title',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: [],
                 dateAdded: '2024-01-15T10:00:00.000Z' // Pre-existing dateAdded
             };
@@ -1479,7 +1713,7 @@ describe('Controllers', () => {
                 year: '2024',
                 book: 'Test Book Title',
                 prompt: 'Test Prompt',
-                rewards: { xp: 10, inkDrops: 5, paperScraps: 0, items: [] },
+                rewards: { xp: 10, dollars: 5, items: [] },
                 buffs: []
                 // No dateAdded field (legacy quest)
             };
@@ -1607,7 +1841,7 @@ describe('Controllers', () => {
                 month: 'January',
                 year: '2024',
                 prompt: `${lastProject.name}: ${lastProject.completionPrompt}`,
-                rewards: { xp: 0, inkDrops: 0, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 0, items: [] },
                 buffs: [],
                 restorationData: {
                     wingId,
@@ -1625,13 +1859,8 @@ describe('Controllers', () => {
             // Wing should now be completed
             expect(realStateAdapter.isWingCompleted(wingId)).toBe(true);
             // And UI currency award should have been invoked
-            expect(updateCurrency).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    xp: expect.any(Number),
-                    inkDrops: expect.any(Number),
-                    paperScraps: expect.any(Number)
-                })
-            );
+            // Wing completion pays $25 and 75 XP
+            expect(updateCurrency).toHaveBeenCalledWith({ xp: 75, dollars: 25, items: [] });
         });
 
         it('should finalize the correct moved completed quest when multiple entries have null ids', () => {
@@ -1644,7 +1873,7 @@ describe('Controllers', () => {
                 year: '2026',
                 dateCompleted: '2026-03-10T00:00:00.000Z',
                 book: 'Book A',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             };
             const second = {
@@ -1655,7 +1884,7 @@ describe('Controllers', () => {
                 year: '2026',
                 dateCompleted: '2026-03-11T00:00:00.000Z',
                 book: 'Book B',
-                rewards: { xp: 0, inkDrops: 10, paperScraps: 0, items: [] },
+                rewards: { xp: 0, dollars: 10, items: [] },
                 buffs: []
             };
             state[STORAGE_KEYS.COMPLETED_QUESTS] = [first, second];
@@ -1700,11 +1929,11 @@ describe('Controllers', () => {
             expect(buttons.length).toBeGreaterThan(0);
         });
 
-        it('end of month flow calls getCurseHelpers, refreshCurseHelpersAtEndOfMonth, and renderWornPageHelpers', () => {
-            const getCurseHelpersSpy = jest.spyOn(stateAdapter, 'getCurseHelpers').mockReturnValue([
-                { sourceId: 'item:equipped:0_Chalice', cadence: 'monthly' }
+        it('end of month flow refreshes quest draw helpers and re-renders them', () => {
+            const getHelpersSpy = jest.spyOn(stateAdapter, 'getQuestDrawHelpers').mockReturnValue([
+                { sourceId: 'ability:Flicker of Prophecy', cadence: 'monthly' }
             ]);
-            const refreshSpy = jest.spyOn(stateAdapter, 'refreshCurseHelpersAtEndOfMonth').mockReturnValue(true);
+            const refreshSpy = jest.spyOn(stateAdapter, 'refreshQuestDrawHelpersAtEndOfMonth').mockReturnValue(true);
 
             const controller = new EndOfMonthController(stateAdapter, form, dependencies);
             const completedBooksSet = new Set();
@@ -1716,14 +1945,179 @@ describe('Controllers', () => {
             expect(eomButton).toBeTruthy();
             eomButton.click();
 
-            expect(getCurseHelpersSpy).toHaveBeenCalled();
+            expect(getHelpersSpy).toHaveBeenCalled();
             expect(refreshSpy).toHaveBeenCalledWith([
-                { sourceId: 'item:equipped:0_Chalice', cadence: 'monthly' }
+                { sourceId: 'ability:Flicker of Prophecy', cadence: 'monthly' }
             ]);
-            expect(dependencies.ui.renderWornPageHelpers).toHaveBeenCalled();
+            expect(dependencies.ui.renderQuestDrawHelpers).toHaveBeenCalled();
 
-            getCurseHelpersSpy.mockRestore();
+            getHelpersSpy.mockRestore();
             refreshSpy.mockRestore();
+        });
+    });
+
+    describe('FundController', () => {
+        let fundAdapter;
+        let fundForm;
+        let controller;
+        let confirmSpy;
+
+        const $ = (id) => document.getElementById(id);
+        const submitDeduction = (amount, note = '') => {
+            $('fund-deduct-amount').value = amount;
+            $('fund-deduct-note').value = note;
+            $('fund-deduct-submit').click();
+        };
+
+        beforeEach(() => {
+            document.body.innerHTML = `
+                <form id="character-sheet">
+                    <input type="number" id="fund-balance" step="0.01" />
+                    <input type="text" id="fund-deduct-amount" />
+                    <input type="text" id="fund-deduct-note" />
+                    <input type="date" id="fund-deduct-date" />
+                    <button type="button" id="fund-deduct-submit">Deduct</button>
+                    <p id="fund-deduct-error" hidden></p>
+                    <div id="fund-ledger"></div>
+                </form>
+            `;
+            fundForm = $('character-sheet');
+            fundAdapter = new StateAdapter(createEmptyCharacterState());
+            controller = new FundController(fundAdapter, fundForm, { saveState: jest.fn() });
+            controller.initialize();
+            confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+        });
+
+        afterEach(() => {
+            controller.destroy();
+            confirmSpy.mockRestore();
+        });
+
+        it('defaults the deduction date to today', () => {
+            expect($('fund-deduct-date').value).toBe(todayIsoDate());
+        });
+
+        it('submitting $20 with note deducts and renders under current month', () => {
+            fundAdapter.addFunds(50);
+            submitDeduction('$20', 'Legendarium purchase');
+
+            expect(fundAdapter.getFundBalanceCents()).toBe(3000);
+            expect(fundAdapter.getFundLedger()).toEqual([
+                expect.objectContaining({ amountCents: 2000, note: 'Legendarium purchase', date: todayIsoDate() })
+            ]);
+            expect($('fund-deduct-amount').value).toBe('');
+            expect($('fund-deduct-note').value).toBe('');
+            expect($('fund-balance').value).toBe('30');
+
+            const month = $('fund-ledger').querySelector('.fund-ledger-month');
+            const [currentMonth] = buildFundLedgerViewModel(fundAdapter.getFundLedger());
+            expect(month.querySelector('.fund-ledger-month-label').textContent).toBe(currentMonth.label);
+            expect(month.querySelector('.fund-ledger-month-total').textContent).toContain('$20');
+            const row = month.querySelector('.fund-ledger-entry');
+            expect(row.textContent).toContain('$20');
+            expect(row.textContent).toContain('Legendarium purchase');
+            expect(row.querySelector('[data-action="delete-fund-deduction"]').dataset.id)
+                .toBe(fundAdapter.getFundLedger()[0].id);
+        });
+
+        it('invalid amount shows error and does not deduct', () => {
+            fundAdapter.addFunds(50);
+            ['', '0', '-5', 'abc'].forEach((raw) => {
+                submitDeduction(raw);
+                expect($('fund-deduct-error').textContent).toBe('Enter an amount greater than $0.');
+                expect($('fund-deduct-error').hidden).toBe(false);
+            });
+            expect(fundAdapter.getFundBalanceCents()).toBe(5000);
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect(confirmSpy).not.toHaveBeenCalled();
+
+            fundAdapter.addFunds(2000);
+            submitDeduction('1,250.5');
+            expect($('fund-deduct-error').hidden).toBe(true);
+            expect(fundAdapter.getFundLedger()[0].amountCents).toBe(125050);
+        });
+
+        it('overdraft asks confirm; declining leaves balance unchanged', () => {
+            fundAdapter.addFunds(10);
+            confirmSpy.mockReturnValue(false);
+            submitDeduction('32');
+
+            expect(confirmSpy).toHaveBeenCalledWith('This will take your Fund below $0. Continue?');
+            expect(fundAdapter.getFundBalanceCents()).toBe(1000);
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect($('fund-deduct-amount').value).toBe('32');
+
+            confirmSpy.mockReturnValue(true);
+            submitDeduction('32');
+            expect(fundAdapter.getFundBalanceCents()).toBe(-2200);
+            expect($('fund-balance').value).toBe('-22');
+        });
+
+        it('does not ask confirm when the balance covers the deduction', () => {
+            fundAdapter.addFunds(20);
+            submitDeduction('20');
+            expect(confirmSpy).not.toHaveBeenCalled();
+            expect(fundAdapter.getFundBalanceCents()).toBe(0);
+        });
+
+        it('delete refunds', () => {
+            fundAdapter.addFunds(50);
+            submitDeduction('12.34', 'Paperback');
+            const button = $('fund-ledger').querySelector('[data-action="delete-fund-deduction"]');
+
+            expect(controller.handleClick(button)).toBe(true);
+            expect(fundAdapter.getFundBalanceCents()).toBe(5000);
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect($('fund-ledger').querySelector('.fund-ledger-entry')).toBeNull();
+            expect($('fund-ledger').textContent).toContain('No deductions yet');
+        });
+
+        it('cancelling the delete confirm keeps the entry', () => {
+            fundAdapter.addFunds(50);
+            submitDeduction('10');
+            confirmSpy.mockReturnValue(false);
+            const button = $('fund-ledger').querySelector('[data-action="delete-fund-deduction"]');
+
+            expect(controller.handleClick(button)).toBe(true);
+            expect(fundAdapter.getFundLedger()).toHaveLength(1);
+            expect(fundAdapter.getFundBalanceCents()).toBe(4000);
+        });
+
+        it('delete is routed through the delegated click handler', () => {
+            initializeDelegatedClickHandler(fundForm, {
+                ability: {}, inventory: {}, quest: {}, buff: {}, fund: controller
+            }, {});
+            fundAdapter.addFunds(5);
+            submitDeduction('5');
+            $('fund-ledger').querySelector('[data-action="delete-fund-deduction"]').click();
+            expect(fundAdapter.getFundLedger()).toHaveLength(0);
+            expect(fundAdapter.getFundBalanceCents()).toBe(500);
+        });
+
+        it('pressing Enter in the amount field deducts instead of submitting the form', () => {
+            fundAdapter.addFunds(10);
+            $('fund-deduct-amount').value = '4';
+            const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+            $('fund-deduct-amount').dispatchEvent(event);
+
+            expect(event.defaultPrevented).toBe(true);
+            expect(fundAdapter.getFundBalanceCents()).toBe(600);
+        });
+
+        it('editing #fund-balance sets cents', () => {
+            $('fund-balance').value = '123.45';
+            $('fund-balance').dispatchEvent(new Event('change', { bubbles: true }));
+            expect(fundAdapter.getFundBalanceCents()).toBe(12345);
+
+            $('fund-balance').value = '';
+            $('fund-balance').dispatchEvent(new Event('change', { bubbles: true }));
+            expect(fundAdapter.getFundBalanceCents()).toBe(12345);
+            expect($('fund-balance').value).toBe('123.45');
+        });
+
+        it('re-renders when the Fund changes elsewhere (quest payout)', () => {
+            fundAdapter.addFunds(15);
+            expect($('fund-balance').value).toBe('15');
         });
     });
 

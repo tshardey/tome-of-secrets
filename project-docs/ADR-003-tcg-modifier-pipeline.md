@@ -3,6 +3,8 @@
 **Date:** 2026-04-01  
 **Technical Story:** Replace ad-hoc hardcoded bonus logic with a declarative, data-driven modifier pipeline
 
+> **Update 2026-11-09 (dollar economy):** Ink Drops and Paper Scraps were replaced by a single real-dollar Fund. Numeric resources are now `xp | dollars | blueprints`. The `MULTIPLY` modifier type was removed (every bonus is a flat amount, and `scripts/validate-data.js` rejects `MULTIPLY` in catalog and side-quest stake JSON). The `ON_JOURNAL_ENTRY` trigger was removed with journaling, and the `ON_WORN_PAGE` trigger this ADR originally listed (never implemented) was dropped with the Shroud curse system. Sanctums no longer double atmospheric buffs: an associated buff pays the sanctum daily rate ($2 instead of $1). The sections below describe the current model; see `docs/superpowers/specs/2026-11-08-dollar-economy-design.md` for the economy itself.
+
 ---
 
 ## Context and Problem Statement
@@ -25,7 +27,7 @@ The project needed a single, consistent model for "something grants a bonus/acti
 - Keep the game playable even while the pipeline migration is incomplete (never break existing behavior)
 - Allow new game mechanics to be added without touching JavaScript — only JSON
 - Make effects testable in isolation using real catalog data
-- Support the three major effect families: numeric rewards (`ADD_FLAT`, `MULTIPLY`, `GRANT_RESOURCE`), prevention (`PREVENT`), and activation (`ACTIVATE`, `UNLOCK_SLOT`)
+- Support the three major effect families: numeric rewards (`ADD_FLAT`, `GRANT_RESOURCE`), prevention (`PREVENT`), and activation (`ACTIVATE`, `UNLOCK_SLOT`)
 
 ---
 
@@ -73,7 +75,7 @@ Effects are plain JSON objects validated against a schema. Each effect has:
 {
   "trigger": "ON_QUEST_COMPLETED",
   "condition": { "questType": "genre_quest" },
-  "modifier": { "type": "ADD_FLAT", "resource": "inkDrops", "value": 5 },
+  "modifier": { "type": "ADD_FLAT", "resource": "dollars", "value": 5 },
   "cooldown": "monthly",
   "description": "Human-readable description for UI"
 }
@@ -81,16 +83,15 @@ Effects are plain JSON objects validated against a schema. Each effect has:
 
 **Triggers** (`TRIGGERS` enum):
 - `ON_QUEST_COMPLETED` — fires when any quest is completed
-- `ON_JOURNAL_ENTRY` — fires for each journal entry at EOM
-- `ON_WORN_PAGE` — fires when a Worn Page penalty would be applied
+- `ON_QUEST_DRAFTED` — fires when a quest is drafted into the active pool
+- `ON_BOOK_COMPLETED` — fires when a library book is marked complete
 - `ON_STATE_LOAD` — fires once when character state is loaded (for persistent slot unlocks)
 - `ON_MONTH_END` — fires during EOM processing
 - `ON_MONTH_START` — fires when a new month begins
 - `ON_ACTIVATE` — fires when the player explicitly activates an ability
 
 **Modifier types** (`MODIFIER_TYPES` enum):
-- `ADD_FLAT` / `GRANT_RESOURCE` — additive numeric bonuses
-- `MULTIPLY` — multiplicative (applies after all additive bonuses)
+- `ADD_FLAT` / `GRANT_RESOURCE` — additive numeric bonuses on a resource (`xp`, `dollars`, or `blueprints`)
 - `PREVENT` — blocks a penalty from applying
 - `ACTIVATE` — records an activation; handled as a cooldown-gated player action
 - `UNLOCK_SLOT` — deferred to `SlotService` on state load; non-numeric
@@ -99,8 +100,8 @@ Effects are plain JSON objects validated against a schema. Each effect has:
 
 `EffectRegistry` indexes all catalog entries (items, backgrounds, schools, mastery abilities, sanctum benefits) at initialization. It provides typed query methods:
 
-- `getEffectsForTrigger(trigger, stateAdapter, dataModule)` — returns all active effects matching a trigger
-- `getSanctumAssociatedBuffIds(sanctumIdOrName, dataModule)` — reads sanctum `ON_MONTH_END` MULTIPLY effects to determine which atmospheric buffs receive a ×2 multiplier
+- `getActiveEffects(trigger, stateAdapter, dataModule)` — returns all active effects matching a trigger
+- `getSanctumAssociatedBuffIds(sanctumIdOrName, dataModule)` — reads the sanctum's `associatedBuffs` list to determine which atmospheric buffs pay the sanctum daily rate
 - `getForcedAtmosphericBuffNames(stateAdapterLike, dataModule)` — reads `ON_MONTH_START force_atmospheric_buff` effects
 
 ### Layer 3: Modifier Pipeline (`assets/js/services/ModifierPipeline.js`)
@@ -109,7 +110,7 @@ Effects are plain JSON objects validated against a schema. Each effect has:
 
 1. Queries `EffectRegistry` for all effects matching the trigger
 2. Evaluates conditions (quest type, page count, atmospheric buff active, etc.)
-3. Applies modifiers in resolution order: `ADD_FLAT` → `GRANT_RESOURCE` → `MULTIPLY` → `PREVENT` → `UNLOCK_SLOT` (deferred) → `ACTIVATE`
+3. Applies modifiers in resolution order: `ADD_FLAT` → `GRANT_RESOURCE` → `PREVENT` → `UNLOCK_SLOT` (deferred) → `ACTIVATE`
 4. Returns a receipt object describing what was applied, to whom, and why
 
 The pipeline is side-effect-free. It never writes state — callers apply the receipt.
@@ -120,11 +121,11 @@ The pipeline is side-effect-free. It never writes state — callers apply the re
 
 | File | Entities with effects |
 |---|---|
-| `keeperBackgrounds.json` | All 6 backgrounds (ink/paper/XP bonuses, forced buffs) |
+| `keeperBackgrounds.json` | All 6 backgrounds (dollar/XP bonuses, forced buffs) |
 | `schoolBenefits.json` | All 6 schools (quest bonuses, prevention, activation, slot unlocks) |
-| `masteryAbilities.json` | Silver Tongue, Alchemic Focus, Quick Shot, Concussive Blast, Irresistible Charm, Empowered Bond, Divination abilities |
-| `allItems.json` | Librarian's Quill, Golden Pen, Chalice of Restoration, Raven Familiar, Scepter of Knowledge, Ward Against the Shroud, Celestial Koi Fish, Lantern of Foresight, familiar items |
-| `sanctumBenefits.json` | All 3 sanctums (atmospheric buff ×2 multipliers via `ON_MONTH_END`) |
+| `masteryAbilities.json` | Ward Against the Shroud, Grand Dispelling, Silver Tongue, Alchemic Focus, Quick Shot, Concussive Blast, Irresistible Charm, Empowered Bond, Divination abilities |
+| `allItems.json` | Librarian's Quill, Golden Pen, Chalice of Restoration, Raven Familiar, Scepter of Knowledge, Celestial Koi Fish, Lantern of Foresight, familiar items |
+| `sanctumBenefits.json` | All 3 sanctums (`associatedBuffs` lists; no numeric effects) |
 
 Entities with subjective mechanics (player decides applicability) retain only `rewardModifier` and are correctly excluded from the pipeline. This is a design choice, not a gap.
 
@@ -145,15 +146,14 @@ Entities with subjective mechanics (player decides applicability) retain only `r
 
 - **Two reward paths coexist**: items and buffs without `effects` arrays still use `rewardModifier` and legacy controller code. This is intentional (subjective mechanics should remain player-driven) but creates an asymmetry that new contributors need to understand.
 - **`ACTIVATE` effects are discovery-only**: the pipeline records that an activation was used and checks cooldowns, but the *action* taken (e.g. "complete two quests from one book") is still executed by controller logic. The pipeline is not yet a full execution engine for non-numeric effects.
-- **Temp buff use-count enforcement is partial**: `Enchanted Focus` now carries `useCount: 3` in data and `usesLeft` is decremented via `StateAdapter.decrementUseCountBuffsOnBookComplete()` when a book is marked complete. However, `The Archivist's Favor` choose-one (reroll / +100 XP / 50% off) remains a manual player step — the mechanic is inherently a choice that cannot be auto-applied without a dedicated UI flow.
-- **Sanctum multipliers are pipeline-read but not pipeline-applied**: `EffectRegistry.getSanctumAssociatedBuffIds` reads sanctum `effects` to determine which buffs get doubled. The actual multiplication happens in `AtmosphericBuffService.calculateDailyValue`, not in `ModifierPipeline.resolve`. This is a deliberate architectural shortcut: atmospheric buff calculation runs on every UI render and the full pipeline overhead is unnecessary for a two-branch conditional.
+- **Temp buff use-count enforcement is partial**: use-count buffs (`Enchanted Focus` `useCount: 3`, `Story Surge` 5, `Librarian's Blessing` 2, `Long Read Focus` 1) spend one use per completed quest whose bonus card they paid on (`QuestController.spendUseCountBuffsForQuest` → `StateAdapter.consumeUseCountBuffsForQuest`); at 0 they are marked used and `RewardCalculator` stops paying them. However, `The Archivist's Favor` choose-one (reroll / +100 XP / +$10) remains a manual player step — the mechanic is inherently a choice that cannot be auto-applied without a dedicated UI flow.
+- **Sanctum daily rate is registry-read but not pipeline-applied**: `EffectRegistry.getSanctumAssociatedBuffIds` reads the sanctum's `associatedBuffs` to determine which buffs pay the higher rate. The rate itself (`GAME_CONFIG.atmospheric.sanctumBonus`) is chosen in `AtmosphericBuffService.calculateDailyValue`, not in `ModifierPipeline.resolve`. This is a deliberate architectural shortcut: atmospheric buff calculation runs on every UI render and the full pipeline overhead is unnecessary for a two-branch conditional.
 
 ### Deferred Work
 
 The following were explicitly scoped out of this ADR and remain open:
 
 - **Full ACTIVATE execution engine**: making `ACTIVATE` effects self-describing enough that controller logic for each action can be eliminated
-- **Abjuration follow-up quest**: the draw-from-prevented-page follow-through is documented in prose as a manual player step; a future ADR could add a UI prompt on prevention
 - **Side quest stable IDs in state**: side quest state is currently matched by text; migrating to ID-based keys requires a state migration in `dataMigrator.js`
 
 ---

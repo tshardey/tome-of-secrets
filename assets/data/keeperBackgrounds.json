@@ -8,13 +8,26 @@
     "scribe": {
         "name": "The Scribe's Acolyte",
         "description": "You spent your formative years copying manuscripts and illuminating texts. Your fingers are permanently stained with ink, but your understanding of the written word is profound.",
-        "benefit": "Gain a permanent +3 Paper Scrap bonus every time you complete an Adventure Journal entry.",
+        "benefit": "Gain a +$3 bonus every time you complete a quest with an illustrated, illuminated, or special-edition book, or a book with maps.",
         "effects": [
             {
-                "trigger": "ON_JOURNAL_ENTRY",
+                "trigger": "ON_QUEST_COMPLETED",
+                "condition": {
+                    "tagMatch": [
+                        [
+                            "illustrated"
+                        ],
+                        [
+                            "special-edition"
+                        ],
+                        [
+                            "maps"
+                        ]
+                    ]
+                },
                 "modifier": {
                     "type": "ADD_FLAT",
-                    "resource": "paperScraps",
+                    "resource": "dollars",
                     "value": 3
                 }
             }
@@ -23,7 +36,7 @@
     "archivist": {
         "name": "The Archivist's Apprentice",
         "description": "You were raised in the dust of history, cataloging artifacts and sorting brittle scrolls. You have an innate sense for separating fact from fiction and finding the truth in old lore.",
-        "benefit": "Gain a +10 Ink Drop bonus any time you complete a quest by reading a book from the Non-Fiction or Historical Fiction genres.",
+        "benefit": "Gain a +$2 bonus any time you complete a quest by reading a book from the Non-Fiction or Historical Fiction genres.",
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
@@ -35,8 +48,8 @@
                 },
                 "modifier": {
                     "type": "ADD_FLAT",
-                    "resource": "inkDrops",
-                    "value": 10
+                    "resource": "dollars",
+                    "value": 2
                 }
             }
         ]
@@ -44,7 +57,7 @@
     "cartographer": {
         "name": "The Cartographer's Guild",
         "description": "You were trained to map the unknown, to chart the stars, and to find paths where none existed. The twisting, shifting halls of the Grand Library feel like a challenge, not a threat.",
-        "benefit": "For each dungeon room card you add to your active quests gain 15 ink drops",
+        "benefit": "For each dungeon room card you add to your active quests, gain +$3.",
         "effects": [
             {
                 "trigger": "ON_QUEST_DRAFTED",
@@ -53,8 +66,8 @@
                 },
                 "modifier": {
                     "type": "GRANT_RESOURCE",
-                    "resource": "inkDrops",
-                    "value": 15
+                    "resource": "dollars",
+                    "value": 3
                 }
             }
         ]
@@ -62,7 +75,7 @@
     "prophet": {
         "name": "The Cloistered Prophet",
         "description": "You lived a life of quiet contemplation, dedicated to the old gods of knowledge and narrative. You see omens in the Shroud and hear whispers from the lost stories.",
-        "benefit": "Gain a +15 Ink Drop bonus any time you complete a quest by reading a book with a spiritual, mythological, or celestial premise.",
+        "benefit": "Gain a +$3 bonus any time you complete a quest by reading a book with a spiritual, mythological, or celestial premise.",
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
@@ -75,8 +88,8 @@
                 },
                 "modifier": {
                     "type": "ADD_FLAT",
-                    "resource": "inkDrops",
-                    "value": 15
+                    "resource": "dollars",
+                    "value": 3
                 }
             }
         ]
@@ -84,7 +97,7 @@
     "biblioslinker": {
         "name": "The Biblioslinker",
         "description": "You used to \"liberate\" rare books from private collections. You know how to get into places you're not supposed to be and find things that are meant to stay hidden.",
-        "benefit": "You know how to find the good stuff. Gain a permanent +10 Paper Scrap bonus every time you successfully complete a Dungeon Crawl (♠).",
+        "benefit": "You know how to find the good stuff. Gain a permanent +$3 bonus every time you successfully complete a Dungeon Crawl (♠).",
         "effects": [
             {
                 "trigger": "ON_QUEST_COMPLETED",
@@ -93,8 +106,8 @@
                 },
                 "modifier": {
                     "type": "ADD_FLAT",
-                    "resource": "paperScraps",
-                    "value": 10
+                    "resource": "dollars",
+                    "value": 3
                 }
             }
         ]
@@ -102,7 +115,7 @@
     "groveTender": {
         "name": "The Grove Tender",
         "description": "You tended one of the last living gardens, cultivating stories from seeds and roots. You understand the natural, creeping decay of the Shroud and how life persists.",
-        "benefit": "Your connection to the natural world is constant. You always have The Soaking in Nature atmospheric buff active, earning +2 Paper Scraps per day you read (or +3 Paper Scraps per day if you chose The Verdant Athenaeum as your sanctum).",
+        "benefit": "Your connection to the natural world is constant. You always have The Soaking in Nature atmospheric buff active, earning $1 per day you read (or $2 per day if you chose The Verdant Athenaeum as your sanctum).",
         "effects": [
             {
                 "trigger": "ON_MONTH_START",

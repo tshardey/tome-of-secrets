@@ -37,7 +37,7 @@ describe('Library Restoration - Storage Keys', () => {
 
 describe('Library Restoration - Data Validation', () => {
         test('schema version should match dataValidator', () => {
-            expect(SCHEMA_VERSION).toBe(17);
+            expect(SCHEMA_VERSION).toBe(18);
     });
 
     test('should validate dustyBlueprints as number', () => {
@@ -111,8 +111,6 @@ describe('Library Restoration - State Migration', () => {
             [STORAGE_KEYS.COMPLETED_QUESTS]: [],
             [STORAGE_KEYS.DISCARDED_QUESTS]: [],
             [STORAGE_KEYS.ATMOSPHERIC_BUFFS]: {},
-            [STORAGE_KEYS.ACTIVE_CURSES]: [],
-            [STORAGE_KEYS.COMPLETED_CURSES]: [],
             [STORAGE_KEYS.TEMPORARY_BUFFS]: [],
             [STORAGE_KEYS.BUFF_MONTH_COUNTER]: 0,
             [STORAGE_KEYS.SELECTED_GENRES]: [],
@@ -300,9 +298,7 @@ describe('Library Restoration - Game Config', () => {
 
     test('should have wing completion rewards', () => {
         expect(GAME_CONFIG.restoration.wingCompletionRewards).toBeDefined();
-        expect(GAME_CONFIG.restoration.wingCompletionRewards.inkDrops).toBe(100);
-        expect(GAME_CONFIG.restoration.wingCompletionRewards.paperScraps).toBe(40);
-        expect(GAME_CONFIG.restoration.wingCompletionRewards.xp).toBe(75);
+        expect(GAME_CONFIG.restoration.wingCompletionRewards).toEqual({ dollars: 25, xp: 75 });
     });
 
     test('should have blueprint reward values', () => {
@@ -310,9 +306,8 @@ describe('Library Restoration - Game Config', () => {
         expect(GAME_CONFIG.restoration.extraCreditBlueprintReward).toBe(10);
     });
 
-    test('should have wing passive bonus', () => {
-        // +4 Ink Drops for matching genre books per wing completion
-        expect(GAME_CONFIG.restoration.wingPassiveBonus).toBe(4);
+    test('has no unused wing passive bonus', () => {
+        expect(GAME_CONFIG.restoration.wingPassiveBonus).toBeUndefined();
     });
 });
 

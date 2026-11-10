@@ -2623,7 +2623,7 @@
     margin-bottom: 0;
 }
 
-/* Quest draw helpers: auto-use switch (same pattern as Worn Page curse toggle) */
+/* Quest draw helpers: auto-use switch */
 .quest-draw-helpers-auto-toggle-wrap {
     margin-top: 0;
     margin-bottom: 12px;
@@ -2917,6 +2917,169 @@
     border-color: #b89f62;
     box-shadow: 0 0 0 2px rgba(184, 159, 98, 0.2);
     background-color: rgba(30, 26, 20, 0.8);
+}
+
+/* Fund widget (Resources panel): deduct form + month-grouped deduction receipt */
+.fund-deduct,
+.fund-receipt {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #54483b;
+}
+
+.fund-section-title {
+    margin: 0 0 12px;
+    color: #b89f62;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fund-deduct-fields {
+    display: grid;
+    grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(150px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.fund-deduct-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.fund-deduct-field-note .rpg-stat-input {
+    text-align: left;
+}
+
+.fund-deduct-error {
+    margin: 8px 0 0;
+    color: #d98c7a;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.fund-ledger-empty {
+    margin: 0;
+    color: #8a7a61;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.fund-ledger-month + .fund-ledger-month {
+    margin-top: 16px;
+}
+
+.fund-ledger-month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed #54483b;
+}
+
+.fund-ledger-month-label {
+    margin: 0;
+    color: #d4c8b0;
+    font-family: 'Lora', serif;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.fund-ledger-month-total {
+    color: #b89f62;
+    font-family: 'Lora', serif;
+    font-weight: 600;
+}
+
+.fund-ledger-entries {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.fund-ledger-entry {
+    display: grid;
+    grid-template-columns: 64px 90px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(84, 72, 59, 0.4);
+    color: #d4c8b0;
+    font-family: 'Lora', serif;
+}
+
+.fund-ledger-entry-date {
+    color: #8a7a61;
+    font-size: 0.9em;
+}
+
+.fund-ledger-entry-amount {
+    font-weight: 600;
+    text-align: right;
+}
+
+.fund-ledger-entry-note {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.fund-ledger-delete-btn {
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    color: #8a7a61;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fund-ledger-delete-btn:hover,
+.fund-ledger-delete-btn:focus-visible {
+    border-color: #b89f62;
+    color: #d98c7a;
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    .fund-deduct-fields {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* The ledger is sized by its panel, not the viewport: on phones the panel is
+   ~240px wide, so narrow ledgers move the note onto its own row. */
+.fund-ledger {
+    container-type: inline-size;
+}
+
+.fund-ledger-month-header {
+    flex-wrap: wrap;
+}
+
+.fund-ledger-month-label,
+.fund-ledger-month-total {
+    white-space: nowrap;
+}
+
+@container (max-width: 420px) {
+    .fund-ledger-entry {
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+            "date amount delete"
+            "note note note";
+        gap: 4px 8px;
+    }
+
+    .fund-ledger-entry-date { grid-area: date; }
+    .fund-ledger-entry-amount { grid-area: amount; text-align: left; }
+    .fund-ledger-entry-note { grid-area: note; overflow-wrap: break-word; }
+    .fund-ledger-delete-btn { grid-area: delete; }
 }
 
 /* RPG Genres Panel - Badge Styling */
@@ -3887,14 +4050,8 @@
     color: #f0c8c8 !important;
 }
 
-/* Add Curse: Worn Page auto-prevent toggle (matches encounter Befriend/Defeat switch from card-draw.css) */
-.add-curse-form .curse-worn-page-toggle-wrap {
-    margin-top: 0.35rem;
-    margin-bottom: 0.85rem;
-}
-
-/* Worn Page Mitigation Helpers (Curse tab tiles) */
-.worn-page-helpers-grid {
+/* Helper tiles (Quest tab draw / dice helpers, activated abilities) */
+.helper-tiles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
@@ -3903,7 +4060,7 @@
     margin: 0;
 }
 
-.curse-helper-tile {
+.helper-tile {
     background: linear-gradient(135deg, rgba(42, 35, 29, 0.7) 0%, rgba(30, 26, 20, 0.8) 100%);
     border: 2px solid #54483b;
     border-radius: 8px;
@@ -3912,14 +4069,14 @@
     transition: all 0.3s ease;
 }
 
-.curse-helper-tile__media {
+.helper-tile__media {
     display: flex;
     justify-content: center;
     align-items: center;
     margin: 0 0 12px 0;
 }
 
-.curse-helper-tile__image {
+.helper-tile__image {
     max-width: 100%;
     max-height: 120px;
     width: auto;
@@ -3930,13 +4087,13 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.curse-helper-tile:hover {
+.helper-tile:hover {
     border-color: #8b7355;
     box-shadow: 0 4px 12px rgba(184, 159, 98, 0.25);
     transform: translateY(-2px);
 }
 
-.curse-helper-tile__title {
+.helper-tile__title {
     margin: 0 0 8px 0;
     font-family: 'Lora', serif;
     font-size: 1.1em;
@@ -3944,7 +4101,7 @@
     font-weight: 600;
 }
 
-.curse-helper-tile__cadence {
+.helper-tile__cadence {
     display: inline-block;
     padding: 4px 10px;
     margin-bottom: 10px;
@@ -3957,28 +4114,28 @@
     letter-spacing: 0.5px;
 }
 
-.curse-helper-tile__effect {
+.helper-tile__effect {
     margin: 0 0 10px 0;
     color: #d4c8b0;
     font-size: 0.9em;
     line-height: 1.5;
 }
 
-.curse-helper-tile__status {
+.helper-tile__status {
     margin: 0 0 12px 0;
     font-size: 0.85em;
     color: #8a7a61;
     font-style: italic;
 }
 
-.curse-helper-tile__actions {
+.helper-tile__actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
 }
 
-.curse-helper-tile__actions button {
+.helper-tile__actions button {
     padding: 6px 12px;
     font-size: 0.85em;
     background-color: rgba(74, 62, 62, 0.6);
@@ -3990,13 +4147,13 @@
     transition: all 0.2s ease;
 }
 
-.curse-helper-tile__actions button:hover {
+.helper-tile__actions button:hover {
     background-color: rgba(74, 62, 62, 0.8);
     border-color: #b89f62;
     color: #f0c8c8;
 }
 
-.curse-helper-empty {
+.helper-tile-empty {
     text-align: center;
     color: #8a7a61;
     font-style: italic;
