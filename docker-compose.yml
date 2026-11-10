@@ -1,0 +1,68 @@
+# Tome of Secrets local development. See README.md "Local Development".
+#
+#   docker compose up jekyll              # serve http://localhost:4000/tome-of-secrets/
+#   docker compose run --rm dev npm test  # Jest suite (runs in tests/)
+#   docker compose run --rm dev           # interactive shell (bash)
+#   docker compose down                   # stop; add -v to also drop the volumes
+#
+# TOS_SRC points the containers at another checkout or worktree (default: this one).
+# Give each checkout its own project name so their volumes stay separate:
+#   bash:        TOS_SRC=../other-worktree docker compose -p tos-other up jekyll
+#   PowerShell:  $env:TOS_SRC='../other-worktree'; docker compose -p tos-other up jekyll
+
+x-common: &common
+  build:
+    context: ./docker
+  image: tome-of-secrets-dev:latest
+  # gh, the Supabase CLI and Chrome are installed as amd64 packages
+  # (Apple Silicon runs this under emulation).
+  platform: linux/amd64
+
+services:
+  jekyll:
+    <<: *common
+    environment:
+      TOS_SKIP_TEST_DEPS: "1"
+    volumes:
+      - ${TOS_SRC:-.}:/workspace
+      - gems:/usr/local/bundle
+    command:
+      - bundle
+      - exec
+      - jekyll
+      - serve
+      - --config
+      - _config.yml,_config.supabase.yml
+      - --host
+      - 0.0.0.0
+      - --port
+      - "4000"
+      - --livereload
+      # Inotify events don't cross a Windows/macOS bind mount; poll instead.
+      - --force_polling
+    ports:
+      - "4000:4000"
+      - "35729:35729"
+
+  dev:
+    <<: *common
+    profiles: ["tools"]
+    working_dir: /workspace/tests
+    stdin_open: true
+    tty: true
+    shm_size: 1gb
+    volumes:
+      - ${TOS_SRC:-.}:/workspace
+      - gems:/usr/local/bundle
+      - test-node-modules:/workspace/tests/node_modules
+      # Keeps CLI logins (gh, supabase, ~/.claude.json) across `run --rm` containers.
+      - home:/home/dev
+      # Claude Code config, shared with the host by default as the old devcontainer did.
+      # Point TOS_CLAUDE_DIR at a separate folder to keep the container's Claude Code
+      # (and any host-only hook commands in settings.json) apart from the host's.
+      - ${TOS_CLAUDE_DIR:-${USERPROFILE:-${HOME}}/.claude}:/home/dev/.claude
+
+volumes:
+  gems:
+  test-node-modules:
+  home:
