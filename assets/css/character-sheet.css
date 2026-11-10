@@ -3050,10 +3050,36 @@
         grid-template-columns: 1fr;
     }
 
+}
+
+/* The ledger is sized by its panel, not the viewport: on phones the panel is
+   ~240px wide, so narrow ledgers move the note onto its own row. */
+.fund-ledger {
+    container-type: inline-size;
+}
+
+.fund-ledger-month-header {
+    flex-wrap: wrap;
+}
+
+.fund-ledger-month-label,
+.fund-ledger-month-total {
+    white-space: nowrap;
+}
+
+@container (max-width: 420px) {
     .fund-ledger-entry {
-        grid-template-columns: 56px 80px 1fr auto;
-        gap: 8px;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+            "date amount delete"
+            "note note note";
+        gap: 4px 8px;
     }
+
+    .fund-ledger-entry-date { grid-area: date; }
+    .fund-ledger-entry-amount { grid-area: amount; text-align: left; }
+    .fund-ledger-entry-note { grid-area: note; overflow-wrap: break-word; }
+    .fund-ledger-delete-btn { grid-area: delete; }
 }
 
 /* RPG Genres Panel - Badge Styling */
