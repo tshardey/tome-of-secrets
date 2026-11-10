@@ -9,6 +9,7 @@ import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { validateCharacterState } from '../assets/js/character-sheet/dataValidator.js';
+import { getQuestLinkRefusal, getBatchQuestLinkRefusal } from '../assets/js/utils/questBookLinker.js';
 
 jest.mock('../assets/js/services/BookMetadataService.js', () => ({
     searchBooks: jest.fn(() => Promise.resolve([]))
@@ -682,5 +683,62 @@ describe('One book, one quest (StateAdapter link guard)', () => {
         // New links are still refused; the old ones stay.
         expect(loaded.linkQuestToBook('legacy-book', 'q4')).toBe(false);
         expect(loaded.getBook('legacy-book').links.questIds).toEqual(['q1', 'q2', 'q3']);
+    });
+});
+
+describe('One book, one quest across duplicate library entries', () => {
+    let adapter;
+
+    beforeEach(() => {
+        localStorage.clear();
+        const state = createEmptyCharacterState();
+        state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = ['q1', 'q2', 'q3'].map((id) => ({ id, type: '⭐ Extra Credit', prompt: '', month: 'March', year: '2026' }));
+        state[STORAGE_KEYS.COMPLETED_QUESTS] = [{ id: 'old', type: '⭐ Extra Credit', prompt: '', month: 'January', year: '2026' }];
+        adapter = new StateAdapter(state);
+    });
+
+    const addBook = (title, author, questIds = []) => adapter.addBook({ title, author, links: { questIds, curriculumPromptIds: [] } });
+
+    test('the same book added twice (title and author match after normalising) is one book', () => {
+        addBook('The Name of the Wind', 'Patrick Rothfuss', ['q1']);
+        const copy = addBook('  the name   of the WIND ', 'patrick  rothfuss');
+        expect(adapter.canLinkQuestToBook(copy.id, 'q2')).toEqual({ ok: false, reason: 'already-linked' });
+        expect(adapter.linkQuestToBook(copy.id, 'q2')).toBe(false);
+        expect(getQuestLinkRefusal(adapter, copy.id, 'q2')).toBe('This book is already linked to a quest.');
+    });
+
+    test('a blank author matches any author; a different author is a different book', () => {
+        addBook('Persuasion', 'Jane Austen', ['q1']);
+        const blank = addBook('Persuasion', '');
+        const other = addBook('Persuasion', 'Someone Else');
+        expect(adapter.canLinkQuestToBook(blank.id, 'q2').ok).toBe(false);
+        expect(adapter.canLinkQuestToBook(other.id, 'q2')).toEqual({ ok: true });
+    });
+
+    test('completed historical quests on the other entry count', () => {
+        addBook('Dune', 'Frank Herbert', ['old']);
+        const copy = addBook('Dune', 'Frank Herbert');
+        expect(adapter.canLinkQuestToBook(copy.id, 'q1').reason).toBe('already-linked');
+    });
+
+    test('a multi-quest ability allows the second quest across entries but never a third', () => {
+        adapter.addLearnedAbility('Quick Shot');
+        addBook('Dune', 'Frank Herbert', ['q1']);
+        const copy = addBook('Dune', 'Frank Herbert');
+        expect(adapter.linkQuestToBook(copy.id, 'q2')).toBe(true);
+        expect(adapter.canLinkQuestToBook(copy.id, 'q3')).toEqual({ ok: false, reason: 'max-links' });
+    });
+
+    test('existing duplicate links are left intact and stay relinkable', () => {
+        addBook('Dune', 'Frank Herbert', ['q1']);
+        const copy = addBook('Dune', 'Frank Herbert', ['q2']);
+        expect(adapter.getBook(copy.id).links.questIds).toEqual(['q2']);
+        expect(adapter.canLinkQuestToBook(copy.id, 'q2')).toEqual({ ok: true });
+    });
+
+    test('the batch check counts the other entry too', () => {
+        addBook('Dune', 'Frank Herbert', ['q1']);
+        const copy = addBook('Dune', 'Frank Herbert');
+        expect(getBatchQuestLinkRefusal(adapter, [{ id: 'new', bookId: copy.id }])).toBe('This book is already linked to a quest.');
     });
 });

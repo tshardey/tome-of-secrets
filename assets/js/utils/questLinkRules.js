@@ -15,6 +15,29 @@ const REFUSAL_MESSAGES = Object.freeze({
 });
 
 /**
+ * @param {*} text - a book title or author
+ * @returns {string} trimmed, inner whitespace collapsed, lower-cased ('' for non-strings)
+ */
+export function normalizeBookText(text) {
+    return typeof text === 'string' ? text.trim().replace(/\s+/g, ' ').toLowerCase() : '';
+}
+
+/**
+ * Two library entries are the same book (for one book, one quest) when their titles match after
+ * normalizeBookText and their authors match the same way; a blank author matches any author.
+ * @param {Object|null} a
+ * @param {Object|null} b
+ * @returns {boolean}
+ */
+export function isSameBook(a, b) {
+    const title = normalizeBookText(a?.title);
+    if (!title || title !== normalizeBookText(b?.title)) return false;
+    const authorA = normalizeBookText(a?.author);
+    const authorB = normalizeBookText(b?.author);
+    return !authorA || !authorB || authorA === authorB;
+}
+
+/**
  * The book's linked quest ids, in link order. With liveQuestIds, links to quests that no longer
  * exist (discarded or deleted) are dropped so they never hold a book's quota; keepId (the quest
  * being evaluated) always counts, since it may be mid-move between quest lists.
@@ -41,14 +64,16 @@ export function getGrandfatheredQuestIds(book) {
 }
 
 /**
- * Grandfather a book's existing links when it holds two or more (pure, idempotent).
+ * Grandfather a book's existing links when the book holds two or more (pure, idempotent).
  * @param {Object} book
  * @param {function(string): boolean} [isLegacyLink] - which of the linked quest ids predate the rule
+ * @param {number|null} [sameBookLinkCount] - links across every library entry for this book
+ *   (isSameBook); defaults to this entry's own links
  * @returns {Object} the same book when nothing changes, otherwise a copy with links.grandfatheredQuestIds
  */
-export function grandfatherBookLinks(book, isLegacyLink = () => true) {
+export function grandfatherBookLinks(book, isLegacyLink = () => true, sameBookLinkCount = null) {
     const questIds = getLinkedQuestIds(book);
-    if (questIds.length < MAX_QUESTS_PER_BOOK) return book;
+    if (questIds.length === 0 || (sameBookLinkCount ?? questIds.length) < MAX_QUESTS_PER_BOOK) return book;
     const existing = getGrandfatheredQuestIds(book);
     const added = questIds.filter((id) => !existing.includes(id) && isLegacyLink(id));
     if (added.length === 0) return book;

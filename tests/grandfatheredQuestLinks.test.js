@@ -21,7 +21,7 @@ function quest(id, bookId, dateAdded = BEFORE_RULE) {
 
 function book(id, questIds) {
     return {
-        id, title: 'Shared Book', author: 'A. Author', cover: null, pageCount: 300, status: 'reading',
+        id, title: `Book ${id}`, author: 'A. Author', cover: null, pageCount: 300, status: 'reading',
         shelfCategory: 'general', dateAdded: BEFORE_RULE, dateCompleted: null,
         links: { questIds, curriculumPromptIds: [] }, tags: []
     };
@@ -83,6 +83,60 @@ describe('grandfathered quest links', () => {
         // A second link made after the rule went live is still the ability-granted secondary quest
         expect(adapter.isSecondaryQuestForBook('mixed', 'new1')).toBe(true);
         expect(payout(adapter, quest('new1', 'mixed', AFTER_RULE))).toBe(10);
+    });
+
+    test('a second quest on a duplicate library entry pays $10 (the older entry\'s quest keeps $15)', () => {
+        const adapter = new StateAdapter(save({
+            books: {
+                a: { ...book('a', ['q1']), title: 'Dune', author: 'Frank Herbert', dateAdded: BEFORE_RULE },
+                b: { ...book('b', []), title: ' dune ', author: '', dateAdded: AFTER_RULE }
+            },
+            active: [quest('q1', 'a', AFTER_RULE), quest('q2', 'b', AFTER_RULE)]
+        }));
+        adapter.addLearnedAbility('Quick Shot');
+        expect(adapter.linkQuestToBook('b', 'q2')).toBe(true);
+
+        expect(adapter.isSecondaryQuestForBook('b', 'q2')).toBe(true);
+        expect(adapter.isSecondaryQuestForBook('a', 'q1')).toBe(false);
+        expect(payout(adapter, quest('q2', 'b', AFTER_RULE))).toBe(10);
+        expect(payout(adapter, quest('q1', 'a', AFTER_RULE))).toBe(15);
+    });
+
+    test('across entries the later quest is the secondary one, whichever entry was added first', () => {
+        const q1 = { ...quest('q1', 'b', '2026-11-12T00:00:00.000Z'), dateCompleted: '2026-11-13T00:00:00.000Z' };
+        const adapter = new StateAdapter(save({
+            books: {
+                a: { ...book('a', []), title: 'Dune', author: 'Frank Herbert', dateAdded: '2026-01-01T00:00:00.000Z' },
+                b: { ...book('b', ['q1']), title: 'Dune', author: 'Frank Herbert', dateAdded: '2026-03-01T00:00:00.000Z' }
+            },
+            active: [quest('q2', 'a', '2026-11-20T00:00:00.000Z')],
+            completed: [q1]
+        }));
+        adapter.addLearnedAbility('Quick Shot');
+        expect(adapter.linkQuestToBook('a', 'q2')).toBe(true);
+        expect(adapter.isSecondaryQuestForBook('a', 'q2')).toBe(true);
+        expect(adapter.isSecondaryQuestForBook('b', 'q1')).toBe(false);
+        expect(payout(adapter, quest('q2', 'a', '2026-11-20T00:00:00.000Z'))).toBe(10);
+    });
+
+    test('a legacy pair split across duplicate entries is grandfathered: $15 + $15', () => {
+        const q1 = quest('q1', 'a');
+        const q2 = quest('q2', 'b');
+        const migrated = migrateState(save({
+            books: {
+                a: { ...book('a', ['q1']), title: 'Dune', author: 'Frank Herbert' },
+                b: { ...book('b', ['q2']), title: 'Dune', author: 'Frank Herbert' },
+                solo: { ...book('solo', ['q3']), title: 'Emma', author: 'Jane Austen' }
+            },
+            active: [q1, q2, quest('q3', 'solo')]
+        }), { fromVersion: 18 });
+        expect(migrated[STORAGE_KEYS.BOOKS].a.links.grandfatheredQuestIds).toEqual(['q1']);
+        expect(migrated[STORAGE_KEYS.BOOKS].b.links.grandfatheredQuestIds).toEqual(['q2']);
+        expect(migrated[STORAGE_KEYS.BOOKS].solo.links.grandfatheredQuestIds).toBeUndefined();
+
+        const adapter = new StateAdapter(validateCharacterState(migrated));
+        expect(payout(adapter, q1)).toBe(15);
+        expect(payout(adapter, q2)).toBe(15);
     });
 
     test('the cutoff is when one book, one quest went live', () => {

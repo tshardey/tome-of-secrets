@@ -14,7 +14,7 @@ import { safeGetJSON, safeRemoveJSON } from '../utils/storage.js';
 import { purgeStateKey } from './persistence.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import * as data from './data.js';
-import { grandfatherBookLinks } from '../utils/questLinkRules.js';
+import { getLinkedQuestIds, grandfatherBookLinks, isSameBook } from '../utils/questLinkRules.js';
 
 /**
  * Migrate quest rewards from legacy format
@@ -511,7 +511,8 @@ function migrateToVersion18(state) {
 export const ONE_BOOK_ONE_QUEST_SINCE = '2026-11-10T18:29:52Z';
 
 /**
- * Grandfather the links of every book linked to two or more quests (see grandfatherBookLinks).
+ * Grandfather the links of every book linked to two or more quests (see grandfatherBookLinks),
+ * counting links on every library entry for the same book (isSameBook: the book added twice).
  * @param {Object} state
  * @param {function(string): boolean} isLegacyLink - quest id -> link predates the rule
  * @returns {Object} new state (books replaced only when one changed)
@@ -519,11 +520,19 @@ export const ONE_BOOK_ONE_QUEST_SINCE = '2026-11-10T18:29:52Z';
 function grandfatherAllBookLinks(state, isLegacyLink) {
     const books = state[STORAGE_KEYS.BOOKS];
     if (!books || typeof books !== 'object' || Array.isArray(books)) return state;
+    const entries = Object.values(books).filter((book) => book && typeof book === 'object');
     let changed = false;
     const updated = {};
     for (const id in books) {
         const book = books[id];
-        const next = book && typeof book === 'object' ? grandfatherBookLinks(book, isLegacyLink) : book;
+        if (!book || typeof book !== 'object') {
+            updated[id] = book;
+            continue;
+        }
+        const sameBookLinkCount = entries.reduce((count, other) => (
+            other === book || isSameBook(book, other) ? count + getLinkedQuestIds(other).length : count
+        ), 0);
+        const next = grandfatherBookLinks(book, isLegacyLink, sameBookLinkCount);
         if (next !== book) changed = true;
         updated[id] = next;
     }

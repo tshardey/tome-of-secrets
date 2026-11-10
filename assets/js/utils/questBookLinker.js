@@ -70,13 +70,16 @@ export function getBatchQuestLinkRefusal(stateAdapter, quests) {
     if (typeof stateAdapter?.getBook !== 'function') return null;
     const learned = typeof stateAdapter.getLearnedAbilities === 'function' ? stateAdapter.getLearnedAbilities() : [];
     const liveQuestIds = typeof stateAdapter.getLiveQuestIds === 'function' ? stateAdapter.getLiveQuestIds() : null;
+    const linkedIds = (book, keepId) => (typeof stateAdapter.getLinkedQuestIdsForBook === 'function'
+        ? stateAdapter.getLinkedQuestIdsForBook(book.id, { keepId })
+        : getLinkedQuestIds(book, { liveQuestIds, keepId }));
     const pendingByBook = new Map();
     for (const quest of quests || []) {
         if (!quest?.bookId || !quest.id) continue;
         const book = stateAdapter.getBook(quest.bookId);
         if (!book) continue;
         const pending = pendingByBook.get(quest.bookId) || [];
-        const questIds = [...getLinkedQuestIds(book, { liveQuestIds, keepId: quest.id }), ...pending];
+        const questIds = [...linkedIds(book, quest.id), ...pending];
         const check = evaluateQuestLink({ links: { questIds } }, quest.id, learned);
         if (!check.ok) return questLinkRefusalMessage(check.reason);
         if (!questIds.includes(quest.id)) pendingByBook.set(quest.bookId, [...pending, quest.id]);
