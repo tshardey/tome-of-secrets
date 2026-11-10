@@ -14,6 +14,7 @@ import { safeGetJSON, safeRemoveJSON } from '../utils/storage.js';
 import { purgeStateKey } from './persistence.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import * as data from './data.js';
+import { getLinkedQuestIds, grandfatherBookLinks, isSameBook } from '../utils/questLinkRules.js';
 
 /**
  * Migrate quest rewards from legacy format
@@ -473,6 +474,8 @@ export function stripRetiredFormFields(formData) {
  * - Refreshes stored temporary-buff descriptions from the catalog (no buff was removed or
  *   renamed, but their saved text still described Ink Drops, Paper Scraps or Worn Pages).
  *   Buffs not found in the catalog are kept as they are.
+ * - Grandfathers the links of books already linked to two or more quests (one book, one
+ *   quest arrives with this version), so each of those quests keeps the full quest base
  * - Leaves every other key untouched
  */
 function migrateToVersion18(state) {
@@ -496,7 +499,66 @@ function migrateToVersion18(state) {
     if (!(STORAGE_KEYS.FUND_LEDGER in migrated)) {
         migrated[STORAGE_KEYS.FUND_LEDGER] = [];
     }
-    return migrated;
+    // Every link a v17 save holds predates one book, one quest.
+    return grandfatherAllBookLinks(migrated, () => true);
+}
+
+/**
+ * When one book, one quest went live (PR #134 merged and deployed). A save already at v18
+ * cannot tell how its links were made, so links to quests added before this instant (or with
+ * no dateAdded) are treated as having predated the rule.
+ */
+export const ONE_BOOK_ONE_QUEST_SINCE = '2026-11-10T18:29:52Z';
+
+/**
+ * Grandfather the links of every book linked to two or more quests (see grandfatherBookLinks),
+ * counting links on every library entry for the same book (isSameBook: the book added twice).
+ * @param {Object} state
+ * @param {function(string): boolean} isLegacyLink - quest id -> link predates the rule
+ * @returns {Object} new state (books replaced only when one changed)
+ */
+function grandfatherAllBookLinks(state, isLegacyLink) {
+    const books = state[STORAGE_KEYS.BOOKS];
+    if (!books || typeof books !== 'object' || Array.isArray(books)) return state;
+    const entries = Object.values(books).filter((book) => book && typeof book === 'object');
+    let changed = false;
+    const updated = {};
+    for (const id in books) {
+        const book = books[id];
+        if (!book || typeof book !== 'object') {
+            updated[id] = book;
+            continue;
+        }
+        const sameBookLinkCount = entries.reduce((count, other) => (
+            other === book || isSameBook(book, other) ? count + getLinkedQuestIds(other).length : count
+        ), 0);
+        const next = grandfatherBookLinks(book, isLegacyLink, sameBookLinkCount);
+        if (next !== book) changed = true;
+        updated[id] = next;
+    }
+    return changed ? { ...state, [STORAGE_KEYS.BOOKS]: updated } : state;
+}
+
+/**
+ * Migration from schema version 18 to version 19
+ * - Grandfathers book links that predate one book, one quest in saves that were already at v18
+ *   before the marker existed: a link counts as legacy when its quest was added before
+ *   ONE_BOOK_ONE_QUEST_SINCE or has no dateAdded. Idempotent; v17 saves were marked by v18.
+ */
+function migrateToVersion19(state) {
+    const cutoff = Date.parse(ONE_BOOK_ONE_QUEST_SINCE);
+    const addedAt = new Map();
+    for (const key of [STORAGE_KEYS.ACTIVE_ASSIGNMENTS, STORAGE_KEYS.COMPLETED_QUESTS, STORAGE_KEYS.DISCARDED_QUESTS]) {
+        const list = state[key];
+        if (!Array.isArray(list)) continue;
+        for (const quest of list) {
+            if (quest && quest.id != null) addedAt.set(String(quest.id), quest.dateAdded);
+        }
+    }
+    return grandfatherAllBookLinks({ ...state }, (questId) => {
+        const added = Date.parse(addedAt.get(questId));
+        return Number.isNaN(added) || added < cutoff;
+    });
 }
 
 /**
@@ -812,6 +874,9 @@ export function migrateState(state, { fromVersion } = {}) {
                 break;
             case 18:
                 migratedState = migrateToVersion18(migratedState);
+                break;
+            case 19:
+                migratedState = migrateToVersion19(migratedState);
                 break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);

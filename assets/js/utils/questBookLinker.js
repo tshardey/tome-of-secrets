@@ -6,6 +6,7 @@
 import { RewardCalculator } from '../services/RewardCalculator.js';
 import { evaluateQuestLink, getLinkedQuestIds, questLinkRefusalMessage } from './questLinkRules.js';
 import { toast } from '../ui/toast.js';
+import { GAME_CONFIG } from '../config/gameConfig.js';
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -60,6 +61,34 @@ export function getQuestLinkRefusal(stateAdapter, bookId, questId, options = {})
 }
 
 /**
+ * How a library book should appear in a quest's book picker under one book, one quest: a book
+ * already linked to another quest says which, and is disabled unless canLinkQuestToBook allows
+ * this quest as the book's second (multi-quest ability), which is labelled with its lower base.
+ * @param {object} stateAdapter
+ * @param {Object} book - a library book
+ * @param {string|null} [questId] - the quest being edited (null while adding a quest)
+ * @returns {{ disabled: boolean, note: string }|null} null when the book has no other quest
+ */
+export function describeBookForQuestLink(stateAdapter, book, questId = null) {
+    if (!book?.id || typeof stateAdapter?.canLinkQuestToBook !== 'function') return null;
+    const linkedIds = typeof stateAdapter.getLinkedQuestIdsForBook === 'function'
+        ? stateAdapter.getLinkedQuestIdsForBook(book.id)
+        : getLinkedQuestIds(book);
+    const otherIds = linkedIds.filter((id) => id !== questId);
+    if (otherIds.length === 0) return null;
+    const quests = [...(stateAdapter.getActiveAssignments?.() || []), ...(stateAdapter.getCompletedQuests?.() || [])];
+    const names = otherIds.map((id) => {
+        const quest = quests.find((q) => q && String(q.id) === id);
+        return (quest && [quest.type, quest.prompt].filter(Boolean).join(': ')) || 'another quest';
+    });
+    const note = `Linked to: ${names.join('; ')}`;
+    // Already linked to this quest: keeping it is a relink, not a new second quest
+    if (questId && linkedIds.includes(questId)) return { disabled: false, note };
+    if (!stateAdapter.canLinkQuestToBook(book.id, questId).ok) return { disabled: true, note };
+    return { disabled: false, note: `${note} · Second quest ($${GAME_CONFIG.rewards.secondaryQuestBase.dollars})` };
+}
+
+/**
  * Like getQuestLinkRefusal, for several quests that will be linked together (each quest's
  * bookId and id), counting the earlier quests of the batch against each book.
  * @param {object} stateAdapter
@@ -70,13 +99,16 @@ export function getBatchQuestLinkRefusal(stateAdapter, quests) {
     if (typeof stateAdapter?.getBook !== 'function') return null;
     const learned = typeof stateAdapter.getLearnedAbilities === 'function' ? stateAdapter.getLearnedAbilities() : [];
     const liveQuestIds = typeof stateAdapter.getLiveQuestIds === 'function' ? stateAdapter.getLiveQuestIds() : null;
+    const linkedIds = (book, keepId) => (typeof stateAdapter.getLinkedQuestIdsForBook === 'function'
+        ? stateAdapter.getLinkedQuestIdsForBook(book.id, { keepId })
+        : getLinkedQuestIds(book, { liveQuestIds, keepId }));
     const pendingByBook = new Map();
     for (const quest of quests || []) {
         if (!quest?.bookId || !quest.id) continue;
         const book = stateAdapter.getBook(quest.bookId);
         if (!book) continue;
         const pending = pendingByBook.get(quest.bookId) || [];
-        const questIds = [...getLinkedQuestIds(book, { liveQuestIds, keepId: quest.id }), ...pending];
+        const questIds = [...linkedIds(book, quest.id), ...pending];
         const check = evaluateQuestLink({ links: { questIds } }, quest.id, learned);
         if (!check.ok) return questLinkRefusalMessage(check.reason);
         if (!questIds.includes(quest.id)) pendingByBook.set(quest.bookId, [...pending, quest.id]);

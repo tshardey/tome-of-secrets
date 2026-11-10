@@ -34,6 +34,8 @@ function escapeAttr(s) {
  * @param {string} [options.placeholder] - Button text when no book selected (default: "Link Book")
  * @param {string} [options.unlinkLabel] - Label for unlink button (default: "Unlink")
  * @param {string} [options.appendTo] - Where to mount the dropdown: 'body' (default) or 'container' (inline below trigger, for use inside drawers)
+ * @param {function(Object): ({ disabled?: boolean, note?: string }|null)} [options.describeBook] - Optional per-book
+ *   status: a note shown under the author, and whether the book can be picked
  * @returns {{ render: function(), setSelectedBookId: function(string|null), getSelectedBookId: function(): string|null, destroy: function() }}
  */
 export function createBookSelector(container, stateAdapter, options = {}) {
@@ -52,6 +54,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
     const placeholder = options.placeholder ?? 'Link Book';
     const unlinkLabel = options.unlinkLabel ?? 'Unlink';
     const appendTo = options.appendTo === 'container' ? 'container' : 'body';
+    const describeBook = typeof options.describeBook === 'function' ? options.describeBook : () => null;
 
     let dropdownEl = null;
     let clickOutsideHandler = null;
@@ -111,12 +114,16 @@ export function createBookSelector(container, stateAdapter, options = {}) {
                 const coverHtml = book.cover
                     ? `<img class="book-selector-option-cover" src="${escapeAttr(book.cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
                     : '<span class="book-selector-option-placeholder">No cover</span>';
+                const status = describeBook(book) || {};
+                const disabled = status.disabled === true;
+                const noteHtml = status.note ? `<span class="book-selector-option-note">${escapeHtml(status.note)}</span>` : '';
                 return `
-                    <button type="button" class="book-selector-option" data-book-id="${escapeAttr(book.id)}">
+                    <button type="button" class="book-selector-option${disabled ? ' is-disabled' : ''}" data-book-id="${escapeAttr(book.id)}"${disabled ? ' disabled aria-disabled="true"' : ''}>
                         <span class="book-selector-option-cover-wrap">${coverHtml}</span>
                         <span class="book-selector-option-text">
                             <span class="book-selector-option-title">${titleEsc}</span>
                             ${authorEsc ? `<span class="book-selector-option-author">${authorEsc}</span>` : ''}
+                            ${noteHtml}
                         </span>
                     </button>`;
             })
@@ -169,7 +176,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         }
         optionsListEl.addEventListener('click', (e) => {
             const btn = e.target.closest('.book-selector-option');
-            if (!btn) return;
+            if (!btn || btn.disabled) return;
             e.stopPropagation();
             const id = btn.getAttribute('data-book-id');
             if (id) {

@@ -517,8 +517,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 18', () => {
-            expect(SCHEMA_VERSION).toBe(18);
+        test('schema version should be 19', () => {
+            expect(SCHEMA_VERSION).toBe(19);
         });
     });
 });

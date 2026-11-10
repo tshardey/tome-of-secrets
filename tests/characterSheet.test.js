@@ -1742,7 +1742,7 @@ describe('Character Sheet', () => {
       expect(characterState.atmosphericBuffs['The Candlight Study'].daysUsed).toBe(0);
     });
 
-    it('should apply the Tome-Bound Cat bonus to a trackable item and a regular buff at end of month', () => {
+    it('should apply the Tome-Bound Cat bonus to atmospheric buff days only, not trackable item days, at end of month', () => {
       // Regression guard for R3a/R3b: EndOfMonthController.js is the only production
       // caller of RewardCalculator.calculateAtmosphericBuffRewards with a real sanctum rate
       // and trackableItemValues. Equip Garden Gnome (trackable, $1/day) and
@@ -1762,8 +1762,8 @@ describe('Character Sheet', () => {
       const endOfMonthButton = document.querySelector('.end-of-month-button');
       endOfMonthButton.click();
 
-      // (10 days x $1 base) + (5 days x $1 from item) + Tome-Bound Cat +$1 per atmospheric day (15) = $30
-      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 3000);
+      // (10 days x $1 base) + (5 days x $1 from item) + Tome-Bound Cat +$1 per atmospheric buff day (10) = $25
+      expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 2500);
     });
   });
 

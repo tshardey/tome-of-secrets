@@ -18,8 +18,8 @@ describe('claimed countries register', () => {
         expect(createEmptyCharacterState()[STORAGE_KEYS.CLAIMED_COUNTRIES]).toEqual([]);
     });
 
-    test('the schema version is 18', () => {
-        expect(SCHEMA_VERSION).toBe(18);
+    test('the schema version is 19', () => {
+        expect(SCHEMA_VERSION).toBe(19);
     });
 
     test('validation coerces a non-array register to an empty array', () => {

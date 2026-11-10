@@ -23,7 +23,7 @@ import { isWingReadyForRestoration } from '../restoration/wingProgress.js';
 import { applyBlueprintRewardToQuest } from '../services/QuestRewardService.js';
 import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { toast } from '../ui/toast.js';
-import { linkQuestToBookOrNotify, getQuestLinkRefusal, getBatchQuestLinkRefusal } from '../utils/questBookLinker.js';
+import { linkQuestToBookOrNotify, getQuestLinkRefusal, getBatchQuestLinkRefusal, describeBookForQuestLink } from '../utils/questBookLinker.js';
 import { createBookSelector } from '../utils/bookSelector.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 
@@ -190,6 +190,7 @@ export class QuestController extends BaseController {
         if (newQuestBookIdInput && newQuestBookSelectorContainer && stateAdapter.getBooks) {
             this._addFormBookSelector = createBookSelector(newQuestBookSelectorContainer, stateAdapter, {
                 placeholder: 'Select a book',
+                describeBook: (book) => describeBookForQuestLink(stateAdapter, book),
                 onSelect: (bookId) => {
                     newQuestBookIdInput.value = bookId || '';
                 },
@@ -1738,6 +1739,7 @@ export class QuestController extends BaseController {
                 selectedBookId: quest.bookId || null,
                 placeholder: 'Link Book',
                 appendTo: 'container',
+                describeBook: (book) => describeBookForQuestLink(this.stateAdapter, book, quest.id || null),
                 onSelect: (bookId) => {
                     if (editQuestBookIdInput) editQuestBookIdInput.value = bookId || '';
                     // Refresh buff cards to reflect the newly linked book's tags

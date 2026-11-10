@@ -196,7 +196,10 @@ export class BaseQuestHandler {
         return quests.map(quest => {
             if (getBook) BaseQuestHandler.enrichQuestWithBookPageCount(quest, getBook);
             let isSecondaryQuest = null;
-            const book = getBook && quest.bookId ? getBook(quest.bookId) : null;
+            // Every library entry for the same book counts (stateAdapter.getSameBookLinks)
+            const book = !quest.bookId ? null
+                : typeof rewardAdapter?.getSameBookLinks === 'function' ? rewardAdapter.getSameBookLinks(quest.bookId)
+                    : getBook ? getBook(quest.bookId) : null;
             if (book) {
                 const earlier = pendingLinksByBook.get(quest.bookId) || 0;
                 isSecondaryQuest = isSecondaryQuestInBatch(book, quest.id, earlier, { liveQuestIds });

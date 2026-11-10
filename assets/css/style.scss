@@ -253,6 +253,7 @@ article h6:hover .anchor-link {
     position: relative;
     /* Needed for the overlay effect */
     width: 100%;
+    box-sizing: border-box; /* Keep the 2em padding inside the 100% width */
     aspect-ratio: 21 / 9;
     min-height: 400px;
     display: flex;
@@ -325,6 +326,7 @@ article h6:hover .anchor-link {
     position: relative;
     /* Needed for the overlay effect */
     width: 100%;
+    box-sizing: border-box; /* Keep the 2em padding inside the 100% width */
     aspect-ratio: 21 / 9;
     min-height: 250px;
     display: flex;

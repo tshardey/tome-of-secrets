@@ -15,6 +15,29 @@ const REFUSAL_MESSAGES = Object.freeze({
 });
 
 /**
+ * @param {*} text - a book title or author
+ * @returns {string} trimmed, inner whitespace collapsed, lower-cased ('' for non-strings)
+ */
+export function normalizeBookText(text) {
+    return typeof text === 'string' ? text.trim().replace(/\s+/g, ' ').toLowerCase() : '';
+}
+
+/**
+ * Two library entries are the same book (for one book, one quest) when their titles match after
+ * normalizeBookText and their authors match the same way; a blank author matches any author.
+ * @param {Object|null} a
+ * @param {Object|null} b
+ * @returns {boolean}
+ */
+export function isSameBook(a, b) {
+    const title = normalizeBookText(a?.title);
+    if (!title || title !== normalizeBookText(b?.title)) return false;
+    const authorA = normalizeBookText(a?.author);
+    const authorB = normalizeBookText(b?.author);
+    return !authorA || !authorB || authorA === authorB;
+}
+
+/**
  * The book's linked quest ids, in link order. With liveQuestIds, links to quests that no longer
  * exist (discarded or deleted) are dropped so they never hold a book's quota; keepId (the quest
  * being evaluated) always counts, since it may be mid-move between quest lists.
@@ -27,6 +50,34 @@ export function getLinkedQuestIds(book, { liveQuestIds = null, keepId = null } =
     if (!Array.isArray(ids)) return [];
     if (!liveQuestIds) return ids;
     return ids.filter((id) => id === keepId || liveQuestIds.has(id));
+}
+
+/**
+ * Quest ids whose link to the book predates one book, one quest (schema v18/v19 migrations).
+ * Grandfathered links never count as the book's secondary quest, so each pays the full questBase.
+ * @param {Object|null} book
+ * @returns {string[]}
+ */
+export function getGrandfatheredQuestIds(book) {
+    const ids = book?.links?.grandfatheredQuestIds;
+    return Array.isArray(ids) ? ids : [];
+}
+
+/**
+ * Grandfather a book's existing links when the book holds two or more (pure, idempotent).
+ * @param {Object} book
+ * @param {function(string): boolean} [isLegacyLink] - which of the linked quest ids predate the rule
+ * @param {number|null} [sameBookLinkCount] - links across every library entry for this book
+ *   (isSameBook); defaults to this entry's own links
+ * @returns {Object} the same book when nothing changes, otherwise a copy with links.grandfatheredQuestIds
+ */
+export function grandfatherBookLinks(book, isLegacyLink = () => true, sameBookLinkCount = null) {
+    const questIds = getLinkedQuestIds(book);
+    if (questIds.length === 0 || (sameBookLinkCount ?? questIds.length) < MAX_QUESTS_PER_BOOK) return book;
+    const existing = getGrandfatheredQuestIds(book);
+    const added = questIds.filter((id) => !existing.includes(id) && isLegacyLink(id));
+    if (added.length === 0) return book;
+    return { ...book, links: { ...book.links, grandfatheredQuestIds: [...existing, ...added] } };
 }
 
 /**
@@ -61,10 +112,12 @@ export function evaluateQuestLink(book, questId, learnedAbilities, options = {})
  * @param {Object|null} book
  * @param {string} questId
  * @param {{ liveQuestIds?: Set<string>|null }} [options] - see getLinkedQuestIds
- * @returns {boolean} true when questId is a book's second (or later) linked quest
+ * @returns {boolean} true when questId is a book's second (or later) linked quest and the link
+ *   is not grandfathered
  */
 export function isSecondaryQuestOnBook(book, questId, { liveQuestIds = null } = {}) {
     if (!questId) return false;
+    if (getGrandfatheredQuestIds(book).includes(questId)) return false;
     return getLinkedQuestIds(book, { liveQuestIds, keepId: questId }).indexOf(questId) >= 1;
 }
 
@@ -79,7 +132,9 @@ export function isSecondaryQuestOnBook(book, questId, { liveQuestIds = null } = 
  */
 export function isSecondaryQuestInBatch(book, questId, earlierInBatch = 0, { liveQuestIds = null } = {}) {
     const linked = getLinkedQuestIds(book, { liveQuestIds, keepId: questId || null });
-    if (questId && linked.includes(questId)) return linked.indexOf(questId) >= 1;
+    if (questId && linked.includes(questId)) {
+        return !getGrandfatheredQuestIds(book).includes(questId) && linked.indexOf(questId) >= 1;
+    }
     return linked.length + earlierInBatch >= 1;
 }
 

@@ -4,7 +4,7 @@ import { setStateKey } from './persistence.js';
 import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
-import { evaluateQuestLink, isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
+import { evaluateQuestLink, getGrandfatheredQuestIds, getLinkedQuestIds, isSameBook, isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
 import { spendUseCountBuffs } from '../utils/useCountBuffs.js';
 
 const EVENTS = Object.freeze({
@@ -1346,6 +1346,7 @@ export class StateAdapter {
     /**
      * One book, one quest: may questId be linked to bookId? A second link needs a learned
      * MULTI_QUEST_ABILITIES ability; a third is always refused. Relinking is idempotent (ok).
+     * Links on other library entries for the same book count too (getLinkedQuestIdsForBook).
      * Existing saves that already hold more links are not modified.
      * @param {string} bookId
      * @param {string} questId
@@ -1353,10 +1354,51 @@ export class StateAdapter {
      * @returns {{ ok: boolean, reason?: 'already-linked' | 'max-links' }}
      */
     canLinkQuestToBook(bookId, questId, options = {}) {
-        return evaluateQuestLink(this.getBook(bookId), questId, this.getLearnedAbilities(), {
-            ...options,
-            liveQuestIds: this.getLiveQuestIds()
-        });
+        const book = this.getBook(bookId);
+        const questIds = book ? this.getLinkedQuestIdsForBook(bookId, { keepId: questId }) : [];
+        return evaluateQuestLink(book ? { links: { questIds } } : null, questId, this.getLearnedAbilities(), options);
+    }
+
+    /**
+     * Live quest ids linked to bookId or to any other library entry for the same book (isSameBook:
+     * the book added twice), so a duplicate entry cannot take a quest of its own.
+     * @param {string} bookId
+     * @param {{ keepId?: string|null }} [options] - see getLinkedQuestIds
+     * @returns {string[]}
+     */
+    getLinkedQuestIdsForBook(bookId, { keepId = null } = {}) {
+        return getLinkedQuestIds(this.getSameBookLinks(bookId), { liveQuestIds: this.getLiveQuestIds(), keepId });
+    }
+
+    /**
+     * bookId's links merged with those of every other library entry for the same book (isSameBook),
+     * shaped like a book ({ links: { questIds, grandfatheredQuestIds } }) for the questLinkRules
+     * helpers. A single entry keeps its own link order. Links spread over several entries are
+     * ordered by their quest's dateAdded (undated legacy quests first), so every entry of the book
+     * gives the same order and the quest taken on later is the secondary one.
+     * @param {string} bookId
+     * @returns {{ links: { questIds: string[], grandfatheredQuestIds: string[] } }|null} null for an unknown book
+     */
+    getSameBookLinks(bookId) {
+        const book = this.getBook(bookId);
+        if (!book) return null;
+        const copies = [book, ...this.getBooks().filter((other) => other.id !== book.id && isSameBook(book, other))]
+            .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        const questIds = [];
+        const grandfatheredQuestIds = [];
+        for (const copy of copies) {
+            for (const id of getLinkedQuestIds(copy)) if (!questIds.includes(id)) questIds.push(id);
+            for (const id of getGrandfatheredQuestIds(copy)) if (!grandfatheredQuestIds.includes(id)) grandfatheredQuestIds.push(id);
+        }
+        if (copies.filter((copy) => getLinkedQuestIds(copy).length > 0).length > 1) {
+            const addedAt = new Map();
+            for (const quest of [...(this.getActiveAssignments() || []), ...(this.getCompletedQuests() || [])]) {
+                if (quest && quest.id != null) addedAt.set(String(quest.id), typeof quest.dateAdded === 'string' ? quest.dateAdded : '');
+            }
+            // Array.prototype.sort is stable, so equal dates keep entry/link order
+            questIds.sort((a, b) => (addedAt.get(a) || '').localeCompare(addedAt.get(b) || ''));
+        }
+        return { links: { questIds, grandfatheredQuestIds } };
     }
 
     /**
@@ -1373,14 +1415,14 @@ export class StateAdapter {
     }
 
     /**
-     * True when questId is the book's second (or later) linked quest, which pays
-     * GAME_CONFIG.rewards.secondaryQuestBase.
+     * True when questId is the book's second (or later) linked quest, across every library entry
+     * for the same book (getSameBookLinks), which pays GAME_CONFIG.rewards.secondaryQuestBase.
      * @param {string} bookId
      * @param {string} questId
      * @returns {boolean}
      */
     isSecondaryQuestForBook(bookId, questId) {
-        return isSecondaryQuestOnBook(this.getBook(bookId), questId, { liveQuestIds: this.getLiveQuestIds() });
+        return isSecondaryQuestOnBook(this.getSameBookLinks(bookId), questId, { liveQuestIds: this.getLiveQuestIds() });
     }
 
     /**

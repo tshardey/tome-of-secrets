@@ -81,7 +81,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         }
 
         // Calculate total; an item's flat per-day bonus (e.g. Tome-Bound Cat +$1/day) is added to
-        // each paying day, matching RewardCalculator.calculateAtmosphericBuffRewards().
+        // each paying atmospheric buff day (not trackable setting-item days), matching RewardCalculator.calculateAtmosphericBuffRewards().
         let total = calculateBuffTotal(buffState.daysUsed, dailyValue);
         if (bonusPerDay > 0 && isActive && total > 0) {
             total += calculateBuffTotal(buffState.daysUsed, bonusPerDay);
@@ -115,10 +115,8 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             const itemState = atmosphericBuffsState[name] || {};
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
             const dailyValue = trackableItemValues[name] ?? 0;
-            let total = calculateBuffTotal(daysUsed, dailyValue);
-            if (bonusPerDay > 0 && total > 0) {
-                total += calculateBuffTotal(daysUsed, bonusPerDay);
-            }
+            // No Cat per-day bonus here: it pays on atmospheric buff days only.
+            const total = calculateBuffTotal(daysUsed, dailyValue);
             buffViewModels.push({
                 key: name,
                 name,
@@ -131,7 +129,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
                 isAssociated: false,
                 isDisabled: true, // Checkbox disabled; can't turn off while item is equipped/displayed
                 isTrackableItem: true,
-                dailyBonus: bonusPerDay,
+                dailyBonus: 0,
                 bonus
             });
         } else {

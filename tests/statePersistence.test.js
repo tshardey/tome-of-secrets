@@ -4,7 +4,7 @@
 import { saveState, loadState, characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { LARGE_STATE_KEYS } from '../assets/js/character-sheet/persistence.js';
-import { validateCharacterState } from '../assets/js/character-sheet/dataValidator.js';
+import { validateCharacterState, SCHEMA_VERSION } from '../assets/js/character-sheet/dataValidator.js';
 
 function resetCharacterState() {
     const emptyState = createEmptyCharacterState();
@@ -209,7 +209,7 @@ describe('state persistence compatibility', () => {
         }
     });
 
-    test('v17 save migrates to v18', async () => {
+    test('v17 save migrates to the current schema', async () => {
         document.body.innerHTML = `
             <form id="character-sheet">
                 <input type="text" id="xp-current" value="" />
@@ -290,7 +290,7 @@ describe('state persistence compatibility', () => {
 
         const storedForm = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM));
         expect(storedForm).toEqual({ 'xp-current': '1234', level: '6', smp: '2' });
-        expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe('18');
+        expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe(String(SCHEMA_VERSION));
     });
 });
 

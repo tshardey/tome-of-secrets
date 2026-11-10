@@ -31,8 +31,9 @@ import { validateHelperState } from './helperDiscoveryShared.js';
  * Version 16: Book tags (tags: [] on each book)
  * Version 17: The Exchange's register (claimedCountries: countries struck off once, ever)
  * Version 18: Dollar economy (retired curse/shopping/book-box keys and the inkDrops, paperScraps and journal-entries-completed form fields are removed; Fund starts at $0)
+ * Version 19: Books linked to two quests before one book, one quest keep both at the full quest base (links.grandfatheredQuestIds)
  */
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 19;
 
 /**
  * Schema version key in localStorage
@@ -435,7 +436,10 @@ function validateBook(book, context = 'book') {
         dateCompleted: typeof book.dateCompleted === 'string' ? book.dateCompleted : null,
         links: {
             questIds: Array.isArray(links.questIds) ? links.questIds.filter(x => typeof x === 'string') : (typeof links.tomeQuestId === 'string' ? [links.tomeQuestId] : []),
-            curriculumPromptIds: Array.isArray(links.curriculumPromptIds) ? links.curriculumPromptIds.filter(x => typeof x === 'string') : []
+            curriculumPromptIds: Array.isArray(links.curriculumPromptIds) ? links.curriculumPromptIds.filter(x => typeof x === 'string') : [],
+            ...(Array.isArray(links.grandfatheredQuestIds)
+                ? { grandfatheredQuestIds: links.grandfatheredQuestIds.filter(x => typeof x === 'string') }
+                : {})
         },
         tags: Array.isArray(book.tags) ? book.tags.filter(t => typeof t === 'string') : []
     };

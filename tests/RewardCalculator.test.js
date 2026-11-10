@@ -720,18 +720,39 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.modifiedBy).toContain('Garden Gnome');
         });
 
-        test('the daily bonus counts trackable item days alongside buff days', () => {
+        test('the daily bonus counts atmospheric buff days only, not trackable setting-item days', () => {
             const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
                 {
                     'The Candlight Study': { daysUsed: 5, isActive: true },
-                    'Garden Gnome': { daysUsed: 5, isActive: false }
+                    'Garden Gnome': { daysUsed: 3, isActive: false },
+                    'Gilded Painting': { daysUsed: 4, isActive: false },
+                    'Mystical Moth': { daysUsed: 2, isActive: false }
                 },
+                [],
+                [],
+                {
+                    dailyBonus: 1,
+                    dailyBonusSource: 'Tome-Bound Cat',
+                    trackableItemValues: { 'Garden Gnome': 1, 'Gilded Painting': 1, 'Mystical Moth': 1 }
+                }
+            );
+
+            // (5 buff + 3 gnome + 4 painting + 2 moth) × $1 = $14, plus Cat on the 5 buff days only = $19
+            expect(rewards.dollars).toBe(19);
+            const catLine = rewards.getReceipt().modifiers.find((m) => m.source === 'Tome-Bound Cat');
+            expect(catLine).toMatchObject({ type: 'atmospheric-bonus', value: 5, description: '5 days × +$1' });
+        });
+
+        test('the daily bonus pays nothing when only trackable setting-item days are present', () => {
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                { 'Garden Gnome': { daysUsed: 6, isActive: false } },
                 [],
                 [],
                 { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 1 } }
             );
 
-            expect(rewards.dollars).toBe(20); // (5×$1 buff + 5×$1 gnome) + 10 days × $1 cat
+            expect(rewards.dollars).toBe(6);
+            expect(rewards.getReceipt().modifiers.find((m) => m.source === 'Tome-Bound Cat')).toBeUndefined();
         });
 
         test('should not pay a trackable item with zero days used', () => {

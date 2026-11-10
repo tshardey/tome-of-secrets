@@ -1557,6 +1557,21 @@
     background: rgba(184, 159, 98, 0.15);
 }
 
+.book-selector-option-note {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #b89f62;
+}
+
+.book-selector-option.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.book-selector-option.is-disabled:hover {
+    background: transparent;
+}
+
 .book-selector-option .book-selector-option-cover-wrap {
     width: 32px;
     height: 44px;
@@ -4053,7 +4068,8 @@
 /* Helper tiles (Quest tab draw / dice helpers, activated abilities) */
 .helper-tiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* min() lets the single column shrink below 280px in narrow panels */
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 16px;
     list-style: none;
     padding: 16px 24px 24px;

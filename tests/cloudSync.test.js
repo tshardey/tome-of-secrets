@@ -6,6 +6,7 @@ import { STORAGE_KEYS, CHARACTER_STATE_KEYS } from '../assets/js/character-sheet
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { getStateKey } from '../assets/js/character-sheet/persistence.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
+import { SCHEMA_VERSION } from '../assets/js/character-sheet/dataValidator.js';
 
 describe('Cloud Sync - Loop Prevention', () => {
     beforeEach(() => {
@@ -99,7 +100,7 @@ describe('Cloud Sync - Loop Prevention', () => {
 
             // The snapshot is migrated on apply, so the stored version is the current one
             const schemaVersion = localStorage.getItem('tomeOfSecrets_schemaVersion');
-            expect(schemaVersion).toBe('18');
+            expect(schemaVersion).toBe(String(SCHEMA_VERSION));
         });
 
         it('should handle partial snapshot data', async () => {
@@ -242,7 +243,7 @@ describe('Cloud Sync - Loop Prevention', () => {
             expect(await getStateKey(STORAGE_KEYS.FUND_LEDGER, null)).toEqual([]);
 
             // The applied snapshot is now at the current schema, so the next load does not re-migrate it
-            expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe('18');
+            expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe(String(SCHEMA_VERSION));
         });
 
         it('applying a v18 snapshot keeps its fund balance and ledger', async () => {
@@ -264,7 +265,7 @@ describe('Cloud Sync - Loop Prevention', () => {
             expect(characterState[STORAGE_KEYS.FUND_LEDGER]).toEqual(ledger);
             expect(await getStateKey(STORAGE_KEYS.FUND_BALANCE_CENTS, null)).toBe(4250);
             expect(await getStateKey(STORAGE_KEYS.FUND_LEDGER, null)).toEqual(ledger);
-            expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe('18');
+            expect(localStorage.getItem('tomeOfSecrets_schemaVersion')).toBe(String(SCHEMA_VERSION));
         });
     });
 
