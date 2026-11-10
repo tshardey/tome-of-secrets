@@ -166,7 +166,7 @@ describe('AtmosphericBuffViewModel', () => {
             expect(buff2.total).toBe(2); // not active, no Cat bonus
         });
 
-        test('rows expose the Cat per-day bonus for live total edits (active and trackable rows only)', () => {
+        test('rows expose the Cat per-day bonus for live total edits (active buff rows only)', () => {
             const state = {
                 ...mockState,
                 atmosphericBuffs: { ...mockState.atmosphericBuffs, 'Garden Gnome': { daysUsed: 1 } },
@@ -175,7 +175,7 @@ describe('AtmosphericBuffViewModel', () => {
             const viewModels = createAtmosphericBuffViewModel(state, '', '');
             expect(viewModels.find(vm => vm.name === 'Buff1').dailyBonus).toBe(1);
             expect(viewModels.find(vm => vm.name === 'Buff2').dailyBonus).toBe(0); // inactive
-            expect(viewModels.find(vm => vm.name === 'Garden Gnome').dailyBonus).toBe(1);
+            expect(viewModels.find(vm => vm.name === 'Garden Gnome').dailyBonus).toBe(0); // setting item
         });
 
         test('should add trackable item row with days/total when Garden Gnome equipped', () => {
@@ -197,16 +197,19 @@ describe('AtmosphericBuffViewModel', () => {
             expect(gnomeRow.total).toBe(8); // 4 days * 2/day
         });
 
-        test('should add the Cat per-day bonus to a trackable item total', () => {
+        test('Cat per-day bonus applies to atmospheric buff days but not trackable item days', () => {
             const stateWithBoth = {
                 atmosphericBuffs: {
+                    ...mockState.atmosphericBuffs,
                     'Garden Gnome': { daysUsed: 5, isActive: true }
                 },
                 equippedItems: [{ name: 'Garden Gnome' }, { name: 'Tome-Bound Cat' }]
             };
             const viewModels = createAtmosphericBuffViewModel(stateWithBoth, '', '');
             const gnomeRow = viewModels.find(vm => vm.name === 'Garden Gnome');
-            expect(gnomeRow.total).toBe(15); // 5 days × ($2 item + $1 Cat)
+            expect(gnomeRow.total).toBe(10); // 5 days × $2 item, no Cat bonus
+            const buff1 = viewModels.find(vm => vm.name === 'Buff1');
+            expect(buff1.total).toBe(6); // 3 days × ($1 + $1 Cat)
         });
 
         test('trackable item row uses the item per-day value, not a hardcoded 1', () => {

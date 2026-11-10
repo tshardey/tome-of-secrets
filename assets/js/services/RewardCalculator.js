@@ -624,7 +624,8 @@ export class RewardCalculator {
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
      * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM reward (e.g. Grove Tender pipeline)
      * @param {{ dailyBonus?: number, dailyBonusSource?: string|null, trackableItemValues?: Object<string, number> }} [options]
-     *   dailyBonus: flat dollars added for every paying day (buff and trackable-item days), e.g. Tome-Bound Cat.
+     *   dailyBonus: flat dollars added for every paying atmospheric buff day, e.g. Tome-Bound Cat.
+     *   Trackable setting-item days (Garden Gnome, Gilded Painting, ...) do not earn it.
      * @returns {Reward} Reward with dollars only
      */
     static calculateAtmosphericBuffRewards(
@@ -681,7 +682,7 @@ export class RewardCalculator {
             total += buffTotal;
 
             if (buffTotal > 0) {
-                bonusDays += buff.daysUsed;
+                if (!isTrackableItem) bonusDays += buff.daysUsed;
                 processedBuffs.push(buffName);
                 reward.receipt.modifiers.push({
                     source: buffName,
@@ -693,7 +694,7 @@ export class RewardCalculator {
             }
         }
 
-        // Flat per-day item bonus (e.g. Tome-Bound Cat +$1 on every paying atmospheric day).
+        // Flat per-day item bonus (e.g. Tome-Bound Cat +$1 on every paying atmospheric buff day).
         if (dailyBonus > 0 && bonusDays > 0) {
             const bonusTotal = bonusDays * dailyBonus;
             total += bonusTotal;
