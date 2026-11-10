@@ -312,4 +312,28 @@ describe('bookSelector', () => {
             expect(dropdown.innerHTML).toContain('&lt;script&gt;');
         });
     });
+
+    describe('describeBook', () => {
+        it('shows each book\'s note and disables books that cannot be picked', () => {
+            const onSelect = jest.fn();
+            selectorApi = createBookSelector(container, stateAdapter, {
+                onSelect,
+                describeBook: (book) => (book.id === 'b1' ? { disabled: true, note: 'Linked to: <Quest>' } : null)
+            });
+            container.querySelector('.book-selector-trigger').click();
+            const dropdown = document.querySelector('.book-selector-dropdown');
+            const linked = dropdown.querySelector('[data-book-id="b1"]');
+            expect(linked.disabled).toBe(true);
+            expect(linked.classList.contains('is-disabled')).toBe(true);
+            expect(linked.querySelector('.book-selector-option-note').textContent).toBe('Linked to: <Quest>');
+            const free = dropdown.querySelector('[data-book-id="b2"]');
+            expect(free.disabled).toBe(false);
+            expect(free.querySelector('.book-selector-option-note')).toBeNull();
+
+            linked.querySelector('.book-selector-option-title').click();
+            expect(onSelect).not.toHaveBeenCalled();
+            free.click();
+            expect(onSelect).toHaveBeenCalledWith('b2');
+        });
+    });
 });

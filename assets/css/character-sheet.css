@@ -1557,6 +1557,21 @@
     background: rgba(184, 159, 98, 0.15);
 }
 
+.book-selector-option-note {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #b89f62;
+}
+
+.book-selector-option.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.book-selector-option.is-disabled:hover {
+    background: transparent;
+}
+
 .book-selector-option .book-selector-option-cover-wrap {
     width: 32px;
     height: 44px;

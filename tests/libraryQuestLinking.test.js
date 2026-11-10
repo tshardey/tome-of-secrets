@@ -9,7 +9,7 @@ import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { validateCharacterState } from '../assets/js/character-sheet/dataValidator.js';
-import { getQuestLinkRefusal, getBatchQuestLinkRefusal } from '../assets/js/utils/questBookLinker.js';
+import { getQuestLinkRefusal, getBatchQuestLinkRefusal, describeBookForQuestLink } from '../assets/js/utils/questBookLinker.js';
 
 jest.mock('../assets/js/services/BookMetadataService.js', () => ({
     searchBooks: jest.fn(() => Promise.resolve([]))
@@ -734,6 +734,35 @@ describe('One book, one quest across duplicate library entries', () => {
         const copy = addBook('Dune', 'Frank Herbert', ['q2']);
         expect(adapter.getBook(copy.id).links.questIds).toEqual(['q2']);
         expect(adapter.canLinkQuestToBook(copy.id, 'q2')).toEqual({ ok: true });
+    });
+
+    test('the quest book picker marks and disables a linked book (either entry)', () => {
+        adapter.updateActiveQuest('q1', { type: '♥ Organize the Stacks', prompt: 'Fantasy' });
+        const original = addBook('Dune', 'Frank Herbert', ['q1']);
+        const copy = addBook('Dune', 'Frank Herbert');
+        const free = addBook('Emma', 'Jane Austen');
+        const expected = { disabled: true, note: 'Linked to: ♥ Organize the Stacks: Fantasy' };
+        expect(describeBookForQuestLink(adapter, adapter.getBook(original.id))).toEqual(expected);
+        expect(describeBookForQuestLink(adapter, adapter.getBook(copy.id), 'q2')).toEqual(expected);
+        expect(describeBookForQuestLink(adapter, adapter.getBook(free.id))).toBeNull();
+        // The quest's own link is not "another quest"
+        expect(describeBookForQuestLink(adapter, adapter.getBook(original.id), 'q1')).toBeNull();
+    });
+
+    test('the picker keeps a linked book selectable as the $10 second quest when an ability allows it', () => {
+        adapter.addLearnedAbility('Quick Shot');
+        const book = addBook('Dune', 'Frank Herbert', ['q1']);
+        expect(describeBookForQuestLink(adapter, adapter.getBook(book.id), 'q2')).toEqual({
+            disabled: false,
+            note: 'Linked to: ⭐ Extra Credit · Second quest ($10)'
+        });
+        adapter.linkQuestToBook(book.id, 'q2');
+        expect(describeBookForQuestLink(adapter, adapter.getBook(book.id), 'q3').disabled).toBe(true);
+        // Editing a quest already on the book: a relink, not labelled as a new second quest
+        expect(describeBookForQuestLink(adapter, adapter.getBook(book.id), 'q1')).toEqual({
+            disabled: false,
+            note: 'Linked to: ⭐ Extra Credit'
+        });
     });
 
     test('the batch check counts the other entry too', () => {
