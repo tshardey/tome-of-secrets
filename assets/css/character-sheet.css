@@ -4053,7 +4053,8 @@
 /* Helper tiles (Quest tab draw / dice helpers, activated abilities) */
 .helper-tiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* min() lets the single column shrink below 280px in narrow panels */
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 16px;
     list-style: none;
     padding: 16px 24px 24px;
