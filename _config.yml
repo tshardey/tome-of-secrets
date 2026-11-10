@@ -40,3 +40,5 @@ exclude:
   - package-lock.json
   - AGENTS.md
   - README.md
+  - docker/
+  - docker-compose.yml

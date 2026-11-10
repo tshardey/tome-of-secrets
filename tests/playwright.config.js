@@ -24,7 +24,7 @@ module.exports = defineConfig({
       name: 'chrome',
       use: {
         ...devices['Desktop Chrome'],
-        // Use the Chrome installed by .devcontainer/scripts/install-chrome.sh
+        // Use the Chrome installed by docker/install-chrome.sh
         // rather than downloading a second Chromium.
         channel: 'chrome',
         launchOptions: {
