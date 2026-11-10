@@ -66,7 +66,7 @@ The repository is organized as a standard Jekyll project.
 *   `.md` files (root directory): These are the core content files for the game rules (e.g., `core-mechanics.md`, `rewards.md`). Some previously-standalone rules pages (like quests/leveling) have moved into the Character Sheet UI.
 *   `character-sheet.html`: The HTML file for the interactive character sheet.
 *   `README.md`: Contains detailed instructions for setting up a local development environment and running tests.
-*   `.devcontainer/`: Configuration for VS Code Dev Containers, allowing for a consistent development environment.
+*   `docker-compose.yml` + `docker/`: Docker Compose development environment (`docker/Dockerfile`, entrypoint, Chrome install script) providing Ruby/Jekyll, Node, gh, the Supabase CLI, Chrome and Claude Code.
 *   `tests/`: Contains the Jest test suite for the project's JavaScript code, primarily for the character sheet functionality.
 *   `supabase/`: Supabase CLI project directory. Contains `config.toml` and `migrations/` with timestamped SQL migration files managed via `supabase migration new` and applied with `supabase db push`.
 *   `Gemfile`: Specifies the Ruby gem dependencies for Jekyll.
@@ -104,7 +104,7 @@ If it errors, or warns about **pending schema migrations** (`v<old> -> v<new>`),
 
 ## Agent Capabilities and Tasks
 
-You can perform the following tasks. Always use the local development environment inside the Dev Container for running servers or tests.
+You can perform the following tasks. Always use the Docker Compose development environment (`docker compose ...`) for running servers or tests.
 
 ### 1. Content Management
 
@@ -145,41 +145,38 @@ You can perform the following tasks. Always use the local development environmen
 
 ### 2. Local Development
 
-This project is configured to use VS Code Dev Containers. All development and testing commands should be run from within the container's terminal.
+This project ships a Docker Compose development environment (`docker-compose.yml`, `docker/Dockerfile`). Run `docker compose` from the repository root on the host; Ruby, Node and the other tools live only in the container. Gems and `tests/node_modules` are kept in named volumes, and the container entrypoint installs them and runs `node scripts/generate-data.js` on start.
 
 **To start the local server:**
-1.  Ensure the Dev Container is running.
-2.  Open a terminal in VS Code.
+1.  Build the image the first time (or after changing `docker/`): `docker compose build`.
+2.  Make sure `_config.supabase.yml` exists (see below).
 3.  Run the command:
     ```bash
-    bundle exec jekyll serve --config _config.yml,_config.supabase.yml
+    docker compose up jekyll        # add -d to run detached; stop with: docker compose down
     ```
-    **Always pass both config files.** `_config.yml` ships `images_cdn_base: ""`, `supabase_url: ""` and the other environment values blank so they are safe to commit; the real values live in `_config.supabase.yml`, which is git-ignored. Serving with `_config.yml` alone builds a site where **every image 404s** (they resolve to repo paths that do not exist — the art is hosted in Supabase Storage, not committed), and cloud sync and Gallery book search are disabled. If a fresh clone has no `_config.supabase.yml`, copy `_config.supabase.yml.example` to that name and fill it in.
-4.  The site will be available at `http://localhost:4000`. The server will auto-reload on file changes.
+    This runs `bundle exec jekyll serve --config _config.yml,_config.supabase.yml --host 0.0.0.0 --livereload --force_polling` (polling makes auto-regeneration work on a Windows bind mount).
 
-**Run Jekyll from the repository root.** `bundle exec jekyll build` inherits the shell's working directory, so running it after a `cd tests` builds `tests/_site/` and copies every `*.test.js` into it — Jest then discovers the whole suite twice and reports a flood of duplicate failures. If you see the suite count double, delete the stray `_site` directory.
+    **Always pass both config files.** `_config.yml` ships `images_cdn_base: ""`, `supabase_url: ""` and the other environment values blank so they are safe to commit; the real values live in `_config.supabase.yml`, which is git-ignored. Serving with `_config.yml` alone builds a site where **every image 404s** (they resolve to repo paths that do not exist — the art is hosted in Supabase Storage, not committed), and cloud sync and Gallery book search are disabled. If a fresh clone has no `_config.supabase.yml`, copy `_config.supabase.yml.example` to that name and fill it in; the `jekyll` service will not start without it.
+4.  The site will be available at `http://localhost:4000/tome-of-secrets/`. The server will auto-reload on file changes.
+5.  For a shell inside the container use `docker compose run --rm dev` (starts in `tests/`; the repo is at `/workspace`).
+6.  To serve a different checkout or worktree, point `TOS_SRC` at it and give it its own project name: `TOS_SRC=../other-worktree docker compose -p tos-other up jekyll` (PowerShell: `$env:TOS_SRC='../other-worktree'; docker compose -p tos-other up jekyll`).
+7.  After editing `assets/data/*.json`, restart the `jekyll` service (or run `node scripts/generate-data.js` in a `dev` shell); the entrypoint regenerates the exports only at container start.
+
+**Run Jekyll from the repository root.** If you run `bundle exec jekyll build` by hand inside the container, run it from `/workspace`: it inherits the shell's working directory, so running it after a `cd tests` builds `tests/_site/` and copies every `*.test.js` into it — Jest then discovers the whole suite twice and reports a flood of duplicate failures. If you see the suite count double, delete the stray `_site` directory.
 
 ### 3. Testing
 
 The project uses Jest for testing JavaScript functionality.
 
-**To run the test suite:**
-1.  Navigate to the `tests` directory:
-    ```bash
-    cd tests
-    ```
-2.  If it's the first time or `package.json` has changed, install dependencies:
-    ```bash
-    cd tests && npm install
-    ```
-3.  Run the tests:
-    ```bash
-    cd tests && npm test
-    ```
+**To run the test suite** (from the repository root on the host):
+```bash
+docker compose run --rm dev npm test
+```
+The container installs test dependencies with `npm ci` automatically when `tests/package-lock.json` changes, so there is no separate install step. `npm run validate-data` and `npm run test:e2e` run the same way.
 
 ### 4. Supabase Database Migrations
 
-The project uses the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli) to manage database schema changes. The CLI is pre-installed in the Dev Container.
+The project uses the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli) to manage database schema changes. The CLI is pre-installed in the Docker development image; run it from a `docker compose run --rm dev` shell (`cd /workspace` first).
 
 **Setup (one-time per environment):**
 1.  Authenticate: `supabase login`
@@ -216,7 +213,7 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 
 1.  **Task tracking (Beads):** Create and claim tasks *before* starting work; keep them granular; mark them **done** only after tests pass and subagent review passes (for code). Use **`bd` only** for issue CRUD (see Task Tracking section — no manual `.beads` storage edits). See [`.beads/README.md`](.beads/README.md) and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md).
 2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`, `shroud.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
-3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed from within the VS Code Dev Container environment to ensure all dependencies are available.
+3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed inside the Docker Compose environment (`docker compose up jekyll`, `docker compose run --rm dev ...`) to ensure all dependencies are available.
 4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
 5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
 6.  **Git: feature branches only, never `main`:** Agents may **`git add`**, **`git commit`**, **`git push`**, and **open pull requests** — but only on a **feature branch**. Agents must **never** commit to, push to, or merge into **`main`**; the maintainer merges. If the session starts on `main`, create a branch before the first commit. When issue state changed, run **`bd export --no-memories -o .beads/issues.jsonl`** so the export matches the database, then stage it with the rest of the work.
