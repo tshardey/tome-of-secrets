@@ -47,6 +47,35 @@ const PROTECTED_TOOLTIP = "Can't drop a book with quest history";
 const PUSH_HINT = 'Saved on this device. It will upload with your next sync.';
 const STORAGE_FULL = "This browser's storage is full, so nothing was changed. Free some space, or remove uploaded covers, and try again.";
 
+/** A write that failed for a reason not known to be storage quota (R30). */
+const SAVE_FAILED = "Couldn't save that. Nothing was changed.";
+
+/**
+ * The cloud adapter while the session can't be read: the player may be signed in, so a
+ * removal is blocked as offline (nothing written) instead of skipping the precheck.
+ */
+const OFFLINE_CLOUD = Object.freeze({
+    checkReady: async () => ({ ok: false, reason: 'offline' }),
+    push: async () => false
+});
+
+/**
+ * The confirm body (D10). Verbatim when nothing is dropped; with drops, says how many stay in
+ * the household library and how many are dropped (R28).
+ * @param {{ remove: number, dropped: number, booksBefore: number, booksAfter: number }} summary
+ */
+export function tidyConfirmBody(summary) {
+    const lead = `Remove ${plural(summary.remove, 'book', 'books')} from Tome of Secrets.`;
+    const tail = `Your save goes from ${summary.booksBefore} to ${summary.booksAfter} books. You can restore them from this panel.`;
+    if (!(summary.dropped > 0)) return `${lead} They stay in the household library. ${tail}`;
+    const kept = summary.remove - summary.dropped;
+    const dropped = `${summary.dropped} ${summary.dropped === 1 ? 'is' : 'are'} dropped.`;
+    const middle = kept > 0
+        ? `${kept} ${kept === 1 ? 'stays' : 'stay'} in the household library; ${dropped}`
+        : dropped;
+    return `${lead} ${middle} ${tail}`;
+}
+
 const BLOCKED_MESSAGES = {
     unsynced: () => 'Your cloud save changed on another device. Use Sync now first, then apply.',
     offline: () => "You're offline. Nothing was changed; removals need a connection. Your choices are still here.",
@@ -91,6 +120,9 @@ export class LibraryTidyController extends BaseController {
         this._cloud = null;
         this._loadToken = 0;
         this._loading = null;
+        /** The session's user at the last load, and the client whose auth changes are watched. */
+        this._userId = null;
+        this._authClient = null;
 
         this._plan = [];
         /** bookId -> { kind: 'link', libraryBookId } | { kind: 'type', type } | { kind: 'drop' } */
@@ -258,22 +290,33 @@ export class LibraryTidyController extends BaseController {
         this._loading = (async () => {
             let client = null;
             let userId = null;
+            let sessionUnknown = false;
             try {
                 client = await this._getClient();
                 if (client && client.auth && typeof client.auth.getSession === 'function') {
-                    const { data } = await client.auth.getSession();
+                    this._watchAuth(client);
+                    const { data, error } = await client.auth.getSession();
+                    if (error) throw error;
                     userId = data && data.session && data.session.user ? data.session.user.id || null : null;
                 }
             } catch (error) {
+                // Not "signed out": the player may be signed in, so removals must not skip the
+                // cloud precheck. They are blocked as offline until the session can be read.
                 console.warn('[LibraryTidy] session unavailable:', errorCode(error));
-                userId = null;
+                sessionUnknown = true;
             }
             if (token !== this._loadToken) return;
-            this._cloud = userId ? this._makeCloud(client) : null;
-            if (!userId || !this._catalogService) {
+            this._userId = userId;
+            if (sessionUnknown) {
+                this._cloud = OFFLINE_CLOUD;
+                this._catalog = null;
+                this._source = 'unavailable';
+            } else if (!userId || !this._catalogService) {
+                this._cloud = userId ? this._makeCloud(client) : null;
                 this._catalog = null;
                 this._source = 'signed-out';
             } else {
+                this._cloud = this._makeCloud(client);
                 let catalog = null;
                 try {
                     catalog = await this._catalogService.getCatalog(force ? { force: true } : undefined);
@@ -290,6 +333,28 @@ export class LibraryTidyController extends BaseController {
             this.render();
         })();
         return this._loading;
+    }
+
+    /**
+     * Reload when the signed-in user changes (sign-in or sign-out after the page loaded).
+     * Subscribed once per client; an event for the same user (token refresh) is ignored.
+     */
+    _watchAuth(client) {
+        if (this._authClient === client || typeof client.auth.onAuthStateChange !== 'function') return;
+        this._authClient = client;
+        try {
+            const result = client.auth.onAuthStateChange((_event, session) => {
+                const userId = session && session.user ? session.user.id || null : null;
+                if (this._source === 'idle' || this._source === 'loading' || userId === this._userId) return;
+                void this._loadSource();
+            });
+            const subscription = result && result.data ? result.data.subscription : null;
+            if (subscription && typeof subscription.unsubscribe === 'function') {
+                this._unsubscribers.push(() => subscription.unsubscribe());
+            }
+        } catch (error) {
+            console.warn('[LibraryTidy] auth watch unavailable:', errorCode(error));
+        }
     }
 
     /** The cloud adapter applyTidy expects: push resolves true only when the save went up. */
@@ -329,28 +394,45 @@ export class LibraryTidyController extends BaseController {
         } catch (error) {
             console.warn('[LibraryTidy] postpone failed:', errorCode(error));
         }
-        if (!ok) this._setMessage(STORAGE_FULL);
+        // The adapter doesn't say why a write failed, so it is never called a full quota (R30).
+        if (!ok) this._setMessage(SAVE_FAILED);
         this.render();
+    }
+
+    /** Apply waits for the session and the library: until then it can't know about the cloud. */
+    _sourcePending() {
+        return this._source === 'idle' || this._source === 'loading';
     }
 
     async handleApply() {
         if (this._busy) return;
+        // The decisions are the ones on screen now; a library answer arriving meanwhile must
+        // not add preselected matches the player never saw.
         const decisions = this._decisions();
         if (decisions.length === 0) return;
         this._busy = true;
         this._setMessage('');
         this.render();
 
+        if (this._sourcePending()) {
+            try {
+                await (this._loading || this._ensureSource());
+            } catch (error) {
+                console.warn('[LibraryTidy] source load failed:', errorCode(error));
+            }
+            if (this._sourcePending()) {
+                // Still unknown (never expected): don't guess about the cloud.
+                this._cloud = OFFLINE_CLOUD;
+            }
+        }
+
         let summary = summarizeTidy(this.stateAdapter.state, decisions);
         const confirm = (confirmed) => {
             summary = confirmed;
-            const removeLabel = `Remove ${plural(confirmed.remove, 'book', 'books')}`;
             return confirmDialog({
                 title: 'Remove books from Tome of Secrets?',
-                body: `${removeLabel} from Tome of Secrets. They stay in the household library. ` +
-                    `Your save goes from ${confirmed.booksBefore} to ${confirmed.booksAfter} books. ` +
-                    'You can restore them from this panel.',
-                confirmLabel: removeLabel,
+                body: tidyConfirmBody(confirmed),
+                confirmLabel: `Remove ${plural(confirmed.remove, 'book', 'books')}`,
                 cancelLabel: 'Cancel'
             });
         };
@@ -367,7 +449,7 @@ export class LibraryTidyController extends BaseController {
             });
         } catch (error) {
             console.warn('[LibraryTidy] apply failed:', errorCode(error));
-            result = { status: 'blocked', reason: 'storage', pushed: false };
+            result = { status: 'failed', pushed: false };
         }
         this._busy = false;
 
@@ -376,8 +458,10 @@ export class LibraryTidyController extends BaseController {
             if (summary.remove > 0 && this._cloud && !result.pushed) text += ` ${PUSH_HINT}`;
             this._setMessage(text);
         } else if (result.status === 'blocked') {
-            const toText = BLOCKED_MESSAGES[result.reason] || BLOCKED_MESSAGES.storage;
-            this._setMessage(toText(this._protectedTitle(decisions)));
+            const toText = BLOCKED_MESSAGES[result.reason];
+            this._setMessage(toText ? toText(this._protectedTitle(decisions)) : SAVE_FAILED);
+        } else if (result.status === 'failed') {
+            this._setMessage(SAVE_FAILED);
         }
         this._replan();
         this.render();
@@ -407,7 +491,8 @@ export class LibraryTidyController extends BaseController {
         // Count from state: the books can be back even when the bookTidy write failed.
         const books = this._books();
         const back = before.filter((id) => id in books).length;
-        this._setMessage(back > 0 ? `Restored ${plural(back, 'book', 'books')}.` : STORAGE_FULL);
+        // restoreRemovedBooks doesn't say why a write failed, so it is never called a full quota (R30).
+        this._setMessage(back > 0 ? `Restored ${plural(back, 'book', 'books')}.` : SAVE_FAILED);
         this._replan();
         this.render();
         this._reconcileStatus();
@@ -573,7 +658,7 @@ export class LibraryTidyController extends BaseController {
         const status = this.stateAdapter.getBookTidy().status;
         const parts = [];
         if (hasRows) {
-            parts.push(`<button type="button" class="rpg-btn rpg-btn-primary library-tidy-apply-btn" data-focus-key="apply"${k === 0 || this._busy ? ' disabled' : ''}>Apply ${escapeHtml(plural(k, 'choice', 'choices'))}</button>`);
+            parts.push(`<button type="button" class="rpg-btn rpg-btn-primary library-tidy-apply-btn" data-focus-key="apply"${k === 0 || this._busy || this._sourcePending() ? ' disabled' : ''}>Apply ${escapeHtml(plural(k, 'choice', 'choices'))}</button>`);
             if (status !== 'done') {
                 parts.push('<button type="button" class="rpg-btn rpg-btn-secondary library-tidy-later-btn" data-focus-key="later">Later</button>');
             }

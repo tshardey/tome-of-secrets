@@ -28,7 +28,7 @@ import { applyTidy, restoreRemovedBooks } from '../assets/js/services/LibraryTid
 import { confirmDialog } from '../assets/js/ui/confirmDialog.js';
 import { checkReadyForDeliberateChange, pushDeliberateChange } from '../assets/js/services/cloudSync.js';
 import { switchToTab } from '../assets/js/tabs.js';
-import { LibraryTidyController, TIDY_REMIND_AFTER_DAYS } from '../assets/js/controllers/LibraryTidyController.js';
+import { LibraryTidyController, TIDY_REMIND_AFTER_DAYS, tidyConfirmBody } from '../assets/js/controllers/LibraryTidyController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { SCHEMA_VERSION } from '../assets/js/character-sheet/dataValidator.js';
@@ -494,6 +494,183 @@ describe('simple version', () => {
     expect(pushDeliberateChange).not.toHaveBeenCalled();
     expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(1)]).toBeUndefined();
     expect(message()).toBe('Done. 1 removed, 0 linked to the library, 0 typed.');
+  });
+});
+
+describe('the session and the cloud (fix round 1)', () => {
+  function slowSessionClient() {
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const client = {
+      auth: {
+        getSession: jest.fn(async () => {
+          await gate;
+          return { data: { session: { user: { id: USER } } }, error: null };
+        })
+      }
+    };
+    return { client, release };
+  }
+
+  test('Apply stays disabled while the session is being read', async () => {
+    const { client, release } = slowSessionClient();
+    const adapter = makeAdapter([makeBook(50), makeBook(51)]);
+    controller = new LibraryTidyController(adapter, document.getElementById('character-sheet'), {
+      libraryCatalog: makeCatalogService(makeCatalog([])),
+      getSupabaseClient: () => Promise.resolve(client),
+      now: () => NOW
+    });
+    const loaded = controller.initialize();
+    await settle();
+    row(bookId(50)).querySelector('.library-tidy-drop-btn').click();
+    expect(applyBtn().textContent).toBe('Apply 1 choice');
+    expect(applyBtn().disabled).toBe(true);
+    applyBtn().click();
+    await settle();
+    expect(applyTidy).not.toHaveBeenCalled();
+    release();
+    await loaded;
+    await settle();
+    expect(applyBtn().disabled).toBe(false);
+    applyBtn().click();
+    await settle();
+    expect(checkReadyForDeliberateChange).toHaveBeenCalledTimes(1);
+    expect(pushDeliberateChange).toHaveBeenCalledTimes(1);
+  });
+
+  test('an apply started before the session settles waits for it, then prechecks the cloud', async () => {
+    const { client, release } = slowSessionClient();
+    const adapter = makeAdapter([makeBook(50), makeBook(51)]);
+    controller = new LibraryTidyController(adapter, document.getElementById('character-sheet'), {
+      libraryCatalog: makeCatalogService(makeCatalog([])),
+      getSupabaseClient: () => Promise.resolve(client),
+      now: () => NOW
+    });
+    void controller.initialize();
+    await settle();
+    row(bookId(50)).querySelector('.library-tidy-drop-btn').click();
+    const applying = controller.handleApply();
+    await settle();
+    expect(applyTidy).not.toHaveBeenCalled();
+    release();
+    await applying;
+    expect(applyTidy.mock.calls[0][0].cloud).not.toBeNull();
+    expect(applyTidy.mock.calls[0][0].decisions).toEqual([{ bookId: bookId(50), kind: 'drop' }]);
+    expect(checkReadyForDeliberateChange).toHaveBeenCalledTimes(1);
+  });
+
+  test('a session error blocks removals as offline and writes nothing', async () => {
+    const client = { auth: { getSession: jest.fn(() => Promise.reject(Object.assign(new Error('x'), { name: 'AuthRetryableFetchError' }))) } };
+    const adapter = makeAdapter([makeBook(50), makeBook(51)]);
+    const catalogService = makeCatalogService(makeCatalog([]));
+    await start(adapter, { client, catalogService });
+    expect(catalogService.getCatalog).not.toHaveBeenCalled();
+    const before = JSON.stringify(adapter.state[STORAGE_KEYS.BOOKS]);
+    const tidyBefore = localStorage.getItem('bookTidy');
+    row(bookId(50)).querySelector('.library-tidy-drop-btn').click();
+    applyBtn().click();
+    await settle();
+    expect(applyTidy.mock.calls[0][0].cloud).not.toBeNull();
+    expect(confirmDialog).not.toHaveBeenCalled();
+    expect(message()).toBe("You're offline. Nothing was changed; removals need a connection. Your choices are still here.");
+    expect(JSON.stringify(adapter.state[STORAGE_KEYS.BOOKS])).toBe(before);
+    expect(localStorage.getItem('bookTidy')).toBe(tidyBefore);
+  });
+
+  test('a session error still lets the player type books', async () => {
+    const client = { auth: { getSession: jest.fn(() => Promise.resolve({ data: null, error: { name: 'AuthError' } })) } };
+    const adapter = makeAdapter([makeBook(50), makeBook(51)]);
+    await start(adapter, { client });
+    row(bookId(50)).querySelector('.library-tidy-type-btn[data-type="ebook"]').click();
+    applyBtn().click();
+    await settle();
+    expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(50)].type).toBe('ebook');
+  });
+
+  test('signing in after the page loaded reloads the library and the cloud', async () => {
+    let session = null;
+    let onChange = null;
+    const unsubscribe = jest.fn();
+    const client = {
+      auth: {
+        getSession: jest.fn(() => Promise.resolve({ data: { session }, error: null })),
+        onAuthStateChange: jest.fn((fn) => { onChange = fn; return { data: { subscription: { unsubscribe } } }; })
+      }
+    };
+    const adapter = makeAdapter([makeBook(1)]);
+    const catalogService = makeCatalogService(makeCatalog([makeLibraryBook(1)]));
+    await start(adapter, { client, catalogService });
+    expect(catalogService.getCatalog).not.toHaveBeenCalled();
+    expect(row(bookId(1)).querySelector('.library-tidy-preselect')).toBeNull();
+    // A token refresh for the same (signed-out) user does nothing.
+    onChange('TOKEN_REFRESHED', null);
+    await settle();
+    expect(client.auth.getSession).toHaveBeenCalledTimes(1);
+    session = { user: { id: USER } };
+    onChange('SIGNED_IN', session);
+    await settle();
+    expect(catalogService.getCatalog).toHaveBeenCalledTimes(1);
+    expect(row(bookId(1)).querySelector('input.library-tidy-preselect').checked).toBe(true);
+    expect(client.auth.onAuthStateChange).toHaveBeenCalledTimes(1);
+    controller.destroy();
+    expect(unsubscribe).toHaveBeenCalled();
+    controller = null;
+  });
+});
+
+describe('confirm body (R28)', () => {
+  test('no drops: D10 verbatim', () => {
+    expect(tidyConfirmBody({ remove: 45, dropped: 0, booksBefore: 52, booksAfter: 7 })).toBe(
+      'Remove 45 books from Tome of Secrets. They stay in the household library. Your save goes from 52 to 7 books. You can restore them from this panel.'
+    );
+  });
+
+  test('links and drops: how many stay and how many are dropped', () => {
+    expect(tidyConfirmBody({ remove: 45, dropped: 5, booksBefore: 52, booksAfter: 7 })).toBe(
+      'Remove 45 books from Tome of Secrets. 40 stay in the household library; 5 are dropped. Your save goes from 52 to 7 books. You can restore them from this panel.'
+    );
+  });
+
+  test('drops only: the "stay" clause is left out', () => {
+    expect(tidyConfirmBody({ remove: 3, dropped: 3, booksBefore: 10, booksAfter: 7 })).toBe(
+      'Remove 3 books from Tome of Secrets. 3 are dropped. Your save goes from 10 to 7 books. You can restore them from this panel.'
+    );
+  });
+
+  test('the dialog gets the drop wording and keeps the Remove label', async () => {
+    const books = range(0, 4).map(n => makeBook(n));
+    const adapter = makeAdapter(books);
+    const catalogService = makeCatalogService(makeCatalog([makeLibraryBook(0), makeLibraryBook(1)]));
+    await start(adapter, { client: signedInClient(), catalogService });
+    row(bookId(2)).querySelector('.library-tidy-drop-btn').click();
+    applyBtn().click();
+    await settle();
+    const dialog = confirmDialog.mock.calls[0][0];
+    expect(dialog.confirmLabel).toBe('Remove 3 books');
+    expect(dialog.body).toBe('Remove 3 books from Tome of Secrets. 2 stay in the household library; 1 is dropped. Your save goes from 4 to 1 books. You can restore them from this panel.');
+  });
+});
+
+describe('write failures (R30)', () => {
+  test('Later that cannot be saved says nothing was changed', async () => {
+    const adapter = makeAdapter([makeBook(1)]);
+    await start(adapter);
+    const spy = jest.spyOn(adapter, 'setBookTidy').mockReturnValue(null);
+    document.querySelector('.library-tidy-later-btn').click();
+    await settle();
+    expect(message()).toBe("Couldn't save that. Nothing was changed.");
+    expect(adapter.getBookTidy().status).toBe('pending');
+    spy.mockRestore();
+  });
+
+  test('a restore that brought nothing back says nothing was changed', async () => {
+    const removedBooks = { [bookId(1)]: makeBook(1) };
+    const adapter = makeAdapter([makeBook(2, { type: 'ebook' })], { status: 'done', removedBooks });
+    await start(adapter);
+    restoreRemovedBooks.mockImplementation(async () => 0);
+    document.querySelector('.library-tidy-restore-btn').click();
+    await settle();
+    expect(message()).toBe("Couldn't save that. Nothing was changed.");
   });
 });
 
