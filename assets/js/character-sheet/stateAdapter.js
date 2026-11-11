@@ -1397,17 +1397,39 @@ export class StateAdapter {
      * @returns {{ status: string, postponedAt: string|null, completedAt: string|null, removedBooks: Object }}
      */
     getBookTidy() {
+        const stored = this._storedBookTidy();
+        if (stored) {
+            // Another tab may have written it since this one loaded (localStorage is shared, RAM
+            // is not): the stored record is the truth, and RAM follows it.
+            this.state[STORAGE_KEYS.BOOK_TIDY] = stored;
+            return stored;
+        }
         return validateBookTidy(this.state[STORAGE_KEYS.BOOK_TIDY]);
+    }
+
+    /** The validated bookTidy in storage, or null when none is stored (or it is unreadable). */
+    _storedBookTidy() {
+        const raw = safeGetJSON(STORAGE_KEYS.BOOK_TIDY, null);
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+        return validateBookTidy(raw);
     }
 
     /**
      * Replace the bookTidy state. Written through the schema write gate (setSaveJSON); RAM and
      * listeners change only when the write succeeds.
+     * `removedBooks` only ever grows by id (D9): the write keeps every entry already stored, even
+     * one a stale tab's `next` lacks. Only `restoredIds` (restoreRemovedBooks, the ids it put
+     * back) leave the map.
      * @param {Object} next
+     * @param {{ restoredIds?: string[] }} [options]
      * @returns {Object|null} the validated bookTidy, or null when the write was refused or failed
      */
-    setBookTidy(next) {
-        const tidy = validateBookTidy(next);
+    setBookTidy(next, { restoredIds = [] } = {}) {
+        const incoming = validateBookTidy(next);
+        const stored = this._storedBookTidy();
+        const removedBooks = { ...(stored ? stored.removedBooks : {}), ...incoming.removedBooks };
+        for (const id of Array.isArray(restoredIds) ? restoredIds : []) delete removedBooks[id];
+        const tidy = { ...incoming, removedBooks };
         if (!setSaveJSON(STORAGE_KEYS.BOOK_TIDY, tidy)) return null;
         this.state[STORAGE_KEYS.BOOK_TIDY] = tidy;
         this.emit(EVENTS.BOOK_TIDY_CHANGED, tidy);
@@ -1429,10 +1451,11 @@ export class StateAdapter {
      * places, never in neither.
      * @param {Object} nextBooks - { [id]: Book }
      * @param {Object} nextTidy
-     * @param {{ booksFirst?: boolean }} [options]
+     * `restoredIds` (restore) are the removed entries put back into books (see setBookTidy).
+     * @param {{ booksFirst?: boolean, restoredIds?: string[] }} [options]
      * @returns {Promise<{ ok: true } | { ok: false, reason: 'storage' }>}
      */
-    async applyBookTidy(nextBooks, nextTidy, { booksFirst = false } = {}) {
+    async applyBookTidy(nextBooks, nextTidy, { booksFirst = false, restoredIds = [] } = {}) {
         const failed = { ok: false, reason: 'storage' };
         const writeBooks = async () => {
             const previous = this.state[STORAGE_KEYS.BOOKS];
@@ -1452,9 +1475,9 @@ export class StateAdapter {
         };
         if (booksFirst) {
             if (!await writeBooks()) return failed;
-            return this.setBookTidy(nextTidy) ? { ok: true } : failed;
+            return this.setBookTidy(nextTidy, { restoredIds }) ? { ok: true } : failed;
         }
-        if (!this.setBookTidy(nextTidy)) return failed;
+        if (!this.setBookTidy(nextTidy, { restoredIds })) return failed;
         return await writeBooks() ? { ok: true } : failed;
     }
 

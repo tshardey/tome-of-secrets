@@ -947,3 +947,75 @@ describe('apply messages', () => {
     }
   });
 });
+
+describe('two tabs over one save (bookTidy is read from storage)', () => {
+  const storedTidy = () => JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOK_TIDY));
+  const staleTidy = { status: 'pending', postponedAt: null, completedAt: null, removedBooks: {} };
+
+  test('a stale tab pressing Later and reconciling keeps every book the other tab removed', async () => {
+    const books = range(0, 50).map(n => makeBook(n));
+    const tabA = makeAdapter(books);
+    const tabB = makeAdapter(books);
+    await start(tabA);
+
+    // Tab B drops 45 books; tab A's RAM still holds the bookTidy it loaded.
+    const dropped = range(0, 45).map(bookId);
+    const result = await applyTidy({
+      stateAdapter: tabB,
+      decisions: dropped.map(id => ({ bookId: id, kind: 'drop' })),
+      catalog: null,
+      service: null,
+      cloud: null,
+      confirm: async () => true
+    });
+    expect(result.status).toBe('applied');
+    expect(Object.keys(storedTidy().removedBooks)).toHaveLength(45);
+    expect(tabA.state[STORAGE_KEYS.BOOK_TIDY].removedBooks).toEqual({});
+
+    await controller.handleLater();
+    controller._reconcileStatus();
+    await settle();
+
+    const stored = storedTidy();
+    expect(stored.status).toBe('postponed');
+    expect(Object.keys(stored.removedBooks).sort()).toEqual([...dropped].sort());
+    // Tab A's RAM follows the stored record.
+    expect(Object.keys(tabA.getBookTidy().removedBooks)).toHaveLength(45);
+  });
+
+  test('tab A restores entries that tab B removed, and only those leave removedBooks', async () => {
+    const books = range(0, 5).map(n => makeBook(n));
+    const tabA = makeAdapter(books);
+    const tabB = makeAdapter(books);
+    const dropped = [bookId(0), bookId(1), bookId(2)];
+    await applyTidy({
+      stateAdapter: tabB,
+      decisions: dropped.map(id => ({ bookId: id, kind: 'drop' })),
+      catalog: null, service: null, cloud: null, confirm: async () => true
+    });
+    // Tab A has B's books (re-read), but its RAM bookTidy is the one it loaded.
+    tabA.state[STORAGE_KEYS.BOOKS] = JSON.parse(JSON.stringify(tabB.state[STORAGE_KEYS.BOOKS]));
+    tabA.state[STORAGE_KEYS.BOOK_TIDY] = { ...staleTidy };
+
+    await expect(restoreRemovedBooks(tabA, [bookId(0), bookId(1)])).resolves.toBe(2);
+
+    expect(Object.keys(storedTidy().removedBooks)).toEqual([bookId(2)]);
+    expect(tabA.getBook(bookId(0))).toBeTruthy();
+    expect(tabA.getBook(bookId(1))).toBeTruthy();
+    expect(tabA.getBook(bookId(2))).toBeFalsy();
+  });
+
+  test('setBookTidy never drops a stored removed entry, unless it is one the restore put back', () => {
+    const removedBooks = { [bookId(1)]: makeBook(1), [bookId(2)]: makeBook(2) };
+    const adapter = makeAdapter([makeBook(3)], { removedBooks });
+    adapter.state[STORAGE_KEYS.BOOK_TIDY] = { ...staleTidy };
+
+    expect(adapter.setBookTidy({ ...staleTidy, status: 'postponed' })).toBeTruthy();
+    expect(Object.keys(storedTidy().removedBooks).sort()).toEqual([bookId(1), bookId(2)].sort());
+    expect(storedTidy().status).toBe('postponed');
+
+    expect(adapter.setBookTidy({ ...staleTidy }, { restoredIds: [bookId(1)] })).toBeTruthy();
+    expect(Object.keys(storedTidy().removedBooks)).toEqual([bookId(2)]);
+    expect(Object.keys(adapter.state[STORAGE_KEYS.BOOK_TIDY].removedBooks)).toEqual([bookId(2)]);
+  });
+});

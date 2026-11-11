@@ -378,6 +378,7 @@ export async function applyTidy({ stateAdapter, decisions, catalog, service, clo
         // 4. bookTidy first, then books (D9 write order). Re-read: the unions took a while.
         const liveBooks = booksOf(stateAdapter.state);
         if (!sameActions(actions, resolveDecisions(stateAdapter.state, decisions))) return blocked('protected');
+        // getBookTidy reads the stored record, so another tab's removed books are kept.
         const { nextBooks, nextTidy } = buildNext(liveBooks, stateAdapter.getBookTidy(), actions, libraryById, new Date().toISOString());
         const written = await stateAdapter.applyBookTidy(nextBooks, nextTidy);
         if (!written || written.ok !== true) return blocked('storage');
@@ -410,6 +411,7 @@ export async function applyTidy({ stateAdapter, decisions, catalog, service, clo
  */
 export function restoreRemovedBooks(stateAdapter, ids) {
     return runExclusiveSync(async () => {
+        // The stored bookTidy, not this tab's RAM copy: another tab may have removed books since.
         const tidy = stateAdapter.getBookTidy();
         const books = booksOf(stateAdapter.state);
         const wanted = Array.isArray(ids) ? new Set(ids) : null;
@@ -424,7 +426,7 @@ export function restoreRemovedBooks(stateAdapter, ids) {
         }
         const anyUnsorted = Object.values(nextBooks).some(isUnsorted);
         const nextTidy = { ...tidy, removedBooks, status: anyUnsorted ? 'pending' : tidy.status };
-        const written = await stateAdapter.applyBookTidy(nextBooks, nextTidy, { booksFirst: true });
+        const written = await stateAdapter.applyBookTidy(nextBooks, nextTidy, { booksFirst: true, restoredIds: restoring });
         return written && written.ok === true ? restoring.length : 0;
     });
 }
