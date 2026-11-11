@@ -829,3 +829,94 @@ describe('startLibrarySync', () => {
     expect(lib.libraryTags(L)).toEqual(sorted([C, F]));
   });
 });
+
+describe('startLibrarySync: a tab returning to view (R37)', () => {
+  function fakeDoc() {
+    const listeners = new Set();
+    return {
+      visibilityState: 'visible',
+      addEventListener(type, fn) { if (type === 'visibilitychange') listeners.add(fn); },
+      removeEventListener(type, fn) { listeners.delete(fn); },
+      show() { for (const fn of [...listeners]) fn(); }
+    };
+  }
+  const settle = async () => { for (let i = 0; i < 6; i += 1) await flush(); };
+
+  it('reloads the catalogue for offers but never writes the save, even with library diffs', async () => {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, title: 'The Salt Road', authors: ['Member A'], tags: [F] });
+    const a = newAdapter();
+    const rec = ensureShelfRecord(a, lib.catalog().books[0]);
+    const onOffers = jest.fn();
+    const doc = fakeDoc();
+    const stop = startLibrarySync(a, { onOffers, service: lib, doc });
+    await settle();
+    expect(onOffers).toHaveBeenCalledTimes(1);
+
+    // Another member edits the library; this tab's catalogue goes stale.
+    lib.setBook(L, { title: 'Glass Orchard', pageCount: 321, seriesName: 'Orchard Cycle' });
+    lib.tags.get(L).add(C);
+    a.addBook({ title: 'Glass Orchard', author: 'Member A', type: 'physical' });
+    const before = clone(a.getBooks());
+    const updateBook = jest.spyOn(a, 'updateBook');
+    setStateKey.mockClear();
+    const getCatalogCalls = lib.calls.getCatalog;
+
+    doc.show();
+    await settle();
+    stop();
+
+    expect(lib.calls.getCatalog).toBeGreaterThan(getCatalogCalls);
+    expect(lib.peek().books[0].title).toBe('Glass Orchard');
+    expect(updateBook).not.toHaveBeenCalled();
+    expect(setStateKey).not.toHaveBeenCalled();
+    expect(a.getBooks()).toEqual(before);
+    expect(a.getBook(rec).title).toBe('The Salt Road');
+    expect(lib.calls.addTags).toEqual([]);
+    expect(lib.calls.removeTags).toEqual([]);
+    expect(lib.calls.fillSeries).toEqual([]);
+    // The offers still follow the newer catalogue.
+    expect(onOffers).toHaveBeenCalledTimes(2);
+    expect(onOffers.mock.calls[1][0]).toHaveLength(1);
+  });
+
+  it('a picker opening afterwards still refreshes shelf records from its own load', async () => {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, title: 'The Salt Road', authors: ['Member A'], tags: [F] });
+    const a = newAdapter();
+    const rec = ensureShelfRecord(a, lib.catalog().books[0]);
+    const doc = fakeDoc();
+    const stop = startLibrarySync(a, { service: lib, doc });
+    await settle();
+
+    lib.setBook(L, { title: 'Glass Orchard' });
+    doc.show();
+    await settle();
+    expect(a.getBook(rec).title).toBe('The Salt Road');
+
+    // The picker's catalogue load (bookSelector loadCatalog) after the library changed again.
+    lib.setBook(L, { pageCount: 280 });
+    await lib.getCatalog();
+    await settle();
+    stop();
+
+    expect(a.getBook(rec).title).toBe('Glass Orchard');
+    expect(a.getBook(rec).pageCount).toBe(280);
+  });
+
+  it('the page-load result still refreshes when the tab comes back while it is loading', async () => {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, title: 'Glass Orchard', authors: ['Member A'], tags: [F] });
+    const a = newAdapter();
+    const rec = addShelf(a, L, { title: 'Old Title' });
+    const doc = fakeDoc();
+    const stop = startLibrarySync(a, { service: lib, doc });
+    // Before the page load has asked: the view reload and the page load share one load.
+    doc.show();
+    await settle();
+    stop();
+
+    expect(a.getBook(rec.id).title).toBe('Glass Orchard');
+    expect(a.getBook(rec.id).tags).toEqual([F]);
+  });
+});

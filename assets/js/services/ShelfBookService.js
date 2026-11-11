@@ -434,8 +434,13 @@ export function isLibraryMissing(book, catalog) {
 
 /**
  * Keep shelf records in step with the household library for the life of the page: a load
- * now, a reload when the tab comes back and the catalogue is stale, and a refresh plus the
- * offers after every completed load. Returns at once; nothing here is awaited by the page.
+ * now, a reload when the tab comes back and the catalogue is stale, and the offers after every
+ * completed load. Shelf records are refreshed from the page-load result and from any load this
+ * tab asks for itself (a picker opening, a lookup after a tag write); a reload because the tab
+ * came back into view only refreshes the offers and the cache the pickers read (R37). Another
+ * tab may have saved newer books meanwhile, and this tab's copy of the save is not re-read, so
+ * writing it here would overwrite that tab's work with no action from the player.
+ * Returns at once; nothing here is awaited by the page.
  * @param {Object} stateAdapter
  * @param {{ onOffers?: Function, service?: Object, doc?: Document }} [options]
  * @returns {() => void} stop
@@ -445,36 +450,50 @@ export function startLibrarySync(stateAdapter, { onOffers, service = libraryCata
     let chain = Promise.resolve();
     let stopped = false;
     let lastQueued = null;
+    let lastQueuedRefreshes = false;
+    // Reloads started by the tab coming back into view and not yet answered. A load completing
+    // meanwhile is announced as theirs, so it does not refresh shelf records.
+    let viewReloads = 0;
 
-    const handle = async (catalog) => {
+    const handle = async (catalog, refresh) => {
         if (stopped || !catalog || catalog.status !== 'ready') return;
-        // A load that overlapped a tag write may predate it, and merging against it would undo
-        // that write. getCatalog serves this same result only while it is fresh; otherwise a
-        // newer load is running and will be handled when it lands.
-        if (await service.getCatalog() !== catalog) return;
-        await refreshShelfRecords(stateAdapter, catalog, service);
+        if (refresh) {
+            // A load that overlapped a tag write may predate it, and merging against it would
+            // undo that write. getCatalog serves this same result only while it is fresh;
+            // otherwise a newer load is running and will be handled when it lands.
+            if (await service.getCatalog() !== catalog) return;
+            await refreshShelfRecords(stateAdapter, catalog, service);
+        }
         if (!stopped && typeof onOffers === 'function') onOffers(findShelfOffers(stateAdapter, catalog));
     };
     // Loads can finish close together; refreshes run one at a time, once per result.
-    const enqueue = (catalog) => {
-        if (!catalog || catalog === lastQueued) return;
+    const enqueue = (catalog, refresh = true) => {
+        if (!catalog) return;
+        if (catalog === lastQueued && (lastQueuedRefreshes || !refresh)) return;
         lastQueued = catalog;
-        chain = chain.then(() => handle(catalog)).catch((error) => {
+        lastQueuedRefreshes = refresh;
+        chain = chain.then(() => handle(catalog, refresh)).catch((error) => {
             console.warn('[ShelfBook] library sync failed:', logCode(error));
         });
     };
 
-    const unsubscribe = service.subscribe(enqueue);
+    const unsubscribe = service.subscribe((catalog) => enqueue(catalog, viewReloads === 0));
     const load = () => {
         // A cached result is not announced to subscribers, so the answer is queued here too.
         Promise.resolve()
             .then(() => service.getCatalog())
-            .then(enqueue)
+            .then((catalog) => enqueue(catalog, true))
             .catch((error) => console.warn('[ShelfBook] catalogue load failed:', logCode(error)));
     };
     const onVisibility = () => {
         // getCatalog serves a fresh cache without a request, so this only reloads when stale.
-        if (target && target.visibilityState === 'visible') load();
+        if (!target || target.visibilityState !== 'visible') return;
+        viewReloads += 1;
+        Promise.resolve()
+            .then(() => service.getCatalog())
+            .then((catalog) => enqueue(catalog, false))
+            .catch((error) => console.warn('[ShelfBook] catalogue load failed:', logCode(error)))
+            .finally(() => { viewReloads -= 1; });
     };
     if (target && typeof target.addEventListener === 'function') {
         target.addEventListener('visibilitychange', onVisibility);
