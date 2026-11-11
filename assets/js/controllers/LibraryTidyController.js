@@ -23,7 +23,7 @@ import {
     restoreRemovedBooks,
     isProtected
 } from '../services/LibraryTidyService.js';
-import { resolveLibraryCatalog } from '../services/LibraryCatalogService.js';
+import { resolveLibraryCatalog, LIBRARY_TIMEOUT_MS } from '../services/LibraryCatalogService.js';
 import { searchShelf } from '../services/ShelfBookService.js';
 import { getSupabaseClient } from '../services/supabaseClient.js';
 import { checkReadyForDeliberateChange, pushDeliberateChange } from '../services/cloudSync.js';
@@ -46,6 +46,9 @@ const OUTCOME_SHELF = 'Will link to the library (keeps its quests)';
 const PROTECTED_TOOLTIP = "Can't drop a book with quest history";
 const PUSH_HINT = 'Saved on this device. It will upload with your next sync.';
 const STORAGE_FULL = "This browser's storage is full, so nothing was changed. Free some space, or remove uploaded covers, and try again.";
+
+/** A `protected` block where no chosen book became protected (R31). */
+const LIBRARY_CHANGED = 'Your library changed while the dialog was open. Nothing was changed; check your choices and apply again.';
 
 /** A write that failed for a reason not known to be storage quota (R30). */
 const SAVE_FAILED = "Couldn't save that. Nothing was changed.";
@@ -98,6 +101,31 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+/** Attribute escaping for a URL (as LibraryController._escapeAttr). */
+function escapeAttr(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+/** An image URL safe to render: http(s), or an inline data:image cover. Else null. */
+function safeImageUrl(url) {
+    if (typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    return /^(https?:\/\/|data:image\/)/i.test(trimmed) ? trimmed : null;
+}
+
+/** A small cover image, or '' when there is none. */
+function coverImgHtml(url, className) {
+    const safe = safeImageUrl(url);
+    return safe
+        ? `<img class="${className}" src="${escapeAttr(safe)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : '';
+}
+
 function errorCode(error) {
     return (error && (error.reason || error.code || error.name)) || 'unknown';
 }
@@ -123,6 +151,9 @@ export class LibraryTidyController extends BaseController {
         /** The session's user at the last load, and the client whose auth changes are watched. */
         this._userId = null;
         this._authClient = null;
+        /** The user of an auth event seen while a load ran (undefined: none). */
+        this._authDuringLoad = undefined;
+        this._sessionTimeoutMs = Number.isFinite(dependencies.sessionTimeoutMs) ? dependencies.sessionTimeoutMs : LIBRARY_TIMEOUT_MS;
 
         this._plan = [];
         /** bookId -> { kind: 'link', libraryBookId } | { kind: 'type', type } | { kind: 'drop' } */
@@ -287,18 +318,13 @@ export class LibraryTidyController extends BaseController {
         const token = ++this._loadToken;
         this._source = 'loading';
         this.render();
+        this._authDuringLoad = undefined;
         this._loading = (async () => {
             let client = null;
             let userId = null;
             let sessionUnknown = false;
             try {
-                client = await this._getClient();
-                if (client && client.auth && typeof client.auth.getSession === 'function') {
-                    this._watchAuth(client);
-                    const { data, error } = await client.auth.getSession();
-                    if (error) throw error;
-                    userId = data && data.session && data.session.user ? data.session.user.id || null : null;
-                }
+                ({ client, userId } = await this._readSession());
             } catch (error) {
                 // Not "signed out": the player may be signed in, so removals must not skip the
                 // cloud precheck. They are blocked as offline until the session can be read.
@@ -331,8 +357,40 @@ export class LibraryTidyController extends BaseController {
             }
             this._replan();
             this.render();
+            // The user changed while this load ran: its answer is for the wrong user (R31).
+            const seen = this._authDuringLoad;
+            this._authDuringLoad = undefined;
+            if (seen !== undefined && seen !== this._userId) await this._loadSource();
         })();
         return this._loading;
+    }
+
+    /**
+     * The client and the session's user, bounded by LIBRARY_TIMEOUT_MS: a CDN import or a token
+     * refresh that stalls must not keep the panel loading (and Apply disabled) for ever.
+     * @returns {Promise<{ client: Object|null, userId: string|null }>} rejects when unknown
+     */
+    _readSession() {
+        const read = (async () => {
+            const client = await this._getClient();
+            if (!client || !client.auth || typeof client.auth.getSession !== 'function') return { client, userId: null };
+            this._watchAuth(client);
+            const { data, error } = await client.auth.getSession();
+            if (error) throw error;
+            const userId = data && data.session && data.session.user ? data.session.user.id || null : null;
+            return { client, userId };
+        })();
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                const timeout = new Error('Session read timed out');
+                timeout.name = 'TimeoutError';
+                reject(timeout);
+            }, this._sessionTimeoutMs);
+            read.then(
+                (value) => { clearTimeout(timer); resolve(value); },
+                (error) => { clearTimeout(timer); reject(error); }
+            );
+        });
     }
 
     /**
@@ -345,7 +403,12 @@ export class LibraryTidyController extends BaseController {
         try {
             const result = client.auth.onAuthStateChange((_event, session) => {
                 const userId = session && session.user ? session.user.id || null : null;
-                if (this._source === 'idle' || this._source === 'loading' || userId === this._userId) return;
+                if (this._source === 'idle' || this._source === 'loading') {
+                    // Settled when the running load ends: reloads then if the user differs.
+                    this._authDuringLoad = userId;
+                    return;
+                }
+                if (userId === this._userId) return;
                 void this._loadSource();
             });
             const subscription = result && result.data ? result.data.subscription : null;
@@ -410,15 +473,19 @@ export class LibraryTidyController extends BaseController {
         // not add preselected matches the player never saw.
         const decisions = this._decisions();
         if (decisions.length === 0) return;
+        const plannedProtected = new Map(this._plan.map((row) => [row.bookId, row.protected]));
         this._busy = true;
         this._setMessage('');
         this.render();
 
         if (this._sourcePending()) {
-            try {
-                await (this._loading || this._ensureSource());
-            } catch (error) {
-                console.warn('[LibraryTidy] source load failed:', errorCode(error));
+            // A load can hand over to a newer one (an auth change); each is bounded.
+            for (let attempt = 0; attempt < 3 && this._sourcePending(); attempt += 1) {
+                try {
+                    await (this._loading || this._ensureSource());
+                } catch (error) {
+                    console.warn('[LibraryTidy] source load failed:', errorCode(error));
+                }
             }
             if (this._sourcePending()) {
                 // Still unknown (never expected): don't guess about the cloud.
@@ -459,7 +526,12 @@ export class LibraryTidyController extends BaseController {
             this._setMessage(text);
         } else if (result.status === 'blocked') {
             const toText = BLOCKED_MESSAGES[result.reason];
-            this._setMessage(toText ? toText(this._protectedTitle(decisions)) : SAVE_FAILED);
+            if (result.reason === 'protected') {
+                const title = this._protectedTitle(decisions, plannedProtected);
+                this._setMessage(title === null ? LIBRARY_CHANGED : toText(title));
+            } else {
+                this._setMessage(toText ? toText() : SAVE_FAILED);
+            }
         } else if (result.status === 'failed') {
             this._setMessage(SAVE_FAILED);
         }
@@ -467,14 +539,19 @@ export class LibraryTidyController extends BaseController {
         this.render();
     }
 
-    /** The title for the `protected` message: a chosen book that now has history. */
-    _protectedTitle(decisions) {
+    /**
+     * The title for the `protected` message: a chosen book that became protected (a drop that
+     * now has history, else a link that had none when the panel was drawn). Null when no chosen
+     * book did: the action list changed for another reason (R31).
+     */
+    _protectedTitle(decisions, plannedProtected) {
         const books = this._books();
         const state = this.stateAdapter.state;
-        const hit = decisions.find((d) => d.kind === 'drop' && isProtected(books[d.bookId], state))
-            || decisions.find((d) => d.kind !== 'type' && isProtected(books[d.bookId], state));
-        const title = hit && books[hit.bookId] ? books[hit.bookId].title : '';
-        return title || 'A book';
+        const nowProtected = (d) => Boolean(books[d.bookId]) && isProtected(books[d.bookId], state);
+        const hit = decisions.find((d) => d.kind === 'drop' && nowProtected(d))
+            || decisions.find((d) => d.kind === 'link' && !plannedProtected.get(d.bookId) && nowProtected(d));
+        if (!hit) return null;
+        return books[hit.bookId].title || 'A book';
     }
 
     async handleRestore() {
@@ -689,18 +766,19 @@ export class LibraryTidyController extends BaseController {
         const ready = Boolean(this._readyCatalog());
         const key = (suffix) => escapeHtml(`${row.bookId}:${suffix}`);
 
-        const cover = typeof book.cover === 'string' && book.cover
-            ? `<img class="library-tidy-cover" src="${escapeHtml(book.cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-            : '<span class="library-tidy-cover library-tidy-cover-placeholder">No cover</span>';
+        const cover = coverImgHtml(book.cover, 'library-tidy-cover')
+            || '<span class="library-tidy-cover library-tidy-cover-placeholder">No cover</span>';
         const author = row.author ? `<div class="library-tidy-author">${escapeHtml(row.author)}</div>` : '';
 
         let matchHtml = '';
         let showOptions = true;
         if (ready && row.preselected) {
             const checked = linked === row.preselected;
+            const preselected = row.candidates.find((c) => c.libraryBookId === row.preselected);
             matchHtml =
                 '<label class="library-tidy-match">' +
                 `<input type="checkbox" class="library-tidy-preselect" data-focus-key="${key('preselect')}"${checked ? ' checked' : ''}> ` +
+                coverImgHtml(preselected ? preselected.coverUrl : null, 'library-tidy-candidate-cover') +
                 `On our shelf: ${escapeHtml(this._libraryTitle(row.preselected, row))}</label>` +
                 (checked ? this._outcomeHtml(row) : '');
             showOptions = !checked;
@@ -712,6 +790,7 @@ export class LibraryTidyController extends BaseController {
                 const authors = c.authors.length ? ` — ${escapeHtml(c.authors.join(', '))}` : '';
                 return '<label class="library-tidy-candidate-option">' +
                     `<input type="radio" class="library-tidy-candidate" name="${name}" value="${escapeHtml(c.libraryBookId)}" data-focus-key="${key(`cand:${c.libraryBookId}`)}"${pickedCandidate === c.libraryBookId ? ' checked' : ''}> ` +
+                    coverImgHtml(c.coverUrl, 'library-tidy-candidate-cover') +
                     `${escapeHtml(c.title)}${authors}</label>`;
             }).join('');
             matchHtml =

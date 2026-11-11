@@ -1420,7 +1420,11 @@ export class StateAdapter {
      *      books are untouched;
      *   2. books, awaited (not _persistBooks, which does not wait). A rejection or a false
      *      return is a failure;
-     *   3. RAM and one BOOKS_CHANGED.
+     *   3. one BOOKS_CHANGED on success.
+     * RAM holds nextBooks while the books write is awaited (R31), so an updateBook made meanwhile
+     * builds on the tidy instead of persisting the old map over it. On failure RAM goes back to
+     * the previous map, unless another write replaced RAM meanwhile (that writer persisted its
+     * own map, which already builds on the tidy).
      * `booksFirst` (restore) swaps steps 1 and 2, so a failure in between leaves a record in both
      * places, never in neither.
      * @param {Object} nextBooks - { [id]: Book }
@@ -1431,15 +1435,19 @@ export class StateAdapter {
     async applyBookTidy(nextBooks, nextTidy, { booksFirst = false } = {}) {
         const failed = { ok: false, reason: 'storage' };
         const writeBooks = async () => {
+            const previous = this.state[STORAGE_KEYS.BOOKS];
+            this.state[STORAGE_KEYS.BOOKS] = nextBooks;
             let ok = false;
             try {
                 ok = await setStateKey(STORAGE_KEYS.BOOKS, nextBooks);
             } catch (_error) {
                 ok = false;
             }
-            if (ok !== true) return false;
-            this.state[STORAGE_KEYS.BOOKS] = nextBooks;
-            this.emit(EVENTS.BOOKS_CHANGED, { ...nextBooks });
+            if (ok !== true) {
+                if (this.state[STORAGE_KEYS.BOOKS] === nextBooks) this.state[STORAGE_KEYS.BOOKS] = previous;
+                return false;
+            }
+            this.emit(EVENTS.BOOKS_CHANGED, { ...this.state[STORAGE_KEYS.BOOKS] });
             return true;
         };
         if (booksFirst) {

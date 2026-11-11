@@ -1806,6 +1806,14 @@
     font-size: 0.85rem;
 }
 
+.library-tidy-candidate-cover {
+    width: 28px;
+    height: 42px;
+    object-fit: contain;
+    flex-shrink: 0;
+    background: rgba(84, 72, 59, 0.3);
+}
+
 .library-tidy-outcome {
     color: #b89f62;
     font-size: 0.85rem;

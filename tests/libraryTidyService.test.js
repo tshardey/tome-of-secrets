@@ -592,6 +592,69 @@ describe('storage', () => {
     expect(cloud.push).not.toHaveBeenCalled();
     expect(Object.keys(storedBooks())).toHaveLength(52);
   });
+
+  it('RAM holds the tidied books while the books write runs, so an edit meanwhile keeps the tidy (R31)', async () => {
+    const adapter = makeAdapter([makeBook(1), makeBook(2)]);
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    let firstBooksWrite = true;
+    setStateKey.mockImplementation(async (key, ...rest) => {
+      if (key === STORAGE_KEYS.BOOKS && firstBooksWrite) {
+        firstBooksWrite = false;
+        await gate;
+      }
+      return actualSetStateKey(key, ...rest);
+    });
+    const changed = jest.fn();
+    adapter.on('booksChanged', changed);
+    const applying = applyTidy({
+      stateAdapter: adapter,
+      decisions: [{ bookId: bookId(1), kind: 'drop' }],
+      catalog: null, service: null, cloud: null, confirm: async () => true
+    });
+    let ramDuringWrite;
+    try {
+      // Wait until the books write is in flight.
+      for (let i = 0; i < 20 && firstBooksWrite; i += 1) await flush();
+      ramDuringWrite = adapter.state[STORAGE_KEYS.BOOKS];
+      adapter.updateBook(bookId(2), { pageCount: 321 });
+    } finally {
+      // Never leave the sync lock held for the tests after this one.
+      release();
+    }
+    const result = await applying;
+    expect(firstBooksWrite).toBe(false);
+    expect(ramDuringWrite[bookId(1)]).toBeUndefined();
+    expect(result.status).toBe('applied');
+    const booksWrites = setStateKey.mock.calls.filter(call => call[0] === STORAGE_KEYS.BOOKS);
+    const lastWritten = booksWrites[booksWrites.length - 1][1];
+    expect(lastWritten[bookId(1)]).toBeUndefined();
+    expect(lastWritten[bookId(2)].pageCount).toBe(321);
+    expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(1)]).toBeUndefined();
+    expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(2)].pageCount).toBe(321);
+  });
+
+  it('a failed books write puts RAM back and emits no BOOKS_CHANGED (R31)', async () => {
+    const adapter = makeAdapter([makeBook(1), makeBook(2)]);
+    const ramBefore = adapter.state[STORAGE_KEYS.BOOKS];
+    setStateKey.mockImplementation(async (key, ...rest) => {
+      if (key === STORAGE_KEYS.BOOKS) {
+        expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(1)]).toBeUndefined();
+        return false;
+      }
+      return actualSetStateKey(key, ...rest);
+    });
+    const changed = jest.fn();
+    adapter.on('booksChanged', changed);
+    const result = await applyTidy({
+      stateAdapter: adapter,
+      decisions: [{ bookId: bookId(1), kind: 'drop' }],
+      catalog: null, service: null, cloud: null, confirm: async () => true
+    });
+    expect(result).toEqual({ status: 'blocked', reason: 'storage', pushed: false });
+    expect(adapter.state[STORAGE_KEYS.BOOKS]).toBe(ramBefore);
+    expect(changed).not.toHaveBeenCalled();
+  });
 });
 
 describe('removedBooks merge by id (I4) and restore', () => {

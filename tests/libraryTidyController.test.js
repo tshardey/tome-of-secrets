@@ -13,6 +13,10 @@ jest.mock('../assets/js/services/LibraryTidyService.js', () => {
     restoreRemovedBooks: jest.fn((...args) => actual.restoreRemovedBooks(...args))
   };
 });
+jest.mock('../assets/js/character-sheet/persistence.js', () => {
+  const actual = jest.requireActual('../assets/js/character-sheet/persistence.js');
+  return { ...actual, setStateKey: jest.fn((...args) => actual.setStateKey(...args)) };
+});
 jest.mock('../assets/js/ui/confirmDialog.js', () => ({
   confirmDialog: jest.fn(() => Promise.resolve(true))
 }));
@@ -25,6 +29,7 @@ jest.mock('../assets/js/tabs.js', () => ({
 }));
 
 import { applyTidy, restoreRemovedBooks } from '../assets/js/services/LibraryTidyService.js';
+import { setStateKey } from '../assets/js/character-sheet/persistence.js';
 import { confirmDialog } from '../assets/js/ui/confirmDialog.js';
 import { checkReadyForDeliberateChange, pushDeliberateChange } from '../assets/js/services/cloudSync.js';
 import { switchToTab } from '../assets/js/tabs.js';
@@ -166,6 +171,8 @@ beforeEach(() => {
   const actual = jest.requireActual('../assets/js/services/LibraryTidyService.js');
   applyTidy.mockImplementation((...args) => actual.applyTidy(...args));
   restoreRemovedBooks.mockImplementation((...args) => actual.restoreRemovedBooks(...args));
+  const persistence = jest.requireActual('../assets/js/character-sheet/persistence.js');
+  setStateKey.mockImplementation((...args) => persistence.setStateKey(...args));
 });
 
 afterEach(() => {
@@ -615,6 +622,146 @@ describe('the session and the cloud (fix round 1)', () => {
     controller.destroy();
     expect(unsubscribe).toHaveBeenCalled();
     controller = null;
+  });
+});
+
+describe('PR review fixes (R31)', () => {
+  const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  test('a session read that never settles times out: type-only applies, a drop is blocked offline', async () => {
+    const client = { auth: { getSession: jest.fn(() => new Promise(() => {})) } };
+    const adapter = makeAdapter([makeBook(50), makeBook(51)]);
+    const catalogService = makeCatalogService(makeCatalog([]));
+    controller = new LibraryTidyController(adapter, document.getElementById('character-sheet'), {
+      libraryCatalog: catalogService,
+      getSupabaseClient: () => Promise.resolve(client),
+      now: () => NOW,
+      sessionTimeoutMs: 30
+    });
+    await controller.initialize();
+    await settle();
+    expect(catalogService.getCatalog).not.toHaveBeenCalled();
+    expect(document.getElementById('library-tidy-body').textContent).toContain('The household library is unavailable right now.');
+
+    row(bookId(50)).querySelector('.library-tidy-type-btn[data-type="ebook"]').click();
+    row(bookId(51)).querySelector('.library-tidy-drop-btn').click();
+    expect(applyBtn().disabled).toBe(false);
+    applyBtn().click();
+    await settle();
+    expect(message()).toBe("You're offline. Nothing was changed; removals need a connection. Your choices are still here.");
+    expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(51)]).toBeDefined();
+
+    // Without the drop, the type-only choice goes through.
+    row(bookId(51)).querySelector('.library-tidy-drop-btn').click();
+    applyBtn().click();
+    await settle();
+    expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(50)].type).toBe('ebook');
+    expect(message()).toBe('Done. 0 removed, 0 linked to the library, 1 typed.');
+  });
+
+  test('the default session bound is the library read timeout', async () => {
+    const { LIBRARY_TIMEOUT_MS } = jest.requireActual('../assets/js/services/LibraryCatalogService.js');
+    const adapter = makeAdapter([makeBook(1)]);
+    const c = new LibraryTidyController(adapter, document.getElementById('character-sheet'), { libraryCatalog: null });
+    expect(c._sessionTimeoutMs).toBe(LIBRARY_TIMEOUT_MS);
+  });
+
+  test('a sign-in while the session is being read reloads once the read settles', async () => {
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    let session = null;
+    let onChange = null;
+    const client = {
+      auth: {
+        getSession: jest.fn(async () => {
+          const answer = { data: { session }, error: null };
+          await gate;
+          return answer;
+        }),
+        onAuthStateChange: jest.fn((fn) => { onChange = fn; return { data: { subscription: { unsubscribe: jest.fn() } } }; })
+      }
+    };
+    const adapter = makeAdapter([makeBook(50), makeBook(51)]);
+    const catalogService = makeCatalogService(makeCatalog([]));
+    controller = new LibraryTidyController(adapter, document.getElementById('character-sheet'), {
+      libraryCatalog: catalogService,
+      getSupabaseClient: () => Promise.resolve(client),
+      now: () => NOW
+    });
+    const loaded = controller.initialize();
+    await settle();
+    // getSession has already read "signed out"; the player signs in before it returns.
+    session = { user: { id: USER } };
+    onChange('SIGNED_IN', session);
+    release();
+    await loaded;
+    await settle();
+    expect(client.auth.getSession).toHaveBeenCalledTimes(2);
+    expect(catalogService.getCatalog).toHaveBeenCalledTimes(1);
+    row(bookId(50)).querySelector('.library-tidy-drop-btn').click();
+    applyBtn().click();
+    await settle();
+    expect(applyTidy.mock.calls[0][0].cloud).not.toBeNull();
+    expect(checkReadyForDeliberateChange).toHaveBeenCalledTimes(1);
+    expect(pushDeliberateChange).toHaveBeenCalledTimes(1);
+  });
+
+  test('the books write fails after the bookTidy write: the panel stays, storage message, status ends pending', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const adapter = makeAdapter([makeBook(1)]);
+    await start(adapter);
+    setStateKey.mockImplementation(async (key) => {
+      if (key === STORAGE_KEYS.BOOKS) throw new Error('disk');
+      return true;
+    });
+    row(bookId(1)).querySelector('.library-tidy-type-btn[data-type="ebook"]').click();
+    applyBtn().click();
+    await settle();
+    await wait(5);
+    await settle();
+    expect(message()).toBe("This browser's storage is full, so nothing was changed. Free some space, or remove uploaded covers, and try again.");
+    expect(panel().hidden).toBe(false);
+    expect(adapter.state[STORAGE_KEYS.BOOKS][bookId(1)].type).toBe('unsorted');
+    expect(adapter.getBookTidy().status).toBe('pending');
+    expect(JSON.parse(localStorage.getItem('bookTidy')).status).toBe('pending');
+    warn.mockRestore();
+  });
+
+  test('a protected block where no chosen book became protected says the library changed', async () => {
+    const adapter = makeAdapter([makeBook(1), makeBook(2)]);
+    await start(adapter);
+    row(bookId(1)).querySelector('.library-tidy-drop-btn').click();
+    applyTidy.mockImplementation(async () => ({ status: 'blocked', reason: 'protected', pushed: false }));
+    applyBtn().click();
+    await settle();
+    expect(message()).toBe('Your library changed while the dialog was open. Nothing was changed; check your choices and apply again.');
+  });
+
+  test('a link that became protected names the book', async () => {
+    const adapter = makeAdapter([makeBook(1)]);
+    const catalogService = makeCatalogService(makeCatalog([makeLibraryBook(1)]));
+    await start(adapter, { client: signedInClient(), catalogService });
+    applyTidy.mockImplementation(async () => {
+      adapter.state[STORAGE_KEYS.BOOKS][bookId(1)].links.questIds = ['q-1'];
+      return { status: 'blocked', reason: 'protected', pushed: false };
+    });
+    applyBtn().click();
+    await settle();
+    expect(message()).toBe(`${titleFor(1)} now has quest history, so it can't be dropped. Nothing was changed.`);
+  });
+
+  test('candidate rows show each candidate cover, with the URL attribute-escaped and unsafe schemes left out', async () => {
+    const adapter = makeAdapter([makeBook(1, { author: '' }), makeBook(2, { cover: 'https://covers.example.test/a.jpg?x=1&y="2"' })]);
+    const catalogService = makeCatalogService(makeCatalog([
+      makeLibraryBook(1, { coverUrl: 'https://covers.example.test/b.jpg?q="x"&z=1' }),
+      makeLibraryBook(1, { id: libId(91), authors: ['Member B'], coverUrl: 'javascript:alert(1)' })
+    ]));
+    await start(adapter, { client: signedInClient(), catalogService });
+    const covers = row(bookId(1)).querySelectorAll('.library-tidy-candidate-cover');
+    expect(covers).toHaveLength(1);
+    expect(covers[0].getAttribute('src')).toBe('https://covers.example.test/b.jpg?q="x"&z=1');
+    expect(row(bookId(1)).querySelectorAll('input.library-tidy-candidate')).toHaveLength(3);
+    expect(row(bookId(2)).querySelector('img.library-tidy-cover').getAttribute('src')).toBe('https://covers.example.test/a.jpg?x=1&y="2"');
   });
 });
 
