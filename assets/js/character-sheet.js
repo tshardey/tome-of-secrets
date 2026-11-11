@@ -12,7 +12,8 @@ import * as ui from './character-sheet/ui.js';
 import { characterState, loadState, saveState } from './character-sheet/state.js';
 import { STORAGE_KEYS } from './character-sheet/storageKeys.js';
 import { StateAdapter } from './character-sheet/stateAdapter.js';
-import { safeGetJSON, safeSetJSON } from './utils/storage.js';
+import { safeGetJSON } from './utils/storage.js';
+import { setSaveJSON } from './character-sheet/persistence.js';
 import { parseIntOr } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { initializeStateDependentUI } from './character-sheet/stateInitUI.js';
@@ -125,7 +126,7 @@ export async function initializeCharacterSheet() {
 
     function saveCompletedBooksSet() {
         const booksArray = Array.from(completedBooksSet);
-        safeSetJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, booksArray);
+        setSaveJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, booksArray);
     }
 
     // Populate completedBooksSet from storage so deduplication works after reload (before callback/controllers use it)
@@ -183,7 +184,7 @@ export async function initializeCharacterSheet() {
                     const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
                     if (shelfColors.length < 10) {
                         const newColors = [...shelfColors, ui.getRandomShelfColor()];
-                        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, newColors);
+                        setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, newColors);
                         characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = newColors;
                         ui.renderShelfBooks(current + 1, newColors);
                     }

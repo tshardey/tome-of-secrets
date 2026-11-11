@@ -1,4 +1,5 @@
-import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
+import { safeGetJSON } from '../utils/storage.js';
+import { setSaveJSON } from './persistence.js';
 import { STORAGE_KEYS } from './storageKeys.js';
 import { characterState } from './state.js';
 import { parseIntOr } from '../utils/helpers.js';
@@ -46,7 +47,7 @@ export function initializeStateDependentUI({ ui, dataModule, stateAdapter, compl
             }
             characterState[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
             stateAdapter.state[STORAGE_KEYS.DUSTY_BLUEPRINTS] = newValue;
-            safeSetJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
+            setSaveJSON(STORAGE_KEYS.DUSTY_BLUEPRINTS, newValue);
         });
     }
 
@@ -74,7 +75,7 @@ export function initializeStateDependentUI({ ui, dataModule, stateAdapter, compl
     }
     // Save updated colors if they changed
     if (shelfColors.length !== safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []).length) {
-        safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
+        setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, shelfColors);
         characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = shelfColors;
     }
 
@@ -103,7 +104,7 @@ export function initializeStateDependentUI({ ui, dataModule, stateAdapter, compl
             }
 
             // Update both localStorage and characterState to keep them in sync
-            safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, currentColors);
+            setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, currentColors);
             characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = currentColors;
             ui.renderShelfBooks(newCount, currentColors);
         });

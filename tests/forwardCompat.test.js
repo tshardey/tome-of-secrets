@@ -13,7 +13,8 @@ jest.mock('../assets/js/utils/storage.js', () => {
     return { ...actual, safeSetJSON: jest.fn((...args) => actual.safeSetJSON(...args)) };
 });
 
-import { setStateKey } from '../assets/js/character-sheet/persistence.js';
+import { setStateKey, getStateKey, setSaveJSON } from '../assets/js/character-sheet/persistence.js';
+import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { safeSetJSON } from '../assets/js/utils/storage.js';
 import {
     SCHEMA_VERSION,
@@ -224,6 +225,45 @@ describe('write gate: saveState and loadState', () => {
         await saveState(makeForm());
         expect(isSchemaWriteSafe()).toBe(true);
         expect(setStateKey).toHaveBeenCalled();
+    });
+});
+
+describe('write gate: direct save writes from a stale tab', () => {
+    test("StateAdapter's add-book path writes nothing once another tab moved the save to a newer schema", async () => {
+        localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+        await loadState(makeForm());
+        const adapter = new StateAdapter(characterState);
+
+        // Another tab migrates and writes a newer-shaped books map.
+        const newerBooks = { 'book-9': { id: 'book-9', title: 'Glass Orchard', type: 'shelf', libraryBookId: '33333333-3333-4333-8333-333333333333' } };
+        await setStateKey(STORAGE_KEYS.BOOKS, newerBooks);
+        localStorage.setItem(VERSION_KEY, String(NEWER));
+        jest.clearAllMocks();
+        const listener = jest.fn();
+        window.addEventListener('tos:schemaChangedElsewhere', listener);
+
+        adapter.addBook({ title: 'The Salt Road', author: 'Member A' });
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(safeSetJSON).not.toHaveBeenCalled();
+        expect(await getStateKey(STORAGE_KEYS.BOOKS, {})).toEqual(newerBooks);
+        expect(storedVersion()).toBe(String(NEWER));
+        expect(listener).toHaveBeenCalledTimes(1);
+        window.removeEventListener('tos:schemaChangedElsewhere', listener);
+    });
+
+    test('setSaveJSON (form, shelf colours, monthly books) refuses while the gate is closed', () => {
+        localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+        rememberLoadedSchemaVersion();
+        expect(setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { keeperName: 'Member A' })).toBe(true);
+
+        localStorage.setItem(VERSION_KEY, String(NEWER));
+        expect(setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, { keeperName: 'Member B' })).toBe(false);
+        expect(setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, ['#000000'])).toBe(false);
+        expect(setSaveJSON(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS, ['x'])).toBe(false);
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.CHARACTER_SHEET_FORM))).toEqual({ keeperName: 'Member A' });
+        expect(localStorage.getItem(STORAGE_KEYS.SHELF_BOOK_COLORS)).toBeNull();
+        expect(localStorage.getItem(STORAGE_KEYS.MONTHLY_COMPLETED_BOOKS)).toBeNull();
     });
 });
 

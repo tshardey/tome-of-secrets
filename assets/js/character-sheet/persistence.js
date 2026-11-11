@@ -1,5 +1,6 @@
 import { safeGetJSON, safeRemoveJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from './storageKeys.js';
+import { isSchemaWriteSafe, announceSchemaChangedElsewhere } from './dataValidator.js';
 
 /**
  * IndexedDB-backed persistence for large state keys.
@@ -96,6 +97,31 @@ async function idbDelete(key) {
 }
 
 /**
+ * Schema write gate for every save write (see dataValidator.js). A tab whose save was changed
+ * by another tab, or written by a newer build, must not write its stale RAM over it.
+ * @returns {boolean} true when this tab may write save data
+ */
+export function canWriteSave() {
+    if (isSchemaWriteSafe()) return true;
+    announceSchemaChangedElsewhere();
+    return false;
+}
+
+/**
+ * Write a save key that lives only in localStorage (the character sheet form, the monthly
+ * completed books, small character state keys written outside setStateKey), behind the
+ * schema write gate.
+ * @param {string} key - The storage key
+ * @param {*} value - The value to store
+ * @param {boolean} suppressEvents - If true, do not emit sync events (default: false)
+ * @returns {boolean} True if written, false if refused or failed
+ */
+export function setSaveJSON(key, value, suppressEvents = false) {
+    if (!canWriteSave()) return false;
+    return safeSetJSON(key, value, suppressEvents);
+}
+
+/**
  * Load a persisted key.
  * - For LARGE_STATE_KEYS: prefer IndexedDB, fallback to localStorage (for pre-migration saves)
  * - For others: localStorage only (for now)
@@ -123,6 +149,7 @@ export async function getStateKey(key, defaultValue = null) {
  * @returns {Promise<boolean>} True if successful, false otherwise
  */
 export async function setStateKey(key, value, suppressEvents = false) {
+    if (!canWriteSave()) return false;
     if (LARGE_STATE_KEYS.has(key) && isIndexedDBAvailable()) {
         try {
             await idbSet(key, value);
@@ -149,6 +176,7 @@ export async function setStateKey(key, value, suppressEvents = false) {
 }
 
 export async function removeStateKey(key) {
+    if (!canWriteSave()) return false;
     if (LARGE_STATE_KEYS.has(key) && isIndexedDBAvailable()) {
         try {
             await idbDelete(key);
