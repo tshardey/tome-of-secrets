@@ -9,7 +9,7 @@
 import { BaseController } from './BaseController.js';
 import { RewardCalculator } from '../services/RewardCalculator.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
-import { safeSetJSON } from '../utils/storage.js';
+import { setSaveJSON } from '../character-sheet/persistence.js';
 import { characterState } from '../character-sheet/state.js';
 import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
@@ -117,7 +117,7 @@ export class EndOfMonthController extends BaseController {
             const booksCompletedInput = document.getElementById('books-completed-month');
             if (booksCompletedInput) {
                 booksCompletedInput.value = 0;
-                safeSetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
+                setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
                 characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = [];
                 uiModule.renderShelfBooks(0, []);
             }

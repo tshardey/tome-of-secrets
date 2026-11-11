@@ -10,7 +10,8 @@
 
 import { BaseController } from './BaseController.js';
 import { parseIntOr } from '../utils/helpers.js';
-import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
+import { safeGetJSON } from '../utils/storage.js';
+import { setSaveJSON } from '../character-sheet/persistence.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import * as data from '../character-sheet/data.js';
 import { renderLevelingRewardsTable, processLinks } from '../table-renderer.js';
@@ -36,7 +37,7 @@ export class CharacterController extends BaseController {
         const formData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, {});
         if (!formData.previousLevel) {
             formData.previousLevel = parseIntOr(levelInput.value, 1);
-            safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+            setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
         }
 
         this.drawerManager = new DrawerManager({
@@ -116,11 +117,11 @@ export class CharacterController extends BaseController {
 
                 // Update previous level
                 formData.previousLevel = newLevel;
-                safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+                setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
             } else if (newLevel < previousLevel) {
                 // Level decreased - update previous level but don't remove rewards
                 formData.previousLevel = newLevel;
-                safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+                setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
             }
             
             this.saveState();
@@ -209,7 +210,7 @@ export class CharacterController extends BaseController {
         
         // Update previousLevel BEFORE setting the value to prevent duplicate rewards in change handler
         formData.previousLevel = newLevel;
-        safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
+        setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, formData);
         
         // Now set the values - this will trigger the change event, but it will see newLevel === previousLevel
         levelInput.value = newLevel;

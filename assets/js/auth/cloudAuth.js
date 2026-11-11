@@ -142,6 +142,12 @@ export async function initializeCloudAuth() {
         setHint('Auto-pulled newer cloud save. Reload recommended to refresh the UI.');
         updateLastSyncedUI();
         lastAutoStatus = 'pull';
+      } else if (result.action === 'blocked') {
+        // A newer Tome of Secrets wrote this save (or the cloud's). Say so once.
+        if (lastAutoStatus !== 'blocked') {
+          setHint(`${result.detail}`);
+          lastAutoStatus = 'blocked';
+        }
       } else if (result.action === 'manual_required') {
         // Nudge once per state to avoid spam.
         if (lastAutoStatus !== 'manual_required') {

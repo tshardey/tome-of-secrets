@@ -6,7 +6,7 @@
  */
 
 import { STORAGE_KEYS } from './storageKeys.js';
-import { safeSetJSON } from '../utils/storage.js';
+import { setSaveJSON } from './persistence.js';
 import { debounce } from '../utils/helpers.js';
 import { RETIRED_FORM_FIELDS } from './dataMigrator.js';
 
@@ -86,8 +86,8 @@ function saveFormData(form) {
     }
     
     // Save to localStorage (same storage key as saveState uses for form data)
-    // Suppress events from safeSetJSON so we can emit with the correct source
-    const saved = safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData, true);
+    // Suppress events from setSaveJSON so we can emit with the correct source
+    const saved = setSaveJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData, true);
     if (!saved) {
         console.warn('Form persistence: Failed to save form data to localStorage');
         return;

@@ -162,3 +162,22 @@ describe('4yqq expansion tags', () => {
         expect(new Set(ids).size).toBe(ids.length);
     });
 });
+
+describe('Plan 4 data-only tag fields (D3)', () => {
+    test('scope is absent or "reader"', () => {
+        bookTags.forEach(tag => {
+            if ('scope' in tag) expect(tag.scope).toBe('reader');
+        });
+    });
+
+    test('derivedFromType is absent or a known book type', () => {
+        bookTags.forEach(tag => {
+            if ('derivedFromType' in tag) expect(['audiobook']).toContain(tag.derivedFromType);
+        });
+    });
+
+    test('audio is derived from the audiobook type', () => {
+        const audio = bookTags.find(tag => tag.id === 'audio');
+        expect(audio.derivedFromType).toBe('audiobook');
+    });
+});

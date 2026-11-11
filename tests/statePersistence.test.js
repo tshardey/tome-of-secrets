@@ -4,7 +4,7 @@
 import { saveState, loadState, characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { LARGE_STATE_KEYS } from '../assets/js/character-sheet/persistence.js';
-import { validateCharacterState, SCHEMA_VERSION } from '../assets/js/character-sheet/dataValidator.js';
+import { validateCharacterState, SCHEMA_VERSION, resetSchemaWriteGateForTests } from '../assets/js/character-sheet/dataValidator.js';
 
 function resetCharacterState() {
     const emptyState = createEmptyCharacterState();
@@ -41,6 +41,8 @@ describe('state persistence compatibility', () => {
     beforeEach(() => {
         localStorage.clear();
         resetCharacterState();
+        // Each test starts as a freshly opened tab (the schema write gate remembers per tab)
+        resetSchemaWriteGateForTests();
         document.body.innerHTML = '';
     });
 

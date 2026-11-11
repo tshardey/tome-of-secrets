@@ -6,12 +6,14 @@ import { STORAGE_KEYS, CHARACTER_STATE_KEYS } from '../assets/js/character-sheet
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { getStateKey } from '../assets/js/character-sheet/persistence.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
-import { SCHEMA_VERSION } from '../assets/js/character-sheet/dataValidator.js';
+import { SCHEMA_VERSION, resetSchemaWriteGateForTests } from '../assets/js/character-sheet/dataValidator.js';
 
 describe('Cloud Sync - Loop Prevention', () => {
     beforeEach(() => {
         localStorage.clear();
         jest.clearAllMocks();
+        // Each test starts as a freshly opened tab (the schema write gate remembers per tab)
+        resetSchemaWriteGateForTests();
     });
 
     describe('applySnapshot loop prevention', () => {

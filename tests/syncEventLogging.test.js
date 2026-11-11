@@ -4,6 +4,7 @@
 import { syncNow, syncAuto, snapshotHash, buildLocalSnapshot } from '../assets/js/services/cloudSync.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeSetJSON } from '../assets/js/utils/storage.js';
+import { resetSchemaWriteGateForTests } from '../assets/js/character-sheet/dataValidator.js';
 
 // --- Helpers ---
 
@@ -62,6 +63,8 @@ function createMockSupabase({ remoteRow = null, upsertError = null, insertError 
 describe('Sync Event Logging', () => {
   beforeEach(() => {
     localStorage.clear();
+    // Each test starts as a freshly opened tab (the schema write gate remembers per tab)
+    resetSchemaWriteGateForTests();
     jest.clearAllMocks();
     window.confirm = jest.fn(() => true);
   });

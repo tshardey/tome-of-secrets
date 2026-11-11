@@ -1,6 +1,14 @@
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from './storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
-import { validateCharacterState, validateFormDataSafe, saveSchemaVersion, getStoredSchemaVersion } from './dataValidator.js';
+import {
+    validateCharacterState,
+    validateFormDataSafe,
+    saveSchemaVersion,
+    getStoredSchemaVersion,
+    rememberLoadedSchemaVersion,
+    isSchemaWriteSafe,
+    announceSchemaChangedElsewhere
+} from './dataValidator.js';
 import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys, RETIREMENT_SCHEMA_VERSION } from './dataMigrator.js';
 import { LARGE_STATE_KEYS, getStateKey, setStateKey } from './persistence.js';
 
@@ -19,13 +27,16 @@ export function resetStateLoadedForTests() {
  * **CRITICAL:** Never loses player data. Invalid data is fixed or uses safe defaults.
  */
 export async function loadState(form = null) {
+    // Record the save's version first: the write gate compares against it before every write.
+    rememberLoadedSchemaVersion();
+
     // Load and validate form data only if a form is provided
     if (form) {
         const storedFormData = safeGetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, null);
         if (storedFormData) {
             // Drop retired fields (Ink Drops, Paper Scraps, journaling) and write the cleaned blob back
             const characterData = stripRetiredFormFields(storedFormData);
-            if (Object.keys(characterData).length !== Object.keys(storedFormData).length) {
+            if (Object.keys(characterData).length !== Object.keys(storedFormData).length && isSchemaWriteSafe()) {
                 safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, characterData);
             }
             const validatedFormData = validateFormDataSafe(characterData);
@@ -82,6 +93,13 @@ export async function loadState(form = null) {
         return JSON.stringify(original) !== JSON.stringify(validated);
     });
     
+    // A save from a newer build (or one another tab changed while this tab loaded) stays as it
+    // is on disk: RAM is populated for display, but nothing is written back.
+    if (!isSchemaWriteSafe()) {
+        announceSchemaChangedElsewhere();
+        return;
+    }
+
     // Persist:
     // - Always persist LARGE_STATE_KEYS (this performs the one-time migration localStorage -> IndexedDB)
     // - Persist small keys only if we had to fix/migrate/validate them
@@ -93,6 +111,11 @@ export async function loadState(form = null) {
 }
 
 export async function saveState(form) {
+    // Never overwrite or relabel a save written by a newer build or changed by another tab.
+    if (!isSchemaWriteSafe()) {
+        announceSchemaChangedElsewhere();
+        return;
+    }
     const characterData = {};
     for (const element of form.elements) {
         if (element.id && element.type !== 'button' && element.type !== 'file' && !element.id.startsWith('new-quest-') && !element.id.startsWith('fund-') && element.id !== 'item-select' && element.id !== 'ability-select' && element.id !== 'xp-needed') {

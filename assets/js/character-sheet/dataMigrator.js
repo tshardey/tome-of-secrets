@@ -800,7 +800,14 @@ function needsBooksRepair(state) {
  */
 export function migrateState(state, { fromVersion } = {}) {
     const storedVersion = Number.isInteger(fromVersion) ? fromVersion : getStoredSchemaVersion();
-    
+
+    // A save from a newer build: leave it exactly as it is and never relabel it with this
+    // build's (older) version. See the schema write gate in dataValidator.js.
+    if (storedVersion !== null && storedVersion > SCHEMA_VERSION) {
+        console.warn(`Save is at schema version ${storedVersion}, newer than this build (${SCHEMA_VERSION}); leaving it untouched.`);
+        return state;
+    }
+
     // If already at current version, run idempotent repair for books if needed.
     if (storedVersion === SCHEMA_VERSION) {
         if (storedVersion >= 5 && needsBooksRepair(state)) {
