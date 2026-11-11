@@ -49,6 +49,8 @@ export const STORAGE_KEYS = Object.freeze({
     QUEST_DRAW_HELPER_SETTINGS: 'questDrawHelperSettings',
     /** Last-used calendar period for TCG effect cooldowns (e.g. once-per-month effects). */
     EFFECT_COOLDOWNS: 'effectCooldowns',
+    /** Schema v20: the review that sorts Unsorted books ({ status, postponedAt, completedAt, removedBooks }). localStorage-backed. */
+    BOOK_TIDY: 'bookTidy',
     /** Alias used by Phase 5 ability activations. */
     ABILITY_COOLDOWNS: 'effectCooldowns'
 });
@@ -84,8 +86,14 @@ export const CHARACTER_STATE_KEYS = Object.freeze([
     STORAGE_KEYS.FUND_LEDGER,
     STORAGE_KEYS.QUEST_DRAW_HELPER_STATE,
     STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS,
-    STORAGE_KEYS.EFFECT_COOLDOWNS
+    STORAGE_KEYS.EFFECT_COOLDOWNS,
+    STORAGE_KEYS.BOOK_TIDY
 ]);
+
+/** The bookTidy of a save with nothing to sort. */
+export function createDefaultBookTidy() {
+    return { status: 'done', postponedAt: null, completedAt: null, removedBooks: {} };
+}
 
 export function createEmptyCharacterState() {
     return {
@@ -119,7 +127,8 @@ export function createEmptyCharacterState() {
         [STORAGE_KEYS.FUND_LEDGER]: [],
         [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
         [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
-        [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
+        [STORAGE_KEYS.EFFECT_COOLDOWNS]: {},
+        [STORAGE_KEYS.BOOK_TIDY]: createDefaultBookTidy()
     };
 }
 

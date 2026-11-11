@@ -384,7 +384,7 @@ describe('LibraryController', () => {
             expect(headings).toEqual(['Genre', 'Content', 'Provenance', 'Agency', 'Form']);
         });
 
-        it('should render a checkbox for every tag in the tag data', () => {
+        it('should render a checkbox for every tag in the tag data except type-derived ones', () => {
             const controller = new LibraryController(stateAdapter, form, dependencies);
             controller.initialize();
 
@@ -393,10 +393,17 @@ describe('LibraryController', () => {
                 tagContainer.querySelectorAll('input[type="checkbox"]')
             ).map((cb) => cb.value);
 
-            for (const tag of data.bookTags) {
+            // Schema 20: a type-derived tag (Audio) comes from the book type, never the picker
+            const pickable = data.bookTags.filter((tag) => !tag.derivedFromType);
+            const derived = data.bookTags.filter((tag) => tag.derivedFromType);
+            expect(derived.length).toBeGreaterThan(0);
+            for (const tag of pickable) {
                 expect(renderedIds).toContain(tag.id);
             }
-            expect(renderedIds).toHaveLength(data.bookTags.length);
+            for (const tag of derived) {
+                expect(renderedIds).not.toContain(tag.id);
+            }
+            expect(renderedIds).toHaveLength(pickable.length);
         });
 
         it('should render provenance tags as selectable options in the picker', () => {

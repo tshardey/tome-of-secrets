@@ -80,7 +80,8 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.FUND_LEDGER]: [{ id: 'f1', date: '2026-11-08', amountCents: 3200, note: 'Hardcover' }],
             [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
             [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
-            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
+            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {},
+            [STORAGE_KEYS.BOOK_TIDY]: { status: 'pending', postponedAt: null, completedAt: null, removedBooks: {} }
         };
 
         Object.entries(expectedState).forEach(([key, value]) => {

@@ -55,7 +55,9 @@ export async function loadState(form = null) {
 
     // Load all state keys (some from IndexedDB, some from localStorage fallback)
     for (const key of CHARACTER_STATE_KEYS) {
-        const defaultValue = empty[key];
+        // bookTidy has no default here: when a pre-v20 save has none, the v20 migration
+        // decides whether the review starts pending (validation fills the default after).
+        const defaultValue = key === STORAGE_KEYS.BOOK_TIDY ? null : empty[key];
         loadedState[key] = await getStateKey(key, defaultValue);
     }
 

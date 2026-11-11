@@ -7,6 +7,7 @@
  */
 
 import { BaseController } from './BaseController.js';
+import { isTypeDerivedTag } from '../utils/bookTagRules.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { searchBooks } from '../services/BookMetadataService.js';
 import { bookTags, allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
@@ -1147,7 +1148,8 @@ export class LibraryController extends BaseController {
 
     _renderTagPicker(container, selectedTags = [], applicableTags = new Set()) {
         if (!container) return;
-        const tags = bookTags || [];
+        // Type-derived tags (Audio) come from the book type, never from the picker (D3)
+        const tags = (bookTags || []).filter(tag => !isTypeDerivedTag(tag.id));
         container.innerHTML = '';
 
         // Group by whatever categories the tag data actually carries, so a new

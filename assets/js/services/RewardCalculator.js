@@ -4,6 +4,7 @@
  */
 
 import * as data from '../character-sheet/data.js';
+import { effectiveBookTags } from '../utils/bookTagRules.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { characterState } from '../character-sheet/state.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
@@ -286,8 +287,9 @@ export class RewardCalculator {
         let tags = Array.isArray(quest?.tags) ? [...quest.tags] : [];
         if (getBook && typeof getBook === 'function' && bookId) {
             const book = getBook(bookId);
-            if (book && Array.isArray(book.tags)) {
-                tags = [...new Set([...tags, ...book.tags])];
+            if (book) {
+                // Effective tags: stored tags plus the ids derived from the book type (D3)
+                tags = [...new Set([...tags, ...effectiveBookTags(book)])];
             }
         }
         return TriggerPayload.questCompleted({

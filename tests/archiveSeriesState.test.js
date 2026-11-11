@@ -285,13 +285,34 @@ describe('Archive series state (StateAdapter)', () => {
       adapter.markBookComplete(b1.id);
       summary = adapter.getSeriesProgressSummary(s.id);
       expect(summary.completedCount).toBe(1);
-      expect(summary.inProgressCount).toBe(1);
+      // Schema 20: an unfinished book counts as in progress only when an active quest links it
+      expect(summary.inProgressCount).toBe(0);
       expect(summary.isKeeperComplete).toBe(false);
       adapter.markBookComplete(b2.id);
       summary = adapter.getSeriesProgressSummary(s.id);
       expect(summary.completedCount).toBe(2);
       expect(summary.inProgressCount).toBe(0);
       expect(summary.isKeeperComplete).toBe(true);
+    });
+
+    it('getSeriesProgressSummary counts an unfinished book as in progress only when an active quest links it', () => {
+      const active = adapter.addBook({ title: 'The Salt Road', author: 'A' });
+      const unlinked = adapter.addBook({ title: 'Glass Orchard', author: 'A' });
+      const linkedToDone = adapter.addBook({ title: 'Ember Atlas', author: 'A' });
+      state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{ id: 'q-active', bookId: active.id }];
+      state[STORAGE_KEYS.COMPLETED_QUESTS] = [{ id: 'q-done', bookId: linkedToDone.id }];
+      adapter.updateBook(active.id, { links: { questIds: ['q-active'] } });
+      adapter.updateBook(linkedToDone.id, { links: { questIds: ['q-done'] } });
+      const s = adapter.addSeries({ name: 'S', bookIds: [active.id, unlinked.id, linkedToDone.id], releasedCount: 3, expectedCount: 3 });
+
+      const summary = adapter.getSeriesProgressSummary(s.id);
+      expect(summary.inProgressCount).toBe(1);
+      expect(summary.completedCount).toBe(0);
+
+      adapter.markBookComplete(active.id);
+      const after = adapter.getSeriesProgressSummary(s.id);
+      expect(after.inProgressCount).toBe(0);
+      expect(after.completedCount).toBe(1);
     });
 
     it('getSeriesProgressSummary returns null for unknown series id', () => {

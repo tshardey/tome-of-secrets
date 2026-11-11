@@ -7,6 +7,10 @@ import { characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { TRIGGERS, MODIFIER_TYPES } from '../assets/js/services/effectSchema.js';
 import * as data from '../assets/js/character-sheet/data.js';
+import { EffectRegistry } from '../assets/js/services/EffectRegistry.js';
+import { ModifierPipeline } from '../assets/js/services/ModifierPipeline.js';
+import { classifyBonusCardState } from '../assets/js/character-sheet/ui.js';
+import { effectiveBookTags } from '../assets/js/utils/bookTagRules.js';
 
 describe('Reward Class', () => {
     test('should create a reward with default values', () => {
@@ -766,5 +770,54 @@ describe('RewardCalculator - End of Month Calculations', () => {
             expect(rewards.dollars).toBe(0);
             expect(rewards.modifiedBy).not.toContain('Garden Gnome');
         });
+    });
+});
+
+describe('RewardCalculator - book types at the reward seam (schema 20, D3)', () => {
+    // A test-only catalog entry: no real item names the type-derived tag today.
+    const testCatalog = {
+        allItems: {
+            'test-audio-charm': {
+                id: 'test-audio-charm',
+                name: 'Test Audio Charm',
+                effects: [{
+                    trigger: TRIGGERS.ON_QUEST_COMPLETED,
+                    condition: { tagMatch: [['audio']] },
+                    modifier: { type: MODIFIER_TYPES.ADD_FLAT, resource: 'dollars', value: 3 }
+                }]
+            }
+        }
+    };
+    const audiobook = { id: 'book-audio', title: 'The Salt Road', type: 'audiobook', tags: ['fantasy'] };
+    const getBook = (id) => (id === audiobook.id ? audiobook : null);
+    const ctx = { isEncounter: false, roomNumber: null, encounterName: null, isBefriend: true, getBook, state: {} };
+
+    test('an audiobook without a stored audio tag has audio in payload.tags', () => {
+        const payload = RewardCalculator._buildQuestCompletedPayload(
+            '♥ Organize the Stacks', 'Fantasy', { bookId: audiobook.id }, ctx
+        );
+        expect(new Set(payload.tags)).toEqual(new Set(['fantasy', 'audio']));
+    });
+
+    test('an item matching tagMatch [["audio"]] applies to the audiobook', () => {
+        const payload = RewardCalculator._buildQuestCompletedPayload(
+            '♥ Organize the Stacks', 'Fantasy', { bookId: audiobook.id }, ctx
+        );
+        const state = {
+            [STORAGE_KEYS.EQUIPPED_ITEMS]: ['test-audio-charm'],
+            [STORAGE_KEYS.PASSIVE_ITEM_SLOTS]: [],
+            [STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS]: []
+        };
+        const effects = EffectRegistry.getActiveEffects(TRIGGERS.ON_QUEST_COMPLETED, state, testCatalog);
+        expect(effects).toHaveLength(1);
+        const reward = ModifierPipeline.resolve(TRIGGERS.ON_QUEST_COMPLETED, payload, effects, new Reward());
+        expect(reward.dollars).toBe(3);
+        expect(reward.modifiedBy).toContain('Test Audio Charm');
+    });
+
+    test('classifyBonusCardState with effectiveBookTags auto-applies the audio bonus', () => {
+        const bonus = { type: 'item', itemData: testCatalog.allItems['test-audio-charm'] };
+        expect(classifyBonusCardState(bonus, effectiveBookTags(audiobook))).toBe('auto-applied');
+        expect(classifyBonusCardState(bonus, audiobook.tags)).toBe('unmatched');
     });
 });

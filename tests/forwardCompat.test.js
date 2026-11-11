@@ -313,7 +313,7 @@ describe('reload banner', () => {
 });
 
 describe('v20 book fields survive validation', () => {
-    test('well-typed fields pass through; badly typed ones are dropped', () => {
+    test('well-typed fields pass through; badly typed ones fall back to the v20 defaults', () => {
         const state = {
             [STORAGE_KEYS.BOOKS]: {
                 good: {
@@ -337,11 +337,14 @@ describe('v20 book fields survive validation', () => {
         expect(books.good.libraryBookId).toBe('11111111-1111-4111-8111-111111111111');
         expect(books.good.libraryTagsBase).toEqual(['fantasy']);
         expect(books.good.shelfMatchDismissed).toBe('22222222-2222-4222-8222-222222222222');
-        expect('type' in books.bad).toBe(false);
-        expect('libraryTagsBase' in books.bad).toBe(false);
+        // Schema 20: a bad type is re-derived (Unsorted) and the library fields are null off the shelf
+        expect(books.bad.type).toBe('unsorted');
+        expect(books.bad.libraryBookId).toBeNull();
+        expect(books.bad.libraryTagsBase).toBeNull();
+        expect(books.bad.shelfMatchDismissed).toBeNull();
     });
 
-    test('an unknown type string is dropped and both status values are kept', () => {
+    test('an unknown type string becomes unsorted and status other reads as reading', () => {
         const state = {
             [STORAGE_KEYS.BOOKS]: {
                 a: { id: 'a', type: 'scroll', status: 'other' },
@@ -349,8 +352,8 @@ describe('v20 book fields survive validation', () => {
             }
         };
         const books = validateCharacterState(state)[STORAGE_KEYS.BOOKS];
-        expect('type' in books.a).toBe(false);
-        expect(books.a.status).toBe('other');
+        expect(books.a.type).toBe('unsorted');
+        expect(books.a.status).toBe('reading');
         expect(books.b.type).toBe('audiobook');
         expect(books.b.status).toBe('reading');
     });
