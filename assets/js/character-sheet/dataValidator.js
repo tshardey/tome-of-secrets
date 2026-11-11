@@ -53,12 +53,75 @@ export function getStoredSchemaVersion() {
     }
 }
 
+/*
+ * Schema write gate (forward compatibility).
+ *
+ * A tab running this build must never overwrite or relabel a save written by a newer build,
+ * whether that save came from another tab that already updated, or this build is a rollback.
+ * The gate remembers the stored version this tab last loaded or wrote; any change made by
+ * another tab (or a stored version above SCHEMA_VERSION) closes it until the tab reloads.
+ */
+let rememberedSchemaVersion = null;
+let hasRememberedSchemaVersion = false;
+let schemaChangeAnnounced = false;
+
 /**
- * Save current schema version to localStorage
+ * Record the stored schema version this tab is working from. loadState() calls this first.
+ */
+export function rememberLoadedSchemaVersion() {
+    rememberedSchemaVersion = getStoredSchemaVersion();
+    hasRememberedSchemaVersion = true;
+}
+
+/**
+ * True when this tab may write its state: the stored version is not newer than this build,
+ * and it is still the version this tab last loaded or wrote.
+ * A page that never ran loadState() remembers the version the first time it asks.
+ */
+export function isSchemaWriteSafe() {
+    if (!hasRememberedSchemaVersion) {
+        rememberLoadedSchemaVersion();
+    }
+    const stored = getStoredSchemaVersion();
+    if (stored !== null && stored > SCHEMA_VERSION) return false;
+    return stored === rememberedSchemaVersion;
+}
+
+/**
+ * Tell the page, once, that the save changed under this tab (the reload banner listens).
+ */
+export function announceSchemaChangedElsewhere() {
+    if (schemaChangeAnnounced) return;
+    schemaChangeAnnounced = true;
+    try {
+        window.dispatchEvent(new CustomEvent('tos:schemaChangedElsewhere'));
+    } catch (_e) {
+        // No window (non-browser context); nothing to announce to.
+    }
+}
+
+/** For tests: forget the remembered version so the gate starts fresh. */
+export function resetSchemaWriteGateForTests() {
+    rememberedSchemaVersion = null;
+    hasRememberedSchemaVersion = false;
+    schemaChangeAnnounced = false;
+}
+
+/**
+ * Save current schema version to localStorage.
+ * Never lowers it: writes only when nothing is stored or the stored version is older.
+ * @returns {boolean} true when it wrote, false otherwise
  */
 export function saveSchemaVersion() {
+    const stored = getStoredSchemaVersion();
+    if (stored !== null && stored >= SCHEMA_VERSION) {
+        return false;
+    }
     try {
         localStorage.setItem(SCHEMA_VERSION_KEY, SCHEMA_VERSION.toString());
+        // This tab's own write keeps its gate open; only another tab's change closes it.
+        rememberedSchemaVersion = SCHEMA_VERSION;
+        hasRememberedSchemaVersion = true;
         return true;
     } catch (error) {
         console.error('Failed to save schema version:', error);
@@ -407,6 +470,31 @@ function validateNumber(value, defaultValue, context = 'number') {
 
 const BOOK_STATUSES = ['reading', 'completed', 'other'];
 const SHELF_CATEGORIES = ['general', 'physical-tbr'];
+// Book types written by schema v20 (Plan 4). Passed through so a stale tab or a rolled-back
+// build never strips them; nothing in this build reads them yet.
+const BOOK_TYPES = ['unsorted', 'shelf', 'audiobook', 'ebook', 'library-loan', 'physical'];
+
+/**
+ * The v20 book fields, kept only when present and well-typed.
+ * @param {Object} book
+ * @returns {Object}
+ */
+function forwardCompatibleBookFields(book) {
+    const fields = {};
+    if (typeof book.type === 'string' && BOOK_TYPES.includes(book.type)) {
+        fields.type = book.type;
+    }
+    if (typeof book.libraryBookId === 'string') {
+        fields.libraryBookId = book.libraryBookId;
+    }
+    if (Array.isArray(book.libraryTagsBase) && book.libraryTagsBase.every(t => typeof t === 'string')) {
+        fields.libraryTagsBase = [...book.libraryTagsBase];
+    }
+    if (typeof book.shelfMatchDismissed === 'string') {
+        fields.shelfMatchDismissed = book.shelfMatchDismissed;
+    }
+    return fields;
+}
 
 /**
  * Validate and fix a book object (Schema v5)
@@ -441,7 +529,8 @@ function validateBook(book, context = 'book') {
                 ? { grandfatheredQuestIds: links.grandfatheredQuestIds.filter(x => typeof x === 'string') }
                 : {})
         },
-        tags: Array.isArray(book.tags) ? book.tags.filter(t => typeof t === 'string') : []
+        tags: Array.isArray(book.tags) ? book.tags.filter(t => typeof t === 'string') : [],
+        ...forwardCompatibleBookFields(book)
     };
 }
 

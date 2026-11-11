@@ -3,7 +3,7 @@ import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '.
 import { getStateKey, setStateKey } from '../character-sheet/persistence.js';
 import { characterState } from '../character-sheet/state.js';
 import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys } from '../character-sheet/dataMigrator.js';
-import { saveSchemaVersion } from '../character-sheet/dataValidator.js';
+import { saveSchemaVersion, getStoredSchemaVersion, isSchemaWriteSafe, SCHEMA_VERSION } from '../character-sheet/dataValidator.js';
 
 const SYNC_TABLE = 'tos_saves';
 const SYNC_EVENTS_TABLE = 'tos_sync_events';
@@ -110,6 +110,20 @@ export async function buildLocalSnapshot() {
   };
 }
 
+const SCHEMA_BLOCKED_HINT = 'This save was made by a newer Tome of Secrets. Reload to update; cloud sync is paused until then.';
+
+/**
+ * Compare the local and cloud save versions with this build's schema.
+ * @param {number|null} localVersion - version stored on this device
+ * @param {number|null} remoteVersion - version of the cloud snapshot
+ * @returns {'ok'|'local-newer'|'remote-newer'}
+ */
+export function schemaGate(localVersion, remoteVersion) {
+  if (Number.isInteger(localVersion) && localVersion > SCHEMA_VERSION) return 'local-newer';
+  if (Number.isInteger(remoteVersion) && remoteVersion > SCHEMA_VERSION) return 'remote-newer';
+  return 'ok';
+}
+
 export function snapshotHash(snapshot) {
   return hashString(stableStringify(snapshot.data));
 }
@@ -149,6 +163,12 @@ export async function applySnapshot(snapshot) {
 
   const { data } = snapshot;
   const snapshotVersion = Number.isInteger(snapshot.version) ? snapshot.version : null;
+
+  // Second guard behind the sync gate: never apply a save this build cannot read, nor
+  // overwrite a local save from a newer build.
+  if (schemaGate(getStoredSchemaVersion(), snapshotVersion) !== 'ok') {
+    throw new Error('newer_schema');
+  }
 
   // Back-compat: older cloud saves may include activeCharacterTab; ignore it.
 
@@ -321,6 +341,13 @@ async function syncNowWithOptions(supabase, { mode }) {
       snapshotHash: localHash, schemaVersion, detail: `getRemoteSave failed: ${err.message}`
     });
     throw err;
+  }
+
+  // Forward compatibility: never push over, or pull from, a save made by a newer build, and
+  // never sync from a tab whose save changed under it. Checked before any write or prompt.
+  const remoteVersion = remoteSnapshot && Number.isInteger(remoteSnapshot.version) ? remoteSnapshot.version : null;
+  if (schemaGate(schemaVersion, remoteVersion) !== 'ok' || !isSchemaWriteSafe()) {
+    return { action: 'blocked', detail: SCHEMA_BLOCKED_HINT };
   }
 
   // No remote save yet

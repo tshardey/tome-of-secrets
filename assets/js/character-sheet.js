@@ -48,6 +48,42 @@ import { FundController } from './controllers/FundController.js';
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
 
+const SCHEMA_VERSION_STORAGE_KEY = 'tomeOfSecrets_schemaVersion';
+const SCHEMA_RELOAD_BANNER_ID = 'tos-schema-reload-banner';
+let schemaChangeBannerInitialized = false;
+
+function showSchemaReloadBanner() {
+    if (document.getElementById(SCHEMA_RELOAD_BANNER_ID)) return;
+    const banner = document.createElement('div');
+    banner.id = SCHEMA_RELOAD_BANNER_ID;
+    banner.setAttribute('role', 'alert');
+    // Deliberately unclosable: this tab's saves are paused until it reloads.
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;display:flex;' +
+        'flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;padding:12px 16px;' +
+        'background:#3b2a14;color:#f5e6c8;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.4);';
+    const message = document.createElement('span');
+    message.textContent = 'Tome of Secrets was updated in another tab. Reload this tab to keep playing.';
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.textContent = 'Reload';
+    reload.addEventListener('click', () => window.location.reload());
+    banner.append(message, reload);
+    document.body.prepend(banner);
+}
+
+/**
+ * Show an unclosable reload banner when another tab changes the save's schema version,
+ * or when this tab's write gate refuses a save (tos:schemaChangedElsewhere).
+ */
+export function initializeSchemaChangeBanner() {
+    if (schemaChangeBannerInitialized) return;
+    schemaChangeBannerInitialized = true;
+    window.addEventListener('storage', (e) => {
+        if (e.key === SCHEMA_VERSION_STORAGE_KEY) showSchemaReloadBanner();
+    });
+    window.addEventListener('tos:schemaChangedElsewhere', showSchemaReloadBanner);
+}
+
 export async function initializeCharacterSheet() {
     // --- FORM ELEMENTS ---
     const form = document.getElementById('character-sheet');
@@ -56,6 +92,9 @@ export async function initializeCharacterSheet() {
         // This is important for testing and for other pages on the site.
         return;
     }
+
+    // Before loading: a newer save written by another tab pauses this one until it reloads.
+    initializeSchemaChangeBanner();
 
     // --- CHARACTER CREATION GUIDE ---
     initializeKeeperPage();
