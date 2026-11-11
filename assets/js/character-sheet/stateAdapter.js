@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
 import { setStateKey, setSaveJSON } from './persistence.js';
 import { validateBookTidy } from './dataValidator.js';
-import { deriveBookType, isBookType, normalizeLibraryFields } from '../utils/bookTypes.js';
+import { deriveBookType, isBookType, normalizeBookStatus, normalizeLibraryFields } from '../utils/bookTypes.js';
 import { withoutTypeDerivedTags } from '../utils/bookTagRules.js';
 import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
@@ -41,11 +41,6 @@ const EVENTS = Object.freeze({
     // Schema v20: the Unsorted-books review; payload is the new bookTidy
     BOOK_TIDY_CHANGED: 'bookTidyChanged'
 });
-
-/** Book status since schema v20: 'completed', or 'reading' for anything not completed ('other' included). */
-function normalizeBookStatus(status) {
-    return status === 'completed' ? 'completed' : 'reading';
-}
 
 /** Set type and the library fields from the v20 rules (a shelf book needs a libraryBookId). */
 function applyBookTypeRules(book) {
@@ -1373,6 +1368,21 @@ export class StateAdapter {
     }
 
     /**
+     * Is the book linked to an active quest (through its links or the quest's bookId)?
+     * Since schema v20 'reading' means every unfinished book, so this is what "in progress" means.
+     * @param {Object|string} bookOrId - a book record or its id
+     * @returns {boolean}
+     */
+    isBookOnActiveQuest(bookOrId) {
+        const book = typeof bookOrId === 'string' ? this._getBooksRaw()[bookOrId] : bookOrId;
+        if (!book || typeof book !== 'object' || !book.id) return false;
+        const active = Array.isArray(this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) ? this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] : [];
+        if (active.length === 0) return false;
+        const linkedIds = new Set(getLinkedQuestIds(book).map(id => String(id)));
+        return active.some(q => q && (q.bookId === book.id || (q.id != null && linkedIds.has(String(q.id)))));
+    }
+
+    /**
      * Books of one type (schema v20).
      * @param {string} type - one of BOOK_TYPES
      * @returns {Object[]}
@@ -1681,9 +1691,6 @@ export class StateAdapter {
         const books = this._getBooksRaw();
         // In progress (schema v20): not completed and linked to an active quest. 'reading' now
         // means every unfinished book, so it no longer says the book is being read.
-        const activeQuests = Array.isArray(this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) ? this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] : [];
-        const activeQuestIds = new Set(activeQuests.filter(q => q && q.id != null).map(q => String(q.id)));
-        const activeBookIds = new Set(activeQuests.filter(q => q && typeof q.bookId === 'string').map(q => q.bookId));
         let completedCount = 0;
         let inProgressCount = 0;
         for (const bookId of bookIds) {
@@ -1691,7 +1698,7 @@ export class StateAdapter {
             if (!book) continue;
             if (book.status === 'completed') {
                 completedCount += 1;
-            } else if (activeBookIds.has(bookId) || getLinkedQuestIds(book).some(id => activeQuestIds.has(String(id)))) {
+            } else if (this.isBookOnActiveQuest(book)) {
                 inProgressCount += 1;
             }
         }

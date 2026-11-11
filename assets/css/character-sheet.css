@@ -802,7 +802,6 @@
     color: #d4c8b0;
 }
 
-.library-status-radios,
 .library-type-radios {
     display: flex;
     gap: 16px;
@@ -828,7 +827,6 @@
     cursor: not-allowed;
 }
 
-.library-status-option,
 .library-type-option {
     display: inline-flex;
     align-items: center;
@@ -1063,12 +1061,6 @@
     background: rgba(72, 120, 72, 0.25);
     border: 1px solid #6a9e6a;
     color: #8bc88b;
-}
-
-.library-status-other {
-    background: rgba(84, 72, 59, 0.5);
-    border: 1px solid #8a7a61;
-    color: #8a7a61;
 }
 
 .library-card-actions {

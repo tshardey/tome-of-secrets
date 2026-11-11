@@ -5,6 +5,7 @@
 import { LibraryController } from '../assets/js/controllers/LibraryController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
+import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
 
@@ -359,6 +360,28 @@ describe('LibraryController', () => {
                 expect(select.options[1].textContent).toBe('Unlink from the library');
             });
 
+            it('saving the drawer re-types an already-typed book (ebook -> audiobook) in the real StateAdapter', () => {
+                const realAdapter = new StateAdapter(createEmptyCharacterState());
+                const saved = realAdapter.addBook({ title: 'Glass Orchard', author: 'Member A', type: 'ebook', tags: ['fantasy'] });
+                expect(saved.type).toBe('ebook');
+                const controller = new LibraryController(realAdapter, form, dependencies);
+                controller.initialize();
+                controller.handleEditBook(saved.id);
+                expect(document.getElementById('book-edit-type').value).toBe('ebook');
+
+                document.getElementById('book-edit-type').value = 'audiobook';
+                document.getElementById('save-book-edit-btn').click();
+
+                const after = realAdapter.getBook(saved.id);
+                expect(after.type).toBe('audiobook');
+                expect(after.status).toBe('reading');
+                expect(after.libraryBookId).toBeNull();
+                expect(after).not.toHaveProperty('shelfCategory');
+                expect(after.tags).not.toContain('audio');
+                expect(realAdapter.getBooksByType('audiobook').map((b) => b.id)).toEqual([saved.id]);
+                expect(realAdapter.getBooksByType('ebook')).toEqual([]);
+            });
+
             it('Unlink from the library makes the book physical and remembers the dismissed match', () => {
                 editBook({ type: 'shelf', libraryBookId: 'lib-1' });
                 document.getElementById('book-edit-type').value = 'unlink';
@@ -448,7 +471,28 @@ describe('LibraryController', () => {
             const completed = byId('library-cards-completed');
             expect(completed.innerHTML).toContain('Title e1');
             expect(completed.querySelector('.library-year-heading').textContent).toBe('2026 (1)');
-            expect(byId('library-cards-audiobook').querySelector('.library-status-badge').textContent).toBe('On a quest');
+            // Not completed and no active quest links it: no badge (spec 6.3)
+            expect(byId('library-cards-audiobook').querySelector('.library-status-badge')).toBeNull();
+        });
+
+        it('shows On a quest only on an unfinished book an active quest links', () => {
+            setLibrary([
+                book('a1', 'audiobook', 'reading', { links: { questIds: ['q-active'], curriculumPromptIds: [] } }),
+                book('a2', 'audiobook', 'reading', { links: { questIds: ['q-old'], curriculumPromptIds: [] } })
+            ]);
+            const savedActive = characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS];
+            characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{ id: 'q-active', bookId: 'a1' }];
+            try {
+                new LibraryController(stateAdapter, form, dependencies).initialize();
+                const cards = byId('library-cards-audiobook').querySelectorAll('.library-card');
+                const badge = (card) => card.querySelector('.library-status-badge');
+                expect(badge(cards[0]) || badge(cards[1])).toBeTruthy();
+                const byBook = Object.fromEntries(Array.from(cards).map((c) => [c.dataset.bookId, badge(c)]));
+                expect(byBook.a1.textContent).toBe('On a quest');
+                expect(byBook.a2).toBeNull();
+            } finally {
+                characterState[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = savedActive;
+            }
         });
 
         it('renders every present section even when the others are missing from the DOM', () => {
@@ -515,8 +559,11 @@ describe('LibraryController', () => {
             const html = controller.renderBookCard(book('r1', 'ebook', 'reading', { title: 'The Salt Road' }));
             expect(html).toContain('class="library-card"');
             expect(html).toContain('The Salt Road');
-            expect(html).toContain('On a quest');
+            // Unfinished and not on an active quest: no status badge
+            expect(html).not.toContain('library-status-badge');
             expect(html).not.toContain('Physical TBR');
+            const done = controller.renderBookCard(book('c1', 'ebook', 'completed'));
+            expect(done).toContain('Completed');
         });
     });
 

@@ -15,7 +15,7 @@ import { purgeStateKey } from './persistence.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import * as data from './data.js';
 import { getLinkedQuestIds, grandfatherBookLinks, isSameBook } from '../utils/questLinkRules.js';
-import { deriveBookType, normalizeLibraryFields } from '../utils/bookTypes.js';
+import { deriveBookType, normalizeBookStatus, normalizeLibraryFields } from '../utils/bookTypes.js';
 import { withoutTypeDerivedTags } from '../utils/bookTagRules.js';
 
 /**
@@ -589,7 +589,7 @@ export function migrateToVersion20(state) {
             const { shelfCategory: _retired, ...rest } = book;
             updated[id] = {
                 ...rest,
-                status: book.status === 'other' ? 'reading' : book.status,
+                status: normalizeBookStatus(book.status),
                 tags: withoutTypeDerivedTags(Array.isArray(book.tags) ? book.tags : []),
                 type,
                 ...normalizeLibraryFields(type, book)

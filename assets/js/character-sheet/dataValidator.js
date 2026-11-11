@@ -11,7 +11,7 @@ import { STORAGE_KEYS, createEmptyCharacterState, createDefaultBookTidy } from '
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { validateHelperState } from './helperDiscoveryShared.js';
-import { deriveBookType, normalizeLibraryFields } from '../utils/bookTypes.js';
+import { deriveBookType, normalizeBookStatus, normalizeLibraryFields } from '../utils/bookTypes.js';
 import { withoutTypeDerivedTags } from '../utils/bookTagRules.js';
 
 /**
@@ -494,7 +494,7 @@ export function validateBook(book, context = 'book') {
         author: typeof book.author === 'string' ? book.author : '',
         cover: typeof book.cover === 'string' ? book.cover : (typeof book.coverUrl === 'string' ? book.coverUrl : null),
         pageCount: typeof book.pageCount === 'number' && !isNaN(book.pageCount) ? Math.max(0, Math.floor(book.pageCount)) : (typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? Math.max(0, Math.floor(book.pageCountRaw)) : null),
-        status: book.status === 'completed' ? 'completed' : 'reading',
+        status: normalizeBookStatus(book.status),
         dateAdded: typeof book.dateAdded === 'string' ? book.dateAdded : new Date().toISOString(),
         dateCompleted: typeof book.dateCompleted === 'string' ? book.dateCompleted : null,
         links: {

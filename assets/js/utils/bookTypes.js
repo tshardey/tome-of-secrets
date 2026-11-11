@@ -47,13 +47,25 @@ export function deriveBookType(book) {
 }
 
 /**
+ * Book status since schema v20: 'completed', or 'reading' for anything not completed
+ * ('other' and a missing or unknown status included).
+ * @param {*} status
+ * @returns {'reading'|'completed'}
+ */
+export function normalizeBookStatus(status) {
+    return status === 'completed' ? 'completed' : 'reading';
+}
+
+/**
  * Normalize the three library fields for a book of the given type.
+ * A `shelf` type without a usable libraryBookId gets null fields (deriveBookType would have
+ * re-typed it Unsorted); this never throws.
  * @param {string} type
  * @param {Object} book
  * @returns {{ libraryBookId: string|null, libraryTagsBase: string[]|null, shelfMatchDismissed: string|null }}
  */
 export function normalizeLibraryFields(type, book) {
-    const isShelf = type === 'shelf';
+    const isShelf = type === 'shelf' && Boolean(book) && hasLibraryBookId(book.libraryBookId);
     const base = book && Array.isArray(book.libraryTagsBase)
         ? book.libraryTagsBase.filter((t) => typeof t === 'string')
         : [];

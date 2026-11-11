@@ -4,17 +4,17 @@
  * Schema 19 -> 20 (Plan 4, D2): book types replace the `audio` tag and Physical TBR.
  * Every entry point (loadState, migrateState, applySnapshot) must give the same answer.
  */
-import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
+import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { migrateState } from '../assets/js/character-sheet/dataMigrator.js';
 import {
     SCHEMA_VERSION,
     validateCharacterState,
     resetSchemaWriteGateForTests
 } from '../assets/js/character-sheet/dataValidator.js';
-import { applySnapshot } from '../assets/js/services/cloudSync.js';
+import { applySnapshot, buildLocalSnapshot } from '../assets/js/services/cloudSync.js';
 import { getStateKey } from '../assets/js/character-sheet/persistence.js';
 import { characterState, loadState, resetStateLoadedForTests } from '../assets/js/character-sheet/state.js';
-import { BOOK_TYPES, deriveBookType } from '../assets/js/utils/bookTypes.js';
+import { BOOK_TYPES, deriveBookType, normalizeBookStatus, normalizeLibraryFields } from '../assets/js/utils/bookTypes.js';
 
 const SCHEMA_VERSION_KEY = 'tomeOfSecrets_schemaVersion';
 const D2_FIELDS = ['type', 'libraryBookId', 'libraryTagsBase', 'shelfMatchDismissed', 'status', 'shelfCategory', 'tags'];
@@ -184,6 +184,35 @@ describe('schema 20 migration (book types)', () => {
         expect(out[STORAGE_KEYS.COMPLETED_QUESTS].map((q) => q.bookId)).toEqual(['b-done', 'b-done']);
     });
 
+    it('a steady-state v19 save keeps its pending review across two loads and in the cloud snapshot', async () => {
+        // Every key already in validated shape, no bookTidy, one Unsorted book: the v20
+        // migration output equals the validated state, so only the migration itself says "save".
+        const steady = validateCharacterState({
+            ...createEmptyCharacterState(),
+            [STORAGE_KEYS.BOOKS]: { u1: book('u1') }
+        });
+        delete steady[STORAGE_KEYS.BOOK_TIDY];
+        expect(steady[STORAGE_KEYS.BOOKS].u1.type).toBe('unsorted');
+        expect(steady[STORAGE_KEYS.BOOKS].u1).not.toHaveProperty('shelfCategory');
+        localStorage.setItem(SCHEMA_VERSION_KEY, '19');
+        Object.entries(steady).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+
+        resetStateLoadedForTests();
+        await loadState();
+        expect(characterState[STORAGE_KEYS.BOOK_TIDY].status).toBe('pending');
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOK_TIDY)).status).toBe('pending');
+
+        // Second load: a freshly opened tab on the now-v20 save
+        resetSchemaWriteGateForTests();
+        resetStateLoadedForTests();
+        await loadState();
+        expect(characterState[STORAGE_KEYS.BOOK_TIDY].status).toBe('pending');
+
+        const snapshot = await buildLocalSnapshot();
+        expect(snapshot.version).toBe(20);
+        expect(snapshot.data.characterState[STORAGE_KEYS.BOOK_TIDY].status).toBe('pending');
+    });
+
     it('loadState migrates a stored v19 save and writes a pending bookTidy', async () => {
         const v19 = buildV19();
         localStorage.setItem(SCHEMA_VERSION_KEY, '19');
@@ -213,6 +242,23 @@ describe('schema 20 migration (book types)', () => {
         const tidy = await getStateKey(STORAGE_KEYS.BOOK_TIDY, null);
         expect(tidy.status).toBe('pending');
         expect(localStorage.getItem(SCHEMA_VERSION_KEY)).toBe('20');
+    });
+});
+
+describe('normalizeLibraryFields and normalizeBookStatus', () => {
+    it('never throws on a shelf type without a usable libraryBookId', () => {
+        const empty = { libraryBookId: null, libraryTagsBase: null, shelfMatchDismissed: null };
+        expect(normalizeLibraryFields('shelf', {})).toEqual(empty);
+        expect(normalizeLibraryFields('shelf', { libraryBookId: 7 })).toEqual(empty);
+        expect(normalizeLibraryFields('shelf', { libraryBookId: '  ' })).toEqual(empty);
+        expect(normalizeLibraryFields('shelf', null)).toEqual(empty);
+        expect(normalizeLibraryFields('shelf', { libraryBookId: 'lib-1', libraryTagsBase: ['a', 3] }))
+            .toEqual({ libraryBookId: 'lib-1', libraryTagsBase: ['a'], shelfMatchDismissed: null });
+    });
+
+    it('maps everything but completed to reading', () => {
+        expect(normalizeBookStatus('completed')).toBe('completed');
+        ['reading', 'other', undefined, null, 'x'].forEach((s) => expect(normalizeBookStatus(s)).toBe('reading'));
     });
 });
 
@@ -289,6 +335,18 @@ describe('StateAdapter book types and bookTidy (schema 20)', () => {
         expect(updated.libraryBookId).toBeNull();
         expect(updated.libraryTagsBase).toBeNull();
         expect(adapter.updateBook(b.id, { type: 'not-a-type' }).type).toBe('audiobook');
+    });
+
+    it('isBookOnActiveQuest: linked through links.questIds or the quest bookId, never a finished quest', () => {
+        const viaLink = adapter.addBook({ title: 'A', links: { questIds: ['q-a'], curriculumPromptIds: [] } });
+        const viaBookId = adapter.addBook({ title: 'B' });
+        const viaDone = adapter.addBook({ title: 'C', links: { questIds: ['q-done'], curriculumPromptIds: [] } });
+        state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] = [{ id: 'q-a' }, { id: 'q-b', bookId: viaBookId.id }];
+        state[STORAGE_KEYS.COMPLETED_QUESTS] = [{ id: 'q-done', bookId: viaDone.id }];
+        expect(adapter.isBookOnActiveQuest(viaLink)).toBe(true);
+        expect(adapter.isBookOnActiveQuest(viaBookId.id)).toBe(true);
+        expect(adapter.isBookOnActiveQuest(viaDone)).toBe(false);
+        expect(adapter.isBookOnActiveQuest('missing')).toBe(false);
     });
 
     it('getBooksByType filters by type', () => {

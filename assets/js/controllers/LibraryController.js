@@ -824,8 +824,12 @@ export class LibraryController extends BaseController {
             : '<span class="library-card-cover-placeholder">No cover</span>';
         const pageStr = book.pageCount != null && !isNaN(book.pageCount) ? ` · ${book.pageCount} pp` : '';
         const isCompleted = book.status === 'completed';
-        const statusClass = isCompleted ? 'library-status-completed' : 'library-status-reading';
-        const statusLabel = isCompleted ? 'Completed' : 'On a quest';
+        // Badge per spec 6.3: Completed, or On a quest when an active quest links the book; else none
+        const onQuest = !isCompleted && typeof this.stateAdapter.isBookOnActiveQuest === 'function'
+            && this.stateAdapter.isBookOnActiveQuest(book);
+        const statusBadge = isCompleted
+            ? '<span class="library-status-badge library-status-overlay library-status-completed">Completed</span>'
+            : (onQuest ? '<span class="library-status-badge library-status-overlay library-status-reading">On a quest</span>' : '');
         const markCompleteBtn = !isCompleted
             ? `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-mark-complete-btn" data-book-id="${idAttr}" aria-label="Mark complete" title="Mark complete">✓</button>`
             : '';
@@ -835,7 +839,7 @@ export class LibraryController extends BaseController {
             <div class="library-card" data-book-id="${idAttr}">
                 <div class="library-card-cover-wrap">
                     ${coverHtml}
-                    <span class="library-status-badge library-status-overlay ${statusClass}">${statusLabel}</span>
+                    ${statusBadge}
                 </div>
                 <div class="library-card-body">
                     <div class="library-card-text">

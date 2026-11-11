@@ -7,7 +7,8 @@ import {
     getStoredSchemaVersion,
     rememberLoadedSchemaVersion,
     isSchemaWriteSafe,
-    announceSchemaChangedElsewhere
+    announceSchemaChangedElsewhere,
+    SCHEMA_VERSION
 } from './dataValidator.js';
 import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys, RETIREMENT_SCHEMA_VERSION } from './dataMigrator.js';
 import { LARGE_STATE_KEYS, getStateKey, setStateKey } from './persistence.js';
@@ -89,7 +90,11 @@ export async function loadState(form = null) {
     
     // If state was migrated or validated, save it back to ensure consistency
     // This is safe because we only save validated data
-    const needsSave = Object.keys(validatedState).some(key => {
+    // A run that migrated has already stored the new schema version, so whatever the migration
+    // added (e.g. v20's pending bookTidy) must be written now even when it already equals the
+    // validated state: the next load no longer migrates and would fall back to the default.
+    const didMigrate = storedVersion === null || storedVersion < SCHEMA_VERSION;
+    const needsSave = didMigrate || Object.keys(validatedState).some(key => {
         const original = migratedState[key];
         const validated = validatedState[key];
         return JSON.stringify(original) !== JSON.stringify(validated);
