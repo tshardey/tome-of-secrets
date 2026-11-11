@@ -45,6 +45,8 @@ import { LibraryController } from './controllers/LibraryController.js';
 import { CampaignsController } from './controllers/CampaignsController.js';
 import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
 import { FundController } from './controllers/FundController.js';
+import { getSupabaseClient } from './services/supabaseClient.js';
+import { startLibrarySync } from './services/ShelfBookService.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -203,6 +205,14 @@ export async function initializeCharacterSheet() {
     }, ui);
 
     initializeStateDependentUI({ ui, dataModule, stateAdapter, completedBooksSet });
+
+    // Household library (Plan 4): only when Supabase is configured, never awaited by the page.
+    getSupabaseClient()
+        .then((client) => {
+            if (client) startLibrarySync(stateAdapter, {});
+        })
+        .catch((error) => console.warn('[Library] client unavailable:', error?.name || 'unknown'));
+
     initializeGenreSelection(stateAdapter, dataModule);
     
     // Initialize rolling tables in Quests tab
