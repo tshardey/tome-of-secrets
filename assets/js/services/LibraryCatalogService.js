@@ -115,7 +115,15 @@ export class LibraryCatalogService {
     this._last = null;
     this._loadedAt = 0;
     this._stale = false;
+    /** The running load: { gen, promise }. */
     this._inFlight = null;
+    /** Bumped by every write (even one that failed or timed out: it may have landed). */
+    this._writeGen = 0;
+    /** Loads are numbered so an older load that ends late never replaces a newer result. */
+    this._loadSeq = 0;
+    this._storedSeq = 0;
+    /** The user the cached result belongs to (null when signed out or never loaded). */
+    this._knownUserId = null;
     this._listeners = new Set();
     /** Library book ids whose series fill hit a check violation; never tried again on this page. */
     this._seriesRejected = new Set();
@@ -151,15 +159,54 @@ export class LibraryCatalogService {
     return age < CATALOG_TTL_MS;
   }
 
+  /** The session's user id (null when signed out or not configured). */
+  async _sessionUserId() {
+    const client = await this._getClient();
+    if (!client) return null;
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    return data?.session?.user?.id || null;
+  }
+
+  /**
+   * Whether the cached result still belongs to the signed-in user. Reads the local session
+   * (bounded by the read timeout), so a sign-out or a user switch never serves the previous
+   * household's books.
+   */
+  async _sessionMatchesCache() {
+    try {
+      const userId = await this._withTimeout(this._sessionUserId(), LIBRARY_TIMEOUT_MS);
+      if (!userId) return false;
+      // An unavailable result holds no household data, so any signed-in user may wait it out.
+      if (this._last?.status === 'unavailable') return true;
+      return userId === this._knownUserId;
+    } catch (_error) {
+      // Session unreadable: keep waiting out a failure, else reload (which reports it).
+      return this._last?.status === 'unavailable';
+    }
+  }
+
+  /** The running load, unless a write happened after it started (its rows may predate it). */
+  _currentLoad() {
+    const running = this._inFlight;
+    return running && running.gen === this._writeGen ? running.promise : null;
+  }
+
   /**
    * The household catalogue. Never throws.
    * @param {{force?: boolean}} [options] force skips the cache and the retry wait
    */
   async getCatalog({ force = false } = {}) {
-    if (this._inFlight) return this._inFlight;
-    if (!force && this._cacheValid()) return this._last;
+    const running = this._currentLoad();
+    if (running) return running;
+    if (!force && this._cacheValid() && await this._sessionMatchesCache()) return this._last;
+    return this._currentLoad() || this._startLoad();
+  }
 
-    this._inFlight = (async () => {
+  _startLoad() {
+    const gen = this._writeGen;
+    const seq = ++this._loadSeq;
+    const promise = (async () => {
       let result;
       try {
         result = await this._withTimeout(this._load(), LIBRARY_TIMEOUT_MS);
@@ -170,27 +217,41 @@ export class LibraryCatalogService {
           ? emptyResult('no-household', { reason: 'denied' })
           : emptyResult('unavailable', { reason: unavailable.reason });
       }
-      this._last = result;
-      this._loadedAt = this._now();
-      this._stale = false;
-      this._notify(result);
+      if (seq > this._storedSeq) {
+        this._storedSeq = seq;
+        this._last = result;
+        this._loadedAt = this._now();
+        // A write made while this load ran may be missing from its rows.
+        this._stale = this._writeGen !== gen;
+        this._notify(result);
+      }
       return result;
     })();
+    const entry = { gen, promise };
+    this._inFlight = entry;
+    promise.then(() => {
+      if (this._inFlight === entry) this._inFlight = null;
+    });
+    return promise;
+  }
 
-    try {
-      return await this._inFlight;
-    } finally {
-      this._inFlight = null;
-    }
+  /** Record the session's user; a different user (or none) forgets per-user state. */
+  _setKnownUser(userId) {
+    if (userId !== this._knownUserId) this._seriesRejected.clear();
+    this._knownUserId = userId;
   }
 
   async _load() {
     const client = await this._getClient();
-    if (!client) return emptyResult('signed-out', { reason: 'not-configured' });
+    if (!client) {
+      this._setKnownUser(null);
+      return emptyResult('signed-out', { reason: 'not-configured' });
+    }
 
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
     if (sessionError) throw sessionError;
-    const userId = sessionData?.session?.user?.id;
+    const userId = sessionData?.session?.user?.id || null;
+    this._setKnownUser(userId);
     if (!userId) return emptyResult('signed-out');
 
     const library = client.schema('library');
@@ -265,15 +326,19 @@ export class LibraryCatalogService {
     }
   }
 
-  /** Run one write; errors become LibraryUnavailableError and a success makes the catalogue stale. */
+  /**
+   * Run one write; errors become LibraryUnavailableError. Every write, even one that failed
+   * or timed out (it may still have landed), makes the catalogue stale.
+   */
   async _write(run) {
     try {
-      const value = await this._withTimeout((async () => run(await this._library()))(), LIBRARY_WRITE_TIMEOUT_MS);
-      this._stale = true;
-      return value;
+      return await this._withTimeout((async () => run(await this._library()))(), LIBRARY_WRITE_TIMEOUT_MS);
     } catch (error) {
       console.warn('[LibraryCatalog] write failed:', logCode(error));
       throw toUnavailable(error);
+    } finally {
+      this._writeGen += 1;
+      this._stale = true;
     }
   }
 

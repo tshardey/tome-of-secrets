@@ -12,7 +12,9 @@ import {
 
 // Synthetic ids only (public repo).
 const USER = '00000000-0000-4000-8000-0000000000a1';
+const USER_B = '00000000-0000-4000-8000-0000000000a2';
 const HOUSEHOLD = '00000000-0000-4000-8000-0000000000b1';
+const HOUSEHOLD_B = '00000000-0000-4000-8000-0000000000b2';
 const BOOK_1 = '00000000-0000-4000-8000-000000000001';
 const BOOK_2 = '00000000-0000-4000-8000-000000000002';
 
@@ -24,6 +26,7 @@ const BOOKS_SELECT = 'id, title, authors, cover_url, page_count, series_name, se
  */
 function makeFakeClient({ session = { user: { id: USER } }, handlers = {}, sessionPromise } = {}) {
     const queries = [];
+    let currentSession = session;
     const builderFor = (schemaName, table) => {
         const calls = [];
         const builder = { schema: schemaName, table, calls };
@@ -50,12 +53,18 @@ function makeFakeClient({ session = { user: { id: USER } }, handlers = {}, sessi
     });
     const client = {
         auth: {
-            getSession: jest.fn(() => sessionPromise || Promise.resolve({ data: { session }, error: null }))
+            getSession: jest.fn(() => sessionPromise || Promise.resolve({ data: { session: currentSession }, error: null }))
         },
         schema: jest.fn(() => ({ from })),
         from: jest.fn(() => { throw new Error('library queries must go through schema()'); })
     };
-    return { client, from, queries, ofTable: (t) => queries.filter(q => q.table === t) };
+    return {
+        client,
+        from,
+        queries,
+        ofTable: (t) => queries.filter(q => q.table === t),
+        setSession: (next) => { currentSession = next; }
+    };
 }
 
 const memberHandler = (rows = [{ household_id: HOUSEHOLD }]) => () => ({ data: rows, error: null });
@@ -275,13 +284,11 @@ describe('LibraryCatalogService.getCatalog', () => {
             const firstResult = await first;
             expect(firstResult.status).toBe('unavailable');
             const fromCount = fake.from.mock.calls.length;
-            const sessionCount = fake.client.auth.getSession.mock.calls.length;
 
             advance(RETRY_AFTER_MS - 1);
             const again = await service.getCatalog();
             expect(again).toBe(firstResult);
             expect(fake.from.mock.calls.length).toBe(fromCount);
-            expect(fake.client.auth.getSession.mock.calls.length).toBe(sessionCount);
 
             const forced = service.getCatalog({ force: true });
             await jest.advanceTimersByTimeAsync(LIBRARY_TIMEOUT_MS);
@@ -355,6 +362,158 @@ describe('LibraryCatalogService.getCatalog', () => {
         unsubscribe();
         await service.getCatalog({ force: true });
         expect(seen).toHaveLength(2);
+    });
+
+    describe('session changes (cache never outlives its user)', () => {
+        it('gives signed-out with zero from calls after a sign-out, even within the TTL', async () => {
+            const fake = makeFakeClient({ handlers: readyHandlers() });
+            const { service, advance } = makeService(fake);
+            expect((await service.getCatalog()).status).toBe('ready');
+            const count = fake.from.mock.calls.length;
+
+            fake.setSession(null);
+            advance(1000);
+            const result = await service.getCatalog();
+            expect(result.status).toBe('signed-out');
+            expect(result.books).toEqual([]);
+            expect(fake.from.mock.calls.length).toBe(count);
+        });
+
+        it('reloads for a different user within the TTL', async () => {
+            const fake = makeFakeClient({
+                handlers: {
+                    ...readyHandlers(),
+                    household_members: (b) => ({
+                        data: [{ household_id: b.call('eq')[2] === USER_B ? HOUSEHOLD_B : HOUSEHOLD }],
+                        error: null
+                    })
+                }
+            });
+            const { service, advance } = makeService(fake);
+            expect((await service.getCatalog()).householdId).toBe(HOUSEHOLD);
+
+            fake.setSession({ user: { id: USER_B } });
+            advance(1000);
+            const result = await service.getCatalog();
+            expect(result.userId).toBe(USER_B);
+            expect(result.householdId).toBe(HOUSEHOLD_B);
+        });
+
+        it('reloads a denied no-household after a user switch', async () => {
+            let denied = true;
+            const fake = makeFakeClient({
+                handlers: {
+                    ...readyHandlers(),
+                    books: (b) => (denied ? { data: null, error: { code: '42501' } } : pagedHandler([bookRow(BOOK_1)])(b))
+                }
+            });
+            const { service } = makeService(fake);
+            expect((await service.getCatalog()).reason).toBe('denied');
+            denied = false;
+            fake.setSession({ user: { id: USER_B } });
+            expect((await service.getCatalog()).status).toBe('ready');
+        });
+
+        it('forgets the series rejections of the previous user', async () => {
+            const fake = makeFakeClient({
+                handlers: {
+                    ...readyHandlers(),
+                    books: (b) => (b.call('update') ? { data: null, error: { code: '23514' } } : pagedHandler([bookRow(BOOK_1)])(b))
+                }
+            });
+            const { service } = makeService(fake);
+            await service.getCatalog();
+            await service.fillSeries(BOOK_1, 'Saga');
+            await service.fillSeries(BOOK_1, 'Saga');
+            const updates = () => fake.ofTable('books').filter(q => q.call('update')).length;
+            expect(updates()).toBe(1);
+
+            fake.setSession({ user: { id: USER_B } });
+            await service.getCatalog();
+            await service.fillSeries(BOOK_1, 'Saga');
+            expect(updates()).toBe(2);
+        });
+    });
+
+    describe('writes and loads interleaved', () => {
+        function deferred() {
+            let resolve;
+            const promise = new Promise((r) => { resolve = r; });
+            return { promise, resolve };
+        }
+
+        /** books: the first load's first page waits for the gate; every later read answers at once. */
+        function gatedFake(gate) {
+            let first = true;
+            const page = pagedHandler([bookRow(BOOK_1)]);
+            return makeFakeClient({
+                handlers: {
+                    ...readyHandlers(),
+                    books: (b) => {
+                        if (first && b.call('range')[1] === 0) {
+                            first = false;
+                            return gate.promise.then(() => page(b));
+                        }
+                        return page(b);
+                    },
+                    book_tags: (b) => (b.call('upsert') ? { data: null, error: null } : pagedHandler([])(b))
+                }
+            });
+        }
+
+        it('a write made while a load runs leaves the catalogue stale after that load', async () => {
+            const gate = deferred();
+            const fake = gatedFake(gate);
+            const { service } = makeService(fake);
+            const pending = service.getCatalog();
+            await new Promise(r => setTimeout(r, 0));
+            await service.addTags(BOOK_1, HOUSEHOLD, ['cozy']);
+            gate.resolve();
+            await pending;
+            const loads = fake.ofTable('household_members').length;
+
+            await service.getCatalog();
+            expect(fake.ofTable('household_members').length).toBe(loads + 1);
+        });
+
+        it('a forced load after a write does not reuse a load that began before it', async () => {
+            const gate = deferred();
+            const fake = gatedFake(gate);
+            const { service } = makeService(fake);
+            const pending = service.getCatalog();
+            await new Promise(r => setTimeout(r, 0));
+            await service.addTags(BOOK_1, HOUSEHOLD, ['cozy']);
+
+            const forced = service.getCatalog({ force: true });
+            const forcedResult = await forced;
+            expect(fake.ofTable('household_members')).toHaveLength(2);
+            expect(forcedResult.status).toBe('ready');
+
+            // The older load ends last but never replaces the newer result.
+            gate.resolve();
+            await pending;
+            expect(service.peek()).toBe(forcedResult);
+        });
+
+        it('a write that times out still makes the catalogue stale', async () => {
+            jest.useFakeTimers();
+            const fake = makeFakeClient({
+                handlers: {
+                    ...readyHandlers(),
+                    book_tags: (b) => (b.call('upsert') ? new Promise(() => {}) : pagedHandler([])(b))
+                }
+            });
+            const { service } = makeService(fake);
+            await service.getCatalog();
+            const loads = fake.ofTable('household_members').length;
+
+            const write = service.addTags(BOOK_1, HOUSEHOLD, ['cozy']).catch(e => e);
+            await jest.advanceTimersByTimeAsync(LIBRARY_WRITE_TIMEOUT_MS);
+            expect(await write).toBeInstanceOf(LibraryUnavailableError);
+
+            await service.getCatalog();
+            expect(fake.ofTable('household_members').length).toBe(loads + 1);
+        });
     });
 
     it('shares one load between concurrent callers', async () => {
