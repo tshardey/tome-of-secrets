@@ -1,6 +1,17 @@
 <!-- TAB 5: LIBRARY -->
 <div class="tab-panel" data-tab-panel="library" role="tabpanel">
 <div class="rpg-tab-content">
+    <!-- Plan 4 (D9): the one-time review of Unsorted books; LibraryTidyController fills it -->
+    <div class="rpg-panel rpg-library-tidy-panel" id="library-tidy-panel" hidden>
+        <div class="rpg-panel-header">
+            <h2 class="rpg-panel-title">🧹 Tidy your ToS library</h2>
+        </div>
+        <div class="rpg-panel-body">
+            <div id="library-tidy-body" class="library-tidy-body"></div>
+            <div id="library-tidy-message" class="library-tidy-message" role="status" aria-live="polite"></div>
+        </div>
+    </div>
+
     <div class="rpg-panel rpg-library-add-panel">
         <div class="rpg-panel-header">
             <h2 class="rpg-panel-title">📚 Add a Book</h2>
@@ -79,7 +90,7 @@
         <div class="rpg-panel-body">
             <div id="library-books-unsorted" class="library-books-section" style="display: none;">
                 <h3 class="library-section-title">Unsorted</h3>
-                <p class="library-section-note">Sort these once the tidy-up is available, or set a type from each book's ✏ button.</p>
+                <p class="library-section-note">Sort these in Tidy your ToS library above, or set a type from each book's ✏ button.</p>
                 <div id="library-cards-unsorted" class="library-cards-grid"></div>
             </div>
             <div id="library-books-audiobook" class="library-books-section">

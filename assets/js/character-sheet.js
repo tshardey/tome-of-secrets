@@ -45,6 +45,7 @@ import { LibraryController } from './controllers/LibraryController.js';
 import { CampaignsController } from './controllers/CampaignsController.js';
 import { ExternalCurriculumController } from './controllers/ExternalCurriculumController.js';
 import { FundController } from './controllers/FundController.js';
+import { LibraryTidyController } from './controllers/LibraryTidyController.js';
 import { getSupabaseClient } from './services/supabaseClient.js';
 import { startLibrarySync } from './services/ShelfBookService.js';
 
@@ -125,6 +126,7 @@ export async function initializeCharacterSheet() {
     const campaignsController = new CampaignsController(stateAdapter, form, dependencies);
     const externalCurriculumController = new ExternalCurriculumController(stateAdapter, form, dependencies);
     const fundController = new FundController(stateAdapter, form, dependencies);
+    const libraryTidyController = new LibraryTidyController(stateAdapter, form, dependencies);
 
     dependencies.onBookMarkedComplete = (result) => {
         (result.movedQuests || []).forEach((quest) => {
@@ -172,6 +174,8 @@ export async function initializeCharacterSheet() {
     campaignsController.initialize();
     externalCurriculumController.initialize();
     fundController.initialize();
+    // The tidy review (D9) asks the household library in the background; never awaited.
+    libraryTidyController.initialize().catch((error) => console.warn('[LibraryTidy] init failed:', error?.name || 'unknown'));
 
     // --- COLLAPSIBLE PANELS (Add Book, Active Temporary Buffs, Draw Quest Cards) ---
     initializeCollapsiblePanels();

@@ -1697,6 +1697,267 @@
     color: #b89f62;
 }
 
+/* Library tab: "Tidy your ToS library" (Plan 4, D9) */
+.rpg-library-tidy-panel[hidden],
+.library-tidy-banner[hidden] {
+    display: none;
+}
+
+.library-tidy-subtext,
+.library-tidy-simple-note {
+    margin: 0 0 12px 0;
+    color: #d4c8b0;
+    font-size: 0.95rem;
+}
+
+.library-tidy-simple-note {
+    color: #8a7a61;
+    font-style: italic;
+}
+
+.library-tidy-simple-note .rpg-btn {
+    margin-left: 8px;
+    font-size: 0.8rem;
+    padding: 3px 10px;
+    font-style: normal;
+}
+
+.library-tidy-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.library-tidy-row {
+    display: flex;
+    gap: 14px;
+    padding: 12px;
+    background: rgba(62, 53, 47, 0.6);
+    border: 1px solid #54483b;
+    border-radius: 8px;
+}
+
+.library-tidy-cover-wrap {
+    flex-shrink: 0;
+    width: 56px;
+    height: 84px;
+    background: rgba(84, 72, 59, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.library-tidy-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.library-tidy-cover-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8a7a61;
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.library-tidy-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.library-tidy-title {
+    font-family: 'Lora', serif;
+    color: #f5f0e6;
+    font-weight: 600;
+}
+
+.library-tidy-author {
+    color: #8a7a61;
+    font-size: 0.85rem;
+}
+
+.library-tidy-match,
+.library-tidy-candidate-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #d4c8b0;
+    cursor: pointer;
+}
+
+.library-tidy-candidates {
+    margin: 0;
+    padding: 6px 10px;
+    border: 1px solid rgba(184, 159, 98, 0.25);
+    border-radius: 6px;
+}
+
+.library-tidy-candidates legend {
+    padding: 0 4px;
+    color: #b89f62;
+    font-size: 0.85rem;
+}
+
+.library-tidy-outcome {
+    color: #b89f62;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.library-tidy-options,
+.library-tidy-more {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.library-tidy-row .rpg-btn {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+}
+
+.library-tidy-row .rpg-btn[aria-pressed="true"] {
+    background: linear-gradient(135deg, #b89f62 0%, #cca352 100%);
+    color: #2a231d;
+    border-color: #8b7355;
+}
+
+.library-tidy-protected-note {
+    color: #8a7a61;
+    font-size: 0.8rem;
+    font-style: italic;
+    cursor: help;
+}
+
+.library-tidy-search {
+    flex-basis: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.library-tidy-search-input {
+    padding: 6px 10px;
+    background-color: rgba(42, 35, 29, 0.8);
+    border: 1px solid #54483b;
+    border-radius: 4px;
+    color: #d4c8b0;
+}
+
+.library-tidy-search-results {
+    display: flex;
+    flex-direction: column;
+}
+
+.library-tidy-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.library-tidy-footer .rpg-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.library-tidy-message {
+    margin-top: 10px;
+    color: #d4c8b0;
+    font-size: 0.95rem;
+}
+
+.library-tidy-message:empty {
+    display: none;
+}
+
+.library-tidy-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, rgba(139, 115, 85, 0.25) 0%, rgba(84, 72, 59, 0.2) 100%);
+    border: 1px solid #b89f62;
+    border-radius: 8px;
+    color: #f5f0e6;
+    font-family: 'Lora', serif;
+}
+
+.library-tidy-banner-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.library-tidy-banner .rpg-btn {
+    font-size: 0.8rem;
+    padding: 4px 12px;
+}
+
+/* In-page confirm dialog (ui/confirmDialog.js, D10) */
+.tos-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.tos-confirm-dialog {
+    width: 100%;
+    max-width: 480px;
+    padding: 20px 24px;
+    background: #2a231d;
+    border: 2px solid #54483b;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    color: #d4c8b0;
+    outline: none;
+}
+
+.tos-confirm-title {
+    margin: 0 0 10px 0;
+    font-family: 'Lora', serif;
+    font-size: 1.2em;
+    color: #b89f62;
+}
+
+.tos-confirm-body {
+    margin: 0 0 18px 0;
+    line-height: 1.5;
+}
+
+.tos-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.tos-confirm-confirm {
+    background: linear-gradient(135deg, #7a3b2e 0%, #94483a 100%);
+    color: #f5f0e6;
+    border-color: #5e2c22;
+}
+
+.tos-confirm-confirm:hover {
+    background: linear-gradient(135deg, #94483a 0%, #a85646 100%);
+}
+
 .form-hint {
     margin-top: 6px;
     color: #8a7a61;
