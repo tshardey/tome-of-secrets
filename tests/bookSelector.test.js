@@ -652,6 +652,25 @@ describe('bookSelector with the household library', () => {
         });
     });
 
+    it('with more than 20 household matches, a shelf record beyond them stays pickable under Your books', () => {
+        const ids = Array.from({ length: 22 }, (_, i) => `00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`);
+        const books = ids.map((id, i) => libraryBook(id, { title: `Shelf Volume ${String(i).padStart(2, '0')}` }));
+        const catalog = fakeCatalog(readyCatalog(books));
+        const records = ids.map((id, i) => adapter.addBook({ title: `Shelf Volume ${String(i).padStart(2, '0')}`, type: 'shelf', libraryBookId: id }));
+        api = createBookSelector(container, adapter, { libraryCatalog: catalog });
+        const dropdown = open();
+
+        const shown = Array.from(group(dropdown, 'shelf').querySelectorAll('[data-library-book-id]'))
+            .map((el) => el.getAttribute('data-library-book-id'));
+        expect(shown).toHaveLength(20);
+        const yours = Array.from(group(dropdown, 'yours').querySelectorAll('[data-book-id]'))
+            .map((el) => el.getAttribute('data-book-id'));
+        // Every record is in exactly one group
+        const hidden = records.filter((r) => !shown.includes(r.libraryBookId)).map((r) => r.id);
+        expect(hidden).toHaveLength(2);
+        expect(yours.sort()).toEqual(hidden.sort());
+    });
+
     describe('quota', () => {
         it('disables a shelf result whose record holds its quota, and creates no record on open', () => {
             const catalog = fakeCatalog(readyCatalog([libraryBook(L1), libraryBook(L2, { title: 'Glass Orchard' })]));
@@ -738,6 +757,28 @@ describe('bookSelector with the household library', () => {
             expect(adapter.getBook(record.id).tags).toEqual(['legacy-unknown-id', 'epistolary']);
             // Not a shelf record: nothing goes to the library
             expect(syncShelfTags).not.toHaveBeenCalled();
+        });
+
+        it('a tag a refresh adds while the panel is open survives the save', async () => {
+            const catalog = fakeCatalog(readyCatalog([libraryBook(L1)]));
+            const lib = new Set(['fantasy']);
+            catalog.readBookTags.mockImplementation(async () => [...lib].sort());
+            catalog.addTags.mockImplementation(async (_id, _h, ids) => ids.forEach((t) => lib.add(t)));
+            catalog.removeTags.mockImplementation(async (_id, ids) => ids.forEach((t) => lib.delete(t)));
+            const record = adapter.addBook({ title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: ['fantasy'], libraryTagsBase: ['fantasy'] });
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog, selectedBookId: record.id, appendTo: 'container' });
+            buttonByText(container, 'Tags & series').click();
+            // A refresh merges cozy from the library while the panel is open
+            lib.add('cozy');
+            adapter.updateBook(record.id, { tags: ['fantasy', 'cozy'], libraryTagsBase: ['fantasy', 'cozy'] });
+
+            container.querySelector('.book-selector-tags-panel input[value="epistolary"]').checked = true;
+            buttonByText(container.querySelector('.book-selector-tags-panel'), 'Save').click();
+            await flush();
+
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy', 'cozy', 'epistolary']);
+            expect([...lib].sort()).toEqual(['cozy', 'epistolary', 'fantasy']);
+            expect(catalog.removeTags).not.toHaveBeenCalled();
         });
 
         it('is hidden without the catalogue unless asked for', () => {

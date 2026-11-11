@@ -20,7 +20,7 @@ import {
     unlinkFromLibrary,
     isLibraryMissing
 } from '../services/ShelfBookService.js';
-import { renderTagPicker, readTagPicker } from '../utils/tagPicker.js';
+import { renderTagPicker, readTagPicker, applyTagPickerChanges } from '../utils/tagPicker.js';
 import { allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
@@ -663,7 +663,10 @@ export class LibraryController extends BaseController {
             searchResultsEl.innerHTML = '';
         }
 
-        renderTagPicker(document.getElementById('book-edit-tags'), book.tags || [], this._getApplicableTagIds());
+        const tagPickerEl = document.getElementById('book-edit-tags');
+        renderTagPicker(tagPickerEl, book.tags || [], this._getApplicableTagIds());
+        // Save applies a diff against this, so a tag a refresh adds while open survives
+        this._editTagsOpened = readTagPicker(tagPickerEl);
 
         // Series (campaign) selector: tag this book to a series
         const seriesSelect = document.getElementById('book-edit-series');
@@ -758,7 +761,14 @@ export class LibraryController extends BaseController {
             }
         }
 
-        const tags = readTagPicker(document.getElementById('book-edit-tags'));
+        // A diff against the picker's opening state, applied to the record's current tags: a tag
+        // a library refresh merged in while the drawer was open is kept (D4, D12), and so are
+        // ids the picker does not offer.
+        const tags = applyTagPickerChanges(
+            this.stateAdapter.getBook(bookId)?.tags || [],
+            this._editTagsOpened || [],
+            readTagPicker(document.getElementById('book-edit-tags'))
+        );
         const unlinking = this._isUnlinkSelected();
 
         const updates = {

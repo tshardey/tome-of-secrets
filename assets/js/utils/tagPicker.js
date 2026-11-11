@@ -97,6 +97,26 @@ export function renderTagPicker(container, selectedTags = [], applicableTags = n
 }
 
 /**
+ * Apply a picker save as a diff against the picker's opening state (D4, D12). A tag that
+ * reached the record while the picker was open (a library refresh) is neither in the opening
+ * state nor unchecked by the player, so it survives; ids the picker does not offer stay too.
+ * @param {string[]} currentTags - the record's tags now
+ * @param {string[]} openedTags - readTagPicker() right after the picker was rendered
+ * @param {string[]} pickedTags - readTagPicker() at save
+ * @returns {string[]}
+ */
+export function applyTagPickerChanges(currentTags, openedTags, pickedTags) {
+    const opened = new Set(Array.isArray(openedTags) ? openedTags : []);
+    const picked = new Set(Array.isArray(pickedTags) ? pickedTags : []);
+    const removed = new Set([...opened].filter((id) => !picked.has(id)));
+    const next = (Array.isArray(currentTags) ? currentTags : []).filter((id) => !removed.has(id));
+    for (const id of picked) {
+        if (!opened.has(id) && !next.includes(id)) next.push(id);
+    }
+    return next;
+}
+
+/**
  * The checked tag ids.
  * @param {HTMLElement} container
  * @returns {string[]}

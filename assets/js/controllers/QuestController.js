@@ -189,7 +189,7 @@ export class QuestController extends BaseController {
             });
         }
 
-        // Add-quest form: book selector (library only; API search is in Library tab)
+        // Add-quest form: book selector (On our shelf, your books, and Search online; D7)
         const newQuestBookIdInput = document.getElementById('new-quest-book-id');
         const newQuestBookSelectorContainer = document.getElementById('new-quest-book-selector-container');
         if (newQuestBookIdInput && newQuestBookSelectorContainer && stateAdapter.getBooks) {

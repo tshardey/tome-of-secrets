@@ -124,6 +124,8 @@ function createFakeLibrary() {
     async readBookTags(id) {
       calls.readBookTags += 1;
       fake.fail();
+      // As the real read: null when the book row is gone (its tags went with it).
+      if (!books.has(id)) return null;
       return sorted(tags.get(id));
     },
     async addTags(id, householdId, tagIds) {
@@ -434,6 +436,22 @@ describe('deleted library book (Review Focus 4)', () => {
     expect(lib.calls.removeTags).toHaveLength(0);
     expect(setStateKey).not.toHaveBeenCalled();
   });
+
+  it('a write-through on a deleted library book keeps the shared tags and pushes nothing', async () => {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, tags: [F] });
+    const a = newAdapter();
+    const rec = addShelf(a, L, { tags: [F], libraryTagsBase: [F] });
+    lib.deleteBook(L);
+    // The player adds cozy after the library book was deleted
+    a.updateBook(rec.id, { tags: [F, C] });
+
+    expect(await syncShelfTags(a, rec.id, lib)).toBe('pending');
+    expect(a.getBook(rec.id).tags).toEqual([F, C]);
+    expect(a.getBook(rec.id).libraryTagsBase).toEqual([F]);
+    expect(lib.calls.addTags).toHaveLength(0);
+    expect(lib.calls.removeTags).toHaveLength(0);
+  });
 });
 
 describe('left the household (Review Focus 5)', () => {
@@ -495,18 +513,25 @@ describe('household id for a write (fix round 1)', () => {
       auth: { getSession: async () => ({ data: { session: { user: { id: userId } } }, error: null }) },
       schema: () => ({
         from: (table) => {
-          const query = { table, upsert: null };
+          const query = { table, upsert: null, select: '' };
           const builder = {};
-          for (const m of ['select', 'eq', 'order', 'limit', 'range', 'in', 'delete', 'update', 'is']) {
+          for (const m of ['eq', 'order', 'limit', 'range', 'in', 'delete', 'update', 'is']) {
             builder[m] = () => builder;
           }
+          builder.select = (columns) => {
+            query.select = String(columns);
+            return builder;
+          };
           builder.upsert = (rows) => {
             query.upsert = rows;
             return builder;
           };
           builder.then = (resolve) => {
             if (query.upsert) upserts.push(...query.upsert);
-            const data = table === 'household_members' ? [{ household_id: households[userId] }] : [];
+            let data = [];
+            if (table === 'household_members') data = [{ household_id: households[userId] }];
+            // The write-through's tag read: the book exists, with no tags yet.
+            else if (table === 'books' && query.select.includes('book_tags(')) data = [{ id: L, book_tags: [] }];
             return resolve({ data, error: null });
           };
           return builder;

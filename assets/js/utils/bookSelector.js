@@ -18,7 +18,7 @@
 
 import { escapeHtml } from './sanitize.js';
 import { BOOK_TYPE_LABELS, PICKABLE_TYPES } from './bookTypes.js';
-import { renderTagPicker, readTagPicker, pickerTagIds } from './tagPicker.js';
+import { renderTagPicker, readTagPicker, applyTagPickerChanges } from './tagPicker.js';
 import {
     ensureShelfRecord,
     findShelfRecord,
@@ -211,14 +211,19 @@ export function createBookSelector(container, stateAdapter, options = {}) {
 
     // --- group 1: On our shelf ---------------------------------------------------------
 
+    /** The shelf results the group lists right now: none while loading or unavailable. */
+    function shelfMatches(catalog, query) {
+        if (!libraryCatalog || !catalog || view.retrying || catalog.status !== 'ready') return [];
+        return searchShelf(catalog, query);
+    }
+
     /** '' when the group is hidden (signed out, no household). */
-    function renderShelfGroup(catalog, query) {
+    function renderShelfGroup(catalog, query, matches) {
         const heading = 'On our shelf';
         if (!catalog || view.retrying) {
             return groupHtml('shelf', heading, '<p class="book-selector-empty book-selector-shelf-loading">Checking the household library…</p>');
         }
         if (catalog.status === 'ready') {
-            const matches = searchShelf(catalog, query);
             if (matches.length === 0) {
                 const message = query ? 'No household books match your search.' : 'No books on our shelf yet.';
                 return groupHtml('shelf', heading, `<p class="book-selector-empty">${escapeHtml(message)}</p>`);
@@ -249,12 +254,11 @@ export function createBookSelector(container, stateAdapter, options = {}) {
 
     // --- group 2: Your books -----------------------------------------------------------
 
-    function renderOwnGroup(catalog, query, grouped) {
-        let books = getBooksList();
-        if (catalog && catalog.status === 'ready' && Array.isArray(catalog.books)) {
-            const onShelf = new Set(catalog.books.map((libraryBook) => libraryBook.id));
-            books = books.filter((book) => !(isShelfRecord(book) && onShelf.has(book.libraryBookId)));
-        }
+    function renderOwnGroup(catalog, query, grouped, matches) {
+        // Leave out only the shelf records whose library book group 1 lists right now, so a
+        // record beyond the 20 shown (or while the library loads) is still pickable here.
+        const listed = new Set(matches.map((libraryBook) => libraryBook.id));
+        const books = getBooksList().filter((book) => !(isShelfRecord(book) && listed.has(book.libraryBookId)));
         const filtered = filterBooksBySearch(books, query);
         let body;
         if (filtered.length === 0) {
@@ -329,10 +333,11 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         if (!listEl) return;
         const query = view.query;
         const catalog = peekCatalog();
-        const shelfHtml = libraryCatalog ? renderShelfGroup(catalog, query) : '';
+        const matches = shelfMatches(catalog, query);
+        const shelfHtml = libraryCatalog ? renderShelfGroup(catalog, query, matches) : '';
         const showOnline = Boolean(onlineSearch) && (Boolean(query) || view.online.phase === 'type');
         const grouped = shelfHtml !== '' || showOnline;
-        listEl.innerHTML = shelfHtml + renderOwnGroup(catalog, query, grouped) + (showOnline ? renderOnlineGroup(query) : '');
+        listEl.innerHTML = shelfHtml + renderOwnGroup(catalog, query, grouped, matches) + (showOnline ? renderOnlineGroup(query) : '');
     }
 
     /** Ask the catalogue for a current answer; the list re-renders when it lands. Never awaited. */
@@ -558,6 +563,8 @@ export function createBookSelector(container, stateAdapter, options = {}) {
             console.warn('[BookSelector] applicable tags unavailable:', errorCode(error));
         }
         renderTagPicker(pickerEl, book.tags || [], applicable);
+        // Save applies a diff against this opening state (D4, D12)
+        const openedTags = readTagPicker(pickerEl);
         panel.appendChild(pickerEl);
 
         let seriesSelect = null;
@@ -589,7 +596,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         save.type = 'button';
         save.className = 'rpg-btn rpg-btn-primary book-selector-tags-save';
         save.textContent = 'Save';
-        save.addEventListener('click', () => saveTagsPanel(book.id, pickerEl, seriesSelect));
+        save.addEventListener('click', () => saveTagsPanel(book.id, pickerEl, openedTags, seriesSelect));
         const cancel = document.createElement('button');
         cancel.type = 'button';
         cancel.className = 'rpg-btn rpg-btn-secondary book-selector-tags-cancel';
@@ -604,14 +611,14 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         return panel;
     }
 
-    function saveTagsPanel(bookId, pickerEl, seriesSelect) {
+    function saveTagsPanel(bookId, pickerEl, openedTags, seriesSelect) {
         const book = stateAdapter.getBook ? stateAdapter.getBook(bookId) : null;
         if (!book) return;
-        // Ids the picker does not offer (unknown legacy ids) stay on the record
-        const offered = new Set(pickerTagIds());
-        const kept = (book.tags || []).filter((id) => !offered.has(id));
-        const picked = readTagPicker(pickerEl).filter((id) => !kept.includes(id));
-        stateAdapter.updateBook(bookId, { tags: [...kept, ...picked] });
+        // Only what the player changed is applied to the record's current tags: a tag a library
+        // refresh merged in while the panel was open survives, and so do ids the picker does
+        // not offer (unknown legacy ids).
+        const tags = applyTagPickerChanges(book.tags || [], openedTags, readTagPicker(pickerEl));
+        stateAdapter.updateBook(bookId, { tags });
 
         let joinedSeries = false;
         if (seriesSelect) {

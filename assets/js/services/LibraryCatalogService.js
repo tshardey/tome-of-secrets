@@ -366,8 +366,9 @@ export class LibraryCatalogService {
   }
 
   /**
-   * The shared tags of one library book.
-   * @returns {Promise<string[]>}
+   * The shared tags of one library book, read through the book row so a deleted book (whose
+   * tags the FK cascade removed) is told apart from a book with no tags.
+   * @returns {Promise<string[]|null>} the tag ids (sorted), or null when the book is gone
    * @throws {LibraryUnavailableError}
    */
   async readBookTags(libraryBookId) {
@@ -375,12 +376,15 @@ export class LibraryCatalogService {
       return await this._withTimeout((async () => {
         const library = await this._library();
         const { data, error } = await library
-          .from('book_tags')
-          .select('tag_id')
-          .eq('book_id', libraryBookId)
-          .order('tag_id');
+          .from('books')
+          .select('id, book_tags(tag_id)')
+          .eq('id', libraryBookId)
+          .limit(1);
         if (error) throw error;
-        return (data || []).map(row => row.tag_id);
+        const row = Array.isArray(data) ? data[0] : null;
+        if (!row) return null;
+        const tags = Array.isArray(row.book_tags) ? row.book_tags : [];
+        return tags.map(t => t && t.tag_id).filter(id => typeof id === 'string').sort();
       })(), LIBRARY_TIMEOUT_MS);
     } catch (error) {
       console.warn('[LibraryCatalog] tag read failed:', logCode(error));

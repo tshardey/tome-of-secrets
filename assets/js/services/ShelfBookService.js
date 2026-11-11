@@ -244,6 +244,8 @@ export async function syncShelfTags(stateAdapter, bookId, service = libraryCatal
             console.warn('[ShelfBook] tag read failed:', logCode(error));
             return 'pending';
         }
+        // The library book is gone: its tags stay local and nothing is pushed (D6, Review Focus 4).
+        if (libraryTags === null || libraryTags === undefined) return 'pending';
         const outcome = await mergeAndPush(stateAdapter, book, libraryTags, householdId, service);
         if (!outcome) return 'pending';
         if (outcome.interrupted) {

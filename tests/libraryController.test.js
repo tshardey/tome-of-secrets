@@ -909,6 +909,78 @@ describe('LibraryController and the household library', () => {
         selector.destroy();
     });
 
+    describe('drawer tag saves (PR review fixes)', () => {
+        /** The library's tags per book; a book missing from the map is deleted (null). */
+        function libraryTags(map) {
+            catalog.readBookTags.mockImplementation(async (id) => (map.has(id) ? [...map.get(id)].sort() : null));
+            catalog.addTags.mockImplementation(async (id, _h, ids) => { ids.forEach((t) => map.get(id).add(t)); });
+            catalog.removeTags.mockImplementation(async (id, ids) => { ids.forEach((t) => map.get(id).delete(t)); });
+        }
+
+        it('a drawer save on a missing library book keeps its shared tags and pushes nothing', async () => {
+            libraryTags(new Map());
+            const record = adapter.addBook({
+                title: 'The Salt Road', type: 'shelf', libraryBookId: L9, tags: ['fantasy'], libraryTagsBase: ['fantasy']
+            });
+            const controller = start();
+            controller.handleEditBook(record.id);
+            document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+            document.getElementById('save-book-edit-btn').click();
+            await flush();
+
+            expect(syncShelfTags).toHaveBeenCalled();
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy', 'epistolary']);
+            expect(adapter.getBook(record.id).libraryTagsBase).toEqual(['fantasy']);
+            expect(catalog.addTags).not.toHaveBeenCalled();
+            expect(catalog.removeTags).not.toHaveBeenCalled();
+        });
+
+        it('a tag a refresh adds while the drawer is open survives the save, locally and in the library', async () => {
+            const lib = new Map([[L1, new Set(['fantasy'])]]);
+            libraryTags(lib);
+            const record = adapter.addBook({
+                title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: ['fantasy'], libraryTagsBase: ['fantasy']
+            });
+            const controller = start();
+            controller.handleEditBook(record.id);
+            // Another player tags it cozy; a refresh merges that in while the drawer is open
+            lib.get(L1).add('cozy');
+            adapter.updateBook(record.id, { tags: ['fantasy', 'cozy'], libraryTagsBase: ['fantasy', 'cozy'] });
+
+            document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+            document.getElementById('save-book-edit-btn').click();
+            await flush();
+
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy', 'cozy', 'epistolary']);
+            expect([...lib.get(L1)].sort()).toEqual(['cozy', 'epistolary', 'fantasy']);
+            expect(catalog.removeTags).not.toHaveBeenCalled();
+        });
+
+        it('an unchecked tag is still removed', async () => {
+            const lib = new Map([[L1, new Set(['fantasy', 'cozy'])]]);
+            libraryTags(lib);
+            const record = adapter.addBook({
+                title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: ['fantasy', 'cozy'], libraryTagsBase: ['fantasy', 'cozy']
+            });
+            const controller = start();
+            controller.handleEditBook(record.id);
+            document.querySelector('#book-edit-tags input[value="cozy"]').checked = false;
+            document.getElementById('save-book-edit-btn').click();
+            await flush();
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy']);
+            expect([...lib.get(L1)]).toEqual(['fantasy']);
+        });
+
+        it('keeps tag ids the picker does not offer', () => {
+            const own = adapter.addBook({ title: 'Glass Orchard', type: 'ebook', tags: ['legacy-unknown-id', 'fantasy'] });
+            const controller = start();
+            controller.handleEditBook(own.id);
+            document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+            document.getElementById('save-book-edit-btn').click();
+            expect(adapter.getBook(own.id).tags).toEqual(['legacy-unknown-id', 'fantasy', 'epistolary']);
+        });
+    });
+
     it('re-renders the cards when the catalogue loads', () => {
         let listener = null;
         catalog.subscribe.mockImplementation((fn) => { listener = fn; return () => {}; });

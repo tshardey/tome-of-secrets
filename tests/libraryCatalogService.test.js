@@ -697,16 +697,26 @@ describe('LibraryCatalogService writes', () => {
             expect(q.call('in')).toEqual(['in', 'tag_id', ['cozy']]);
         });
 
-        it('readBookTags returns the tag ids of one book', async () => {
-            const fake = makeFakeClient({ handlers: { book_tags: () => ({ data: [{ tag_id: 'cozy' }, { tag_id: 'reread' }], error: null }) } });
+        it('readBookTags returns the tag ids of one book, read through its book row', async () => {
+            const fake = makeFakeClient({ handlers: {
+                books: () => ({ data: [{ id: BOOK_1, book_tags: [{ tag_id: 'reread' }, { tag_id: 'cozy' }] }], error: null })
+            } });
             const { service } = makeService(fake);
             await expect(service.readBookTags(BOOK_1)).resolves.toEqual(['cozy', 'reread']);
-            const [q] = fake.ofTable('book_tags');
-            expect(q.call('eq')).toEqual(['eq', 'book_id', BOOK_1]);
+            const [q] = fake.ofTable('books');
+            expect(q.call('select')).toEqual(['select', 'id, book_tags(tag_id)']);
+            expect(q.call('eq')).toEqual(['eq', 'id', BOOK_1]);
+        });
+
+        it('readBookTags gives [] for a book with no tags and null for a deleted book', async () => {
+            const tagless = makeFakeClient({ handlers: { books: () => ({ data: [{ id: BOOK_1, book_tags: [] }], error: null }) } });
+            await expect(makeService(tagless).service.readBookTags(BOOK_1)).resolves.toEqual([]);
+            const gone = makeFakeClient({ handlers: { books: () => ({ data: [], error: null }) } });
+            await expect(makeService(gone).service.readBookTags(BOOK_1)).resolves.toBeNull();
         });
 
         it('readBookTags throws LibraryUnavailableError on an error', async () => {
-            const fake = makeFakeClient({ handlers: { book_tags: () => ({ data: null, error: { message: 'NetworkError when attempting to fetch resource.' } }) } });
+            const fake = makeFakeClient({ handlers: { books: () => ({ data: null, error: { message: 'NetworkError when attempting to fetch resource.' } }) } });
             const { service } = makeService(fake);
             await expect(service.readBookTags(BOOK_1)).rejects.toEqual(expect.objectContaining({ reason: 'network' }));
         });
