@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(32);
+select plan(35);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -150,6 +150,19 @@ select throws_ok(
 select throws_ok(
   $$ update library.books set series_volume = 10000 where id = 'aaaaaaaa-0000-0000-0000-000000000001' $$,
   '22003', null, 'A: a volume of 10000 is rejected (numeric(6,2) overflows before the check)'
+);
+
+select lives_ok(
+  $$ update library.books set series_name = repeat('x', 200) where id = 'aaaaaaaa-0000-0000-0000-000000000001' $$,
+  'A: a 200-character series name is accepted'
+);
+select lives_ok(
+  $$ update library.books set series_volume = 0 where id = 'aaaaaaaa-0000-0000-0000-000000000001' $$,
+  'A: volume 0 is accepted'
+);
+select lives_ok(
+  $$ update library.books set series_volume = 9999.99 where id = 'aaaaaaaa-0000-0000-0000-000000000001' $$,
+  'A: volume 9999.99 is accepted'
 );
 
 update library.books set series_name = 'First', series_volume = 2.5

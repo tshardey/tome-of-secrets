@@ -12,6 +12,7 @@ alter table library.books add constraint books_series_name_check
   check (series_name is null
          or (series_name = btrim(series_name) and char_length(series_name) between 1 and 200));
 
+-- Belt and braces: numeric(6,2) already caps series_volume below 10000.
 alter table library.books drop constraint if exists books_series_volume_check;
 alter table library.books add constraint books_series_volume_check
   check (series_volume is null or (series_volume >= 0 and series_volume < 10000));

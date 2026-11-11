@@ -28,12 +28,17 @@ import { migrateState } from '../assets/js/character-sheet/dataMigrator.js';
 import { characterState, loadState, saveState, resetStateLoadedForTests } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { applySnapshot, schemaGate, snapshotHash, syncAuto, syncNow } from '../assets/js/services/cloudSync.js';
-import { initializeSchemaChangeBanner } from '../assets/js/character-sheet.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { initializeSchemaChangeBanner } from '../assets/js/components/schemaReloadBanner.js';
 
 const VERSION_KEY = 'tomeOfSecrets_schemaVersion';
 const NEWER = SCHEMA_VERSION + 1;
 const OLDER = SCHEMA_VERSION - 1;
 const BLOCKED_HINT = 'This save was made by a newer Tome of Secrets. Reload to update; cloud sync is paused until then.';
+const SAVE_CHANGED_HINT = 'Your save changed in another tab. Reload this tab; cloud sync is paused until then.';
+const NEWER_BANNER = 'Tome of Secrets was updated in another tab. Reload this tab to keep playing.';
+const SAME_BUILD_BANNER = 'Your save changed in another tab. Reload this tab to keep playing.';
 
 function storedVersion() {
     return localStorage.getItem(VERSION_KEY);
@@ -268,18 +273,42 @@ describe('write gate: direct save writes from a stale tab', () => {
 });
 
 describe('reload banner', () => {
-    test('a schema-version storage event shows an unclosable reload banner', () => {
-        document.body.innerHTML = '';
-        initializeSchemaChangeBanner();
-
-        window.dispatchEvent(new StorageEvent('storage', { key: VERSION_KEY, newValue: String(NEWER) }));
-
+    function expectUnclosableBanner(text) {
         const banner = document.getElementById('tos-schema-reload-banner');
         expect(banner).not.toBeNull();
-        expect(banner.textContent).toContain('Tome of Secrets was updated in another tab. Reload this tab to keep playing.');
+        expect(banner.classList.contains('schema-reload-banner')).toBe(true);
+        expect(banner.getAttribute('style')).toBeNull();
+        expect(banner.textContent).toContain(text);
         const buttons = banner.querySelectorAll('button');
         expect(buttons).toHaveLength(1);
         expect(buttons[0].textContent).toBe('Reload');
+    }
+
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        initializeSchemaChangeBanner();
+    });
+
+    test('a storage event moving the save to a newer schema shows the newer-build banner', () => {
+        localStorage.setItem(VERSION_KEY, String(NEWER));
+        window.dispatchEvent(new StorageEvent('storage', { key: VERSION_KEY, newValue: String(NEWER) }));
+        expectUnclosableBanner(NEWER_BANNER);
+    });
+
+    test('a refused write on a page with no character sheet shows the same-build banner', () => {
+        expect(document.getElementById('character-sheet')).toBeNull();
+        localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+        window.dispatchEvent(new CustomEvent('tos:schemaChangedElsewhere'));
+        expectUnclosableBanner(SAME_BUILD_BANNER);
+    });
+
+    test('main.js installs the banner on every page, before any other initializer', () => {
+        const main = fs.readFileSync(path.resolve(process.cwd(), '..', 'assets', 'js', 'main.js'), 'utf8');
+        const install = main.indexOf('initializeSchemaChangeBanner();');
+        expect(install).toBeGreaterThan(-1);
+        for (const other of ['initializeTabs();', 'initializeCloudAuth()', 'initializeCharacterSheet()', 'initializeStatusWidget()']) {
+            expect(main.indexOf(other)).toBeGreaterThan(install);
+        }
     });
 });
 
@@ -372,8 +401,64 @@ describe('sync is blocked across schemas', () => {
 
         const result = await syncAuto(supabase);
 
-        expect(result.action).toBe('blocked');
+        expect(result).toEqual({ action: 'blocked', detail: SAVE_CHANGED_HINT });
         expect(supabase.upsert).not.toHaveBeenCalled();
+        expect(setStateKey).not.toHaveBeenCalled();
+    });
+
+    describe('another tab migrates while a manual-sync prompt is open', () => {
+        function migrateElsewhereDuringPrompt(answer) {
+            window.confirm = jest.fn(() => {
+                localStorage.setItem(VERSION_KEY, String(NEWER));
+                return answer;
+            });
+        }
+
+        test.each([
+            ['first sync, Cancel (push)', false, null],
+            ['first sync, OK (pull)', true, null],
+            ['conflict, Cancel (push)', false, 'stale-hash'],
+            ['conflict, OK (pull)', true, 'stale-hash']
+        ])('%s is blocked with nothing written', async (_label, answer, lastHash) => {
+            localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+            rememberLoadedSchemaVersion();
+            if (lastHash) localStorage.setItem('tos_cloud_lastSyncedHash', lastHash);
+            const supabase = createMockSupabase(makeSnapshot(SCHEMA_VERSION, 'Member B'));
+            migrateElsewhereDuringPrompt(answer);
+
+            const result = await syncNow(supabase);
+
+            expect(window.confirm).toHaveBeenCalledTimes(1);
+            expect(result).toEqual({ action: 'blocked', detail: BLOCKED_HINT });
+            expect(supabase.upsert).not.toHaveBeenCalled();
+            expect(setStateKey).not.toHaveBeenCalled();
+            expect(safeSetJSON).not.toHaveBeenCalled();
+            expect(storedVersion()).toBe(String(NEWER));
+        });
+
+        test('a same-build change during the prompt is blocked with the neutral hint', async () => {
+            localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+            rememberLoadedSchemaVersion();
+            const supabase = createMockSupabase(makeSnapshot(SCHEMA_VERSION, 'Member B'));
+            window.confirm = jest.fn(() => {
+                localStorage.removeItem(VERSION_KEY);
+                return false;
+            });
+
+            const result = await syncNow(supabase);
+
+            expect(result).toEqual({ action: 'blocked', detail: SAVE_CHANGED_HINT });
+            expect(supabase.upsert).not.toHaveBeenCalled();
+        });
+    });
+
+    test('applySnapshot refuses, writing nothing, when the write gate is closed', async () => {
+        rememberLoadedSchemaVersion();
+        localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+        expect(isSchemaWriteSafe()).toBe(false);
+
+        await expect(applySnapshot(makeSnapshot(OLDER))).rejects.toThrow('newer_schema');
+        expect(safeSetJSON).not.toHaveBeenCalled();
         expect(setStateKey).not.toHaveBeenCalled();
     });
 

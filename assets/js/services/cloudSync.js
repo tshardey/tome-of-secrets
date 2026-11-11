@@ -111,6 +111,7 @@ export async function buildLocalSnapshot() {
 }
 
 const SCHEMA_BLOCKED_HINT = 'This save was made by a newer Tome of Secrets. Reload to update; cloud sync is paused until then.';
+const SAVE_CHANGED_HINT = 'Your save changed in another tab. Reload this tab; cloud sync is paused until then.';
 
 /**
  * Compare the local and cloud save versions with this build's schema.
@@ -122,6 +123,22 @@ export function schemaGate(localVersion, remoteVersion) {
   if (Number.isInteger(localVersion) && localVersion > SCHEMA_VERSION) return 'local-newer';
   if (Number.isInteger(remoteVersion) && remoteVersion > SCHEMA_VERSION) return 'remote-newer';
   return 'ok';
+}
+
+/**
+ * The sync result when the schema gate or this tab's write gate is closed, else null.
+ * Reads the local version from storage at call time, so it can be rechecked after a prompt.
+ * @param {number|null} remoteVersion
+ * @returns {{action: 'blocked', detail: string}|null}
+ */
+function schemaBlock(remoteVersion) {
+  if (schemaGate(getStoredSchemaVersion(), remoteVersion) !== 'ok') {
+    return { action: 'blocked', detail: SCHEMA_BLOCKED_HINT };
+  }
+  if (!isSchemaWriteSafe()) {
+    return { action: 'blocked', detail: SAVE_CHANGED_HINT };
+  }
+  return null;
 }
 
 export function snapshotHash(snapshot) {
@@ -165,8 +182,8 @@ export async function applySnapshot(snapshot) {
   const snapshotVersion = Number.isInteger(snapshot.version) ? snapshot.version : null;
 
   // Second guard behind the sync gate: never apply a save this build cannot read, nor
-  // overwrite a local save from a newer build.
-  if (schemaGate(getStoredSchemaVersion(), snapshotVersion) !== 'ok') {
+  // overwrite a local save from a newer build or one another tab changed under this tab.
+  if (schemaGate(getStoredSchemaVersion(), snapshotVersion) !== 'ok' || !isSchemaWriteSafe()) {
     throw new Error('newer_schema');
   }
 
@@ -346,9 +363,8 @@ async function syncNowWithOptions(supabase, { mode }) {
   // Forward compatibility: never push over, or pull from, a save made by a newer build, and
   // never sync from a tab whose save changed under it. Checked before any write or prompt.
   const remoteVersion = remoteSnapshot && Number.isInteger(remoteSnapshot.version) ? remoteSnapshot.version : null;
-  if (schemaGate(schemaVersion, remoteVersion) !== 'ok' || !isSchemaWriteSafe()) {
-    return { action: 'blocked', detail: SCHEMA_BLOCKED_HINT };
-  }
+  const blockedBeforeSync = schemaBlock(remoteVersion);
+  if (blockedBeforeSync) return blockedBeforeSync;
 
   // No remote save yet
   if (!remoteSnapshot) {
@@ -380,6 +396,10 @@ async function syncNowWithOptions(supabase, { mode }) {
       'Click OK to REPLACE local data with the cloud save.\n' +
       'Click Cancel to UPLOAD local data and overwrite the cloud save.'
     );
+
+    // Another tab may have migrated or saved while the dialog was open.
+    const blockedAfterPrompt = schemaBlock(remoteVersion);
+    if (blockedAfterPrompt) return blockedAfterPrompt;
 
     if (useRemote) {
       await applySnapshot(remoteSnapshot);
@@ -426,6 +446,10 @@ async function syncNowWithOptions(supabase, { mode }) {
     'Click OK to KEEP the cloud save (replace local).\n' +
     'Click Cancel to KEEP local data (overwrite cloud).'
   );
+
+  // Another tab may have migrated or saved while the dialog was open.
+  const blockedAfterPrompt = schemaBlock(remoteVersion);
+  if (blockedAfterPrompt) return blockedAfterPrompt;
 
   if (useRemote) {
     await applySnapshot(remoteSnapshot);
