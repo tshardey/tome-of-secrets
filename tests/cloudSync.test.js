@@ -1,12 +1,18 @@
 /**
  * @jest-environment jsdom
  */
-import { applySnapshot, buildLocalSnapshot } from '../assets/js/services/cloudSync.js';
+import {
+    applySnapshot,
+    buildLocalSnapshot,
+    snapshotHash,
+    checkReadyForDeliberateChange,
+    pushDeliberateChange
+} from '../assets/js/services/cloudSync.js';
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 import { safeGetJSON, safeSetJSON } from '../assets/js/utils/storage.js';
 import { getStateKey } from '../assets/js/character-sheet/persistence.js';
 import { characterState } from '../assets/js/character-sheet/state.js';
-import { SCHEMA_VERSION, resetSchemaWriteGateForTests } from '../assets/js/character-sheet/dataValidator.js';
+import { SCHEMA_VERSION, resetSchemaWriteGateForTests, isSchemaWriteSafe } from '../assets/js/character-sheet/dataValidator.js';
 
 describe('Cloud Sync - Loop Prevention', () => {
     beforeEach(() => {
@@ -345,3 +351,112 @@ describe('Cloud Sync - Loop Prevention', () => {
     });
 });
 
+
+describe('Cloud Sync - deliberate change (Plan 4, D10)', () => {
+    const LAST_HASH_KEY = 'tos_cloud_lastSyncedHash';
+    const REMOTE = {
+        version: SCHEMA_VERSION,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        data: { formData: { keeperName: 'Member A' }, characterState: {}, monthlyCompletedBooks: [] }
+    };
+
+    /** remote: a snapshot, null (no row), or an Error the read rejects with. */
+    function makeSupabase(remote) {
+        const upserts = [];
+        const events = [];
+        const client = {
+            auth: {
+                getSession: jest.fn(async () => ({ data: { session: { user: { id: 'user-1' } } }, error: null }))
+            },
+            from: jest.fn((table) => {
+                if (table === 'tos_sync_events') {
+                    return { insert: jest.fn(async (row) => { events.push(row); return { error: null }; }) };
+                }
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            maybeSingle: async () => {
+                                if (remote instanceof Error) throw remote;
+                                return { data: remote ? { data: remote, updated_at: 'x' } : null, error: null };
+                            }
+                        })
+                    }),
+                    upsert: jest.fn(async (row) => { upserts.push(row); return { error: null }; })
+                };
+            })
+        };
+        return { client, upserts, events };
+    }
+
+    beforeEach(() => {
+        localStorage.clear();
+        resetSchemaWriteGateForTests();
+        localStorage.setItem('tomeOfSecrets_schemaVersion', String(SCHEMA_VERSION));
+    });
+
+    describe('checkReadyForDeliberateChange', () => {
+        it('is ok when the remote hash equals lastSyncedHash', async () => {
+            localStorage.setItem(LAST_HASH_KEY, snapshotHash(REMOTE));
+            await expect(checkReadyForDeliberateChange(makeSupabase(REMOTE).client)).resolves.toEqual({ ok: true });
+        });
+
+        it('is ok with no remote row and no lastSyncedHash', async () => {
+            await expect(checkReadyForDeliberateChange(makeSupabase(null).client)).resolves.toEqual({ ok: true });
+        });
+
+        it('is unsynced when the remote changed since the last sync', async () => {
+            localStorage.setItem(LAST_HASH_KEY, 'an-older-hash');
+            await expect(checkReadyForDeliberateChange(makeSupabase(REMOTE).client))
+                .resolves.toEqual({ ok: false, reason: 'unsynced' });
+        });
+
+        it('is offline when the cloud read fails with a network error', async () => {
+            localStorage.setItem(LAST_HASH_KEY, snapshotHash(REMOTE));
+            await expect(checkReadyForDeliberateChange(makeSupabase(new TypeError('Failed to fetch')).client))
+                .resolves.toEqual({ ok: false, reason: 'offline' });
+        });
+
+        it('is newer-schema for a newer remote version', async () => {
+            const newer = { ...REMOTE, version: SCHEMA_VERSION + 1 };
+            localStorage.setItem(LAST_HASH_KEY, snapshotHash(newer));
+            await expect(checkReadyForDeliberateChange(makeSupabase(newer).client))
+                .resolves.toEqual({ ok: false, reason: 'newer-schema' });
+        });
+
+        it('is newer-schema when this tab\'s write gate is closed', async () => {
+            localStorage.setItem(LAST_HASH_KEY, snapshotHash(REMOTE));
+            expect(isSchemaWriteSafe()).toBe(true);
+            // Another tab rewrote the save's version under this one.
+            localStorage.setItem('tomeOfSecrets_schemaVersion', String(SCHEMA_VERSION - 1));
+            await expect(checkReadyForDeliberateChange(makeSupabase(REMOTE).client))
+                .resolves.toEqual({ ok: false, reason: 'newer-schema' });
+        });
+    });
+
+    describe('pushDeliberateChange', () => {
+        it('upserts and logs push with the declaration', async () => {
+            localStorage.setItem(LAST_HASH_KEY, snapshotHash(REMOTE));
+            const { client, upserts, events } = makeSupabase(REMOTE);
+
+            const result = await pushDeliberateChange(client, { reason: 'library-tidy', booksBefore: 52, booksAfter: 7 });
+
+            expect(result.action).toBe('push');
+            expect(upserts).toHaveLength(1);
+            expect(upserts[0].snapshot_hash).toBe(snapshotHash(upserts[0].data));
+            expect(localStorage.getItem(LAST_HASH_KEY)).toBe(upserts[0].snapshot_hash);
+            expect(events).toHaveLength(1);
+            expect(events[0]).toMatchObject({ event_type: 'push', detail: 'library-tidy: books 52\u21927' });
+        });
+
+        it('returns manual_required and does not upsert when the remote changed in between', async () => {
+            localStorage.setItem(LAST_HASH_KEY, 'an-older-hash');
+            const { client, upserts } = makeSupabase(REMOTE);
+
+            const result = await pushDeliberateChange(client, { reason: 'library-tidy', booksBefore: 52, booksAfter: 7 });
+
+            expect(result.action).toBe('manual_required');
+            expect(upserts).toHaveLength(0);
+            expect(localStorage.getItem(LAST_HASH_KEY)).toBe('an-older-hash');
+        });
+    });
+});

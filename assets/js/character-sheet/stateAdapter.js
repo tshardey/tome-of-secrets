@@ -1415,6 +1415,42 @@ export class StateAdapter {
     }
 
     /**
+     * Write a tidy's books and bookTidy (Plan 4, D9), both awaited and checked:
+     *   1. bookTidy (setBookTidy; a full quota returns false without throwing). On failure the
+     *      books are untouched;
+     *   2. books, awaited (not _persistBooks, which does not wait). A rejection or a false
+     *      return is a failure;
+     *   3. RAM and one BOOKS_CHANGED.
+     * `booksFirst` (restore) swaps steps 1 and 2, so a failure in between leaves a record in both
+     * places, never in neither.
+     * @param {Object} nextBooks - { [id]: Book }
+     * @param {Object} nextTidy
+     * @param {{ booksFirst?: boolean }} [options]
+     * @returns {Promise<{ ok: true } | { ok: false, reason: 'storage' }>}
+     */
+    async applyBookTidy(nextBooks, nextTidy, { booksFirst = false } = {}) {
+        const failed = { ok: false, reason: 'storage' };
+        const writeBooks = async () => {
+            let ok = false;
+            try {
+                ok = await setStateKey(STORAGE_KEYS.BOOKS, nextBooks);
+            } catch (_error) {
+                ok = false;
+            }
+            if (ok !== true) return false;
+            this.state[STORAGE_KEYS.BOOKS] = nextBooks;
+            this.emit(EVENTS.BOOKS_CHANGED, { ...nextBooks });
+            return true;
+        };
+        if (booksFirst) {
+            if (!await writeBooks()) return failed;
+            return this.setBookTidy(nextTidy) ? { ok: true } : failed;
+        }
+        if (!this.setBookTidy(nextTidy)) return failed;
+        return await writeBooks() ? { ok: true } : failed;
+    }
+
+    /**
      * One book, one quest: may questId be linked to bookId? A second link needs a learned
      * MULTI_QUEST_ABILITIES ability; a third is always refused. Relinking is idempotent (ok).
      * Links on other library entries for the same book count too (getLinkedQuestIdsForBook).

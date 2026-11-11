@@ -4,6 +4,7 @@ import { getStateKey, setStateKey } from '../character-sheet/persistence.js';
 import { characterState } from '../character-sheet/state.js';
 import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys } from '../character-sheet/dataMigrator.js';
 import { saveSchemaVersion, getStoredSchemaVersion, isSchemaWriteSafe, SCHEMA_VERSION } from '../character-sheet/dataValidator.js';
+import { healTidyStatus } from './LibraryTidyService.js';
 
 const SYNC_TABLE = 'tos_saves';
 const SYNC_EVENTS_TABLE = 'tos_sync_events';
@@ -197,10 +198,11 @@ export async function applySnapshot(snapshot) {
   // Bring the snapshot's state up to the current schema from the snapshot's own version
   // (e.g. a v17 snapshot loses its retired keys and starts the Fund at $0). A snapshot with
   // no version falls back to the locally stored one, as before.
-  const state = migrateState(
+  // The review can never be hidden by an older snapshot (D9): an Unsorted book keeps it pending.
+  const state = healTidyStatus(migrateState(
     data.characterState || {},
     snapshotVersion !== null ? { fromVersion: snapshotVersion } : {}
-  );
+  ));
   if (snapshotVersion !== null) {
     // The applied state is now at the current schema; record that so the next load does not
     // migrate it a second time from the snapshot's older version.
@@ -302,6 +304,83 @@ async function logSyncEvent(supabase, userId, eventType, { snapshotHash: hash, s
   } catch (_e) {
     // Intentionally swallowed — logging must never break sync
   }
+}
+
+/**
+ * Before a deliberate change that shrinks the save (the library tidy, D10): is the cloud save
+ * still the one this device last synced? Reads only; never writes.
+ * - ok: the remote hash equals lastSyncedHash (or there is neither a remote save nor a hash);
+ * - 'unsynced': the cloud changed since this device last synced ("Sync now" first);
+ * - 'offline': the cloud could not be read;
+ * - 'newer-schema': a newer build wrote the cloud or local save, or this tab's write gate is closed.
+ * @param {Object} supabase
+ * @returns {Promise<{ ok: true } | { ok: false, reason: 'unsynced'|'offline'|'newer-schema' }>}
+ */
+export async function checkReadyForDeliberateChange(supabase) {
+  if (schemaBlock(null)) return { ok: false, reason: 'newer-schema' };
+  let remoteSnapshot;
+  try {
+    const remoteRow = await getRemoteSave(supabase);
+    remoteSnapshot = remoteRow?.data || null;
+  } catch (_err) {
+    return { ok: false, reason: 'offline' };
+  }
+  const remoteVersion = remoteSnapshot && Number.isInteger(remoteSnapshot.version) ? remoteSnapshot.version : null;
+  if (schemaBlock(remoteVersion)) return { ok: false, reason: 'newer-schema' };
+  const remoteHash = remoteSnapshot ? snapshotHash(remoteSnapshot) : '';
+  return remoteHash === getLastSyncedHash() ? { ok: true } : { ok: false, reason: 'unsynced' };
+}
+
+/**
+ * A manual-class push with an explicit declaration (D10): upload the local save only if the
+ * cloud still equals lastSyncedHash, and log `push` with "<reason>: books <before>→<after>".
+ * Never throws and never prompts; anything else is `manual_required` and the change uploads
+ * with the next sync.
+ * @param {Object} supabase
+ * @param {{ reason: string, booksBefore: number, booksAfter: number }} declaration
+ * @returns {Promise<{ action: 'push'|'manual_required', detail: string }>}
+ */
+export async function pushDeliberateChange(supabase, { reason, booksBefore, booksAfter } = {}) {
+  const manual = (detail) => ({ action: 'manual_required', detail });
+  let userId;
+  try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    userId = sessionData?.session?.user?.id;
+  } catch (_err) {
+    userId = null;
+  }
+  if (!userId) return manual('Not signed in.');
+
+  let localSnapshot;
+  let remoteSnapshot;
+  try {
+    localSnapshot = await buildLocalSnapshot();
+    const remoteRow = await getRemoteSave(supabase);
+    remoteSnapshot = remoteRow?.data || null;
+  } catch (err) {
+    await logSyncEvent(supabase, userId, 'error', { detail: `deliberate push read failed: ${err.message}` });
+    return manual('Could not reach the cloud save.');
+  }
+
+  const remoteVersion = remoteSnapshot && Number.isInteger(remoteSnapshot.version) ? remoteSnapshot.version : null;
+  const block = schemaBlock(remoteVersion);
+  if (block) return manual(block.detail);
+  const remoteHash = remoteSnapshot ? snapshotHash(remoteSnapshot) : '';
+  if (remoteHash !== getLastSyncedHash()) return manual('The cloud save changed since the last sync.');
+
+  const localHash = snapshotHash(localSnapshot);
+  const schemaVersion = localSnapshot.version ?? null;
+  try {
+    await upsertRemoteSave(supabase, localSnapshot);
+  } catch (err) {
+    await logSyncEvent(supabase, userId, 'error', { snapshotHash: localHash, schemaVersion, detail: `deliberate push failed: ${err.message}` });
+    return manual('Could not upload the cloud save.');
+  }
+  setLastSynced(localHash, 'manual');
+  const detail = `${reason}: books ${booksBefore}→${booksAfter}`;
+  await logSyncEvent(supabase, userId, 'push', { snapshotHash: localHash, schemaVersion, detail });
+  return { action: 'push', detail };
 }
 
 /**
