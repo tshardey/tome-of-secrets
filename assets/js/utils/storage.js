@@ -18,7 +18,8 @@ const CLOUD_SYNCED_LOCALSTORAGE_KEYS = new Set([
     'completedRestorationProjects', // STORAGE_KEYS.COMPLETED_RESTORATION_PROJECTS
     'completedWings', // STORAGE_KEYS.COMPLETED_WINGS
     'passiveItemSlots', // STORAGE_KEYS.PASSIVE_ITEM_SLOTS
-    'passiveFamiliarSlots' // STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
+    'passiveFamiliarSlots', // STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS
+    'bookTidy' // STORAGE_KEYS.BOOK_TIDY (schema v20)
 ]);
 
 /**

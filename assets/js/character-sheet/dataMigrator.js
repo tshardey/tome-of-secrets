@@ -7,7 +7,7 @@
  * **CRITICAL:** Migrations should preserve all player data. Never lose progress.
  */
 
-import { STORAGE_KEYS } from './storageKeys.js';
+import { STORAGE_KEYS, createDefaultBookTidy } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { getStoredSchemaVersion, SCHEMA_VERSION, saveSchemaVersion } from './dataValidator.js';
 import { safeGetJSON, safeRemoveJSON } from '../utils/storage.js';
@@ -15,6 +15,8 @@ import { purgeStateKey } from './persistence.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import * as data from './data.js';
 import { getLinkedQuestIds, grandfatherBookLinks, isSameBook } from '../utils/questLinkRules.js';
+import { deriveBookType, normalizeBookStatus, normalizeLibraryFields } from '../utils/bookTypes.js';
+import { withoutTypeDerivedTags } from '../utils/bookTagRules.js';
 
 /**
  * Migrate quest rewards from legacy format
@@ -562,6 +564,55 @@ function migrateToVersion19(state) {
 }
 
 /**
+ * Migration from schema version 19 to version 20 (Plan 4, D2): book types.
+ * For every book: `type` from deriveBookType (a stored `audio` tag makes an audiobook, anything
+ * else is Unsorted), type-derived tags stripped from `tags`, status 'other' -> 'reading',
+ * shelfCategory deleted, and libraryBookId / libraryTagsBase / shelfMatchDismissed normalized.
+ * Adds bookTidy when absent: 'pending' when any book is Unsorted, else 'done'.
+ *
+ * Makes no network call, never reads the clock, makes no ids and removes no book.
+ * Idempotent: v20 data passes through unchanged.
+ * @param {Object} state
+ * @returns {Object}
+ */
+export function migrateToVersion20(state) {
+    const migrated = { ...state };
+    const books = migrated[STORAGE_KEYS.BOOKS];
+    if (books && typeof books === 'object' && !Array.isArray(books)) {
+        const updated = {};
+        for (const [id, book] of Object.entries(books)) {
+            if (!book || typeof book !== 'object') {
+                updated[id] = book;
+                continue;
+            }
+            const type = deriveBookType(book);
+            const { shelfCategory: _retired, ...rest } = book;
+            updated[id] = {
+                ...rest,
+                status: normalizeBookStatus(book.status),
+                tags: withoutTypeDerivedTags(Array.isArray(book.tags) ? book.tags : []),
+                type,
+                ...normalizeLibraryFields(type, book)
+            };
+        }
+        migrated[STORAGE_KEYS.BOOKS] = updated;
+    }
+
+    const tidy = migrated[STORAGE_KEYS.BOOK_TIDY];
+    if (!tidy || typeof tidy !== 'object' || Array.isArray(tidy)) {
+        const migratedBooks = migrated[STORAGE_KEYS.BOOKS];
+        const anyUnsorted = migratedBooks && typeof migratedBooks === 'object'
+            ? Object.values(migratedBooks).some((book) => book && typeof book === 'object' && book.type === 'unsorted')
+            : false;
+        migrated[STORAGE_KEYS.BOOK_TIDY] = {
+            ...createDefaultBookTidy(),
+            status: anyUnsorted ? 'pending' : 'done'
+        };
+    }
+    return migrated;
+}
+
+/**
  * Delete the retired state keys from every store (IndexedDB and localStorage).
  * activeCurses/completedCurses used to be IndexedDB-backed, so old copies may be
  * orphaned there as well as in localStorage.
@@ -885,6 +936,9 @@ export function migrateState(state, { fromVersion } = {}) {
             case 19:
                 migratedState = migrateToVersion19(migratedState);
                 break;
+            case 20:
+                migratedState = migrateToVersion20(migratedState);
+                break;
             default:
                 console.warn(`No migration defined for version ${nextVersion}`);
                 break;
@@ -935,7 +989,9 @@ export function loadAndMigrateState() {
         STORAGE_KEYS.CLAIMED_SERIES_REWARDS,
         STORAGE_KEYS.SERIES_EXPEDITION_PROGRESS,
         STORAGE_KEYS.FUND_BALANCE_CENTS,
-        STORAGE_KEYS.FUND_LEDGER
+        STORAGE_KEYS.FUND_LEDGER,
+        // Schema v20. Absent until migrated: the v20 migration decides its starting status.
+        STORAGE_KEYS.BOOK_TIDY
     ];
 
     stateKeys.forEach(key => {
@@ -948,6 +1004,8 @@ export function loadAndMigrateState() {
             defaultValue = 0;
         } else if (key === STORAGE_KEYS.GENRE_DICE_SELECTION) {
             defaultValue = 'd6';
+        } else if (key === STORAGE_KEYS.BOOK_TIDY) {
+            defaultValue = null;
         } else {
             defaultValue = [];
         }

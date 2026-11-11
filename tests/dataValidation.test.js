@@ -97,7 +97,7 @@ describe('Data Validation', () => {
             expect(validated).not.toHaveProperty('bookBoxHistory');
         });
 
-        test('should add shelfCategory to validated books (v10)', () => {
+        test('validated books have the v20 shape: a type, no shelfCategory (v10 field retired in v20)', () => {
             const state = {
                 [STORAGE_KEYS.BOOKS]: {
                     b1: {
@@ -112,7 +112,8 @@ describe('Data Validation', () => {
                 }
             };
             const validated = validateCharacterState(state);
-            expect(validated[STORAGE_KEYS.BOOKS].b1.shelfCategory).toBe('general');
+            expect(validated[STORAGE_KEYS.BOOKS].b1).not.toHaveProperty('shelfCategory');
+            expect(validated[STORAGE_KEYS.BOOKS].b1.type).toBe('unsorted');
         });
 
         test('should set restorationData to null for non-restoration quests', () => {
@@ -517,8 +518,8 @@ describe('Data Validation', () => {
             expect(version).toBeNull();
         });
 
-        test('schema version should be 19', () => {
-            expect(SCHEMA_VERSION).toBe(19);
+        test('schema version should be 20', () => {
+            expect(SCHEMA_VERSION).toBe(20);
         });
     });
 });
@@ -753,7 +754,7 @@ describe('Data Migration', () => {
             RETIRED_FORM_FIELDS.forEach((field) => expect(once).not.toHaveProperty(field));
         });
 
-        test('v10: adds book shelfCategory; the retired shopping state does not survive to v18', () => {
+        test('v10 adds shelfCategory, v20 retires it; the retired shopping state does not survive to v18', () => {
             localStorage.setItem('tomeOfSecrets_schemaVersion', '9');
             const state = {
                 [STORAGE_KEYS.BOOKS]: {
@@ -778,7 +779,8 @@ describe('Data Migration', () => {
             expect(migrated).not.toHaveProperty('bookBoxSubscriptions');
             expect(migrated).not.toHaveProperty('bookBoxHistory');
             const book = migrated[STORAGE_KEYS.BOOKS].bid1;
-            expect(book.shelfCategory).toBe('general');
+            expect(book).not.toHaveProperty('shelfCategory');
+            expect(book.type).toBe('unsorted');
         });
     });
 

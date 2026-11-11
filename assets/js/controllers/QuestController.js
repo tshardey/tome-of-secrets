@@ -10,6 +10,7 @@
  */
 
 import { BaseController } from './BaseController.js';
+import { effectiveBookTags } from '../utils/bookTagRules.js';
 import { QuestHandlerFactory } from '../quest-handlers/QuestHandlerFactory.js';
 import { BaseQuestHandler } from '../quest-handlers/BaseQuestHandler.js';
 import { trimOrEmpty, parseIntOr } from '../utils/helpers.js';
@@ -1750,7 +1751,7 @@ export class QuestController extends BaseController {
                         if (bookId) {
                             const books = characterState[STORAGE_KEYS.BOOKS];
                             const linkedBook = books && books[bookId];
-                            bookTags = Array.isArray(linkedBook?.tags) ? linkedBook.tags : [];
+                            bookTags = effectiveBookTags(linkedBook);
                             bookPageCount = typeof linkedBook?.pageCount === 'number' ? linkedBook.pageCount : null;
                         }
                         const buffsSelect = document.getElementById('edit-quest-buffs-select');
@@ -1786,7 +1787,7 @@ export class QuestController extends BaseController {
             if (quest.bookId) {
                 const books = characterState[STORAGE_KEYS.BOOKS];
                 const linkedBook = books && books[quest.bookId];
-                bookTags = Array.isArray(linkedBook?.tags) ? linkedBook.tags : [];
+                bookTags = effectiveBookTags(linkedBook);
                 bookPageCount = typeof linkedBook?.pageCount === 'number' ? linkedBook.pageCount : null;
             }
             uiModule.updateEditQuestBuffsDropdown(quest.buffs || [], bookTags, bookPageCount);

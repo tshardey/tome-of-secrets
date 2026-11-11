@@ -802,13 +802,32 @@
     color: #d4c8b0;
 }
 
-.library-status-radios {
+.library-type-radios {
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
 }
 
-.library-status-option {
+.library-section-note {
+    margin: -6px 0 12px 0;
+    color: #8a7a61;
+    font-size: 0.85rem;
+}
+
+.library-tag-note {
+    margin-left: 4px;
+    color: #8a7a61;
+    font-size: 0.7rem;
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.library-add-actions .rpg-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.library-type-option {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -927,31 +946,6 @@
     margin: 0;
 }
 
-.library-shelf-badge {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    line-height: 1;
-    text-align: center;
-}
-
-.library-shelf-physical-tbr {
-    background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.12), transparent 55%), rgba(120, 96, 64, 0.9);
-    border: 1px solid rgba(226, 199, 140, 0.95);
-    color: #fff3d6;
-    box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.4),
-        0 4px 10px rgba(0, 0, 0, 0.55);
-}
-
 .library-tag-picker {
     display: grid;
     /* Columns are derived from the tag categories, so let them wrap onto new
@@ -1067,12 +1061,6 @@
     background: rgba(72, 120, 72, 0.25);
     border: 1px solid #6a9e6a;
     color: #8bc88b;
-}
-
-.library-status-other {
-    background: rgba(84, 72, 59, 0.5);
-    border: 1px solid #8a7a61;
-    color: #8a7a61;
 }
 
 .library-card-actions {

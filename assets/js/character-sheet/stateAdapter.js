@@ -1,6 +1,9 @@
 import { STORAGE_KEYS } from './storageKeys.js';
 import { safeGetJSON } from '../utils/storage.js';
-import { setStateKey } from './persistence.js';
+import { setStateKey, setSaveJSON } from './persistence.js';
+import { validateBookTidy } from './dataValidator.js';
+import { deriveBookType, isBookType, normalizeBookStatus, normalizeLibraryFields } from '../utils/bookTypes.js';
+import { withoutTypeDerivedTags } from '../utils/bookTagRules.js';
 import { buildSourceId } from './helperDiscoveryShared.js';
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { isIsoDate, todayIsoDate } from '../services/FundLedgerService.js';
@@ -34,8 +37,18 @@ const EVENTS = Object.freeze({
     // The Exchange's register – countries struck off once, ever
     CLAIMED_COUNTRIES_CHANGED: 'claimedCountriesChanged',
     // Real-dollar Fund (dollar economy); payload { balanceCents }
-    FUND_CHANGED: 'fundChanged'
+    FUND_CHANGED: 'fundChanged',
+    // Schema v20: the Unsorted-books review; payload is the new bookTidy
+    BOOK_TIDY_CHANGED: 'bookTidyChanged'
 });
+
+/** Set type and the library fields from the v20 rules (a shelf book needs a libraryBookId). */
+function applyBookTypeRules(book) {
+    const type = deriveBookType(book);
+    Object.assign(book, { type, ...normalizeLibraryFields(type, book) });
+    delete book.shelfCategory;
+    return book;
+}
 
 const LIST_EVENTS = Object.freeze({
     [STORAGE_KEYS.ACTIVE_ASSIGNMENTS]: EVENTS.ACTIVE_ASSIGNMENTS_CHANGED,
@@ -1256,15 +1269,13 @@ export class StateAdapter {
         const books = { ...this._getBooksRaw() };
         const id = (typeof bookData.id === 'string' && bookData.id.trim()) ? bookData.id.trim() : this._generateId();
         const now = new Date().toISOString();
-        const shelfCategory = (bookData.shelfCategory === 'physical-tbr' || bookData.shelfCategory === 'general') ? bookData.shelfCategory : 'general';
         const book = {
             id,
             title: typeof bookData.title === 'string' ? bookData.title : '',
             author: typeof bookData.author === 'string' ? bookData.author : '',
             cover: typeof bookData.cover === 'string' ? bookData.cover : (typeof bookData.coverUrl === 'string' ? bookData.coverUrl : null),
             pageCount: typeof bookData.pageCount === 'number' && !isNaN(bookData.pageCount) ? Math.max(0, Math.floor(bookData.pageCount)) : (typeof bookData.pageCountRaw === 'number' && !isNaN(bookData.pageCountRaw) ? Math.max(0, Math.floor(bookData.pageCountRaw)) : null),
-            status: ['reading', 'completed', 'other'].includes(bookData.status) ? bookData.status : 'reading',
-            shelfCategory,
+            status: normalizeBookStatus(bookData.status),
             dateAdded: typeof bookData.dateAdded === 'string' ? bookData.dateAdded : now,
             dateCompleted: typeof bookData.dateCompleted === 'string' ? bookData.dateCompleted : null,
             links: bookData.links && typeof bookData.links === 'object'
@@ -1273,8 +1284,15 @@ export class StateAdapter {
                     curriculumPromptIds: Array.isArray(bookData.links.curriculumPromptIds) ? bookData.links.curriculumPromptIds.filter(x => typeof x === 'string') : []
                 }
                 : { questIds: [], curriculumPromptIds: [] },
-            tags: Array.isArray(bookData.tags) ? bookData.tags.filter(x => typeof x === 'string') : []
+            tags: Array.isArray(bookData.tags) ? bookData.tags.filter(x => typeof x === 'string') : [],
+            type: bookData.type,
+            libraryBookId: bookData.libraryBookId,
+            libraryTagsBase: bookData.libraryTagsBase,
+            shelfMatchDismissed: bookData.shelfMatchDismissed
         };
+        // Type first (a stored type-derived tag implies its type), then drop type-derived tags
+        applyBookTypeRules(book);
+        book.tags = withoutTypeDerivedTags(book.tags);
         books[id] = book;
         this._persistBooks(books);
         return book;
@@ -1290,11 +1308,18 @@ export class StateAdapter {
             if (typeof updates.author === 'string') book.author = updates.author;
             if (updates.cover !== undefined) book.cover = typeof updates.cover === 'string' ? updates.cover : null;
             if (typeof updates.pageCount === 'number' && !isNaN(updates.pageCount)) book.pageCount = Math.max(0, Math.floor(updates.pageCount));
-            if (['reading', 'completed', 'other'].includes(updates.status)) book.status = updates.status;
-            if (updates.shelfCategory === 'general' || updates.shelfCategory === 'physical-tbr') book.shelfCategory = updates.shelfCategory;
+            if (['reading', 'completed', 'other'].includes(updates.status)) book.status = normalizeBookStatus(updates.status);
+            if (isBookType(updates.type)) book.type = updates.type;
+            if (updates.libraryBookId !== undefined) book.libraryBookId = typeof updates.libraryBookId === 'string' ? updates.libraryBookId : null;
+            if (updates.libraryTagsBase !== undefined) {
+                book.libraryTagsBase = Array.isArray(updates.libraryTagsBase) ? updates.libraryTagsBase.filter(x => typeof x === 'string') : null;
+            }
+            if (updates.shelfMatchDismissed !== undefined) {
+                book.shelfMatchDismissed = typeof updates.shelfMatchDismissed === 'string' ? updates.shelfMatchDismissed : null;
+            }
             if (typeof updates.dateAdded === 'string') book.dateAdded = updates.dateAdded;
             if (updates.dateCompleted !== undefined) book.dateCompleted = typeof updates.dateCompleted === 'string' ? updates.dateCompleted : null;
-            if (Array.isArray(updates.tags)) book.tags = updates.tags.filter(x => typeof x === 'string');
+            if (Array.isArray(updates.tags)) book.tags = withoutTypeDerivedTags(updates.tags.filter(x => typeof x === 'string'));
             if (updates.links && typeof updates.links === 'object') {
                 if (!book.links || typeof book.links !== 'object') {
                     book.links = { questIds: [], curriculumPromptIds: [] };
@@ -1303,6 +1328,7 @@ export class StateAdapter {
                 if (Array.isArray(updates.links.curriculumPromptIds)) book.links.curriculumPromptIds = updates.links.curriculumPromptIds.filter(x => typeof x === 'string');
             }
         }
+        applyBookTypeRules(book);
         books[bookId] = book;
         this._persistBooks(books);
         return book;
@@ -1324,8 +1350,7 @@ export class StateAdapter {
         const book = books[bookId];
         if (!book) return null;
         const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
-        const shelfCategory = (book.shelfCategory === 'physical-tbr' || book.shelfCategory === 'general') ? book.shelfCategory : 'general';
-        return { ...book, shelfCategory, links: { ...links } };
+        return { ...book, links: { ...links } };
     }
 
     getBooks() {
@@ -1333,14 +1358,60 @@ export class StateAdapter {
         return Object.keys(books).map(id => {
             const book = books[id];
             const links = book.links && typeof book.links === 'object' ? book.links : { questIds: [], curriculumPromptIds: [] };
-            const shelfCategory = (book.shelfCategory === 'physical-tbr' || book.shelfCategory === 'general') ? book.shelfCategory : 'general';
-            return { ...book, shelfCategory, links: { ...links } };
+            return { ...book, links: { ...links } };
         });
     }
 
     getBooksByStatus(status) {
-        if (!['reading', 'completed', 'other'].includes(status)) return [];
+        if (!['reading', 'completed'].includes(status)) return [];
         return this.getBooks().filter(b => b.status === status);
+    }
+
+    /**
+     * Is the book linked to an active quest (through its links or the quest's bookId)?
+     * Since schema v20 'reading' means every unfinished book, so this is what "in progress" means.
+     * @param {Object|string} bookOrId - a book record or its id
+     * @returns {boolean}
+     */
+    isBookOnActiveQuest(bookOrId) {
+        const book = typeof bookOrId === 'string' ? this._getBooksRaw()[bookOrId] : bookOrId;
+        if (!book || typeof book !== 'object' || !book.id) return false;
+        const active = Array.isArray(this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS]) ? this.state[STORAGE_KEYS.ACTIVE_ASSIGNMENTS] : [];
+        if (active.length === 0) return false;
+        const linkedIds = new Set(getLinkedQuestIds(book).map(id => String(id)));
+        return active.some(q => q && (q.bookId === book.id || (q.id != null && linkedIds.has(String(q.id)))));
+    }
+
+    /**
+     * Books of one type (schema v20).
+     * @param {string} type - one of BOOK_TYPES
+     * @returns {Object[]}
+     */
+    getBooksByType(type) {
+        if (!isBookType(type)) return [];
+        return this.getBooks().filter(b => b.type === type);
+    }
+
+    /**
+     * The Unsorted-books review state (schema v20, localStorage-backed).
+     * @returns {{ status: string, postponedAt: string|null, completedAt: string|null, removedBooks: Object }}
+     */
+    getBookTidy() {
+        return validateBookTidy(this.state[STORAGE_KEYS.BOOK_TIDY]);
+    }
+
+    /**
+     * Replace the bookTidy state. Written through the schema write gate (setSaveJSON); RAM and
+     * listeners change only when the write succeeds.
+     * @param {Object} next
+     * @returns {Object|null} the validated bookTidy, or null when the write was refused or failed
+     */
+    setBookTidy(next) {
+        const tidy = validateBookTidy(next);
+        if (!setSaveJSON(STORAGE_KEYS.BOOK_TIDY, tidy)) return null;
+        this.state[STORAGE_KEYS.BOOK_TIDY] = tidy;
+        this.emit(EVENTS.BOOK_TIDY_CHANGED, tidy);
+        return tidy;
     }
 
     /**
@@ -1618,13 +1689,18 @@ export class StateAdapter {
         if (!s) return null;
         const bookIds = s.bookIds || [];
         const books = this._getBooksRaw();
+        // In progress (schema v20): not completed and linked to an active quest. 'reading' now
+        // means every unfinished book, so it no longer says the book is being read.
         let completedCount = 0;
         let inProgressCount = 0;
         for (const bookId of bookIds) {
             const book = books[bookId];
             if (!book) continue;
-            if (book.status === 'completed') completedCount += 1;
-            else if (book.status === 'reading') inProgressCount += 1;
+            if (book.status === 'completed') {
+                completedCount += 1;
+            } else if (this.isBookOnActiveQuest(book)) {
+                inProgressCount += 1;
+            }
         }
         const releasedCount = typeof s.releasedCount === 'number' && s.releasedCount >= 0 ? s.releasedCount : 0;
         const expectedCount = typeof s.expectedCount === 'number' && s.expectedCount >= 0 ? s.expectedCount : 0;

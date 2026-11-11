@@ -7,10 +7,12 @@
  * **CRITICAL:** Never lose player data. If data is invalid, fix it or use safe defaults.
  */
 
-import { STORAGE_KEYS, createEmptyCharacterState } from './storageKeys.js';
+import { STORAGE_KEYS, createEmptyCharacterState, createDefaultBookTidy } from './storageKeys.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { normalizeQuestPeriod, PERIOD_TYPES } from '../services/PeriodService.js';
 import { validateHelperState } from './helperDiscoveryShared.js';
+import { deriveBookType, normalizeBookStatus, normalizeLibraryFields } from '../utils/bookTypes.js';
+import { withoutTypeDerivedTags } from '../utils/bookTagRules.js';
 
 /**
  * Current schema version - increment when data structure changes
@@ -32,8 +34,9 @@ import { validateHelperState } from './helperDiscoveryShared.js';
  * Version 17: The Exchange's register (claimedCountries: countries struck off once, ever)
  * Version 18: Dollar economy (retired curse/shopping/book-box keys and the inkDrops, paperScraps and journal-entries-completed form fields are removed; Fund starts at $0)
  * Version 19: Books linked to two quests before one book, one quest keep both at the full quest base (links.grandfatheredQuestIds)
+ * Version 20: Book types (type, libraryBookId, libraryTagsBase, shelfMatchDismissed); audiobook replaces the audio tag and every other book is Unsorted; status 'other' becomes 'reading'; shelfCategory is removed; bookTidy
  */
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 
 /**
  * Schema version key in localStorage
@@ -468,58 +471,30 @@ function validateNumber(value, defaultValue, context = 'number') {
     return defaultValue;
 }
 
-const BOOK_STATUSES = ['reading', 'completed', 'other'];
-const SHELF_CATEGORIES = ['general', 'physical-tbr'];
-// Book types written by schema v20 (Plan 4). Passed through so a stale tab or a rolled-back
-// build never strips them; nothing in this build reads them yet.
-const BOOK_TYPES = ['unsorted', 'shelf', 'audiobook', 'ebook', 'library-loan', 'physical'];
-
 /**
- * The v20 book fields, kept only when present and well-typed.
- * @param {Object} book
- * @returns {Object}
- */
-function forwardCompatibleBookFields(book) {
-    const fields = {};
-    if (typeof book.type === 'string' && BOOK_TYPES.includes(book.type)) {
-        fields.type = book.type;
-    }
-    if (typeof book.libraryBookId === 'string') {
-        fields.libraryBookId = book.libraryBookId;
-    }
-    if (Array.isArray(book.libraryTagsBase) && book.libraryTagsBase.every(t => typeof t === 'string')) {
-        fields.libraryTagsBase = [...book.libraryTagsBase];
-    }
-    if (typeof book.shelfMatchDismissed === 'string') {
-        fields.shelfMatchDismissed = book.shelfMatchDismissed;
-    }
-    return fields;
-}
-
-/**
- * Validate and fix a book object (Schema v5)
+ * Validate and fix a book object (Schema v5; book types since v20).
+ * v20: `type` comes from deriveBookType (a `shelf` book without a libraryBookId is Unsorted),
+ * the library fields are null unless the book is `shelf`, type-derived tags are never stored,
+ * status is 'reading' or 'completed' ('other' reads as 'reading'), and shelfCategory is gone.
  * @param {*} book - Book object to validate
  * @param {string} context - Context for error messages
  * @returns {Object|null} - Validated book object, or null if unfixable
  */
-function validateBook(book, context = 'book') {
+export function validateBook(book, context = 'book') {
     if (!book || typeof book !== 'object') {
         return null;
     }
     const id = typeof book.id === 'string' && book.id.trim() ? book.id.trim() : null;
     if (!id) return null;
     const links = book.links && typeof book.links === 'object' ? book.links : {};
-    const shelfCategory = typeof book.shelfCategory === 'string' && SHELF_CATEGORIES.includes(book.shelfCategory)
-        ? book.shelfCategory
-        : 'general';
+    const type = deriveBookType(book);
     return {
         id,
         title: typeof book.title === 'string' ? book.title : '',
         author: typeof book.author === 'string' ? book.author : '',
         cover: typeof book.cover === 'string' ? book.cover : (typeof book.coverUrl === 'string' ? book.coverUrl : null),
         pageCount: typeof book.pageCount === 'number' && !isNaN(book.pageCount) ? Math.max(0, Math.floor(book.pageCount)) : (typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? Math.max(0, Math.floor(book.pageCountRaw)) : null),
-        status: BOOK_STATUSES.includes(book.status) ? book.status : 'reading',
-        shelfCategory,
+        status: normalizeBookStatus(book.status),
         dateAdded: typeof book.dateAdded === 'string' ? book.dateAdded : new Date().toISOString(),
         dateCompleted: typeof book.dateCompleted === 'string' ? book.dateCompleted : null,
         links: {
@@ -529,8 +504,9 @@ function validateBook(book, context = 'book') {
                 ? { grandfatheredQuestIds: links.grandfatheredQuestIds.filter(x => typeof x === 'string') }
                 : {})
         },
-        tags: Array.isArray(book.tags) ? book.tags.filter(t => typeof t === 'string') : [],
-        ...forwardCompatibleBookFields(book)
+        tags: withoutTypeDerivedTags(Array.isArray(book.tags) ? book.tags.filter(t => typeof t === 'string') : []),
+        type,
+        ...normalizeLibraryFields(type, book)
     };
 }
 
@@ -551,6 +527,36 @@ function validateBooks(books) {
         }
     }
     return validated;
+}
+
+const BOOK_TIDY_STATUSES = ['pending', 'postponed', 'done'];
+
+/**
+ * Validate the book tidy state (schema v20).
+ * Shape: { status: 'pending'|'postponed'|'done', postponedAt, completedAt, removedBooks: { [bookId]: Book } }
+ * removedBooks holds whole v20 records kept for undo.
+ * @param {*} raw
+ * @returns {Object}
+ */
+export function validateBookTidy(raw) {
+    const fallback = createDefaultBookTidy();
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return fallback;
+    }
+    const removedRaw = raw.removedBooks && typeof raw.removedBooks === 'object' && !Array.isArray(raw.removedBooks)
+        ? raw.removedBooks
+        : {};
+    const removedBooks = {};
+    for (const key of Object.keys(removedRaw)) {
+        const record = validateBook(removedRaw[key], `bookTidy.removedBooks[${key}]`);
+        if (record) removedBooks[record.id] = record;
+    }
+    return {
+        status: BOOK_TIDY_STATUSES.includes(raw.status) ? raw.status : fallback.status,
+        postponedAt: typeof raw.postponedAt === 'string' ? raw.postponedAt : null,
+        completedAt: typeof raw.completedAt === 'string' ? raw.completedAt : null,
+        removedBooks
+    };
 }
 
 /**
@@ -1024,6 +1030,7 @@ export function validateCharacterState(state) {
         state[STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]
     );
     validated[STORAGE_KEYS.EFFECT_COOLDOWNS] = validateEffectCooldownState(state[STORAGE_KEYS.EFFECT_COOLDOWNS]);
+    validated[STORAGE_KEYS.BOOK_TIDY] = validateBookTidy(state[STORAGE_KEYS.BOOK_TIDY]);
 
     return validated;
 }

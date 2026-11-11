@@ -30,7 +30,7 @@ jest.mock('../assets/js/ui/toast.js', () => ({
 function createLibraryFormHTML() {
     return `
         <form id="character-sheet">
-            <div id="library-cards-reading"></div>
+            <div id="library-cards-ebook"></div>
             <div id="library-cards-completed"></div>
             <div id="library-cards-other"></div>
             <div id="book-edit-drawer" style="display: none;"></div>
@@ -163,6 +163,7 @@ describe('Library Quest Linking — Card Popover', () => {
         stateAdapter.updateBook = jest.fn();
         stateAdapter.getBook = jest.fn((id) => (id === 'book-1' ? { ...BOOK_1 } : null));
         stateAdapter.getBooks = jest.fn(() => [BOOK_1]);
+        stateAdapter.getBooksByType = jest.fn((type) => (type === 'ebook' ? [BOOK_1] : []));
         stateAdapter.getBooksByStatus = jest.fn((status) =>
             status === 'reading' ? [BOOK_1] : []
         );
@@ -200,7 +201,7 @@ describe('Library Quest Linking — Card Popover', () => {
     it('renders a Link Quest button on each book card', () => {
         initController();
 
-        const readingHTML = document.getElementById('library-cards-reading').innerHTML;
+        const readingHTML = document.getElementById('library-cards-ebook').innerHTML;
         expect(readingHTML).toContain('library-link-quest-btn');
         expect(readingHTML).toContain('data-book-id="book-1"');
 
@@ -391,6 +392,7 @@ describe('Book Edit Drawer — Links Section', () => {
             return null;
         });
         stateAdapter.getBooks = jest.fn(() => [BOOK_WITH_LINKS, BOOK_NO_LINKS]);
+        stateAdapter.getBooksByType = jest.fn((type) => (type === 'ebook' ? [BOOK_WITH_LINKS, BOOK_NO_LINKS] : []));
         stateAdapter.getBooksByStatus = jest.fn((status) =>
             status === 'reading' ? [BOOK_WITH_LINKS, BOOK_NO_LINKS] : []
         );

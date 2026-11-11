@@ -14,6 +14,15 @@
         </div>
         <div class="rpg-panel-body" id="library-add-panel-body">
             <div id="library-add-book-form" class="library-add-form" role="form" aria-label="Add a book">
+                <div class="form-row library-type-row">
+                    <label id="library-add-type-label"><strong>What kind of book is it?</strong></label>
+                    <div class="library-type-radios" role="radiogroup" aria-labelledby="library-add-type-label">
+                        <label class="library-type-option"><input type="radio" name="library-add-type" value="audiobook" /> Audiobook</label>
+                        <label class="library-type-option"><input type="radio" name="library-add-type" value="ebook" /> Ebook</label>
+                        <label class="library-type-option"><input type="radio" name="library-add-type" value="library-loan" /> Library book</label>
+                        <label class="library-type-option"><input type="radio" name="library-add-type" value="physical" /> Physical, not in the library yet</label>
+                    </div>
+                </div>
                 <div class="form-row library-book-search-row">
                     <label for="library-book-title"><strong>Title:</strong></label>
                     <div class="library-search-input-and-results">
@@ -47,27 +56,6 @@
                     <label for="library-add-page-count"><strong>Page count (optional):</strong></label>
                     <input type="number" id="library-add-page-count" class="library-page-count-input" min="1" placeholder="—" value="" />
                 </div>
-                <div class="form-row library-status-row">
-                    <label><strong>Status:</strong></label>
-                    <div class="library-status-radios">
-                        <label class="library-status-option"><input type="radio" name="library-add-status" value="reading" checked /> Reading</label>
-                        <label class="library-status-option"><input type="radio" name="library-add-status" value="completed" /> Completed</label>
-                        <label class="library-status-option"><input type="radio" name="library-add-status" value="other" /> Other</label>
-                    </div>
-                </div>
-                <div class="form-row library-shelf-row">
-                    <label><strong>Shelf:</strong></label>
-                    <div class="library-shelf-radios">
-                        <label class="library-shelf-option">
-                            <input type="radio" name="library-add-shelf-category" value="general" checked />
-                            General library
-                        </label>
-                        <label class="library-shelf-option">
-                            <input type="radio" name="library-add-shelf-category" value="physical-tbr" />
-                            Physical TBR
-                        </label>
-                    </div>
-                </div>
                 <div class="form-row library-tags-row">
                     <label>
                         <strong>Tags (optional):</strong>
@@ -78,7 +66,7 @@
                     </div>
                 </div>
                 <div class="form-row library-add-actions">
-                    <button type="button" id="library-add-book-btn" class="rpg-btn rpg-btn-primary">Add Book</button>
+                    <button type="button" id="library-add-book-btn" class="rpg-btn rpg-btn-primary" disabled>Add Book</button>
                 </div>
             </div>
         </div>
@@ -89,17 +77,30 @@
             <h2 class="rpg-panel-title">Your Library</h2>
         </div>
         <div class="rpg-panel-body">
-            <div id="library-books-reading" class="library-books-section">
-                <h3 class="library-section-title">Reading</h3>
-                <div id="library-cards-reading" class="library-cards-grid"></div>
+            <div id="library-books-unsorted" class="library-books-section" style="display: none;">
+                <h3 class="library-section-title">Unsorted</h3>
+                <p class="library-section-note">Sort these once the tidy-up is available, or set a type from each book's ✏ button.</p>
+                <div id="library-cards-unsorted" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-audiobook" class="library-books-section">
+                <h3 class="library-section-title">Audiobooks</h3>
+                <div id="library-cards-audiobook" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-ebook" class="library-books-section">
+                <h3 class="library-section-title">Ebooks</h3>
+                <div id="library-cards-ebook" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-library-loan" class="library-books-section">
+                <h3 class="library-section-title">Library books</h3>
+                <div id="library-cards-library-loan" class="library-cards-grid"></div>
+            </div>
+            <div id="library-books-physical" class="library-books-section" style="display: none;">
+                <h3 class="library-section-title">Not in the library yet</h3>
+                <div id="library-cards-physical" class="library-cards-grid"></div>
             </div>
             <div id="library-books-completed" class="library-books-section">
                 <h3 class="library-section-title">Completed</h3>
                 <div id="library-cards-completed" class="library-cards-grid"></div>
-            </div>
-            <div id="library-books-other" class="library-books-section">
-                <h3 class="library-section-title">Other</h3>
-                <div id="library-cards-other" class="library-cards-grid"></div>
             </div>
         </div>
     </div>

@@ -1,12 +1,14 @@
 /**
  * LibraryController - Handles Library tab: add/edit books, search, render book cards
  *
- * - Add Book: inline form with title (live API search), author, cover (URL + upload), page count, status
- * - Book cards grouped by status (Reading, Completed, Other); each card: cover, title, author, Mark Complete, Edit
- * - Edit Book: right-side drawer with same fields + read-only linked quests/prompts
+ * - Add Book: inline form, type first (Audiobook, Ebook, Library book, Not in the library yet), then title, author, cover, page count
+ * - Book cards grouped by type (Unsorted, Audiobooks, Ebooks, Library books, Not in the library yet) plus Completed by year
+ * - Edit Book: right-side drawer with the type select + read-only linked quests/prompts
  */
 
 import { BaseController } from './BaseController.js';
+import { isTypeDerivedTag } from '../utils/bookTagRules.js';
+import { BOOK_TYPES, PICKABLE_TYPES, BOOK_TYPE_LABELS } from '../utils/bookTypes.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { searchBooks } from '../services/BookMetadataService.js';
 import { bookTags, allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
@@ -19,6 +21,18 @@ import { buildEffectContext } from '../services/effectContext.js';
 
 const BOOK_SEARCH_DEBOUNCE_MS = 600;
 const BOOK_SEARCH_MIN_LENGTH = 2;
+
+// Library tab sections, in order. Each renders into `library-cards-<type>`;
+// a hideWhenEmpty section is hidden instead of showing "None".
+const TYPE_SECTIONS = [
+    { type: 'unsorted', hideWhenEmpty: true },
+    { type: 'audiobook', hideWhenEmpty: false },
+    { type: 'ebook', hideWhenEmpty: false },
+    { type: 'library-loan', hideWhenEmpty: false },
+    { type: 'physical', hideWhenEmpty: true }
+];
+
+const UNLINK_OPTION_VALUE = 'unlink';
 
 // Stable display order for the tag picker columns. Any tag category not listed
 // here is still rendered, appended after these in the order it appears in the
@@ -77,6 +91,11 @@ export class LibraryController extends BaseController {
                     this._editingBookId = null;
                 }
             }
+        });
+
+        this._syncAddButton();
+        document.querySelectorAll('input[name="library-add-type"]').forEach((radio) => {
+            this.addEventListener(radio, 'change', () => this._syncAddButton());
         });
 
         if (addBookBtn) {
@@ -438,7 +457,20 @@ export class LibraryController extends BaseController {
         }
     }
 
+    _getAddType() {
+        const typeRadio = document.querySelector('input[name="library-add-type"]:checked');
+        return typeRadio && PICKABLE_TYPES.includes(typeRadio.value) ? typeRadio.value : null;
+    }
+
+    /** Add Book stays disabled until a type is chosen. */
+    _syncAddButton() {
+        const btn = document.getElementById('library-add-book-btn');
+        if (btn) btn.disabled = !this._getAddType();
+    }
+
     handleAddBook() {
+        const type = this._getAddType();
+        if (!type) return;
         const titleEl = document.getElementById('library-book-title');
         const title = trimOrEmpty(titleEl?.value);
         if (!title) return;
@@ -459,12 +491,6 @@ export class LibraryController extends BaseController {
         const pageCount = pageCountRaw !== '' && pageCountRaw != null ? parseInt(pageCountRaw, 10) : null;
         const pageCountNum = typeof pageCount === 'number' && !isNaN(pageCount) && pageCount > 0 ? pageCount : null;
 
-        const statusRadio = this.form?.querySelector('input[name="library-add-status"]:checked');
-        const status = statusRadio?.value === 'completed' || statusRadio?.value === 'other' ? statusRadio.value : 'reading';
-
-        const shelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"]:checked');
-        const shelfCategory = shelfRadio?.value === 'physical-tbr' ? 'physical-tbr' : 'general';
-
         const tags = this._readTagPicker(document.getElementById('library-add-tags'));
 
         const book = this.stateAdapter.addBook({
@@ -472,8 +498,7 @@ export class LibraryController extends BaseController {
             author,
             cover,
             pageCount: pageCountNum,
-            status,
-            shelfCategory,
+            type,
             tags
         });
         if (book) {
@@ -497,10 +522,8 @@ export class LibraryController extends BaseController {
         if (pageCountEl) pageCountEl.value = '';
         if (uploadEl) uploadEl.value = '';
         this._setAddFormCover('', '');
-        const readingRadio = this.form?.querySelector('input[name="library-add-status"][value="reading"]');
-        if (readingRadio) readingRadio.checked = true;
-        const generalShelfRadio = this.form?.querySelector('input[name="library-add-shelf-category"][value="general"]');
-        if (generalShelfRadio) generalShelfRadio.checked = true;
+        document.querySelectorAll('input[name="library-add-type"]').forEach((radio) => { radio.checked = false; });
+        this._syncAddButton();
         this._renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
     }
 
@@ -514,7 +537,6 @@ export class LibraryController extends BaseController {
         const titleEl = document.getElementById('book-edit-title');
         const authorEl = document.getElementById('book-edit-author');
         const pageCountEl = document.getElementById('book-edit-page-count');
-        const statusEl = document.getElementById('book-edit-status');
         const linksSection = document.getElementById('book-edit-links-section');
         const valueEl = document.getElementById('book-edit-cover-value');
 
@@ -524,12 +546,7 @@ export class LibraryController extends BaseController {
         if (pageCountEl) {
             pageCountEl.value = book.pageCount != null && !isNaN(book.pageCount) ? String(book.pageCount) : '';
         }
-        if (statusEl) statusEl.value = book.status || 'reading';
-
-        const shelfCategoryEl = document.getElementById('book-edit-shelf-category');
-        if (shelfCategoryEl) {
-            shelfCategoryEl.value = book.shelfCategory === 'physical-tbr' ? 'physical-tbr' : 'general';
-        }
+        this._renderTypeSelect(book);
 
         const dateCompletedEl = document.getElementById('book-edit-date-completed');
         if (dateCompletedEl) {
@@ -599,6 +616,40 @@ export class LibraryController extends BaseController {
         this.drawerManager.open('book-edit');
     }
 
+    /**
+     * Fill the drawer's type select. A shelf book (linked to the household library) shows
+     * `On our shelf` plus `Unlink from the library`; every other book offers the four
+     * pickable types, plus Unsorted while it is unsorted.
+     */
+    _renderTypeSelect(book) {
+        const select = document.getElementById('book-edit-type');
+        if (!select) return;
+        const isShelf = book.type === 'shelf';
+        const options = isShelf
+            ? [['shelf', BOOK_TYPE_LABELS.shelf], [UNLINK_OPTION_VALUE, 'Unlink from the library']]
+            : [
+                ...(PICKABLE_TYPES.includes(book.type) ? [] : [['unsorted', BOOK_TYPE_LABELS.unsorted]]),
+                ...PICKABLE_TYPES.map((t) => [t, BOOK_TYPE_LABELS[t]])
+            ];
+        select.innerHTML = options
+            .map(([value, label]) => `<option value="${this._escapeAttr(value)}">${this._escapeHtml(label)}</option>`)
+            .join('');
+        select.value = options.some(([v]) => v === book.type) ? book.type : options[0][0];
+    }
+
+    /** The updateBook fields for the drawer's type select. */
+    _readTypeSelect(bookId) {
+        const value = document.getElementById('book-edit-type')?.value;
+        if (!value) return {};
+        if (value === UNLINK_OPTION_VALUE) {
+            // Undoes a wrong review match: the book goes back to `physical`, and the match is remembered as dismissed
+            const book = this.stateAdapter.getBook(bookId);
+            const dismissed = book && typeof book.libraryBookId === 'string' && book.libraryBookId.trim() ? book.libraryBookId : null;
+            return { type: 'physical', libraryBookId: null, libraryTagsBase: null, shelfMatchDismissed: dismissed };
+        }
+        return BOOK_TYPES.includes(value) ? { type: value } : {};
+    }
+
     _closeBookEditDrawer() {
         this.drawerManager.close('book-edit');
     }
@@ -625,9 +676,6 @@ export class LibraryController extends BaseController {
         const pageCount = pageCountRaw !== '' && pageCountRaw != null ? parseInt(pageCountRaw, 10) : null;
         const pageCountNum = typeof pageCount === 'number' && !isNaN(pageCount) && pageCount > 0 ? pageCount : null;
 
-        const statusEl = document.getElementById('book-edit-status');
-        const status = statusEl?.value === 'completed' || statusEl?.value === 'other' ? statusEl.value : 'reading';
-
         const dateCompletedInput = document.getElementById('book-edit-date-completed');
         let dateCompleted = null;
         if (dateCompletedInput && dateCompletedInput.value && dateCompletedInput.value.trim()) {
@@ -635,9 +683,6 @@ export class LibraryController extends BaseController {
             const parsed = new Date(dateStr + 'T12:00:00Z');
             if (!isNaN(parsed.getTime())) dateCompleted = parsed.toISOString();
         }
-
-        const shelfCategoryEl = document.getElementById('book-edit-shelf-category');
-        const shelfCategory = shelfCategoryEl?.value === 'physical-tbr' ? 'physical-tbr' : 'general';
 
         // Update series (campaign) tagging
         const seriesSelect = document.getElementById('book-edit-series');
@@ -653,16 +698,16 @@ export class LibraryController extends BaseController {
 
         const tags = this._readTagPicker(document.getElementById('book-edit-tags'));
 
-        this.stateAdapter.updateBook(bookId, {
+        const updates = {
             title,
             author,
             cover,
             pageCount: pageCountNum,
-            status,
             dateCompleted,
-            shelfCategory,
             tags
-        });
+        };
+        Object.assign(updates, this._readTypeSelect(bookId));
+        this.stateAdapter.updateBook(bookId, updates);
         this._closeBookEditDrawer();
         this.renderBooks();
         this.saveState();
@@ -720,19 +765,25 @@ export class LibraryController extends BaseController {
         return years.map((year) => ({ year, books: byYear.get(year) }));
     }
 
+    /** Render every section whose container exists, independently of the others. */
     renderBooks() {
-        const reading = document.getElementById('library-cards-reading');
+        for (const { type, hideWhenEmpty } of TYPE_SECTIONS) {
+            const container = document.getElementById(`library-cards-${type}`);
+            if (!container) continue;
+            const books = this._sortBooksForDisplay(this.stateAdapter.getBooksByType(type));
+            container.innerHTML = this._renderCardList(books);
+            if (hideWhenEmpty) {
+                const section = container.closest('.library-books-section') || container;
+                section.style.display = books.length === 0 ? 'none' : '';
+            }
+        }
+
         const completed = document.getElementById('library-cards-completed');
-        const other = document.getElementById('library-cards-other');
-        if (!reading || !completed || !other) return;
-
-        const byStatus = (status) => this.stateAdapter.getBooksByStatus(status);
-
-        reading.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('reading')));
-        const completedBooks = byStatus('completed');
-        completed.innerHTML = this._renderCompletedByYear(completedBooks);
-        completed.classList.toggle('library-cards-completed--by-year', completedBooks.length > 0);
-        other.innerHTML = this._renderCardList(this._sortBooksForDisplay(byStatus('other')));
+        if (completed) {
+            const completedBooks = this.stateAdapter.getBooksByStatus('completed');
+            completed.innerHTML = this._renderCompletedByYear(completedBooks);
+            completed.classList.toggle('library-cards-completed--by-year', completedBooks.length > 0);
+        }
     }
 
     _renderCompletedByYear(completedBooks) {
@@ -755,46 +806,54 @@ export class LibraryController extends BaseController {
         if (!books || books.length === 0) {
             return '<p class="library-empty-section">None</p>';
         }
-        return books
-            .map((book) => {
-                const titleEsc = this._escapeHtml(book.title || '');
-                const authorEsc = this._escapeHtml(book.author || '');
-                const coverHtml = book.cover
-                    ? `<img class="library-card-cover" src="${this._escapeAttr(book.cover)}" alt="" loading="lazy" onerror="this.style.display=\'none\'">`
-                    : '<span class="library-card-cover-placeholder">No cover</span>';
-                const pageStr = book.pageCount != null && !isNaN(book.pageCount) ? ` · ${book.pageCount} pp` : '';
-                const statusClass = book.status === 'completed' ? 'library-status-completed' : book.status === 'reading' ? 'library-status-reading' : 'library-status-other';
-                const shelfBadge = book.shelfCategory === 'physical-tbr'
-                    ? `<span class="library-shelf-badge library-shelf-physical-tbr" aria-label="Physical TBR">Physical TBR</span>`
-                    : '';
-                const markCompleteBtn =
-                    book.status !== 'completed'
-                        ? `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-mark-complete-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Mark complete" title="Mark complete">✓</button>`
-                        : '';
-                const editBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-edit-book-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Edit" title="Edit">✏</button>`;
-                const linkQuestBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-link-quest-btn" data-book-id="${this._escapeAttr(book.id)}" aria-label="Link quest" title="Link quest">🔗</button>`;
-                return `
-                    <div class="library-card" data-book-id="${this._escapeAttr(book.id)}">
-                        <div class="library-card-cover-wrap">
-                            ${coverHtml}
-                            <span class="library-status-badge library-status-overlay ${statusClass}">${book.status || 'reading'}</span>
-                        </div>
-                        <div class="library-card-body">
-                            <div class="library-card-text">
-                                <div class="library-card-title">${titleEsc}</div>
-                                <div class="library-card-author">${authorEsc}</div>
-                                <div class="library-card-meta">${pageStr || ''}</div>
-                            </div>
-                            <div class="library-card-actions">
-                                ${markCompleteBtn}
-                                ${editBtn}
-                                ${linkQuestBtn}
-                                ${shelfBadge}
-                            </div>
-                        </div>
-                    </div>`;
-            })
-            .join('');
+        return books.map((book) => this.renderBookCard(book)).join('');
+    }
+
+    /**
+     * One book card (cover, title, author, status badge, actions). Also used for the
+     * offer line on the quest tab.
+     * @param {Object} book
+     * @returns {string} HTML
+     */
+    renderBookCard(book) {
+        const idAttr = this._escapeAttr(book.id);
+        const titleEsc = this._escapeHtml(book.title || '');
+        const authorEsc = this._escapeHtml(book.author || '');
+        const coverHtml = book.cover
+            ? `<img class="library-card-cover" src="${this._escapeAttr(book.cover)}" alt="" loading="lazy" onerror="this.style.display=\'none\'">`
+            : '<span class="library-card-cover-placeholder">No cover</span>';
+        const pageStr = book.pageCount != null && !isNaN(book.pageCount) ? ` · ${book.pageCount} pp` : '';
+        const isCompleted = book.status === 'completed';
+        // Badge per spec 6.3: Completed, or On a quest when an active quest links the book; else none
+        const onQuest = !isCompleted && typeof this.stateAdapter.isBookOnActiveQuest === 'function'
+            && this.stateAdapter.isBookOnActiveQuest(book);
+        const statusBadge = isCompleted
+            ? '<span class="library-status-badge library-status-overlay library-status-completed">Completed</span>'
+            : (onQuest ? '<span class="library-status-badge library-status-overlay library-status-reading">On a quest</span>' : '');
+        const markCompleteBtn = !isCompleted
+            ? `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-mark-complete-btn" data-book-id="${idAttr}" aria-label="Mark complete" title="Mark complete">✓</button>`
+            : '';
+        const editBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-edit-book-btn" data-book-id="${idAttr}" aria-label="Edit" title="Edit">✏</button>`;
+        const linkQuestBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-link-quest-btn" data-book-id="${idAttr}" aria-label="Link quest" title="Link quest">🔗</button>`;
+        return `
+            <div class="library-card" data-book-id="${idAttr}">
+                <div class="library-card-cover-wrap">
+                    ${coverHtml}
+                    ${statusBadge}
+                </div>
+                <div class="library-card-body">
+                    <div class="library-card-text">
+                        <div class="library-card-title">${titleEsc}</div>
+                        <div class="library-card-author">${authorEsc}</div>
+                        <div class="library-card-meta">${pageStr || ''}</div>
+                    </div>
+                    <div class="library-card-actions">
+                        ${markCompleteBtn}
+                        ${editBtn}
+                        ${linkQuestBtn}
+                    </div>
+                </div>
+            </div>`;
     }
 
     _renderDrawerLinksSection(bookId) {
@@ -1147,7 +1206,8 @@ export class LibraryController extends BaseController {
 
     _renderTagPicker(container, selectedTags = [], applicableTags = new Set()) {
         if (!container) return;
-        const tags = bookTags || [];
+        // Type-derived tags (Audio) come from the book type, never from the picker (D3)
+        const tags = (bookTags || []).filter(tag => !isTypeDerivedTag(tag.id));
         container.innerHTML = '';
 
         // Group by whatever categories the tag data actually carries, so a new
@@ -1186,6 +1246,14 @@ export class LibraryController extends BaseController {
                 checkbox.checked = selectedTags.includes(tag.id);
                 label.appendChild(checkbox);
                 label.appendChild(document.createTextNode(' ' + tag.label));
+                if (tag.scope === 'reader') {
+                    // Reader tags stay with this reader; the household library never sees them (D3)
+                    const note = document.createElement('span');
+                    note.className = 'library-tag-note';
+                    note.textContent = 'just you';
+                    label.appendChild(document.createTextNode(' '));
+                    label.appendChild(note);
+                }
                 column.appendChild(label);
             }
 
