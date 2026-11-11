@@ -437,3 +437,98 @@ describe('ExternalCurriculumController', () => {
         });
     });
 });
+
+describe('ExternalCurriculumController and the household library (§6.9)', () => {
+    const L1 = '00000000-0000-4000-8000-000000000001';
+
+    function promptCurriculum() {
+        return {
+            'curriculum-1': {
+                id: 'curriculum-1',
+                name: 'Curr',
+                categories: {
+                    'category-1': {
+                        id: 'category-1',
+                        name: 'Cat',
+                        prompts: {
+                            'prompt-1': { id: 'prompt-1', text: 'Prompt', bookId: null, completedAt: null }
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    afterEach(() => {
+        document.querySelectorAll('.book-selector-dropdown').forEach((el) => el.remove());
+        document.body.innerHTML = '';
+    });
+
+    it('gives the prompt selector the catalogue, and a shelf pick links the shelf record to the prompt', () => {
+        const { createBookSelector } = require('../assets/js/utils/bookSelector.js');
+        const actual = jest.requireActual('../assets/js/utils/bookSelector.js');
+        createBookSelector.mockClear();
+        createBookSelector.mockImplementationOnce((...args) => actual.createBookSelector(...args));
+
+        document.body.innerHTML = createCurriculumFormHTML();
+        const form = document.getElementById('character-sheet');
+        const books = [];
+        const libraryBook = {
+            id: L1, title: 'The Salt Road', authors: ['Member A'], coverUrl: null, pageCount: 320,
+            seriesName: null, seriesVolume: null, editionLabels: [], tags: []
+        };
+        const ready = { status: 'ready', userId: 'user-a', householdId: 'h', books: [libraryBook], tagsAvailable: true, fetchedAt: 1 };
+        const libraryCatalog = {
+            peek: jest.fn(() => ready),
+            getCatalog: jest.fn(async () => ready),
+            subscribe: jest.fn(() => () => {})
+        };
+        const stateAdapter = {
+            getExternalCurriculum: jest.fn(() => promptCurriculum()),
+            linkBookToPrompt: jest.fn(() => ({})),
+            getBooks: jest.fn(() => books),
+            getBook: jest.fn((id) => books.find((b) => b.id === id) || null),
+            addBook: jest.fn((data) => {
+                const book = { id: 'record-1', links: { questIds: [], curriculumPromptIds: [] }, ...data };
+                books.push(book);
+                return book;
+            }),
+            on: jest.fn()
+        };
+        const controller = new ExternalCurriculumController(stateAdapter, form, { saveState: jest.fn(), libraryCatalog });
+        controller.initialize();
+
+        expect(createBookSelector).toHaveBeenCalledWith(
+            expect.any(HTMLElement),
+            stateAdapter,
+            expect.objectContaining({ libraryCatalog, onlineSearch: expect.any(Function) })
+        );
+
+        document.querySelector('[data-prompt-id="prompt-1"] .book-selector-trigger').click();
+        document.querySelector(`.book-selector-dropdown [data-library-book-id="${L1}"]`).click();
+        expect(stateAdapter.addBook).toHaveBeenCalledWith(expect.objectContaining({ type: 'shelf', libraryBookId: L1 }));
+        expect(stateAdapter.linkBookToPrompt).toHaveBeenCalledWith('prompt-1', 'record-1');
+        controller.destroy();
+    });
+
+    it('gives the book club selector the catalogue too', () => {
+        const { createBookSelector } = require('../assets/js/utils/bookSelector.js');
+        createBookSelector.mockClear();
+        document.body.innerHTML = createCurriculumFormHTML();
+        const form = document.getElementById('character-sheet');
+        const libraryCatalog = { peek: jest.fn(() => null), getCatalog: jest.fn(), subscribe: jest.fn() };
+        const stateAdapter = {
+            getExternalCurriculum: jest.fn(() => ({
+                'club-1': { id: 'club-1', name: 'Club', type: 'book-club', categories: {}, books: [] }
+            })),
+            on: jest.fn()
+        };
+        const controller = new ExternalCurriculumController(stateAdapter, form, { saveState: jest.fn(), libraryCatalog });
+        controller.initialize();
+        expect(createBookSelector).toHaveBeenCalledWith(
+            expect.any(HTMLElement),
+            stateAdapter,
+            expect.objectContaining({ libraryCatalog, onlineSearch: expect.any(Function) })
+        );
+    });
+});

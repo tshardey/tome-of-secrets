@@ -995,7 +995,7 @@ Never escape a URL — `escapeHtml` turns `&` into `&amp;`, which breaks any que
 
 ### Adding a book tag category
 
-`bookTags.json` entries carry a `category`, and `LibraryController._renderTagPicker()` builds
+`bookTags.json` entries carry a `category`, and `renderTagPicker()` in `utils/tagPicker.js` builds
 one column per category from the data with an explicit order and label map
 (`TAG_CATEGORY_ORDER` / `TAG_CATEGORY_LABELS`). **Add your category to both constants**, or it
 falls through to a title-cased fallback heading and lands at the end. The picker previously

@@ -209,7 +209,8 @@ export async function initializeCharacterSheet() {
     // Household library (Plan 4): only when Supabase is configured, never awaited by the page.
     getSupabaseClient()
         .then((client) => {
-            if (client) startLibrarySync(stateAdapter, {});
+            // "Found on our shelf — link it?" offers land on the Library tab's physical cards (D7)
+            if (client) startLibrarySync(stateAdapter, { onOffers: (offers) => libraryController.setShelfOffers(offers) });
         })
         .catch((error) => console.warn('[Library] client unavailable:', error?.name || 'unknown'));
 

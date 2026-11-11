@@ -730,3 +730,83 @@ describe('LibraryCatalogService writes', () => {
         });
     });
 });
+
+describe('LibraryCatalogService.currentHouseholdId (R22)', () => {
+    let warnSpy;
+    beforeEach(() => {
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+        warnSpy.mockRestore();
+    });
+
+    it('is null with zero from calls when signed out', async () => {
+        const fake = makeFakeClient({ session: null, handlers: readyHandlers() });
+        const { service } = makeService(fake);
+        await expect(service.currentHouseholdId()).resolves.toBeNull();
+        expect(fake.from).not.toHaveBeenCalled();
+    });
+
+    it('is null when Supabase is not configured', async () => {
+        const service = new LibraryCatalogService({ getClient: async () => null });
+        await expect(service.currentHouseholdId()).resolves.toBeNull();
+    });
+
+    it('loads once, then serves the cached household without rereading the books', async () => {
+        const handlers = readyHandlers();
+        const fake = makeFakeClient({ handlers });
+        const { service } = makeService(fake);
+        await expect(service.currentHouseholdId()).resolves.toBe(HOUSEHOLD);
+        handlers.book_tags = () => ({ data: null, error: null });
+        expect(fake.ofTable('books')).not.toHaveLength(0);
+        const booksReads = fake.ofTable('books').length;
+        const fromCalls = fake.from.mock.calls.length;
+
+        // A write makes the catalogue stale; the household is still known for this user.
+        await service.addTags(BOOK_1, HOUSEHOLD, ['fantasy']);
+        const afterWrite = fake.from.mock.calls.length;
+        await expect(service.currentHouseholdId()).resolves.toBe(HOUSEHOLD);
+        expect(fake.from.mock.calls.length).toBe(afterWrite);
+        expect(fake.ofTable('books')).toHaveLength(booksReads);
+        expect(afterWrite).toBe(fromCalls + 1);
+    });
+
+    it('follows a user switch to the new household', async () => {
+        const handlers = readyHandlers();
+        const fake = makeFakeClient({ handlers });
+        const { service } = makeService(fake);
+        await expect(service.currentHouseholdId()).resolves.toBe(HOUSEHOLD);
+
+        fake.setSession({ user: { id: USER_B } });
+        handlers.household_members = memberHandler([{ household_id: HOUSEHOLD_B }]);
+        handlers.books = pagedHandler([bookRow(BOOK_2)]);
+        handlers.book_tags = pagedHandler([]);
+        await expect(service.currentHouseholdId()).resolves.toBe(HOUSEHOLD_B);
+        const members = fake.ofTable('household_members');
+        expect(members[members.length - 1].call('eq')).toEqual(['eq', 'user_id', USER_B]);
+    });
+
+    it('is null after a sign-out, with no new request', async () => {
+        const fake = makeFakeClient({ handlers: readyHandlers() });
+        const { service } = makeService(fake);
+        await service.currentHouseholdId();
+        const before = fake.from.mock.calls.length;
+        fake.setSession(null);
+        await expect(service.currentHouseholdId()).resolves.toBeNull();
+        expect(fake.from.mock.calls.length).toBe(before);
+    });
+
+    it('is null without a household, and when the library is unavailable; never throws', async () => {
+        const none = makeFakeClient({ handlers: { ...readyHandlers(), household_members: memberHandler([]) } });
+        await expect(makeService(none).service.currentHouseholdId()).resolves.toBeNull();
+
+        const broken = makeFakeClient({
+            handlers: { ...readyHandlers(), books: () => ({ data: null, error: { code: 'PGRST000', message: 'boom' } }) }
+        });
+        await expect(makeService(broken).service.currentHouseholdId()).resolves.toBeNull();
+
+        const failing = makeFakeClient({ handlers: readyHandlers() });
+        failing.client.auth.getSession.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')));
+        await expect(makeService(failing).service.currentHouseholdId()).resolves.toBeNull();
+    });
+});

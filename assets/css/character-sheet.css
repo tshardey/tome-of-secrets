@@ -1573,6 +1573,130 @@
     font-style: italic;
 }
 
+/* Plan 4 (D7): On our shelf / Your books / Search online groups */
+.book-selector-group + .book-selector-group {
+    border-top: 1px solid #54483b;
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.book-selector-group-heading {
+    padding: 6px 10px 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #b89f62;
+}
+
+.book-selector-action,
+.book-selector-type-option {
+    margin: 4px 6px;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+}
+
+.book-selector-online-actions,
+.book-selector-type-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.book-selector-online-actions .book-selector-option,
+.book-selector-online-actions .book-selector-empty {
+    flex-basis: 100%;
+}
+
+.book-selector-type-prompt {
+    margin: 6px 10px 2px;
+    color: #d4c8b0;
+    font-weight: 600;
+}
+
+.book-selector-type-book {
+    margin: 0 10px 4px;
+    color: #8a7a61;
+    font-size: 0.85rem;
+}
+
+.book-selector-tags-btn {
+    font-size: 0.85rem;
+    padding: 4px 10px;
+}
+
+.book-selector-tags-panel {
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(42, 35, 29, 0.6);
+    border: 1px solid #54483b;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.book-selector-series-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #d4c8b0;
+    font-size: 0.9rem;
+}
+
+.book-selector-tags-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Library tab: Add-form shelf results, the offer line, and the missing state */
+.library-shelf-results-heading {
+    padding: 6px 12px 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #b89f62;
+}
+
+.library-shelf-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(184, 159, 98, 0.15);
+    color: #f5f0e6;
+}
+
+.library-shelf-result-note {
+    flex-shrink: 0;
+    color: #8a7a61;
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.library-card-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(184, 159, 98, 0.2);
+    font-size: 0.85rem;
+    color: #d4c8b0;
+}
+
+.library-card-offer .rpg-btn {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+}
+
+.library-card-missing {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #b89f62;
+}
+
 .form-hint {
     margin-top: 6px;
     color: #8a7a61;

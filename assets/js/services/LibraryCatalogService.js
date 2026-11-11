@@ -11,6 +11,7 @@
  * - Logs carry an error code or name only, never titles, authors or tags.
  */
 import { getSupabaseClient } from './supabaseClient.js';
+import { getSupabaseConfig } from './siteConfig.js';
 
 export const LIBRARY_TIMEOUT_MS = 4000;
 export const LIBRARY_WRITE_TIMEOUT_MS = 8000;
@@ -302,6 +303,28 @@ export class LibraryCatalogService {
     };
   }
 
+  /**
+   * The signed-in user's household id, for a write (R22). Reads the local session (bounded by
+   * the read timeout) and serves the household of a cached result for that same user, even a
+   * stale one, so a tag edit does not reload every book; else it loads. Never throws.
+   * @returns {Promise<string|null>} null when signed out, without a household, or unavailable
+   */
+  async currentHouseholdId() {
+    try {
+      const userId = await this._withTimeout(this._sessionUserId(), LIBRARY_TIMEOUT_MS);
+      if (!userId) return null;
+      const last = this._last;
+      if (last && last.status === 'ready' && last.userId === userId && last.householdId) return last.householdId;
+      const catalog = await this.getCatalog();
+      return catalog && catalog.status === 'ready' && catalog.userId === userId && catalog.householdId
+        ? catalog.householdId
+        : null;
+    } catch (error) {
+      console.warn('[LibraryCatalog] household lookup failed:', logCode(error));
+      return null;
+    }
+  }
+
   /** The last result, or null before the first load. */
   peek() {
     return this._last;
@@ -428,3 +451,26 @@ export class LibraryCatalogService {
 }
 
 export const libraryCatalog = new LibraryCatalogService();
+
+/**
+ * The page's catalogue when Supabase is configured, else null (no shelf group, no request).
+ * Read synchronously from the page's meta tags.
+ * @returns {LibraryCatalogService|null}
+ */
+export function configuredLibraryCatalog() {
+  const { url, publishableKey } = getSupabaseConfig();
+  return url && publishableKey ? libraryCatalog : null;
+}
+
+/**
+ * The catalogue a controller hands its book selectors: `dependencies.libraryCatalog` when the
+ * key is present (tests, or null to turn it off), else the configured one.
+ * @param {Object} [dependencies]
+ * @returns {LibraryCatalogService|null}
+ */
+export function resolveLibraryCatalog(dependencies) {
+  if (dependencies && Object.prototype.hasOwnProperty.call(dependencies, 'libraryCatalog')) {
+    return dependencies.libraryCatalog || null;
+  }
+  return configuredLibraryCatalog();
+}

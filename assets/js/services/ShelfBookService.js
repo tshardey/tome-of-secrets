@@ -13,8 +13,11 @@
  * Logs carry an error code only, never titles, authors or tags.
  */
 import { libraryCatalog } from './LibraryCatalogService.js';
-import { matchToLibrary } from '../utils/bookMatching.js';
+import { matchToLibrary, baseNormalize } from '../utils/bookMatching.js';
 import { isSharedTag, sharedTags } from '../utils/bookTagRules.js';
+
+/** At most this many "On our shelf" results (D7). */
+export const SHELF_SEARCH_LIMIT = 20;
 
 function logCode(error) {
     if (!error || typeof error !== 'object') return 'unknown';
@@ -154,10 +157,12 @@ export function ensureShelfRecord(stateAdapter, libraryBook) {
 }
 
 /**
- * The household id for a write. getCatalog checks the session before serving its cache, so an
- * account switch never sends the previous household's id.
+ * The household id for a write. Both paths check the session first, so an account switch never
+ * sends the previous household's id. currentHouseholdId (R22) answers from a cached result for
+ * the same user, so a tag edit does not reload the whole catalogue.
  */
 async function householdIdFor(service) {
+    if (typeof service.currentHouseholdId === 'function') return service.currentHouseholdId();
     const catalog = await service.getCatalog();
     return catalog && catalog.status === 'ready' && catalog.householdId ? catalog.householdId : null;
 }
@@ -265,6 +270,53 @@ async function fillSeriesFor(stateAdapter, book, libraryBook, service) {
     } catch (error) {
         console.warn('[ShelfBook] series fill failed:', logCode(error));
     }
+}
+
+/**
+ * Fill the library's empty series name after a shelf record joined a ToS series (D5), from the
+ * selector's Tags & series panel or the book drawer. Skips a library book the catalogue shows
+ * with a series already, and makes no request without a household. Never throws.
+ * @returns {Promise<'filled'|'kept'|'skipped'>}
+ */
+export async function fillSeriesForBook(stateAdapter, bookId, service = libraryCatalog) {
+    try {
+        const book = stateAdapter.getBook(bookId);
+        if (!isShelfRecord(book)) return 'skipped';
+        const series = typeof stateAdapter.getSeriesForBook === 'function' ? stateAdapter.getSeriesForBook(bookId) : null;
+        const name = series && typeof series.name === 'string' ? series.name.trim() : '';
+        if (!name) return 'skipped';
+        const catalog = typeof service.peek === 'function' ? service.peek() : null;
+        const known = catalog && catalog.status === 'ready' && Array.isArray(catalog.books)
+            ? catalog.books.find((libraryBook) => libraryBook.id === book.libraryBookId)
+            : null;
+        if (known && known.seriesName !== null && known.seriesName !== undefined) return 'skipped';
+        if (!await householdIdFor(service)) return 'skipped';
+        return await service.fillSeries(book.libraryBookId, name);
+    } catch (error) {
+        console.warn('[ShelfBook] series fill failed:', logCode(error));
+        return 'skipped';
+    }
+}
+
+/**
+ * "On our shelf" search (D7): catalogue books whose title or author contains the query, with
+ * accents and case folded, ordered by title. An empty query matches every book.
+ * @param {Object|null} catalog - a getCatalog() result
+ * @param {string} query
+ * @param {number} [limit]
+ * @returns {Object[]} LibraryBooks
+ */
+export function searchShelf(catalog, query, limit = SHELF_SEARCH_LIMIT) {
+    if (!catalog || catalog.status !== 'ready' || !Array.isArray(catalog.books)) return [];
+    const q = baseNormalize(query);
+    const matches = catalog.books.filter((libraryBook) => {
+        if (!q) return true;
+        if (baseNormalize(libraryBook.title).includes(q)) return true;
+        return (libraryBook.authors || []).some((author) => baseNormalize(author).includes(q));
+    });
+    return matches
+        .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')) || String(a.id).localeCompare(String(b.id)))
+        .slice(0, limit);
 }
 
 /**

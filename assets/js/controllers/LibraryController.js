@@ -7,11 +7,21 @@
  */
 
 import { BaseController } from './BaseController.js';
-import { isTypeDerivedTag } from '../utils/bookTagRules.js';
 import { BOOK_TYPES, PICKABLE_TYPES, BOOK_TYPE_LABELS } from '../utils/bookTypes.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { searchBooks } from '../services/BookMetadataService.js';
-import { bookTags, allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
+import { resolveLibraryCatalog } from '../services/LibraryCatalogService.js';
+import {
+    searchShelf,
+    syncShelfTags,
+    fillSeriesForBook,
+    linkPhysicalToShelf,
+    dismissShelfOffer,
+    unlinkFromLibrary,
+    isLibraryMissing
+} from '../services/ShelfBookService.js';
+import { renderTagPicker, readTagPicker } from '../utils/tagPicker.js';
+import { allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 import { getUnlinkedActiveQuests, linkExistingQuestToBook, createExtraCreditForBook, getQuestLinkRefusal } from '../utils/questBookLinker.js';
@@ -34,25 +44,12 @@ const TYPE_SECTIONS = [
 
 const UNLINK_OPTION_VALUE = 'unlink';
 
-// Stable display order for the tag picker columns. Any tag category not listed
-// here is still rendered, appended after these in the order it appears in the
-// tag data, so new categories can never be silently dropped from the picker.
-const TAG_CATEGORY_ORDER = ['genre', 'content', 'provenance', 'agency', 'form'];
-const TAG_CATEGORY_LABELS = {
-    genre: 'Genre',
-    content: 'Content',
-    provenance: 'Provenance',
-    agency: 'Agency',
-    form: 'Form'
-};
+function errorCode(error) {
+    return (error && (error.reason || error.code || error.name)) || 'unknown';
+}
 
-function tagCategoryLabel(category) {
-    if (TAG_CATEGORY_LABELS[category]) return TAG_CATEGORY_LABELS[category];
-    return String(category)
-        .split(/[-_\s]+/)
-        .filter(Boolean)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+function isShelfRecord(book) {
+    return Boolean(book) && book.type === 'shelf' && typeof book.libraryBookId === 'string' && book.libraryBookId.trim() !== '';
 }
 
 export class LibraryController extends BaseController {
@@ -64,6 +61,11 @@ export class LibraryController extends BaseController {
         this._linkQuestPopoverEl = null;
         this._linkQuestOutsideClickHandler = null;
         this._linkQuestEscHandler = null;
+        /** "Found on our shelf" offers: ToS book id -> library book (D7). Never automatic. */
+        this._shelfOffers = new Map();
+        this._libraryCatalog = resolveLibraryCatalog(this.dependencies);
+        this._unsubscribeCatalog = null;
+        this._shelfSearchToken = 0;
     }
 
     initialize() {
@@ -124,7 +126,7 @@ export class LibraryController extends BaseController {
             });
         }
 
-        this._renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
+        renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
 
         this._setupAddFormCoverHandlers();
 
@@ -142,6 +144,18 @@ export class LibraryController extends BaseController {
             const editBtn = e.target.closest('.library-edit-book-btn');
             const markCompleteBtn = e.target.closest('.library-mark-complete-btn');
             const linkQuestBtn = e.target.closest('.library-link-quest-btn');
+            const offerLinkBtn = e.target.closest('.library-offer-link-btn');
+            const offerDismissBtn = e.target.closest('.library-offer-dismiss-btn');
+            if (offerLinkBtn && offerLinkBtn.dataset.bookId) {
+                e.preventDefault();
+                this.handleLinkShelfOffer(offerLinkBtn.dataset.bookId);
+                return;
+            }
+            if (offerDismissBtn && offerDismissBtn.dataset.bookId) {
+                e.preventDefault();
+                this.handleDismissShelfOffer(offerDismissBtn.dataset.bookId);
+                return;
+            }
             if (linkQuestBtn && linkQuestBtn.dataset.bookId) {
                 e.preventDefault();
                 this._openLinkQuestPopover(linkQuestBtn, linkQuestBtn.dataset.bookId);
@@ -163,6 +177,11 @@ export class LibraryController extends BaseController {
             this.renderBooks();
         });
 
+        // Each catalogue load can mark a shelf book as missing from the household library
+        if (this._libraryCatalog && typeof this._libraryCatalog.subscribe === 'function') {
+            this._unsubscribeCatalog = this._libraryCatalog.subscribe(() => this.renderBooks());
+        }
+
         this._onBookMarkedComplete = this.dependencies.onBookMarkedComplete || null;
     }
 
@@ -171,26 +190,68 @@ export class LibraryController extends BaseController {
         if (this._searchAbortController) this._searchAbortController.abort();
         this._searchAbortController = new AbortController();
         const signal = this._searchAbortController.signal;
-        resultsContainer.innerHTML = '<span class="book-search-loading">Searching…</span>';
+        resultsContainer.innerHTML =
+            '<div class="library-shelf-results"></div>' +
+            '<div class="library-online-results"><span class="book-search-loading">Searching…</span></div>';
         resultsContainer.style.display = 'block';
+        const onlineContainer = resultsContainer.querySelector('.library-online-results');
+        this._renderShelfSearchResults(query, resultsContainer);
 
         searchBooks(query, author || undefined, signal)
             .then((results) => {
                 if (signal.aborted) return;
-                this._renderSearchResults(results, resultsContainer);
+                this._renderSearchResults(results, onlineContainer, resultsContainer);
             })
             .catch((err) => {
                 if (err.name === 'AbortError') return;
-                resultsContainer.innerHTML = '<span class="book-search-error">Search failed.</span>';
+                onlineContainer.innerHTML = '<span class="book-search-error">Search failed.</span>';
                 resultsContainer.style.display = 'block';
             });
     }
 
-    _renderSearchResults(results, container) {
+    /**
+     * The Add form's "On our shelf" results (§6.3): household books are linked from a quest, so
+     * they carry the note and no add button. Painted from the cached catalogue at once, then from
+     * the library's answer; never blocks the online results.
+     */
+    _renderShelfSearchResults(query, resultsContainer) {
+        const catalogService = this._libraryCatalog;
+        if (!catalogService) return;
+        const token = ++this._shelfSearchToken;
+        const paint = (catalog) => {
+            if (token !== this._shelfSearchToken) return;
+            const target = resultsContainer.querySelector('.library-shelf-results');
+            if (!target) return;
+            const matches = searchShelf(catalog, query);
+            if (matches.length === 0) {
+                target.innerHTML = '';
+                return;
+            }
+            target.innerHTML =
+                '<div class="library-shelf-results-heading">On our shelf</div>' +
+                matches.map((libraryBook) => {
+                    const authors = (libraryBook.authors || []).join(', ');
+                    const cover = libraryBook.coverUrl
+                        ? `<img class="book-search-result-cover" src="${this._escapeAttr(libraryBook.coverUrl)}" alt="">`
+                        : '';
+                    const authorHtml = authors ? ` — ${this._escapeHtml(authors)}` : '';
+                    return `<div class="library-shelf-result">${cover}` +
+                        `<span class="book-search-result-text">${this._escapeHtml(libraryBook.title || '')}${authorHtml}</span>` +
+                        '<span class="library-shelf-result-note">Link it from a quest</span></div>';
+                }).join('');
+        };
+        paint(catalogService.peek());
+        Promise.resolve()
+            .then(() => catalogService.getCatalog())
+            .then(paint)
+            .catch((error) => console.warn('[Library] shelf search unavailable:', errorCode(error)));
+    }
+
+    _renderSearchResults(results, container, outer = container) {
         container.innerHTML = '';
         if (!results || results.length === 0) {
             container.innerHTML = '<span class="book-search-empty">No results.</span>';
-            container.style.display = 'block';
+            outer.style.display = 'block';
             return;
         }
         results.forEach((book) => {
@@ -212,12 +273,13 @@ export class LibraryController extends BaseController {
             item.appendChild(text);
             item.addEventListener('click', () => {
                 this._applySearchResultToAddForm(book);
-                container.style.display = 'none';
-                container.innerHTML = '';
+                this._shelfSearchToken += 1;
+                outer.style.display = 'none';
+                outer.innerHTML = '';
             });
             container.appendChild(item);
         });
-        container.style.display = 'block';
+        outer.style.display = 'block';
     }
 
     _applySearchResultToAddForm(book) {
@@ -491,7 +553,7 @@ export class LibraryController extends BaseController {
         const pageCount = pageCountRaw !== '' && pageCountRaw != null ? parseInt(pageCountRaw, 10) : null;
         const pageCountNum = typeof pageCount === 'number' && !isNaN(pageCount) && pageCount > 0 ? pageCount : null;
 
-        const tags = this._readTagPicker(document.getElementById('library-add-tags'));
+        const tags = readTagPicker(document.getElementById('library-add-tags'));
 
         const book = this.stateAdapter.addBook({
             title,
@@ -524,7 +586,7 @@ export class LibraryController extends BaseController {
         this._setAddFormCover('', '');
         document.querySelectorAll('input[name="library-add-type"]').forEach((radio) => { radio.checked = false; });
         this._syncAddButton();
-        this._renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
+        renderTagPicker(document.getElementById('library-add-tags'), [], this._getApplicableTagIds());
     }
 
     handleEditBook(bookId) {
@@ -601,7 +663,7 @@ export class LibraryController extends BaseController {
             searchResultsEl.innerHTML = '';
         }
 
-        this._renderTagPicker(document.getElementById('book-edit-tags'), book.tags || [], this._getApplicableTagIds());
+        renderTagPicker(document.getElementById('book-edit-tags'), book.tags || [], this._getApplicableTagIds());
 
         // Series (campaign) selector: tag this book to a series
         const seriesSelect = document.getElementById('book-edit-series');
@@ -637,16 +699,15 @@ export class LibraryController extends BaseController {
         select.value = options.some(([v]) => v === book.type) ? book.type : options[0][0];
     }
 
-    /** The updateBook fields for the drawer's type select. */
-    _readTypeSelect(bookId) {
+    /** Whether the drawer's type select asks to unlink a shelf book from the library. */
+    _isUnlinkSelected() {
+        return document.getElementById('book-edit-type')?.value === UNLINK_OPTION_VALUE;
+    }
+
+    /** The updateBook fields for the drawer's type select (Unlink goes through unlinkFromLibrary). */
+    _readTypeSelect() {
         const value = document.getElementById('book-edit-type')?.value;
-        if (!value) return {};
-        if (value === UNLINK_OPTION_VALUE) {
-            // Undoes a wrong review match: the book goes back to `physical`, and the match is remembered as dismissed
-            const book = this.stateAdapter.getBook(bookId);
-            const dismissed = book && typeof book.libraryBookId === 'string' && book.libraryBookId.trim() ? book.libraryBookId : null;
-            return { type: 'physical', libraryBookId: null, libraryTagsBase: null, shelfMatchDismissed: dismissed };
-        }
+        if (!value || value === UNLINK_OPTION_VALUE) return {};
         return BOOK_TYPES.includes(value) ? { type: value } : {};
     }
 
@@ -685,6 +746,7 @@ export class LibraryController extends BaseController {
         }
 
         // Update series (campaign) tagging
+        let joinedSeries = false;
         const seriesSelect = document.getElementById('book-edit-series');
         if (seriesSelect) {
             const newSeriesId = (seriesSelect.value || '').trim() || null;
@@ -692,11 +754,12 @@ export class LibraryController extends BaseController {
             const currentSeriesId = currentSeries ? currentSeries.id : null;
             if (newSeriesId !== currentSeriesId) {
                 if (currentSeriesId) this.stateAdapter.removeBookFromSeries(currentSeriesId, bookId);
-                if (newSeriesId) this.stateAdapter.addBookToSeries(newSeriesId, bookId);
+                if (newSeriesId) joinedSeries = this.stateAdapter.addBookToSeries(newSeriesId, bookId) !== false;
             }
         }
 
-        const tags = this._readTagPicker(document.getElementById('book-edit-tags'));
+        const tags = readTagPicker(document.getElementById('book-edit-tags'));
+        const unlinking = this._isUnlinkSelected();
 
         const updates = {
             title,
@@ -706,9 +769,73 @@ export class LibraryController extends BaseController {
             dateCompleted,
             tags
         };
-        Object.assign(updates, this._readTypeSelect(bookId));
+        Object.assign(updates, this._readTypeSelect());
         this.stateAdapter.updateBook(bookId, updates);
+        if (unlinking) {
+            // Undoes a wrong review match: the book goes back to `physical`, and the match is
+            // remembered as dismissed (D7). Nothing is pushed to the library.
+            unlinkFromLibrary(this.stateAdapter, bookId);
+        } else {
+            this._syncShelfBook(bookId, joinedSeries);
+        }
         this._closeBookEditDrawer();
+        this.renderBooks();
+        this.saveState();
+    }
+
+    /**
+     * After a drawer save of a shelf book: push its shared tags (write-through, D4) and, when
+     * it just joined a series, fill the library's empty series name (D5). Never awaited.
+     */
+    _syncShelfBook(bookId, joinedSeries) {
+        const catalog = this._libraryCatalog;
+        if (!catalog || !isShelfRecord(this.stateAdapter.getBook(bookId))) return;
+        Promise.resolve(syncShelfTags(this.stateAdapter, bookId, catalog))
+            .catch((error) => console.warn('[Library] tag sync failed:', errorCode(error)));
+        if (joinedSeries) void fillSeriesForBook(this.stateAdapter, bookId, catalog);
+    }
+
+    destroy() {
+        if (this._unsubscribeCatalog) this._unsubscribeCatalog();
+        this._unsubscribeCatalog = null;
+        super.destroy();
+    }
+
+    /**
+     * Show "Found on our shelf — link it?" on these physical books (from startLibrarySync).
+     * @param {Array<{ bookId: string, libraryBook: Object }>} offers
+     */
+    setShelfOffers(offers) {
+        this._shelfOffers = new Map(
+            (Array.isArray(offers) ? offers : [])
+                .filter((offer) => offer && offer.bookId && offer.libraryBook)
+                .map((offer) => [offer.bookId, offer.libraryBook])
+        );
+        this.renderBooks();
+    }
+
+    /** `Link`: the physical book becomes a shelf record in place (D7). */
+    handleLinkShelfOffer(bookId) {
+        const libraryBook = this._shelfOffers.get(bookId);
+        if (!libraryBook) return;
+        this._shelfOffers.delete(bookId);
+        const pending = linkPhysicalToShelf(this.stateAdapter, bookId, libraryBook, this._libraryCatalog || undefined);
+        this.renderBooks();
+        Promise.resolve(pending)
+            .catch((error) => console.warn('[Library] link failed:', errorCode(error)))
+            .then((linkedId) => {
+                if (linkedId) toast.success('Linked to the household library');
+                this.saveState();
+                this.renderBooks();
+            });
+    }
+
+    /** `Not this one`: that library book is not offered for this book again. */
+    handleDismissShelfOffer(bookId) {
+        const libraryBook = this._shelfOffers.get(bookId);
+        if (!libraryBook) return;
+        this._shelfOffers.delete(bookId);
+        dismissShelfOffer(this.stateAdapter, bookId, libraryBook.id);
         this.renderBooks();
         this.saveState();
     }
@@ -835,6 +962,20 @@ export class LibraryController extends BaseController {
             : '';
         const editBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-edit-book-btn" data-book-id="${idAttr}" aria-label="Edit" title="Edit">✏</button>`;
         const linkQuestBtn = `<button type="button" class="rpg-btn rpg-btn-secondary library-card-action-btn library-link-quest-btn" data-book-id="${idAttr}" aria-label="Link quest" title="Link quest">🔗</button>`;
+        // "Found on our shelf — link it?" (D7): only on a physical book, never automatic
+        const offer = book.type === 'physical' ? this._shelfOffers.get(book.id) : null;
+        const offerHtml = offer
+            ? '<div class="library-card-offer">' +
+                '<span class="library-card-offer-text">Found on our shelf — link it?</span>' +
+                `<button type="button" class="rpg-btn rpg-btn-secondary library-offer-link-btn" data-book-id="${idAttr}">Link</button>` +
+                `<button type="button" class="rpg-btn rpg-btn-secondary library-offer-dismiss-btn" data-book-id="${idAttr}">Not this one</button>` +
+                '</div>'
+            : '';
+        // Review Focus 4: the record keeps its data; the card only says the library book is gone
+        const catalog = this._libraryCatalog ? this._libraryCatalog.peek() : null;
+        const missingHtml = isLibraryMissing(book, catalog)
+            ? '<div class="library-card-missing">No longer in the household library</div>'
+            : '';
         return `
             <div class="library-card" data-book-id="${idAttr}">
                 <div class="library-card-cover-wrap">
@@ -846,12 +987,14 @@ export class LibraryController extends BaseController {
                         <div class="library-card-title">${titleEsc}</div>
                         <div class="library-card-author">${authorEsc}</div>
                         <div class="library-card-meta">${pageStr || ''}</div>
+                        ${missingHtml}
                     </div>
                     <div class="library-card-actions">
                         ${markCompleteBtn}
                         ${editBtn}
                         ${linkQuestBtn}
                     </div>
+                    ${offerHtml}
                 </div>
             </div>`;
     }
@@ -1202,69 +1345,6 @@ export class LibraryController extends BaseController {
         };
         const effectContext = buildEffectContext(this.stateAdapter, this.form);
         return getApplicableTagIds(effectContext, dataModule);
-    }
-
-    _renderTagPicker(container, selectedTags = [], applicableTags = new Set()) {
-        if (!container) return;
-        // Type-derived tags (Audio) come from the book type, never from the picker (D3)
-        const tags = (bookTags || []).filter(tag => !isTypeDerivedTag(tag.id));
-        container.innerHTML = '';
-
-        // Group by whatever categories the tag data actually carries, so a new
-        // category added to bookTags.json shows up in the picker automatically.
-        const categories = new Map();
-        for (const tag of tags) {
-            const category = tag.category || 'other';
-            if (!categories.has(category)) {
-                categories.set(category, []);
-            }
-            categories.get(category).push(tag);
-        }
-
-        const orderedCategories = [
-            ...TAG_CATEGORY_ORDER.filter(category => categories.has(category)),
-            ...Array.from(categories.keys()).filter(category => !TAG_CATEGORY_ORDER.includes(category))
-        ];
-
-        for (const category of orderedCategories) {
-            const categoryTags = categories.get(category);
-            const column = document.createElement('div');
-            column.className = 'library-tag-column';
-
-            const heading = document.createElement('div');
-            heading.className = 'library-tag-category';
-            heading.textContent = tagCategoryLabel(category);
-            column.appendChild(heading);
-
-            for (const tag of categoryTags) {
-                const label = document.createElement('label');
-                label.className = 'library-tag-option' + (applicableTags.has(tag.id) ? ' tag--applicable' : '');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = container.id + '-tag';
-                checkbox.value = tag.id;
-                checkbox.checked = selectedTags.includes(tag.id);
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(' ' + tag.label));
-                if (tag.scope === 'reader') {
-                    // Reader tags stay with this reader; the household library never sees them (D3)
-                    const note = document.createElement('span');
-                    note.className = 'library-tag-note';
-                    note.textContent = 'just you';
-                    label.appendChild(document.createTextNode(' '));
-                    label.appendChild(note);
-                }
-                column.appendChild(label);
-            }
-
-            container.appendChild(column);
-        }
-    }
-
-    _readTagPicker(container) {
-        if (!container) return [];
-        const checked = container.querySelectorAll('input[type="checkbox"]:checked');
-        return Array.from(checked).map(cb => cb.value);
     }
 
     _escapeHtml(s) {
