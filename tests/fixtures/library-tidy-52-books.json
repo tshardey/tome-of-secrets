@@ -1,0 +1,1006 @@
+{
+  "version": 20,
+  "updatedAt": "2026-11-01T00:00:00.000Z",
+  "data": {
+    "formData": {},
+    "characterState": {
+      "books": {
+        "10000000-0000-4000-8000-000000000000": {
+          "id": "10000000-0000-4000-8000-000000000000",
+          "title": "The Salt Road",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 200,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000001": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "title": "The Glass Road",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 201,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000002": {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "title": "The Amber Road",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 202,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000003": {
+          "id": "10000000-0000-4000-8000-000000000003",
+          "title": "The Cinder Road",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 203,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000004": {
+          "id": "10000000-0000-4000-8000-000000000004",
+          "title": "The Hollow Road",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 204,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000005": {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "title": "The Lantern Road",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 205,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000006": {
+          "id": "10000000-0000-4000-8000-000000000006",
+          "title": "The Willow Road",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 206,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000007": {
+          "id": "10000000-0000-4000-8000-000000000007",
+          "title": "The Ember Road",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 207,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000008": {
+          "id": "10000000-0000-4000-8000-000000000008",
+          "title": "The Raven Road",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 208,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000009": {
+          "id": "10000000-0000-4000-8000-000000000009",
+          "title": "The Marble Road",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 209,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000010": {
+          "id": "10000000-0000-4000-8000-000000000010",
+          "title": "The Salt Orchard",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 210,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000011": {
+          "id": "10000000-0000-4000-8000-000000000011",
+          "title": "The Glass Orchard",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 211,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000012": {
+          "id": "10000000-0000-4000-8000-000000000012",
+          "title": "The Amber Orchard",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 212,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000013": {
+          "id": "10000000-0000-4000-8000-000000000013",
+          "title": "The Cinder Orchard",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 213,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000014": {
+          "id": "10000000-0000-4000-8000-000000000014",
+          "title": "The Hollow Orchard",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 214,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000015": {
+          "id": "10000000-0000-4000-8000-000000000015",
+          "title": "The Lantern Orchard",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 215,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000016": {
+          "id": "10000000-0000-4000-8000-000000000016",
+          "title": "The Willow Orchard",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 216,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000017": {
+          "id": "10000000-0000-4000-8000-000000000017",
+          "title": "The Ember Orchard",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 217,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000018": {
+          "id": "10000000-0000-4000-8000-000000000018",
+          "title": "The Raven Orchard",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 218,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000019": {
+          "id": "10000000-0000-4000-8000-000000000019",
+          "title": "The Marble Orchard",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 219,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000020": {
+          "id": "10000000-0000-4000-8000-000000000020",
+          "title": "The Salt Tide",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 220,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000021": {
+          "id": "10000000-0000-4000-8000-000000000021",
+          "title": "The Glass Tide",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 221,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000022": {
+          "id": "10000000-0000-4000-8000-000000000022",
+          "title": "The Amber Tide",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 222,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000023": {
+          "id": "10000000-0000-4000-8000-000000000023",
+          "title": "The Cinder Tide",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 223,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000024": {
+          "id": "10000000-0000-4000-8000-000000000024",
+          "title": "The Hollow Tide",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 224,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000025": {
+          "id": "10000000-0000-4000-8000-000000000025",
+          "title": "The Lantern Tide",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 225,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000026": {
+          "id": "10000000-0000-4000-8000-000000000026",
+          "title": "The Willow Tide",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 226,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000027": {
+          "id": "10000000-0000-4000-8000-000000000027",
+          "title": "The Ember Tide",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 227,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000028": {
+          "id": "10000000-0000-4000-8000-000000000028",
+          "title": "The Raven Tide",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 228,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000029": {
+          "id": "10000000-0000-4000-8000-000000000029",
+          "title": "The Marble Tide",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 229,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000030": {
+          "id": "10000000-0000-4000-8000-000000000030",
+          "title": "The Salt Crown",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 230,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000031": {
+          "id": "10000000-0000-4000-8000-000000000031",
+          "title": "The Glass Crown",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 231,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000032": {
+          "id": "10000000-0000-4000-8000-000000000032",
+          "title": "The Amber Crown",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 232,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000033": {
+          "id": "10000000-0000-4000-8000-000000000033",
+          "title": "The Cinder Crown",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 233,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000034": {
+          "id": "10000000-0000-4000-8000-000000000034",
+          "title": "The Hollow Crown",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 234,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000035": {
+          "id": "10000000-0000-4000-8000-000000000035",
+          "title": "The Lantern Crown",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 235,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000036": {
+          "id": "10000000-0000-4000-8000-000000000036",
+          "title": "The Willow Crown",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 236,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000037": {
+          "id": "10000000-0000-4000-8000-000000000037",
+          "title": "The Ember Crown",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 237,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000038": {
+          "id": "10000000-0000-4000-8000-000000000038",
+          "title": "The Raven Crown",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 238,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000039": {
+          "id": "10000000-0000-4000-8000-000000000039",
+          "title": "The Marble Crown",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 239,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000040": {
+          "id": "10000000-0000-4000-8000-000000000040",
+          "title": "The Salt Garden",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 240,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000041": {
+          "id": "10000000-0000-4000-8000-000000000041",
+          "title": "The Glass Garden",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 241,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000042": {
+          "id": "10000000-0000-4000-8000-000000000042",
+          "title": "The Amber Garden",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 242,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000043": {
+          "id": "10000000-0000-4000-8000-000000000043",
+          "title": "The Cinder Garden",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 243,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000044": {
+          "id": "10000000-0000-4000-8000-000000000044",
+          "title": "The Hollow Garden",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 244,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000045": {
+          "id": "10000000-0000-4000-8000-000000000045",
+          "title": "The Lantern Garden",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 245,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000046": {
+          "id": "10000000-0000-4000-8000-000000000046",
+          "title": "The Willow Garden",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 246,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000047": {
+          "id": "10000000-0000-4000-8000-000000000047",
+          "title": "The Ember Garden",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 247,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000048": {
+          "id": "10000000-0000-4000-8000-000000000048",
+          "title": "The Raven Garden",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 248,
+          "status": "reading",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": null,
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000049": {
+          "id": "10000000-0000-4000-8000-000000000049",
+          "title": "The Marble Garden",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 249,
+          "status": "completed",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": "2026-03-01",
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000050": {
+          "id": "10000000-0000-4000-8000-000000000050",
+          "title": "The Salt Harbour",
+          "author": "Member B",
+          "cover": null,
+          "pageCount": 250,
+          "status": "completed",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": "2026-03-01",
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        },
+        "10000000-0000-4000-8000-000000000051": {
+          "id": "10000000-0000-4000-8000-000000000051",
+          "title": "The Glass Harbour",
+          "author": "Member A",
+          "cover": null,
+          "pageCount": 251,
+          "status": "completed",
+          "dateAdded": "2026-01-01T00:00:00.000Z",
+          "dateCompleted": "2026-03-01",
+          "links": {
+            "questIds": [],
+            "curriculumPromptIds": []
+          },
+          "tags": [],
+          "type": "unsorted",
+          "libraryBookId": null,
+          "libraryTagsBase": null,
+          "shelfMatchDismissed": null
+        }
+      },
+      "bookTidy": {
+        "status": "pending",
+        "postponedAt": null,
+        "completedAt": null,
+        "removedBooks": {}
+      }
+    },
+    "monthlyCompletedBooks": []
+  }
+}

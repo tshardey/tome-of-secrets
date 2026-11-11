@@ -5,6 +5,7 @@ import { saveState, loadState, characterState } from '../assets/js/character-she
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import { LARGE_STATE_KEYS } from '../assets/js/character-sheet/persistence.js';
 import { validateCharacterState, SCHEMA_VERSION, resetSchemaWriteGateForTests } from '../assets/js/character-sheet/dataValidator.js';
+import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 
 function resetCharacterState() {
     const emptyState = createEmptyCharacterState();
@@ -80,9 +81,10 @@ describe('state persistence compatibility', () => {
             [STORAGE_KEYS.FUND_LEDGER]: [{ id: 'f1', date: '2026-11-08', amountCents: 3200, note: 'Hardcover' }],
             [STORAGE_KEYS.QUEST_DRAW_HELPER_STATE]: {},
             [STORAGE_KEYS.QUEST_DRAW_HELPER_SETTINGS]: { autoApplyOnDraw: false },
-            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {},
-            [STORAGE_KEYS.BOOK_TIDY]: { status: 'pending', postponedAt: null, completedAt: null, removedBooks: {} }
+            [STORAGE_KEYS.EFFECT_COOLDOWNS]: {}
         };
+        // bookTidy is not saveState's to write (setBookTidy is its only writer).
+        characterState[STORAGE_KEYS.BOOK_TIDY] = { status: 'pending', postponedAt: null, completedAt: null, removedBooks: {} };
 
         Object.entries(expectedState).forEach(([key, value]) => {
             characterState[key] = value;
@@ -103,7 +105,8 @@ describe('state persistence compatibility', () => {
             librarySanctum: 'The Spire of Whispers'
         });
 
-        CHARACTER_STATE_KEYS.forEach(key => {
+        expect(localStorage.getItem(STORAGE_KEYS.BOOK_TIDY)).toBeNull();
+        CHARACTER_STATE_KEYS.filter(key => key !== STORAGE_KEYS.BOOK_TIDY).forEach(key => {
             const raw = localStorage.getItem(key);
             // Large keys may have been migrated out of localStorage (IndexedDB-backed).
             if (raw === null && LARGE_STATE_KEYS.has(key)) {
@@ -210,6 +213,31 @@ describe('state persistence compatibility', () => {
             expect(loadedQuests[0].rewards).toBeDefined();
             expect(typeof loadedQuests[0].rewards.xp).toBe('number');
         }
+    });
+
+    it('saveState from a stale tab keeps the removed books another tab stored', async () => {
+        const form = setupForm();
+        const pendingTidy = { status: 'pending', postponedAt: null, completedAt: null, removedBooks: {} };
+        localStorage.setItem(STORAGE_KEYS.BOOK_TIDY, JSON.stringify(pendingTidy));
+
+        // Tab B loaded before tab A's tidy: its RAM bookTidy has no removed books.
+        characterState[STORAGE_KEYS.BOOK_TIDY] = { ...pendingTidy, removedBooks: {} };
+
+        // Tab A drops a book, so its record lands in the stored removedBooks.
+        const tabA = new StateAdapter({ ...createEmptyCharacterState(), [STORAGE_KEYS.BOOK_TIDY]: { ...pendingTidy } });
+        const dropped = {
+            id: 'tidy-drop-1', title: 'Synthetic Dropped Book', author: 'Test Author', cover: null,
+            pageCount: 100, status: 'reading', type: 'unsorted', dateAdded: '2026-10-01T00:00:00.000Z',
+            dateCompleted: null, links: { questIds: [], curriculumPromptIds: [] }, tags: []
+        };
+        expect(tabA.setBookTidy({ ...pendingTidy, status: 'done', removedBooks: { [dropped.id]: dropped } })).toBeTruthy();
+
+        // Tab B then saves the sheet with its stale RAM copy.
+        await saveState(form);
+
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOK_TIDY));
+        expect(Object.keys(stored.removedBooks)).toEqual([dropped.id]);
+        expect(stored.status).toBe('done');
     });
 
     test('v17 save migrates to the current schema', async () => {

@@ -1397,21 +1397,88 @@ export class StateAdapter {
      * @returns {{ status: string, postponedAt: string|null, completedAt: string|null, removedBooks: Object }}
      */
     getBookTidy() {
+        const stored = this._storedBookTidy();
+        if (stored) {
+            // Another tab may have written it since this one loaded (localStorage is shared, RAM
+            // is not): the stored record is the truth, and RAM follows it.
+            this.state[STORAGE_KEYS.BOOK_TIDY] = stored;
+            return stored;
+        }
         return validateBookTidy(this.state[STORAGE_KEYS.BOOK_TIDY]);
+    }
+
+    /** The validated bookTidy in storage, or null when none is stored (or it is unreadable). */
+    _storedBookTidy() {
+        const raw = safeGetJSON(STORAGE_KEYS.BOOK_TIDY, null);
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+        return validateBookTidy(raw);
     }
 
     /**
      * Replace the bookTidy state. Written through the schema write gate (setSaveJSON); RAM and
      * listeners change only when the write succeeds.
+     * `removedBooks` only ever grows by id (D9): the write keeps every entry already stored, even
+     * one a stale tab's `next` lacks. Only `restoredIds` (restoreRemovedBooks, the ids it put
+     * back) leave the map.
      * @param {Object} next
+     * @param {{ restoredIds?: string[] }} [options]
      * @returns {Object|null} the validated bookTidy, or null when the write was refused or failed
      */
-    setBookTidy(next) {
-        const tidy = validateBookTidy(next);
+    setBookTidy(next, { restoredIds = [] } = {}) {
+        const incoming = validateBookTidy(next);
+        const stored = this._storedBookTidy();
+        const removedBooks = { ...(stored ? stored.removedBooks : {}), ...incoming.removedBooks };
+        for (const id of Array.isArray(restoredIds) ? restoredIds : []) delete removedBooks[id];
+        const tidy = { ...incoming, removedBooks };
         if (!setSaveJSON(STORAGE_KEYS.BOOK_TIDY, tidy)) return null;
         this.state[STORAGE_KEYS.BOOK_TIDY] = tidy;
         this.emit(EVENTS.BOOK_TIDY_CHANGED, tidy);
         return tidy;
+    }
+
+    /**
+     * Write a tidy's books and bookTidy (Plan 4, D9), both awaited and checked:
+     *   1. bookTidy (setBookTidy; a full quota returns false without throwing). On failure the
+     *      books are untouched;
+     *   2. books, awaited (not _persistBooks, which does not wait). A rejection or a false
+     *      return is a failure;
+     *   3. one BOOKS_CHANGED on success.
+     * RAM holds nextBooks while the books write is awaited (R31), so an updateBook made meanwhile
+     * builds on the tidy instead of persisting the old map over it. On failure RAM goes back to
+     * the previous map, unless another write replaced RAM meanwhile (that writer persisted its
+     * own map, which already builds on the tidy).
+     * `booksFirst` (restore) swaps steps 1 and 2, so a failure in between leaves a record in both
+     * places, never in neither.
+     * @param {Object} nextBooks - { [id]: Book }
+     * @param {Object} nextTidy
+     * `restoredIds` (restore) are the removed entries put back into books (see setBookTidy).
+     * @param {{ booksFirst?: boolean, restoredIds?: string[] }} [options]
+     * @returns {Promise<{ ok: true } | { ok: false, reason: 'storage' }>}
+     */
+    async applyBookTidy(nextBooks, nextTidy, { booksFirst = false, restoredIds = [] } = {}) {
+        const failed = { ok: false, reason: 'storage' };
+        const writeBooks = async () => {
+            const previous = this.state[STORAGE_KEYS.BOOKS];
+            this.state[STORAGE_KEYS.BOOKS] = nextBooks;
+            let ok = false;
+            try {
+                ok = await setStateKey(STORAGE_KEYS.BOOKS, nextBooks);
+            } catch (_error) {
+                ok = false;
+            }
+            if (ok !== true) {
+                if (this.state[STORAGE_KEYS.BOOKS] === nextBooks) this.state[STORAGE_KEYS.BOOKS] = previous;
+                return false;
+            }
+            this.emit(EVENTS.BOOKS_CHANGED, { ...this.state[STORAGE_KEYS.BOOKS] });
+            return true;
+        };
+        if (booksFirst) {
+            if (!await writeBooks()) return failed;
+            return this.setBookTidy(nextTidy, { restoredIds }) ? { ok: true } : failed;
+        }
+        if (!this.setBookTidy(nextTidy, { restoredIds })) return failed;
+        return await writeBooks() ? { ok: true } : failed;
     }
 
     /**

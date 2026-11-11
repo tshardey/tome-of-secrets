@@ -12,6 +12,7 @@ import {
 } from './dataValidator.js';
 import { migrateState, stripRetiredFormFields, purgeRetiredStateKeys, RETIREMENT_SCHEMA_VERSION } from './dataMigrator.js';
 import { LARGE_STATE_KEYS, getStateKey, setStateKey } from './persistence.js';
+import { healTidyStatus } from '../services/LibraryTidyService.js';
 
 export const characterState = createEmptyCharacterState();
 export let isStateLoaded = false;
@@ -70,7 +71,9 @@ export async function loadState(form = null) {
         // but old copies may still sit in localStorage or IndexedDB.
         await purgeRetiredStateKeys();
     }
-    const validatedState = validateCharacterState(migratedState);
+    // The review can never be hidden for good (D9): an Unsorted book keeps it pending. Same
+    // object when nothing changed, so a healthy save writes nothing extra.
+    const validatedState = healTidyStatus(validateCharacterState(migratedState));
     
     // Copy validated state to characterState
     // This ensures all keys are properly set, including ACTIVE_ASSIGNMENTS
@@ -136,6 +139,9 @@ export async function saveState(form) {
     }
     safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, stripRetiredFormFields(characterData));
     for (const key of CHARACTER_STATE_KEYS) {
+        // bookTidy is written only by stateAdapter.setBookTidy, which merges the stored
+        // removedBooks: this tab's RAM copy may predate another tab's tidy and would drop them.
+        if (key === STORAGE_KEYS.BOOK_TIDY) continue;
         await setStateKey(key, characterState[key]);
     }
     // Save schema version to ensure future loads know the data format
