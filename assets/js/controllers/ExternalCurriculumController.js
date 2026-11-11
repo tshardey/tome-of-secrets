@@ -12,6 +12,8 @@ import { BaseController } from './BaseController.js';
 import { STATE_EVENTS } from '../character-sheet/stateAdapter.js';
 import { escapeHtml } from '../utils/sanitize.js';
 import { createBookSelector } from '../utils/bookSelector.js';
+import { resolveLibraryCatalog } from '../services/LibraryCatalogService.js';
+import { searchBooks } from '../services/BookMetadataService.js';
 import { trimOrEmpty } from '../utils/helpers.js';
 
 function escapeAttr(s) {
@@ -382,6 +384,7 @@ export class ExternalCurriculumController extends BaseController {
         const prompt = this._getPromptForSelector(curriculumId, promptId);
         const selectedBookId = prompt && typeof prompt.bookId === 'string' ? prompt.bookId : null;
         const selector = createBookSelector(promptEl, this.stateAdapter, {
+            ...this._bookSelectorLibraryOptions(),
             selectedBookId,
             onSelect: (bookId) => {
                 this.stateAdapter.linkBookToPrompt(promptId, bookId);
@@ -398,6 +401,7 @@ export class ExternalCurriculumController extends BaseController {
         const el = container.querySelector(`.curriculum-book-club-add-selector[data-curriculum-id="${escapeAttr(curriculumId)}"]`);
         if (!el || !this.stateAdapter) return;
         const selector = createBookSelector(el, this.stateAdapter, {
+            ...this._bookSelectorLibraryOptions(),
             selectedBookId: null,
             onSelect: (bookId) => {
                 if (bookId) {
@@ -409,6 +413,14 @@ export class ExternalCurriculumController extends BaseController {
             appendTo: 'body'
         });
         this._bookSelectors.push(selector);
+    }
+
+    /** Curriculum prompts and book clubs get shelf results and online search too (§6.9, D7). */
+    _bookSelectorLibraryOptions() {
+        return {
+            libraryCatalog: resolveLibraryCatalog(this.dependencies),
+            onlineSearch: searchBooks
+        };
     }
 
     _getPromptForSelector(curriculumId, promptId) {

@@ -1,14 +1,10 @@
-import { getBaseUrl, getSupabaseConfig } from '../services/siteConfig.js';
+import { getSupabaseConfig } from '../services/siteConfig.js';
+import { getSupabaseClient } from '../services/supabaseClient.js';
+import { runExclusiveSync } from '../services/syncLock.js';
 import { getLastSyncedAt, getLastSyncedSource, syncAuto, syncNow } from '../services/cloudSync.js';
 import { AutoSyncScheduler } from './autoSyncScheduler.js';
 import { STORAGE_KEYS, CHARACTER_STATE_KEYS } from '../character-sheet/storageKeys.js';
 import { LARGE_STATE_KEYS } from '../character-sheet/persistence.js';
-
-async function loadSupabase() {
-  // Dynamic import so Jest/tests (and pages that don't need auth) don't try to resolve a CDN module.
-  const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/+esm');
-  return mod;
-}
 
 function getRedirectTo() {
   // For magic links, Supabase is very strict: `emailRedirectTo` must be allowlisted
@@ -83,8 +79,9 @@ export async function initializeCloudAuth() {
     return;
   }
 
-  const { createClient } = await loadSupabase();
-  const supabase = createClient(url, publishableKey);
+  // The page's one client: cloud save and the household library share its auth session.
+  const supabase = await getSupabaseClient();
+  if (!supabase) return;
 
   const signInBtn = el('auth-sign-in');
   const syncBtn = el('auth-sync-now');
@@ -99,7 +96,6 @@ export async function initializeCloudAuth() {
   let autoSyncLocalStateHandler = null;
   let syncScheduler = null;
   let lastAutoStatus = '';
-  let syncInProgress = false; // Shared flag to prevent concurrent manual and auto syncs
   
   // Allowlist for storage event filtering (localStorage keys that trigger sync)
   const CLOUD_SYNCED_KEYS = new Set([
@@ -123,15 +119,10 @@ export async function initializeCloudAuth() {
   }
 
   async function runAutoSyncOnce() {
-    // Prevent auto-sync if manual sync is in progress
-    if (syncInProgress) {
-      console.log('[AutoSync] Sync skipped (manual sync in progress)');
-      return;
-    }
-    
-    syncInProgress = true;
     try {
-      const result = await syncAuto(supabase);
+      // Waits for any sync (manual, auto or the book review) in this or another tab, then
+      // builds its snapshot from what that one left behind.
+      const result = await runExclusiveSync(() => syncAuto(supabase));
       // Only surface useful info; avoid spamming.
       if (result.action === 'push') {
         setHint('Auto-synced to cloud.');
@@ -162,8 +153,6 @@ export async function initializeCloudAuth() {
         setHint(`Auto-sync paused: ${formatAuthError(e)}`);
         lastAutoStatus = 'error';
       }
-    } finally {
-      syncInProgress = false;
     }
   }
 
@@ -292,33 +281,19 @@ export async function initializeCloudAuth() {
         syncScheduler.cancelPendingSync();
       }
       
-      // Wait for any in-progress sync to complete before starting manual sync
-      // This prevents race conditions where auto-sync and manual sync run concurrently
-      while (syncInProgress) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // Poll every 100ms
-      }
-      
-      // Set flag to prevent auto-sync from running concurrently
-      syncInProgress = true;
-      
-      try {
-        // Run manual sync (can prompt for conflicts)
-        const result = await syncNow(supabase);
-        setHint(result.detail + (result.action === 'pull' ? ' Reload the page to apply UI updates.' : ''));
-        updateLastSyncedUI();
-        if (result.action === 'pull') {
-          // The underlying storage is updated; a reload is the simplest way to refresh all controllers/pages.
-          // Give the user a moment to read the hint.
-          setTimeout(() => window.location.reload(), 250);
-        }
-      } finally {
-        // Always clear the flag, even if sync fails
-        syncInProgress = false;
+      // Run manual sync (can prompt for conflicts) once any sync in flight, in this or
+      // another tab, has finished.
+      const result = await runExclusiveSync(() => syncNow(supabase));
+      setHint(result.detail + (result.action === 'pull' ? ' Reload the page to apply UI updates.' : ''));
+      updateLastSyncedUI();
+      if (result.action === 'pull') {
+        // The underlying storage is updated; a reload is the simplest way to refresh all controllers/pages.
+        // Give the user a moment to read the hint.
+        setTimeout(() => window.location.reload(), 250);
       }
     } catch (e) {
       console.error(e);
       setHint(`Sync failed: ${formatAuthError(e)}`);
-      syncInProgress = false; // Ensure flag is cleared on error
     }
   });
 

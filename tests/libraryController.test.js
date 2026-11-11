@@ -8,10 +8,29 @@ import { characterState } from '../assets/js/character-sheet/state.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import * as ui from '../assets/js/character-sheet/ui.js';
 import * as data from '../assets/js/character-sheet/data.js';
+import { readTagPicker } from '../assets/js/utils/tagPicker.js';
 
 jest.mock('../assets/js/services/BookMetadataService.js', () => ({
     searchBooks: jest.fn(() => Promise.resolve([]))
 }));
+jest.mock('../assets/js/services/ShelfBookService.js', () => {
+    const actual = jest.requireActual('../assets/js/services/ShelfBookService.js');
+    return {
+        ...actual,
+        linkPhysicalToShelf: jest.fn(actual.linkPhysicalToShelf),
+        dismissShelfOffer: jest.fn(actual.dismissShelfOffer),
+        unlinkFromLibrary: jest.fn(actual.unlinkFromLibrary),
+        syncShelfTags: jest.fn(actual.syncShelfTags)
+    };
+});
+
+import {
+    linkPhysicalToShelf,
+    dismissShelfOffer,
+    unlinkFromLibrary,
+    syncShelfTags
+} from '../assets/js/services/ShelfBookService.js';
+import { createBookSelector } from '../assets/js/utils/bookSelector.js';
 
 function createLibraryFormHTML() {
     return `
@@ -683,7 +702,298 @@ describe('LibraryController', () => {
             expect(provenanceColumn.querySelector('.library-tag-category').textContent).toBe('Provenance');
 
             borrowedCheckbox.checked = true;
-            expect(controller._readTagPicker(tagContainer)).toContain('borrowed');
+            expect(readTagPicker(tagContainer)).toContain('borrowed');
         });
+    });
+});
+
+// ---------------------------------------------------------------------------------------
+// Plan 4 (D7): the household library on the Library tab. Invented titles, synthetic ids.
+// ---------------------------------------------------------------------------------------
+describe('LibraryController and the household library', () => {
+    const HOUSEHOLD = '00000000-0000-4000-8000-0000000000aa';
+    const L1 = '00000000-0000-4000-8000-000000000001';
+    const L9 = '00000000-0000-4000-8000-000000000009';
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    let adapter;
+    let form;
+    let catalog;
+    let deps;
+    let warnSpy;
+
+    const libraryBook = (id, extra = {}) => ({
+        id,
+        title: 'The Salt Road',
+        authors: ['Member A'],
+        coverUrl: null,
+        pageCount: 320,
+        seriesName: null,
+        seriesVolume: null,
+        editionLabels: [],
+        tags: [],
+        ...extra
+    });
+
+    function fakeCatalog(books) {
+        const result = { status: 'ready', userId: 'user-a', householdId: HOUSEHOLD, books, tagsAvailable: true, fetchedAt: 1 };
+        return {
+            peek: jest.fn(() => result),
+            getCatalog: jest.fn(async () => result),
+            subscribe: jest.fn(() => () => {}),
+            currentHouseholdId: jest.fn(async () => HOUSEHOLD),
+            readBookTags: jest.fn(async () => []),
+            addTags: jest.fn(async () => {}),
+            removeTags: jest.fn(async () => {}),
+            fillSeries: jest.fn(async () => 'filled')
+        };
+    }
+
+    function start() {
+        const controller = new LibraryController(adapter, form, deps);
+        controller.initialize();
+        return controller;
+    }
+
+    beforeEach(() => {
+        document.body.innerHTML = createLibraryFormHTML();
+        form = document.getElementById('character-sheet');
+        form.insertAdjacentHTML('beforeend', '<div id="book-edit-tags"></div><select id="book-edit-series"></select>');
+        adapter = new StateAdapter(createEmptyCharacterState());
+        catalog = fakeCatalog([libraryBook(L1)]);
+        deps = { ui: { ...ui }, data, saveState: jest.fn(), libraryCatalog: catalog };
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        for (const call of warnSpy.mock.calls) {
+            expect(call.join(' ')).not.toMatch(/Salt Road|Glass Orchard|Member A|epistolary/);
+        }
+        warnSpy.mockRestore();
+        document.body.innerHTML = '';
+        jest.clearAllMocks();
+    });
+
+    it('the Add-form search lists On our shelf results to link from a quest, with no add button', async () => {
+        const { searchBooks } = require('../assets/js/services/BookMetadataService.js');
+        searchBooks.mockResolvedValueOnce([{ title: 'Glass Orchard', authors: ['Member B'], coverUrl: null, pageCount: 90 }]);
+        start();
+        document.getElementById('library-book-title').value = 'salt';
+        document.getElementById('library-book-search-btn').click();
+        await flush();
+
+        const results = document.getElementById('library-book-search-results');
+        const shelf = results.querySelector('.library-shelf-results');
+        expect(shelf).toBeTruthy();
+        expect(shelf.textContent).toContain('On our shelf');
+        const item = shelf.querySelector('.library-shelf-result');
+        expect(item.textContent).toContain('The Salt Road');
+        expect(item.textContent).toContain('Link it from a quest');
+        expect(item.querySelector('button')).toBeNull();
+        expect(item.tagName).not.toBe('BUTTON');
+        // Online results still follow
+        expect(results.querySelector('.book-search-result-item').textContent).toContain('Glass Orchard');
+    });
+
+    it('the Add-form search shows no shelf results without the catalogue', async () => {
+        deps.libraryCatalog = null;
+        start();
+        document.getElementById('library-book-title').value = 'salt';
+        document.getElementById('library-book-search-btn').click();
+        await flush();
+        expect(document.querySelector('.library-shelf-result')).toBeNull();
+    });
+
+    describe('Found on our shelf — link it?', () => {
+        function physicalWithOffer() {
+            const own = adapter.addBook({ title: 'The Salt Road', author: 'Member A', type: 'physical' });
+            const controller = start();
+            const offer = { bookId: own.id, libraryBook: libraryBook(L1) };
+            controller.setShelfOffers([offer]);
+            return { own, controller, offer };
+        }
+
+        it('shows the offer line on the physical card', () => {
+            const { own } = physicalWithOffer();
+            const card = document.querySelector(`#library-cards-physical .library-card[data-book-id="${own.id}"]`);
+            expect(card.textContent).toContain('Found on our shelf — link it?');
+            expect(card.querySelector('.library-offer-link-btn').textContent.trim()).toBe('Link');
+            expect(card.querySelector('.library-offer-dismiss-btn').textContent.trim()).toBe('Not this one');
+        });
+
+        it('Link calls linkPhysicalToShelf', async () => {
+            const { own, offer } = physicalWithOffer();
+            document.querySelector('.library-offer-link-btn').click();
+            expect(linkPhysicalToShelf).toHaveBeenCalledWith(adapter, own.id, offer.libraryBook, catalog);
+            await flush();
+            expect(adapter.getBook(own.id)).toEqual(expect.objectContaining({ type: 'shelf', libraryBookId: L1 }));
+            expect(deps.saveState).toHaveBeenCalled();
+            expect(document.body.textContent).not.toContain('Found on our shelf — link it?');
+        });
+
+        it('Not this one calls dismissShelfOffer', () => {
+            const { own } = physicalWithOffer();
+            document.querySelector('.library-offer-dismiss-btn').click();
+            expect(dismissShelfOffer).toHaveBeenCalledWith(adapter, own.id, L1);
+            expect(adapter.getBook(own.id).shelfMatchDismissed).toBe(L1);
+            expect(adapter.getBook(own.id).type).toBe('physical');
+            expect(document.body.textContent).not.toContain('Found on our shelf — link it?');
+            expect(deps.saveState).toHaveBeenCalled();
+        });
+
+        it('never shows an offer on a book that is no longer physical', () => {
+            const { own, controller } = physicalWithOffer();
+            adapter.updateBook(own.id, { type: 'ebook' });
+            controller.renderBooks();
+            expect(document.body.textContent).not.toContain('Found on our shelf');
+        });
+    });
+
+    it('the shelf drawer\'s Unlink from the library calls unlinkFromLibrary', () => {
+        const record = adapter.addBook({ title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: [], libraryTagsBase: [] });
+        const controller = start();
+        controller.handleEditBook(record.id);
+        document.getElementById('book-edit-type').value = 'unlink';
+        document.getElementById('save-book-edit-btn').click();
+        expect(unlinkFromLibrary).toHaveBeenCalledWith(adapter, record.id);
+        expect(adapter.getBook(record.id)).toEqual(expect.objectContaining({
+            type: 'physical', libraryBookId: null, shelfMatchDismissed: L1
+        }));
+        // An unlinked record pushes nothing to the library
+        expect(syncShelfTags).not.toHaveBeenCalled();
+    });
+
+    it('saving a shelf record\'s tags in the drawer syncs them, and a new series fills the library series', async () => {
+        const record = adapter.addBook({ title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: [], libraryTagsBase: [] });
+        const series = adapter.addSeries({ name: 'The Lantern Cycle' });
+        const controller = start();
+        controller.handleEditBook(record.id);
+        document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+        document.getElementById('book-edit-series').value = series.id;
+        document.getElementById('save-book-edit-btn').click();
+
+        expect(syncShelfTags).toHaveBeenCalledWith(adapter, record.id, catalog);
+        await flush();
+        expect(catalog.addTags).toHaveBeenCalledWith(L1, HOUSEHOLD, ['epistolary']);
+        expect(catalog.fillSeries).toHaveBeenCalledWith(L1, 'The Lantern Cycle');
+    });
+
+    it('a missing library book\'s card says No longer in the household library', () => {
+        const gone = adapter.addBook({
+            title: 'The Salt Road', type: 'shelf', libraryBookId: L9, status: 'completed',
+            dateCompleted: '2026-03-05T00:00:00.000Z'
+        });
+        const present = adapter.addBook({
+            title: 'Glass Orchard', type: 'shelf', libraryBookId: L1, status: 'completed',
+            dateCompleted: '2026-03-06T00:00:00.000Z'
+        });
+        start();
+        const completed = document.getElementById('library-cards-completed');
+        const goneCard = completed.querySelector(`.library-card[data-book-id="${gone.id}"]`);
+        const presentCard = completed.querySelector(`.library-card[data-book-id="${present.id}"]`);
+        expect(goneCard.textContent).toContain('No longer in the household library');
+        expect(presentCard.textContent).not.toContain('No longer in the household library');
+
+        // The selector does not list it under On our shelf
+        document.body.insertAdjacentHTML('beforeend', '<div id="picker"></div>');
+        const picker = document.getElementById('picker');
+        const selector = createBookSelector(picker, adapter, { libraryCatalog: catalog });
+        picker.querySelector('.book-selector-trigger').click();
+        const dropdown = document.querySelector('.book-selector-dropdown');
+        const shelfIds = Array.from(dropdown.querySelectorAll('[data-group="shelf"] [data-library-book-id]'))
+            .map((el) => el.getAttribute('data-library-book-id'));
+        expect(shelfIds).toEqual([L1]);
+        expect(shelfIds).not.toContain(L9);
+        const yours = dropdown.querySelector(`[data-group="yours"] [data-book-id="${gone.id}"]`);
+        expect(yours.textContent).toContain('No longer in the household library');
+        selector.destroy();
+    });
+
+    describe('drawer tag saves (PR review fixes)', () => {
+        /** The library's tags per book; a book missing from the map is deleted (null). */
+        function libraryTags(map) {
+            catalog.readBookTags.mockImplementation(async (id) => (map.has(id) ? [...map.get(id)].sort() : null));
+            catalog.addTags.mockImplementation(async (id, _h, ids) => { ids.forEach((t) => map.get(id).add(t)); });
+            catalog.removeTags.mockImplementation(async (id, ids) => { ids.forEach((t) => map.get(id).delete(t)); });
+        }
+
+        it('a drawer save on a missing library book keeps its shared tags and pushes nothing', async () => {
+            libraryTags(new Map());
+            const record = adapter.addBook({
+                title: 'The Salt Road', type: 'shelf', libraryBookId: L9, tags: ['fantasy'], libraryTagsBase: ['fantasy']
+            });
+            const controller = start();
+            controller.handleEditBook(record.id);
+            document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+            document.getElementById('save-book-edit-btn').click();
+            await flush();
+
+            expect(syncShelfTags).toHaveBeenCalled();
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy', 'epistolary']);
+            expect(adapter.getBook(record.id).libraryTagsBase).toEqual(['fantasy']);
+            expect(catalog.addTags).not.toHaveBeenCalled();
+            expect(catalog.removeTags).not.toHaveBeenCalled();
+        });
+
+        it('a tag a refresh adds while the drawer is open survives the save, locally and in the library', async () => {
+            const lib = new Map([[L1, new Set(['fantasy'])]]);
+            libraryTags(lib);
+            const record = adapter.addBook({
+                title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: ['fantasy'], libraryTagsBase: ['fantasy']
+            });
+            const controller = start();
+            controller.handleEditBook(record.id);
+            // Another player tags it cozy; a refresh merges that in while the drawer is open
+            lib.get(L1).add('cozy');
+            adapter.updateBook(record.id, { tags: ['fantasy', 'cozy'], libraryTagsBase: ['fantasy', 'cozy'] });
+
+            document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+            document.getElementById('save-book-edit-btn').click();
+            await flush();
+
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy', 'cozy', 'epistolary']);
+            expect([...lib.get(L1)].sort()).toEqual(['cozy', 'epistolary', 'fantasy']);
+            expect(catalog.removeTags).not.toHaveBeenCalled();
+        });
+
+        it('an unchecked tag is still removed', async () => {
+            const lib = new Map([[L1, new Set(['fantasy', 'cozy'])]]);
+            libraryTags(lib);
+            const record = adapter.addBook({
+                title: 'The Salt Road', type: 'shelf', libraryBookId: L1, tags: ['fantasy', 'cozy'], libraryTagsBase: ['fantasy', 'cozy']
+            });
+            const controller = start();
+            controller.handleEditBook(record.id);
+            document.querySelector('#book-edit-tags input[value="cozy"]').checked = false;
+            document.getElementById('save-book-edit-btn').click();
+            await flush();
+            expect(adapter.getBook(record.id).tags).toEqual(['fantasy']);
+            expect([...lib.get(L1)]).toEqual(['fantasy']);
+        });
+
+        it('keeps tag ids the picker does not offer', () => {
+            const own = adapter.addBook({ title: 'Glass Orchard', type: 'ebook', tags: ['legacy-unknown-id', 'fantasy'] });
+            const controller = start();
+            controller.handleEditBook(own.id);
+            document.querySelector('#book-edit-tags input[value="epistolary"]').checked = true;
+            document.getElementById('save-book-edit-btn').click();
+            expect(adapter.getBook(own.id).tags).toEqual(['legacy-unknown-id', 'fantasy', 'epistolary']);
+        });
+    });
+
+    it('re-renders the cards when the catalogue loads', () => {
+        let listener = null;
+        catalog.subscribe.mockImplementation((fn) => { listener = fn; return () => {}; });
+        const record = adapter.addBook({
+            title: 'The Salt Road', type: 'shelf', libraryBookId: L1, status: 'completed',
+            dateCompleted: '2026-03-05T00:00:00.000Z'
+        });
+        start();
+        expect(document.getElementById('library-cards-completed').textContent).not.toContain('No longer in the household library');
+        const without = { status: 'ready', userId: 'user-a', householdId: HOUSEHOLD, books: [], tagsAvailable: true, fetchedAt: 2 };
+        catalog.peek.mockReturnValue(without);
+        listener(without);
+        const card = document.querySelector(`#library-cards-completed .library-card[data-book-id="${record.id}"]`);
+        expect(card.textContent).toContain('No longer in the household library');
     });
 });

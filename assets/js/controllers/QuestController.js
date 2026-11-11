@@ -26,6 +26,10 @@ import { assignQuestToPeriod, PERIOD_TYPES } from '../services/PeriodService.js'
 import { toast } from '../ui/toast.js';
 import { linkQuestToBookOrNotify, getQuestLinkRefusal, getBatchQuestLinkRefusal, describeBookForQuestLink } from '../utils/questBookLinker.js';
 import { createBookSelector } from '../utils/bookSelector.js';
+import { resolveLibraryCatalog } from '../services/LibraryCatalogService.js';
+import { searchBooks } from '../services/BookMetadataService.js';
+import { getApplicableTagIds } from '../utils/applicableTagIds.js';
+import { buildEffectContext } from '../services/effectContext.js';
 import { DrawerManager } from '../ui/DrawerManager.js';
 
 function generateQuestId() {
@@ -185,11 +189,12 @@ export class QuestController extends BaseController {
             });
         }
 
-        // Add-quest form: book selector (library only; API search is in Library tab)
+        // Add-quest form: book selector (On our shelf, your books, and Search online; D7)
         const newQuestBookIdInput = document.getElementById('new-quest-book-id');
         const newQuestBookSelectorContainer = document.getElementById('new-quest-book-selector-container');
         if (newQuestBookIdInput && newQuestBookSelectorContainer && stateAdapter.getBooks) {
             this._addFormBookSelector = createBookSelector(newQuestBookSelectorContainer, stateAdapter, {
+                ...this._bookSelectorLibraryOptions(),
                 placeholder: 'Select a book',
                 describeBook: (book) => describeBookForQuestLink(stateAdapter, book),
                 onSelect: (bookId) => {
@@ -1737,6 +1742,7 @@ export class QuestController extends BaseController {
         if (this._editDrawerBookSelector) this._editDrawerBookSelector.destroy();
         if (editBookSelectorContainer && this.stateAdapter.getBooks) {
             this._editDrawerBookSelector = createBookSelector(editBookSelectorContainer, this.stateAdapter, {
+                ...this._bookSelectorLibraryOptions(),
                 selectedBookId: quest.bookId || null,
                 placeholder: 'Link Book',
                 appendTo: 'container',
@@ -1744,21 +1750,11 @@ export class QuestController extends BaseController {
                 onSelect: (bookId) => {
                     if (editQuestBookIdInput) editQuestBookIdInput.value = bookId || '';
                     // Refresh buff cards to reflect the newly linked book's tags
-                    const { ui: uiModule } = this.dependencies;
-                    if (uiModule && uiModule.updateEditQuestBuffsDropdown) {
-                        let bookTags = null;
-                        let bookPageCount = null;
-                        if (bookId) {
-                            const books = characterState[STORAGE_KEYS.BOOKS];
-                            const linkedBook = books && books[bookId];
-                            bookTags = effectiveBookTags(linkedBook);
-                            bookPageCount = typeof linkedBook?.pageCount === 'number' ? linkedBook.pageCount : null;
-                        }
-                        const buffsSelect = document.getElementById('edit-quest-buffs-select');
-                        const currentBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
-                        uiModule.updateEditQuestBuffsDropdown(currentBuffs, bookTags, bookPageCount);
-                    }
-                }
+                    this._refreshEditBonusCards(bookId);
+                },
+                // Tags & series saved inside the drawer (the book is already stored): re-evaluate
+                // the bonus cards with the new tags (D7)
+                onBookChanged: (bookId) => this._refreshEditBonusCards(bookId)
             });
         }
 
@@ -1792,6 +1788,40 @@ export class QuestController extends BaseController {
             }
             uiModule.updateEditQuestBuffsDropdown(quest.buffs || [], bookTags, bookPageCount);
         }
+    }
+
+    /**
+     * Options every book selector on the quest tab shares (D7): the household catalogue (null
+     * when Supabase is not configured), the online search, the Tags & series panel, and the
+     * tags the player's gear rewards (highlighted in the tag picker).
+     */
+    _bookSelectorLibraryOptions() {
+        return {
+            libraryCatalog: resolveLibraryCatalog(this.dependencies),
+            onlineSearch: searchBooks,
+            showTagsAndSeries: true,
+            getApplicableTags: () => getApplicableTagIds(buildEffectContext(this.stateAdapter, this.form), data)
+        };
+    }
+
+    /**
+     * Re-render the edit drawer's bonus cards for a book, keeping the current selections.
+     * @param {string|null} bookId
+     */
+    _refreshEditBonusCards(bookId) {
+        const { ui: uiModule } = this.dependencies;
+        if (!uiModule || !uiModule.updateEditQuestBuffsDropdown) return;
+        let bookTags = null;
+        let bookPageCount = null;
+        if (bookId) {
+            const books = characterState[STORAGE_KEYS.BOOKS];
+            const linkedBook = books && books[bookId];
+            bookTags = effectiveBookTags(linkedBook);
+            bookPageCount = typeof linkedBook?.pageCount === 'number' ? linkedBook.pageCount : null;
+        }
+        const buffsSelect = document.getElementById('edit-quest-buffs-select');
+        const currentBuffs = buffsSelect && buffsSelect.value ? JSON.parse(buffsSelect.value) : [];
+        uiModule.updateEditQuestBuffsDropdown(currentBuffs, bookTags, bookPageCount);
     }
 
     populateBuffsSelect(buffsSelect) {

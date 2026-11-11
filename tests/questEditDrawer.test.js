@@ -745,3 +745,73 @@ describe('Quest Edit Drawer', () => {
         });
     });
 });
+
+describe('Quest Edit Drawer: Tags & series on the linked book (D7)', () => {
+    beforeEach(async () => {
+        localStorage.clear();
+        characterState.inventoryItems = [];
+        characterState.equippedItems = [];
+        characterState.activeAssignments = [];
+        characterState.completedQuests = [];
+        characterState.discardedQuests = [];
+        characterState.temporaryBuffs = [];
+        characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [];
+        characterState[STORAGE_KEYS.PASSIVE_FAMILIAR_SLOTS] = [];
+        loadHTML('character-sheet.md');
+        await initializeCharacterSheet();
+    });
+
+    it('re-renders the bonus cards with the new tags, so an epistolary item becomes auto-applied', () => {
+        characterState.equippedItems = [{ name: 'Raven Familiar', type: 'Familiar' }];
+        characterState[STORAGE_KEYS.BOOKS] = {
+            'shelf-1': {
+                id: 'shelf-1',
+                title: 'The Salt Road',
+                author: 'Member A',
+                cover: null,
+                pageCount: null,
+                status: 'reading',
+                type: 'shelf',
+                libraryBookId: '00000000-0000-4000-8000-000000000001',
+                libraryTagsBase: [],
+                tags: [],
+                dateAdded: new Date().toISOString(),
+                dateCompleted: null,
+                links: { questIds: ['q-1'], curriculumPromptIds: [] }
+            }
+        };
+        characterState.activeAssignments = [{
+            id: 'q-1',
+            type: '♥ Organize the Stacks',
+            prompt: 'Fantasy',
+            book: 'The Salt Road',
+            bookId: 'shelf-1',
+            month: 'January',
+            year: '2024',
+            notes: '',
+            buffs: [],
+            rewards: { xp: 15, dollars: 10, items: [] }
+        }];
+        ui.renderActiveAssignments();
+        document.querySelector('.edit-quest-btn[data-index="0"]').click();
+
+        const cards = document.getElementById('edit-quest-bonus-selection-container');
+        const raven = () => cards.querySelector('.quest-bonus-card[data-value="[Item] Raven Familiar"]');
+        expect(raven()).toBeTruthy();
+        expect(raven().classList.contains('auto-applied')).toBe(false);
+
+        const selectorEl = document.getElementById('edit-quest-book-selector-container');
+        const tagsBtn = Array.from(selectorEl.querySelectorAll('button')).find((b) => b.textContent.trim() === 'Tags & series');
+        expect(tagsBtn).toBeTruthy();
+        tagsBtn.click();
+        const panel = selectorEl.querySelector('.book-selector-tags-panel');
+        expect(panel).toBeTruthy();
+        panel.querySelector('input[value="epistolary"]').checked = true;
+        Array.from(panel.querySelectorAll('button')).find((b) => b.textContent.trim() === 'Save').click();
+
+        expect(characterState[STORAGE_KEYS.BOOKS]['shelf-1'].tags).toContain('epistolary');
+        expect(raven().classList.contains('auto-applied')).toBe(true);
+        // The drawer stays open: tagging happens where the player already is
+        expect(document.getElementById('quest-edit-drawer').style.display).toBe('flex');
+    });
+});
