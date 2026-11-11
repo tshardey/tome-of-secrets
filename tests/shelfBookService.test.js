@@ -102,7 +102,8 @@ function createFakeLibrary() {
     async getCatalog() {
       calls.getCatalog += 1;
       if (fake.mode === 'hang') return new Promise(() => {});
-      if (fake.mode === 'down') return { status: 'unavailable', books: [], tagsAvailable: false, reason: 'timeout' };
+      // Down after a load: the cached catalogue is still served, but every request times out.
+      if (fake.mode === 'down') return current || { status: 'unavailable', books: [], tagsAvailable: false, reason: 'timeout' };
       if (!current) {
         current = fake.catalog();
         for (const fn of [...listeners]) fn(current);
@@ -128,6 +129,8 @@ function createFakeLibrary() {
     async addTags(id, householdId, tagIds) {
       calls.addTags.push({ id, householdId, tagIds: [...tagIds] });
       fake.fail();
+      // A test may hold a write back until it releases the gate.
+      if (fake.gate) await fake.gate;
       if (!tags.has(id)) tags.set(id, new Set());
       for (const t of tagIds) tags.get(id).add(t);
       current = null;
@@ -169,9 +172,25 @@ function addShelf(adapter, libraryBookId, extra = {}) {
   });
 }
 
+// Words that must never reach a log line: invented titles and authors, and tag ids.
+const NEVER_LOGGED = ['The Salt Road', 'Glass Orchard', 'Member A', 'Member B', F, C, E, READER];
+let warn;
+
 beforeEach(() => {
   localStorage.clear();
   setStateKey.mockClear();
+  warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+  jest.spyOn(console, 'info').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  // Every warning is a fixed prefix and an error code, never a title, author or tag set.
+  for (const args of warn.mock.calls) {
+    const text = args.map(String).join(' ');
+    for (const word of NEVER_LOGGED) expect(text).not.toContain(word);
+  }
+  jest.restoreAllMocks();
 });
 
 describe('mergeShelfTags (D4)', () => {
@@ -241,10 +260,12 @@ describe('offline edit', () => {
     const state = createEmptyCharacterState();
     const a = new StateAdapter(state);
     const rec = ensureShelfRecord(a, lib.catalog().books[0]);
+    await lib.getCatalog();
 
     lib.mode = 'down';
     a.updateBook(rec, { tags: [F, C] });
     expect(await syncShelfTags(a, rec, lib)).toBe('pending');
+    expect(warn).toHaveBeenCalledWith('[ShelfBook] tag read failed:', 'timeout');
     expect(a.getBook(rec).tags).toEqual([F, C]);
     expect(a.getBook(rec).libraryTagsBase).toEqual([F]);
 
@@ -267,9 +288,64 @@ describe('offline edit', () => {
     lib.readBookTags = readOk;
 
     expect(await syncShelfTags(a, rec, lib)).toBe('pending');
+    expect(warn).toHaveBeenCalledWith('[ShelfBook] tag push failed:', 'timeout');
     expect(a.getBook(rec).libraryTagsBase).toEqual([F]);
     expect(mergeShelfTags({ local: a.getBook(rec).tags, base: a.getBook(rec).libraryTagsBase, library: [F] }).toAdd)
       .toEqual([C]);
+  });
+});
+
+describe('a push that lands under a newer edit (fix round 1)', () => {
+  function gated(lib) {
+    let release;
+    lib.gate = new Promise(resolve => { release = resolve; });
+    return () => {
+      lib.gate = null;
+      release();
+    };
+  }
+
+  it('interleaved syncs: the second edit removes c and the library ends without it', async () => {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, tags: [F] });
+    const a = newAdapter();
+    const rec = ensureShelfRecord(a, lib.catalog().books[0]);
+
+    const release = gated(lib);
+    a.updateBook(rec, { tags: [F, C] });
+    const first = syncShelfTags(a, rec, lib);
+    await flush();
+    expect(lib.calls.addTags).toEqual([{ id: L, householdId: HOUSEHOLD, tagIds: [C] }]);
+
+    // Edit 2 removes c; its sync reads the library before the first push lands: no diffs.
+    a.updateBook(rec, { tags: [F] });
+    lib.gate = null;
+    expect(await syncShelfTags(a, rec, lib)).toBe('synced');
+    expect(lib.libraryTags(L)).toEqual([F]);
+
+    release();
+    expect(await first).toBe('synced');
+    expect(lib.libraryTags(L)).toEqual([F]);
+    expect(a.getBook(rec).tags).toEqual([F]);
+    expect(a.getBook(rec).libraryTagsBase).toEqual([F]);
+  });
+
+  it('a refresh push interrupted by an edit: the edit still reaches the library', async () => {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, tags: [F] });
+    const a = newAdapter();
+    const rec = addShelf(a, L, { tags: [F, C], libraryTagsBase: [F] });
+
+    const release = gated(lib);
+    const refresh = refreshShelfRecords(a, lib.catalog(), lib);
+    await flush();
+    a.updateBook(rec.id, { tags: [F] });
+    release();
+    await refresh;
+
+    expect(lib.libraryTags(L)).toEqual([F]);
+    expect(a.getBook(rec.id).tags).toEqual([F]);
+    expect(a.getBook(rec.id).libraryTagsBase).toEqual([F]);
   });
 });
 
@@ -406,6 +482,46 @@ describe('left the household (Review Focus 5)', () => {
     expect(a.getBooks()).toEqual(before);
     expect(a.getBook(rec.id).libraryTagsBase).toEqual([F]);
     expect(setStateKey).not.toHaveBeenCalled();
+  });
+});
+
+describe('household id for a write (fix round 1)', () => {
+  it('an account switch never sends the previous household id', async () => {
+    const HOUSEHOLD_B = '00000000-0000-4000-8000-0000000000bb';
+    const households = { 'user-a': HOUSEHOLD, 'user-b': HOUSEHOLD_B };
+    let userId = 'user-a';
+    const upserts = [];
+    const client = {
+      auth: { getSession: async () => ({ data: { session: { user: { id: userId } } }, error: null }) },
+      schema: () => ({
+        from: (table) => {
+          const query = { table, upsert: null };
+          const builder = {};
+          for (const m of ['select', 'eq', 'order', 'limit', 'range', 'in', 'delete', 'update', 'is']) {
+            builder[m] = () => builder;
+          }
+          builder.upsert = (rows) => {
+            query.upsert = rows;
+            return builder;
+          };
+          builder.then = (resolve) => {
+            if (query.upsert) upserts.push(...query.upsert);
+            const data = table === 'household_members' ? [{ household_id: households[userId] }] : [];
+            return resolve({ data, error: null });
+          };
+          return builder;
+        }
+      })
+    };
+    const service = new LibraryCatalogService({ getClient: async () => client, now: () => 1000 });
+    const a = newAdapter();
+    const rec = addShelf(a, L, { tags: [C], libraryTagsBase: [] });
+
+    expect((await service.getCatalog()).householdId).toBe(HOUSEHOLD);
+    userId = 'user-b';
+    expect(await syncShelfTags(a, rec.id, service)).toBe('synced');
+
+    expect(upserts).toEqual([{ book_id: L, household_id: HOUSEHOLD_B, tag_id: C }]);
   });
 });
 
@@ -551,6 +667,19 @@ describe('Found on our shelf (§6.9, D7)', () => {
     expect(linked.status).toBe('completed');
     expect(lib.libraryTags(L)).toEqual(sorted([C, F]));
     expect(a.getBooks()).toHaveLength(1);
+  });
+
+  it('linkPhysicalToShelf refuses a book that is not physical (D6)', async () => {
+    const { lib, a } = setup();
+    const ebook = a.addBook({ title: 'The Salt Road', author: 'Member A', type: 'ebook', tags: [C] });
+    const before = clone(a.getBook(ebook.id));
+    setStateKey.mockClear();
+
+    expect(await linkPhysicalToShelf(a, ebook.id, lib.catalog().books[0], lib)).toBeNull();
+    expect(a.getBook(ebook.id)).toEqual(before);
+    expect(setStateKey).not.toHaveBeenCalled();
+    expect(lib.calls.addTags).toHaveLength(0);
+    expect(lib.calls.readBookTags).toBe(0);
   });
 
   it('unlinkFromLibrary makes the record physical with its match dismissed', () => {

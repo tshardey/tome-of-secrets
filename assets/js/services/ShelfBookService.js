@@ -153,12 +153,13 @@ export function ensureShelfRecord(stateAdapter, libraryBook) {
     return book ? book.id : null;
 }
 
-/** The household id for a write: from the cached catalogue, else a (cached) load. */
+/**
+ * The household id for a write. getCatalog checks the session before serving its cache, so an
+ * account switch never sends the previous household's id.
+ */
 async function householdIdFor(service) {
-    const cached = typeof service.peek === 'function' ? service.peek() : null;
-    if (cached && cached.status === 'ready' && cached.householdId) return cached.householdId;
     const catalog = await service.getCatalog();
-    return catalog && catalog.status === 'ready' ? catalog.householdId : null;
+    return catalog && catalog.status === 'ready' && catalog.householdId ? catalog.householdId : null;
 }
 
 /**
@@ -180,19 +181,25 @@ async function pushDiffs(service, libraryBookId, householdId, { toAdd, toRemove 
 
 /**
  * Merge one record against the library's tags, push the diffs, and work out the record's new
- * tags and base (D4). Returns null when the record changed while the push ran (the next sync
- * recomputes from the stored base, so nothing is lost).
+ * tags and base (D4).
+ * - The record is unchanged after the push: `{ pushed, tags, libraryTagsBase }`.
+ * - It changed while the push ran and the push landed: `{ interrupted: true, libraryTagsBase }`.
+ *   The library now holds `merged`, so the base moves there while the tags (the player's newer
+ *   edit) stay as they are; the caller then syncs again so that edit is measured against what
+ *   the library really holds.
+ * - It changed and the push failed: null. The stored base still describes the last exchange.
  */
 async function mergeAndPush(stateAdapter, book, libraryTags, householdId, service) {
     const local = book.tags || [];
     const base = book.libraryTagsBase || [];
     const result = mergeShelfTags({ local, base, library: libraryTags });
-    const pushed = (result.toAdd.length === 0 && result.toRemove.length === 0)
-        || await pushDiffs(service, book.libraryBookId, householdId, result);
+    const hasDiffs = result.toAdd.length > 0 || result.toRemove.length > 0;
+    const pushed = !hasDiffs || await pushDiffs(service, book.libraryBookId, householdId, result);
     const current = stateAdapter.getBook(book.id);
     if (!current || !sameList(current.tags, book.tags) || !sameList(current.libraryTagsBase, book.libraryTagsBase)
         || current.libraryBookId !== book.libraryBookId) {
-        return null;
+        if (!pushed || !hasDiffs || !isShelfRecord(current) || current.libraryBookId !== book.libraryBookId) return null;
+        return { interrupted: true, libraryTagsBase: result.merged };
     }
     return {
         pushed,
@@ -205,34 +212,46 @@ async function mergeAndPush(stateAdapter, book, libraryTags, householdId, servic
 function tagUpdates(book, outcome) {
     if (!outcome) return {};
     const updates = {};
-    if (!sameList(book.tags, outcome.tags)) updates.tags = outcome.tags;
+    if (outcome.tags && !sameList(book.tags, outcome.tags)) updates.tags = outcome.tags;
     if (!sameSet(book.libraryTagsBase, outcome.libraryTagsBase)) updates.libraryTagsBase = outcome.libraryTagsBase;
     return updates;
 }
+
+/** Times a sync starts over when the record keeps changing under its push. */
+const MAX_SYNC_ATTEMPTS = 3;
 
 /**
  * Write-through after a tag edit on a shelf record: read the book's library tags, merge, push.
  * @returns {Promise<'synced'|'pending'>} 'pending' leaves the diffs waiting in the record
  */
 export async function syncShelfTags(stateAdapter, bookId, service = libraryCatalog) {
-    const book = stateAdapter.getBook(bookId);
-    if (!isShelfRecord(book)) return 'pending';
-    let libraryTags;
-    let householdId;
-    try {
-        // No household (signed out, left it, or denied): no request at all (Review Focus 5).
-        householdId = await householdIdFor(service);
-        if (!householdId) return 'pending';
-        libraryTags = await service.readBookTags(book.libraryBookId);
-    } catch (error) {
-        console.warn('[ShelfBook] tag read failed:', logCode(error));
-        return 'pending';
+    for (let attempt = 1; attempt <= MAX_SYNC_ATTEMPTS; attempt += 1) {
+        const book = stateAdapter.getBook(bookId);
+        if (!isShelfRecord(book)) return 'pending';
+        let libraryTags;
+        let householdId;
+        try {
+            // No household (signed out, left it, or denied): no request at all (Review Focus 5).
+            householdId = await householdIdFor(service);
+            if (!householdId) return 'pending';
+            libraryTags = await service.readBookTags(book.libraryBookId);
+        } catch (error) {
+            console.warn('[ShelfBook] tag read failed:', logCode(error));
+            return 'pending';
+        }
+        const outcome = await mergeAndPush(stateAdapter, book, libraryTags, householdId, service);
+        if (!outcome) return 'pending';
+        if (outcome.interrupted) {
+            // The push landed under a newer edit: record it in the base, then start over.
+            const updates = tagUpdates(stateAdapter.getBook(bookId), outcome);
+            if (Object.keys(updates).length > 0) stateAdapter.updateBook(bookId, updates);
+            continue;
+        }
+        const updates = tagUpdates(book, outcome);
+        if (Object.keys(updates).length > 0) stateAdapter.updateBook(bookId, updates);
+        return outcome.pushed ? 'synced' : 'pending';
     }
-    const outcome = await mergeAndPush(stateAdapter, book, libraryTags, householdId, service);
-    if (!outcome) return 'pending';
-    const updates = tagUpdates(book, outcome);
-    if (Object.keys(updates).length > 0) stateAdapter.updateBook(bookId, updates);
-    return outcome.pushed ? 'synced' : 'pending';
+    return 'pending';
 }
 
 /** Fill the library's empty series name from the record's ToS series (D5). Never throws. */
@@ -259,25 +278,31 @@ async function fillSeriesFor(stateAdapter, book, libraryBook, service) {
 export async function refreshShelfRecords(stateAdapter, catalog, service = libraryCatalog) {
     if (!catalog || catalog.status !== 'ready' || !Array.isArray(catalog.books)) return { changed: 0 };
     const byId = new Map(catalog.books.map((book) => [book.id, book]));
+    const ids = stateAdapter.getBooks().filter(isShelfRecord).map((book) => book.id);
     let changed = 0;
-    for (const snapshot of stateAdapter.getBooks()) {
-        if (!isShelfRecord(snapshot)) continue;
-        const libraryBook = byId.get(snapshot.libraryBookId);
+    for (const id of ids) {
+        // Read each record right before its merge: an earlier record's push may have taken a while.
+        const before = stateAdapter.getBook(id);
+        if (!isShelfRecord(before)) continue;
+        const libraryBook = byId.get(before.libraryBookId);
         // A deleted library book: the record keeps its metadata and tags (Review Focus 4).
         if (!libraryBook) continue;
 
         let outcome = null;
         if (catalog.tagsAvailable) {
-            outcome = await mergeAndPush(stateAdapter, snapshot, libraryBook.tags || [], catalog.householdId, service);
+            outcome = await mergeAndPush(stateAdapter, before, libraryBook.tags || [], catalog.householdId, service);
         }
-        await fillSeriesFor(stateAdapter, snapshot, libraryBook, service);
+        await fillSeriesFor(stateAdapter, before, libraryBook, service);
 
-        const book = stateAdapter.getBook(snapshot.id);
+        const book = stateAdapter.getBook(id);
         if (!isShelfRecord(book) || book.libraryBookId !== libraryBook.id) continue;
         const updates = { ...metadataUpdates(book, libraryBook), ...tagUpdates(book, outcome) };
-        if (Object.keys(updates).length === 0) continue;
-        stateAdapter.updateBook(book.id, updates);
-        changed += 1;
+        if (Object.keys(updates).length > 0) {
+            stateAdapter.updateBook(id, updates);
+            changed += 1;
+        }
+        // The push landed under a newer edit: measure that edit against the library again.
+        if (outcome && outcome.interrupted) await syncShelfTags(stateAdapter, id, service);
     }
     return { changed };
 }
@@ -308,7 +333,9 @@ export function findShelfOffers(stateAdapter, catalog) {
  */
 export async function linkPhysicalToShelf(stateAdapter, bookId, libraryBook, service = libraryCatalog) {
     const book = stateAdapter.getBook(bookId);
-    if (!book || !libraryBook || typeof libraryBook.id !== 'string' || !libraryBook.id) return null;
+    // Only a physical book is offered and linked; another type stays its own record (D6).
+    if (!book || book.type !== 'physical') return null;
+    if (!libraryBook || typeof libraryBook.id !== 'string' || !libraryBook.id) return null;
     const libraryShared = uniqueStrings(sharedTags(libraryBook.tags));
     const tags = uniqueStrings([...(book.tags || []), ...libraryShared]);
     stateAdapter.updateBook(bookId, {
