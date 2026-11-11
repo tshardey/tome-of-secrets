@@ -139,6 +139,9 @@ export async function saveState(form) {
     }
     safeSetJSON(STORAGE_KEYS.CHARACTER_SHEET_FORM, stripRetiredFormFields(characterData));
     for (const key of CHARACTER_STATE_KEYS) {
+        // bookTidy is written only by stateAdapter.setBookTidy, which merges the stored
+        // removedBooks: this tab's RAM copy may predate another tab's tidy and would drop them.
+        if (key === STORAGE_KEYS.BOOK_TIDY) continue;
         await setStateKey(key, characterState[key]);
     }
     // Save schema version to ensure future loads know the data format
