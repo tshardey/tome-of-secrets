@@ -1,7 +1,22 @@
 import {
     SIMILAR_WITH_AUTHORS, SIMILAR_ANY_AUTHORS, MAX_CANDIDATES, titleKey, baseTitleKey, authorKey,
-    authorsOverlap, trigramSimilarity, splitAuthorString, classifyLibraryMatch, matchToLibrary
+    authorsOverlap, trigramSimilarity, splitAuthorString, classifyLibraryMatch, matchToLibrary,
+    hasEditionSuffix
 } from '../assets/js/utils/bookMatching.js';
+
+describe('hasEditionSuffix (R33)', () => {
+    it.each([
+        ['The Salt Road (Ebook Edition)', true],
+        ['The Salt Road  (Deluxe   edition) ', true],
+        ['The Salt Road', false],
+        ['  The   Salt Road  ', false],
+        ['The Salt Road (Book 2)', false],
+        ['(Special Edition)', false],
+        [null, false]
+    ])('%p -> %p', (title, expected) => {
+        expect(hasEditionSuffix(title)).toBe(expected);
+    });
+});
 
 // Vectors in the first five describes are copied from the library app's
 // match-keys.test.ts and similarity.test.ts.

@@ -15,7 +15,7 @@
  */
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
 import { isSchemaWriteSafe } from '../character-sheet/dataValidator.js';
-import { matchToLibrary } from '../utils/bookMatching.js';
+import { matchToLibrary, hasEditionSuffix } from '../utils/bookMatching.js';
 import { PICKABLE_TYPES, normalizeLibraryFields } from '../utils/bookTypes.js';
 import { sharedTags } from '../utils/bookTagRules.js';
 import { runExclusiveSync } from './syncLock.js';
@@ -139,7 +139,9 @@ export function planTidy(state, catalog) {
                 ...strong.map((libraryBook) => toCandidate(libraryBook, 'same_title', 1)),
                 ...weak.map((match) => toCandidate(match.book, match.reason, match.score))
             ];
-            preselected = strong.length === 1 ? strong[0].id : null;
+            // R33: a title whose edition suffix matching stripped is likely a second copy of the
+            // plain-titled book; it keeps the candidate but is never preselected for removal.
+            preselected = strong.length === 1 && !hasEditionSuffix(book.title) ? strong[0].id : null;
         }
         return {
             bookId: book.id,

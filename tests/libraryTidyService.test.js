@@ -255,6 +255,23 @@ describe('planTidy', () => {
     expect(two.candidates.find(c => c.libraryBookId === libId(201)).authors).toEqual(['Member A', 'Member B']);
   });
 
+  it('an edition-suffixed duplicate lists the strong candidate but is never preselected (R33)', () => {
+    const state = createEmptyCharacterState();
+    state[STORAGE_KEYS.BOOKS] = {
+      [bookId(1)]: makeBook(1, { title: 'The Salt Road' }),
+      [bookId(2)]: makeBook(2, { title: 'The Salt Road (Ebook Edition)' }),
+      [bookId(3)]: makeBook(3, { title: '  The   Salt Road  ' })
+    };
+    const rows = planTidy(state, makeCatalog([makeLibraryBook(9, { title: 'The Salt Road' })]));
+    const plain = rows.find(r => r.bookId === bookId(1));
+    expect(plain.preselected).toBe(libId(9));
+    const duplicate = rows.find(r => r.bookId === bookId(2));
+    expect(duplicate.preselected).toBeNull();
+    expect(duplicate.candidates).toEqual([expect.objectContaining({ libraryBookId: libId(9), reason: 'same_title' })]);
+    // Extra whitespace alone is not an edition suffix.
+    expect(rows.find(r => r.bookId === bookId(3)).preselected).toBe(libId(9));
+  });
+
   it('a weak-only row has candidates and no preselection', () => {
     const state = createEmptyCharacterState();
     state[STORAGE_KEYS.BOOKS] = { [bookId(1)]: makeBook(1, { title: 'The Glass Orchard', author: '' }) };

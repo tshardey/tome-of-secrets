@@ -784,6 +784,61 @@ describe('confirm body (R28)', () => {
     );
   });
 
+  test('R34: links and types are stated, so removed + linked + typed add up', () => {
+    expect(tidyConfirmBody({ remove: 45, dropped: 5, shelf: 3, typed: 4, booksBefore: 52, booksAfter: 7 })).toBe(
+      'Remove 45 books from Tome of Secrets. 40 stay in the household library; 5 are dropped. ' +
+      '3 link to the library and keep their history; 4 get a type. Your save goes from 52 to 7 books. You can restore them from this panel.'
+    );
+    expect(tidyConfirmBody({ remove: 2, dropped: 0, shelf: 1, typed: 1, booksBefore: 9, booksAfter: 7 })).toBe(
+      'Remove 2 books from Tome of Secrets. They stay in the household library. ' +
+      '1 links to the library and keeps its history; 1 gets a type. Your save goes from 9 to 7 books. You can restore them from this panel.'
+    );
+  });
+
+  test('R34: a clause whose count is 0 is left out', () => {
+    expect(tidyConfirmBody({ remove: 2, dropped: 0, shelf: 0, typed: 3, booksBefore: 9, booksAfter: 7 })).toBe(
+      'Remove 2 books from Tome of Secrets. They stay in the household library. 3 get a type. Your save goes from 9 to 7 books. You can restore them from this panel.'
+    );
+    expect(tidyConfirmBody({ remove: 1, dropped: 1, shelf: 2, typed: 0, booksBefore: 9, booksAfter: 8 })).toBe(
+      'Remove 1 book from Tome of Secrets. 1 is dropped. 2 link to the library and keep their history. Your save goes from 9 to 8 books. You can restore them from this panel.'
+    );
+  });
+
+  test('R34: the dialog for a mixed apply states removals, links and types', async () => {
+    // Book 0 links (removed), book 1 is completed and links (kept as a shelf record), book 2 is dropped, book 3 gets a type.
+    const books = [makeBook(0), makeBook(1, { status: 'completed', dateCompleted: '2026-02-01' }), makeBook(2), makeBook(3)];
+    const adapter = makeAdapter(books);
+    const catalogService = makeCatalogService(makeCatalog([makeLibraryBook(0), makeLibraryBook(1)]));
+    await start(adapter, { client: signedInClient(), catalogService });
+    row(bookId(2)).querySelector('.library-tidy-drop-btn').click();
+    row(bookId(3)).querySelector('.library-tidy-type-btn[data-type="ebook"]').click();
+    expect(applyBtn().textContent).toBe('Apply 4 choices');
+    applyBtn().click();
+    await settle();
+    const dialog = confirmDialog.mock.calls[0][0];
+    expect(dialog.confirmLabel).toBe('Remove 2 books');
+    expect(dialog.body).toBe(
+      'Remove 2 books from Tome of Secrets. 1 stays in the household library; 1 is dropped. ' +
+      '1 links to the library and keeps its history; 1 gets a type. Your save goes from 4 to 2 books. You can restore them from this panel.'
+    );
+    expect(message()).toBe('Done. 2 removed, 1 linked to the library, 1 typed.');
+  });
+
+  test('R33: the edition-suffixed duplicate is not preselected; the plain one is', async () => {
+    const adapter = makeAdapter([
+      makeBook(1, { title: 'The Salt Road' }),
+      makeBook(2, { title: 'The Salt Road (Ebook Edition)' })
+    ]);
+    const catalogService = makeCatalogService(makeCatalog([makeLibraryBook(9, { title: 'The Salt Road' })]));
+    await start(adapter, { client: signedInClient(), catalogService });
+    expect(row(bookId(1)).querySelector('input.library-tidy-preselect').checked).toBe(true);
+    const duplicate = row(bookId(2));
+    expect(duplicate.querySelector('.library-tidy-preselect')).toBeNull();
+    expect(duplicate.textContent).toContain('Is it one of these?');
+    expect(duplicate.querySelector(`input.library-tidy-candidate[value="${libId(9)}"]`).checked).toBe(false);
+    expect(applyBtn().textContent).toBe('Apply 1 choice');
+  });
+
   test('the dialog gets the drop wording and keeps the Remove label', async () => {
     const books = range(0, 4).map(n => makeBook(n));
     const adapter = makeAdapter(books);

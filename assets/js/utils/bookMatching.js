@@ -28,6 +28,14 @@ function stripEdition(title) {
     return m && title.slice(0, m.index).trim() ? title.slice(0, m.index) : title;
 }
 
+// New in ToS (R33; no TS source): whether matching strips an edition/format suffix from the
+// title ("The Salt Road (Ebook Edition)"). Such a title can strong-match its plain twin, so the
+// tidy lists it but never preselects it.
+export function hasEditionSuffix(title) {
+    const t = String(title ?? '').replace(/\s+/g, ' ').trim();
+    return stripEdition(t).trim() !== t;
+}
+
 // match-keys.ts titleKey. '' means "nothing to match on": callers must not match on it.
 export function titleKey(title) {
     const tokens = baseNormalize(stripEdition(String(title ?? ''))).split(' ').filter(Boolean);

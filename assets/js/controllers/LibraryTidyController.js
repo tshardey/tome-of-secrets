@@ -63,20 +63,32 @@ const OFFLINE_CLOUD = Object.freeze({
 });
 
 /**
- * The confirm body (D10). Verbatim when nothing is dropped; with drops, says how many stay in
- * the household library and how many are dropped (R28).
- * @param {{ remove: number, dropped: number, booksBefore: number, booksAfter: number }} summary
+ * The confirm body (D10). Verbatim when nothing is dropped, linked or typed; with drops, says
+ * how many stay in the household library and how many are dropped (R28); then how many link to
+ * the library and how many get a type, so removed + linked + typed add up to the choices (R34).
+ * @param {{ remove: number, dropped: number, shelf?: number, typed?: number, booksBefore: number, booksAfter: number }} summary
  */
 export function tidyConfirmBody(summary) {
     const lead = `Remove ${plural(summary.remove, 'book', 'books')} from Tome of Secrets.`;
     const tail = `Your save goes from ${summary.booksBefore} to ${summary.booksAfter} books. You can restore them from this panel.`;
-    if (!(summary.dropped > 0)) return `${lead} They stay in the household library. ${tail}`;
-    const kept = summary.remove - summary.dropped;
-    const dropped = `${summary.dropped} ${summary.dropped === 1 ? 'is' : 'are'} dropped.`;
-    const middle = kept > 0
-        ? `${kept} ${kept === 1 ? 'stays' : 'stay'} in the household library; ${dropped}`
-        : dropped;
-    return `${lead} ${middle} ${tail}`;
+    let removal;
+    if (!(summary.dropped > 0)) {
+        removal = 'They stay in the household library.';
+    } else {
+        const kept = summary.remove - summary.dropped;
+        const dropped = `${summary.dropped} ${summary.dropped === 1 ? 'is' : 'are'} dropped.`;
+        removal = kept > 0
+            ? `${kept} ${kept === 1 ? 'stays' : 'stay'} in the household library; ${dropped}`
+            : dropped;
+    }
+    const shelf = summary.shelf > 0 ? summary.shelf : 0;
+    const typed = summary.typed > 0 ? summary.typed : 0;
+    const linkClause = shelf > 0
+        ? `${shelf} ${shelf === 1 ? 'links to the library and keeps its history' : 'link to the library and keep their history'}`
+        : '';
+    const typeClause = typed > 0 ? `${typed} ${typed === 1 ? 'gets a type' : 'get a type'}` : '';
+    const others = [linkClause, typeClause].filter(Boolean).join('; ');
+    return [lead, removal, others ? `${others}.` : '', tail].filter(Boolean).join(' ');
 }
 
 const BLOCKED_MESSAGES = {
