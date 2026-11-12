@@ -21,6 +21,7 @@ import {
 import { buildQuestDrawHelperList } from './questDrawHelperDiscovery.js';
 import { toLocalOrCdnUrl } from '../utils/imageCdn.js';
 import { createInventoryViewModel } from '../viewModels/inventoryViewModel.js';
+import { hydrateItem } from '../services/InventoryService.js';
 import { getSlotLimits as slotServiceGetSlotLimits } from '../services/SlotService.js';
 import { createQuestListViewModel } from '../viewModels/questViewModel.js';
 import { createDungeonArchiveCardsViewModel } from '../viewModels/dungeonArchiveCardsViewModel.js';
@@ -1501,7 +1502,9 @@ function renderBonusCards(containerId, hiddenInputId, selectedValues = [], bookT
                 bonuses.push({
                     value: `[Item] ${item.name}`,
                     name: item.name,
-                    description: item.bonus || 'Equipped item',
+                    // Same catalog-hydrated text the Inventory shows; the saved copy of `bonus`
+                    // can be stale (e.g. still Ink Drops from before the dollar economy).
+                    description: hydrateItem(item).bonus || 'Equipped item',
                     type: 'item',
                     typeLabel: 'Equipped Item',
                     itemData: itemData

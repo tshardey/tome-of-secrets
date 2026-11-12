@@ -78,6 +78,24 @@ describe('UI Bonus Cards Filter', () => {
         expect(cardTexts.some(text => text.includes('Gilded Painting'))).toBe(false);
     });
 
+    test('equipped item cards show the catalog bonus, not a stale saved copy', () => {
+        // A save from before the dollar economy still carries the old text on the item.
+        characterState.equippedItems = [
+            { name: 'Pocket Dragon', bonus: 'Earn a +20 Ink Drop bonus for books in a fantasy series.' }
+        ];
+
+        ui.updateQuestBuffsDropdown(
+            document.createElement('input'),
+            document.createElement('input'),
+            document.createElement('input')
+        );
+
+        const container = document.getElementById('quest-bonus-selection-container');
+        const text = container.textContent;
+        expect(text).toContain('Earn +$4 for books in a fantasy series.');
+        expect(text).not.toContain('Ink Drop');
+    });
+
     test('should filter out atmospheric buff sources from passive item slots', () => {
         // Set up passive item slots
         characterState[STORAGE_KEYS.PASSIVE_ITEM_SLOTS] = [
