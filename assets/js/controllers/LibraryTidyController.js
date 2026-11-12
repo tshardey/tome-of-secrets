@@ -179,6 +179,8 @@ export class LibraryTidyController extends BaseController {
 
         this._busy = false;
         this._bannerOpened = false;
+        /** The control to focus after the next redraw: { bookId, focusKeys } (first found wins). */
+        this._pendingFocus = null;
         this._unsubscribers = [];
     }
 
@@ -632,6 +634,12 @@ export class LibraryTidyController extends BaseController {
             this._revealed.add(bookId);
             this._choices.set(bookId, { kind: 'link', libraryBookId });
             this._searching.delete(bookId);
+            // The result button is gone after the redraw: focus the control that now shows the
+            // pick (the "On our shelf" tick, or the row's own candidate or preselected match).
+            this._pendingFocus = {
+                bookId,
+                focusKeys: [`${bookId}:hand`, `${bookId}:cand:${libraryBookId}`, `${bookId}:preselect`]
+            };
         } else {
             return;
         }
@@ -705,13 +713,23 @@ export class LibraryTidyController extends BaseController {
 
     _renderPanel() {
         if (!this._panel) return;
+        // A focus hint is for this redraw only, never a later unrelated one.
+        const pending = this._pendingFocus;
+        this._pendingFocus = null;
         const visible = this._panelVisible();
         this._panel.hidden = !visible;
         if (!visible || !this._body) return;
 
-        // Keep keyboard focus on the same control across the redraw.
+        // Keep keyboard focus on the same control across the redraw, or, when that control is
+        // gone (a picked search result, an unticked hand link), on another one in the same row.
         const active = document.activeElement;
-        const focusKey = active && this._body.contains(active) ? active.dataset.focusKey : null;
+        const inBody = Boolean(active) && this._body.contains(active);
+        const focusKey = inBody ? active.dataset.focusKey : null;
+        const focusRowId = pending ? pending.bookId : (inBody ? this._rowId(active) : null);
+        // The rows scroll inside their own box, which the redraw replaces: keep its position so
+        // the row the player acted on stays where it was.
+        const oldRows = this._body.querySelector('.library-tidy-rows');
+        const rowsScrollTop = oldRows ? oldRows.scrollTop : 0;
 
         const rows = this._plan;
         const intro = rows.length > 0
@@ -723,10 +741,24 @@ export class LibraryTidyController extends BaseController {
             (rows.length > 0 ? `<div class="library-tidy-rows">${rows.map((row) => this._rowHtml(row)).join('')}</div>` : '') +
             this._footerHtml(rows.length > 0);
 
-        if (focusKey) {
-            const again = [...this._body.querySelectorAll('[data-focus-key]')].find((el) => el.dataset.focusKey === focusKey);
-            if (again) again.focus();
+        const newRows = this._body.querySelector('.library-tidy-rows');
+        if (newRows && rowsScrollTop) newRows.scrollTop = rowsScrollTop;
+
+        const byKey = (key) => (key
+            ? [...this._body.querySelectorAll('[data-focus-key]')].find((el) => el.dataset.focusKey === key) || null
+            : null);
+        let again = null;
+        for (const key of pending ? pending.focusKeys : []) {
+            again = byKey(key);
+            if (again) break;
         }
+        if (!again) again = byKey(focusKey);
+        if (!again && focusRowId) {
+            const rowEl = [...this._body.querySelectorAll('.library-tidy-row')].find((el) => el.dataset.bookId === focusRowId);
+            again = rowEl ? rowEl.querySelector('[data-focus-key]') : null;
+        }
+        // preventScroll: the restored scroll position already shows the row.
+        if (again) again.focus({ preventScroll: true });
     }
 
     _sourceNoteHtml() {

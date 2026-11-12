@@ -442,6 +442,131 @@ describe('rows (signed in, library ready)', () => {
   });
 });
 
+describe('a choice keeps the player\'s place (the rows scroll in their own box)', () => {
+  // jsdom has no layout, so scrollTop is always 0: give elements a settable one.
+  const scrollTops = new WeakMap();
+  let original;
+  beforeAll(() => {
+    original = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', {
+      configurable: true,
+      get() { return scrollTops.get(this) || 0; },
+      set(value) { scrollTops.set(this, value); }
+    });
+  });
+  afterAll(() => {
+    if (original) Object.defineProperty(Element.prototype, 'scrollTop', original);
+    else delete Element.prototype.scrollTop;
+  });
+
+  const rowsBox = () => document.querySelector('.library-tidy-rows');
+  const focusKey = () => document.activeElement && document.activeElement.dataset.focusKey;
+
+  async function startScrolled() {
+    // 50 unmatched books, so every row offers the type buttons and the library search.
+    const adapter = makeAdapter(range(0, 50).map(n => makeBook(n)));
+    const catalogService = makeCatalogService(makeCatalog(range(100, 110).map(n => makeLibraryBook(n))));
+    await start(adapter, { client: signedInClient(), catalogService });
+    rowsBox().scrollTop = 2400;
+    return rowsBox();
+  }
+
+  test('picking a library book keeps the scroll position and focuses that row\'s new shelf tick', async () => {
+    await startScrolled();
+    row(bookId(30)).querySelector('.library-tidy-find-btn').click();
+    const input = row(bookId(30)).querySelector('.library-tidy-search-input');
+    expect(focusKey()).toBe(`${bookId(30)}:search`);
+    input.value = titleFor(104);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const result = row(bookId(30)).querySelector(`.library-tidy-search-result[data-library-book-id="${libId(104)}"]`);
+    result.focus();
+    result.click();
+
+    expect(row(bookId(30)).textContent).toContain(`On our shelf: ${titleFor(104)}`);
+    expect(rowsBox().scrollTop).toBe(2400);
+    expect(focusKey()).toBe(`${bookId(30)}:hand`);
+    expect(panel().scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  test('a pick still focuses the shelf tick when the search box kept focus (no focus on click)', async () => {
+    await startScrolled();
+    row(bookId(30)).querySelector('.library-tidy-find-btn').click();
+    const input = row(bookId(30)).querySelector('.library-tidy-search-input');
+    input.value = titleFor(104);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    row(bookId(30)).querySelector('.library-tidy-search-result').click();
+    expect(focusKey()).toBe(`${bookId(30)}:hand`);
+    expect(rowsBox().scrollTop).toBe(2400);
+  });
+
+  test('a type choice, a Drop and Later keep the scroll position and the focus', async () => {
+    await startScrolled();
+    const type = row(bookId(30)).querySelector('.library-tidy-type-btn[data-type="ebook"]');
+    type.focus();
+    type.click();
+    expect(row(bookId(30)).querySelector('.library-tidy-type-btn[data-type="ebook"]').getAttribute('aria-pressed')).toBe('true');
+    expect(rowsBox().scrollTop).toBe(2400);
+    expect(focusKey()).toBe(`${bookId(30)}:type:ebook`);
+
+    const drop = row(bookId(31)).querySelector('.library-tidy-drop-btn');
+    drop.focus();
+    drop.click();
+    expect(rowsBox().scrollTop).toBe(2400);
+    expect(focusKey()).toBe(`${bookId(31)}:drop`);
+
+    const later = document.querySelector('.library-tidy-later-btn');
+    later.focus();
+    later.click();
+    await settle();
+    expect(rowsBox().scrollTop).toBe(2400);
+    expect(focusKey()).toBe('later');
+    expect(panel().scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  test('unticking a hand link moves focus to another control in the same row', async () => {
+    await startScrolled();
+    row(bookId(30)).querySelector('.library-tidy-find-btn').click();
+    const input = row(bookId(30)).querySelector('.library-tidy-search-input');
+    input.value = titleFor(104);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    row(bookId(30)).querySelector('.library-tidy-search-result').click();
+    const hand = row(bookId(30)).querySelector('input.library-tidy-hand');
+    hand.checked = false;
+    hand.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(row(bookId(30)).querySelector('input.library-tidy-hand')).toBeNull();
+    // The first control left in the row.
+    expect(focusKey()).toBe(`${bookId(30)}:type:${row(bookId(30)).querySelector('.library-tidy-type-btn').dataset.type}`);
+    expect(rowsBox().scrollTop).toBe(2400);
+  });
+
+  test('searching up one of the row\'s own candidates focuses that candidate', async () => {
+    // No ToS author: the equal title is a weak candidate (D8), with a second library book.
+    const adapter = makeAdapter([makeBook(1, { author: '' })]);
+    const catalogService = makeCatalogService(makeCatalog([makeLibraryBook(1), makeLibraryBook(2)]));
+    await start(adapter, { client: signedInClient(), catalogService });
+    const none = row(bookId(1)).querySelector('input.library-tidy-candidate[value=""]');
+    none.checked = true;
+    none.dispatchEvent(new Event('change', { bubbles: true }));
+    row(bookId(1)).querySelector('.library-tidy-find-btn').click();
+    const input = row(bookId(1)).querySelector('.library-tidy-search-input');
+    input.value = titleFor(1);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    row(bookId(1)).querySelector(`.library-tidy-search-result[data-library-book-id="${libId(1)}"]`).click();
+    expect(row(bookId(1)).querySelector(`input.library-tidy-candidate[value="${libId(1)}"]`).checked).toBe(true);
+    expect(focusKey()).toBe(`${bookId(1)}:cand:${libId(1)}`);
+  });
+
+  test('a redraw never takes focus from outside the panel', async () => {
+    await startScrolled();
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    outside.focus();
+    controller.render();
+    expect(document.activeElement).toBe(outside);
+    expect(rowsBox().scrollTop).toBe(2400);
+  });
+});
+
 describe('simple version', () => {
   test('signed out: no candidate UI, type buttons only, and no getCatalog call', async () => {
     const adapter = makeAdapter([makeBook(1), makeBook(2, { status: 'completed', dateCompleted: '2026-02-01' })]);
