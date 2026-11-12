@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(167);
+select plan(168);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -303,6 +303,15 @@ select throws_ok(
   '22023', null, 'A: 1001 ids are refused');
 
 select is(pg_temp.req(array[19], false), '{not_found}', 'A: a book of another household is not_found');
+
+-- Outcomes come back in id order (the lock order), deduplicated, whatever the input order.
+select is((select array_agg(r.book_id::text || ':' || r.outcome)
+             from library.request_cover_searches(pg_temp.hh(),
+                    array[pg_temp.book(19), pg_temp.book(2), pg_temp.book(1), pg_temp.book(19)],
+                    pg_temp.batch(), false) r),
+          array[pg_temp.book(1)::text || ':already_open', pg_temp.book(2)::text || ':already_open',
+                pg_temp.book(19)::text || ':not_found'],
+          'A: requests are processed once each, in id order');
 
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
 select throws_ok($$ select pg_temp.req(array[1], false) $$, '42501', null,

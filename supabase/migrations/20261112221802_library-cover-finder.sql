@@ -283,7 +283,9 @@ begin
     raise exception 'too_many_books' using errcode = '22023';
   end if;
 
-  for v_id in select distinct x from unnest(coalesce(p_book_ids, '{}'::uuid[])) x where x is not null loop
+  -- Id order, so overlapping concurrent requests lock shared books in the same order (no deadlock).
+  for v_id in select distinct x from unnest(coalesce(p_book_ids, '{}'::uuid[])) x where x is not null
+              order by x loop
     select b.cover_url into v_cover
       from library.books b
      where b.id = v_id and b.household_id = p_household;
