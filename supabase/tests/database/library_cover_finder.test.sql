@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(168);
+select plan(174);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -341,6 +341,10 @@ select throws_ok(
   $$ select library.record_cover_candidates(pg_temp.search_of(3),
        jsonb_build_array(pg_temp.cand(3, 1) || jsonb_build_object('editionTitle', repeat('t', 201)))) $$,
   '22023', null, 'A: an editionTitle of 201 characters is refused');
+select throws_ok(
+  $$ select library.record_cover_candidates(pg_temp.search_of(3),
+       jsonb_build_array(pg_temp.cand(3, 1), pg_temp.cand(3, 1) || '{"width":800}')) $$,
+  '22023', null, 'A: a candidate URL given twice is refused');
 
 select is(pg_temp.req(array[6], false), '{queued}', 'A: book 6 is queued');
 select is(library.record_cover_candidates(pg_temp.search_of(6),
@@ -534,6 +538,28 @@ select is(pg_temp.req(array[4], true), '{queued}', 'A: a manual request queues b
 select is((select string_agg(status, ',' order by created_at, status) from library.cover_searches
             where book_id = pg_temp.book(4)),
           'dismissed,queued', 'A: the old nothing_found row is dismissed');
+
+-- Search again on a ready search whose covers no longer load (R29).
+select library.mark_for_cover(pg_temp.book(9), '{placeholder}', 'Search again note');
+select pg_temp.prep(9, 1);
+reset role;
+update library.cover_searches
+   set status = 'ready', results = jsonb_build_array(pg_temp.cand(9, 1) - 'language' - 'editionTitle')
+ where id = pg_temp.search_of(9);
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select pg_temp.save('s9', pg_temp.search_of(9)::text);
+select is(pg_temp.req(array[9], false), '{already_open}', 'A: a non-manual request on a ready search is already_open');
+select is(pg_temp.req(array[9], true), '{queued}', 'A: a manual request on a ready search re-queues it');
+select is((select string_agg(status, ',' order by created_at, status) from library.cover_searches
+            where book_id = pg_temp.book(9))
+            || '|' || (select status from library.cover_searches where id = pg_temp.val('s9')::uuid),
+          'dismissed,queued|dismissed', 'A: the old ready row is dismissed and a new one queued');
+select is((select array_to_string(m.reasons, ',') || ':' || m.note from library.cover_marks m
+            where m.book_id = pg_temp.book(9))
+            || '|' || (select s.note from library.cover_searches s where s.id = pg_temp.search_of(9)),
+          'placeholder:Search again note|Search again note', 'A: the mark is kept, and the new search snapshots it');
+select is(pg_temp.req(array[9], true), '{already_open}', 'A: a manual request on a queued search is already_open');
 
 reset role;
 select throws_ok(

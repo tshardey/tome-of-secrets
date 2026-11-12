@@ -262,6 +262,11 @@ $$;
 ---------------------------------------------------------------------------
 
 -- One outcome per distinct id: queued | already_open | nothing_found | not_found.
+-- A book's active search blocks a new one (already_open), except for a manual
+-- request (Try again, Search again): it dismisses a nothing_found, failed or
+-- ready active search, keeping the book's mark, and queues a fresh one. A
+-- non-manual request answers nothing_found for a nothing_found or failed
+-- search. Queued, gathered and processing searches always read already_open.
 create or replace function library.request_cover_searches(p_household uuid, p_book_ids uuid[],
                                                           p_batch uuid, p_manual boolean)
 returns table (book_id uuid, outcome text)
@@ -300,7 +305,8 @@ begin
        and s.status in ('queued', 'gathered', 'processing', 'ready', 'nothing_found', 'failed')
      for update;
     if found then
-      if v_active.status not in ('nothing_found', 'failed') then
+      if v_active.status in ('queued', 'gathered', 'processing')
+         or (v_active.status = 'ready' and not coalesce(p_manual, false)) then
         return query select v_id, 'already_open'::text;
         continue;
       end if;
@@ -308,6 +314,7 @@ begin
         return query select v_id, 'nothing_found'::text;
         continue;
       end if;
+      -- Manual: retire the ready or ended search (status only; the mark stays).
       update library.cover_searches s set status = 'dismissed' where s.id = v_active.id;
     end if;
 
@@ -331,7 +338,7 @@ $$;
 -- Saves the gathered candidates of a queued search: gathered, or
 -- nothing_found when there are none. Anything but a queued search is skipped.
 -- Each candidate is {url, source, width, height, language, editionTitle} and
--- nothing else; anything malformed raises 22023.
+-- nothing else; anything malformed, or a url given twice, raises 22023.
 create or replace function library.record_cover_candidates(p_search uuid, p_candidates jsonb)
 returns text
 language plpgsql
@@ -386,6 +393,11 @@ begin
       raise exception 'invalid_candidates' using errcode = '22023';
     end if;
   end loop;
+
+  if (select count(distinct e.value ->> 'url') from jsonb_array_elements(p_candidates) e)
+     <> jsonb_array_length(p_candidates) then
+    raise exception 'duplicate_candidate' using errcode = '22023';
+  end if;
 
   if jsonb_array_length(p_candidates) = 0 then
     update library.cover_searches s
