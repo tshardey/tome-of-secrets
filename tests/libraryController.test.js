@@ -40,7 +40,6 @@ function createLibraryFormHTML() {
             <div id="library-cards-ebook"></div>
             <div id="library-cards-library-loan"></div>
             <div id="library-books-physical" class="library-books-section"><div id="library-cards-physical"></div></div>
-            <div id="library-cards-completed"></div>
             <div id="book-edit-drawer" style="display: none;"></div>
             <div id="book-edit-backdrop"></div>
             <button type="button" id="close-book-edit">Close</button>
@@ -218,7 +217,7 @@ describe('LibraryController', () => {
             for (const type of ['unsorted', 'audiobook', 'ebook', 'library-loan', 'physical']) {
                 expect(stateAdapter.getBooksByType).toHaveBeenCalledWith(type);
             }
-            expect(stateAdapter.getBooksByStatus).toHaveBeenCalledWith('completed');
+            expect(stateAdapter.getBooksByStatus).not.toHaveBeenCalled();
         });
 
         it('should bind add book button and add book on click', () => {
@@ -317,9 +316,11 @@ describe('LibraryController', () => {
             expect(tab).toContain('name="library-add-type"');
             expect(tab).toContain('id="library-add-book-btn"');
             expect(drawer).toContain('id="book-edit-type"');
-            for (const id of ['unsorted', 'audiobook', 'ebook', 'library-loan', 'physical', 'completed']) {
+            for (const id of ['unsorted', 'audiobook', 'ebook', 'library-loan', 'physical']) {
                 expect(tab).toContain(`id="library-cards-${id}"`);
             }
+            // Quest completion lives in the Archived tab; the Library tab has no Completed section
+            expect(tab).not.toContain('id="library-cards-completed"');
         });
     });
 
@@ -452,7 +453,7 @@ describe('LibraryController', () => {
     });
 
     describe('handleMarkComplete', () => {
-        it('calls markBookComplete and moves the card to Completed', () => {
+        it('calls markBookComplete and badges the card Completed in its type section', () => {
             const library = setLibrary([book('b1', 'ebook', 'reading')]);
             stateAdapter.markBookComplete = jest.fn((id) => {
                 library.find((b) => b.id === id).status = 'completed';
@@ -461,12 +462,12 @@ describe('LibraryController', () => {
 
             const controller = new LibraryController(stateAdapter, form, dependencies);
             controller.initialize();
-            expect(document.getElementById('library-cards-completed').innerHTML).toContain('None');
+            expect(document.querySelector('#library-cards-ebook .library-status-badge')).toBeNull();
 
             document.querySelector('#library-cards-ebook .library-mark-complete-btn').click();
 
             expect(stateAdapter.markBookComplete).toHaveBeenCalledWith('b1');
-            expect(document.getElementById('library-cards-completed').innerHTML).toContain('Title b1');
+            expect(document.querySelector('#library-cards-ebook .library-status-badge').textContent).toBe('Completed');
             expect(document.querySelector('#library-cards-ebook .library-mark-complete-btn')).toBeNull();
         });
     });
@@ -474,7 +475,7 @@ describe('LibraryController', () => {
     describe('renderBooks', () => {
         const byId = (id) => document.getElementById(id);
 
-        it('places each book in its type section, and every completed book also under its year', () => {
+        it('places each book in its type section, completed books included', () => {
             setLibrary([
                 book('a1', 'audiobook', 'reading'),
                 book('u1', 'unsorted', 'reading'),
@@ -487,9 +488,6 @@ describe('LibraryController', () => {
             const ebook = byId('library-cards-ebook');
             expect(ebook.innerHTML).toContain('Title e1');
             expect(ebook.querySelector('.library-status-badge').textContent).toBe('Completed');
-            const completed = byId('library-cards-completed');
-            expect(completed.innerHTML).toContain('Title e1');
-            expect(completed.querySelector('.library-year-heading').textContent).toBe('2026 (1)');
             // Not completed and no active quest links it: no badge (spec 6.3)
             expect(byId('library-cards-audiobook').querySelector('.library-status-badge')).toBeNull();
         });
@@ -517,7 +515,6 @@ describe('LibraryController', () => {
         it('renders every present section even when the others are missing from the DOM', () => {
             document.body.innerHTML = `
                 <form id="character-sheet">
-                    <div id="library-cards-completed"></div>
                     <div id="library-cards-ebook"></div>
                 </form>`;
             setLibrary([book('e1', 'ebook', 'completed'), book('a1', 'audiobook', 'reading')]);
@@ -526,7 +523,6 @@ describe('LibraryController', () => {
             new LibraryController(stateAdapter, lonelyForm, dependencies).renderBooks();
 
             expect(byId('library-cards-ebook').innerHTML).toContain('Title e1');
-            expect(byId('library-cards-completed').innerHTML).toContain('Title e1');
         });
 
         it('hides empty Unsorted and Not-in-the-library sections, and shows None for the rest', () => {
@@ -538,7 +534,6 @@ describe('LibraryController', () => {
             expect(byId('library-cards-audiobook').innerHTML).toContain('None');
             expect(byId('library-cards-ebook').innerHTML).toContain('None');
             expect(byId('library-cards-library-loan').innerHTML).toContain('None');
-            expect(byId('library-cards-completed').innerHTML).toContain('None');
         });
 
         it('shows the Unsorted and physical sections again once they hold a book', () => {
@@ -570,7 +565,6 @@ describe('LibraryController', () => {
 
             expect(byId('library-cards-ebook').innerHTML).toContain('library-mark-complete-btn');
             expect(byId('library-cards-audiobook').innerHTML).not.toContain('library-mark-complete-btn');
-            expect(byId('library-cards-completed').innerHTML).not.toContain('library-mark-complete-btn');
         });
 
         it('renderBookCard returns one card with the status badge', () => {
@@ -878,23 +872,17 @@ describe('LibraryController and the household library', () => {
         expect(catalog.fillSeries).toHaveBeenCalledWith(L1, 'The Lantern Cycle');
     });
 
-    it('a missing library book\'s card says No longer in the household library', () => {
+    it('the selector notes a missing library book and leaves it out of On our shelf', () => {
         const gone = adapter.addBook({
             title: 'The Salt Road', type: 'shelf', libraryBookId: L9, status: 'completed',
             dateCompleted: '2026-03-05T00:00:00.000Z'
         });
-        const present = adapter.addBook({
+        adapter.addBook({
             title: 'Glass Orchard', type: 'shelf', libraryBookId: L1, status: 'completed',
             dateCompleted: '2026-03-06T00:00:00.000Z'
         });
         start();
-        const completed = document.getElementById('library-cards-completed');
-        const goneCard = completed.querySelector(`.library-card[data-book-id="${gone.id}"]`);
-        const presentCard = completed.querySelector(`.library-card[data-book-id="${present.id}"]`);
-        expect(goneCard.textContent).toContain('No longer in the household library');
-        expect(presentCard.textContent).not.toContain('No longer in the household library');
 
-        // The selector does not list it under On our shelf
         document.body.insertAdjacentHTML('beforeend', '<div id="picker"></div>');
         const picker = document.getElementById('picker');
         const selector = createBookSelector(picker, adapter, { libraryCatalog: catalog });
@@ -920,19 +908,6 @@ describe('LibraryController and the household library', () => {
                 libraryBook(V, { title: 'The Ember Gate', unhauled: true })
             ]);
             deps.libraryCatalog = catalog;
-        });
-
-        it('a linked unhauled record\'s card says Unhauled, not the missing note', () => {
-            const record = adapter.addBook({
-                title: 'Glass Orchard', type: 'shelf', libraryBookId: U, status: 'completed',
-                dateCompleted: '2026-03-05T00:00:00.000Z'
-            });
-            start();
-            const card = document.querySelector(`.library-card[data-book-id="${record.id}"]`);
-            const mark = card.querySelector('.library-card-unhauled');
-            expect(mark).toBeTruthy();
-            expect(mark.textContent).toBe('Unhauled');
-            expect(card.querySelector('.library-card-missing')).toBeNull();
         });
 
         it('the Add-form shelf results leave out an unlinked unhauled book', async () => {
@@ -1026,21 +1001,5 @@ describe('LibraryController and the household library', () => {
             document.getElementById('save-book-edit-btn').click();
             expect(adapter.getBook(own.id).tags).toEqual(['legacy-unknown-id', 'fantasy', 'epistolary']);
         });
-    });
-
-    it('re-renders the cards when the catalogue loads', () => {
-        let listener = null;
-        catalog.subscribe.mockImplementation((fn) => { listener = fn; return () => {}; });
-        const record = adapter.addBook({
-            title: 'The Salt Road', type: 'shelf', libraryBookId: L1, status: 'completed',
-            dateCompleted: '2026-03-05T00:00:00.000Z'
-        });
-        start();
-        expect(document.getElementById('library-cards-completed').textContent).not.toContain('No longer in the household library');
-        const without = { status: 'ready', userId: 'user-a', householdId: HOUSEHOLD, books: [], tagsAvailable: true, fetchedAt: 2 };
-        catalog.peek.mockReturnValue(without);
-        listener(without);
-        const card = document.querySelector(`#library-cards-completed .library-card[data-book-id="${record.id}"]`);
-        expect(card.textContent).toContain('No longer in the household library');
     });
 });

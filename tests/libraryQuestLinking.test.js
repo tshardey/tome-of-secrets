@@ -31,7 +31,6 @@ function createLibraryFormHTML() {
     return `
         <form id="character-sheet">
             <div id="library-cards-ebook"></div>
-            <div id="library-cards-completed"></div>
             <div id="library-cards-other"></div>
             <div id="book-edit-drawer" style="display: none;"></div>
             <div id="book-edit-backdrop"></div>

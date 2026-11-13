@@ -2,7 +2,8 @@
  * LibraryController - Handles Library tab: add/edit books, search, render book cards
  *
  * - Add Book: inline form, type first (Audiobook, Ebook, Library book, Not in the library yet), then title, author, cover, page count
- * - Book cards grouped by type (Unsorted, Audiobooks, Ebooks, Library books, Not in the library yet) plus Completed by year
+ * - Book cards grouped by type (Unsorted, Audiobooks, Ebooks, Library books, Not in the library yet);
+ *   completed books stay in their type section with a Completed badge
  * - Edit Book: right-side drawer with the type select + read-only linked quests/prompts
  */
 
@@ -14,13 +15,11 @@ import { resolveLibraryCatalog } from '../services/LibraryCatalogService.js';
 import {
     searchShelf,
     listedCatalog,
-    isLibraryUnhauled,
     syncShelfTags,
     fillSeriesForBook,
     linkPhysicalToShelf,
     dismissShelfOffer,
-    unlinkFromLibrary,
-    isLibraryMissing
+    unlinkFromLibrary
 } from '../services/ShelfBookService.js';
 import { renderTagPicker, readTagPicker, applyTagPickerChanges } from '../utils/tagPicker.js';
 import { allItems, keeperBackgrounds, schoolBenefits, masteryAbilities, temporaryBuffsFromRewards, temporaryBuffs } from '../character-sheet/data.js';
@@ -66,7 +65,6 @@ export class LibraryController extends BaseController {
         /** "Found on our shelf" offers: ToS book id -> library book (D7). Never automatic. */
         this._shelfOffers = new Map();
         this._libraryCatalog = resolveLibraryCatalog(this.dependencies);
-        this._unsubscribeCatalog = null;
         this._shelfSearchToken = 0;
     }
 
@@ -178,11 +176,6 @@ export class LibraryController extends BaseController {
         this.stateAdapter.on(STATE_EVENTS.BOOKS_CHANGED, () => {
             this.renderBooks();
         });
-
-        // Each catalogue load can mark a shelf book as missing from the household library
-        if (this._libraryCatalog && typeof this._libraryCatalog.subscribe === 'function') {
-            this._unsubscribeCatalog = this._libraryCatalog.subscribe(() => this.renderBooks());
-        }
 
         this._onBookMarkedComplete = this.dependencies.onBookMarkedComplete || null;
     }
@@ -807,11 +800,6 @@ export class LibraryController extends BaseController {
         if (joinedSeries) void fillSeriesForBook(this.stateAdapter, bookId, catalog);
     }
 
-    destroy() {
-        if (this._unsubscribeCatalog) this._unsubscribeCatalog();
-        this._unsubscribeCatalog = null;
-        super.destroy();
-    }
 
     /**
      * Show "Found on our shelf — link it?" on these physical books (from startLibrarySync).
@@ -877,33 +865,6 @@ export class LibraryController extends BaseController {
         });
     }
 
-    /**
-     * Group completed books by completion year (from dateCompleted), most recent first.
-     * Books without dateCompleted are grouped under "Unknown".
-     * @returns {Array<{ year: string, books: Object[] }>}
-     */
-    _groupCompletedBooksByYear(completedBooks) {
-        if (!completedBooks || completedBooks.length === 0) return [];
-        const byYear = new Map();
-        for (const book of completedBooks) {
-            const dateStr = book.dateCompleted || book.dateAdded || '';
-            const year = dateStr ? String(new Date(dateStr).getFullYear()) : 'Unknown';
-            if (!byYear.has(year)) byYear.set(year, []);
-            byYear.get(year).push(book);
-        }
-        for (const books of byYear.values()) {
-            books.sort((a, b) => {
-                const dateA = a.dateCompleted || a.dateAdded || '';
-                const dateB = b.dateCompleted || b.dateAdded || '';
-                return dateB.localeCompare(dateA) || (a.title || '').localeCompare(b.title || '');
-            });
-        }
-        const years = Array.from(byYear.keys()).filter((y) => y !== 'Unknown');
-        years.sort((a, b) => Number(b) - Number(a));
-        if (byYear.has('Unknown')) years.push('Unknown');
-        return years.map((year) => ({ year, books: byYear.get(year) }));
-    }
-
     /** Render every section whose container exists, independently of the others. */
     renderBooks() {
         for (const { type, hideWhenEmpty } of TYPE_SECTIONS) {
@@ -916,29 +877,6 @@ export class LibraryController extends BaseController {
                 section.style.display = books.length === 0 ? 'none' : '';
             }
         }
-
-        const completed = document.getElementById('library-cards-completed');
-        if (completed) {
-            const completedBooks = this.stateAdapter.getBooksByStatus('completed');
-            completed.innerHTML = this._renderCompletedByYear(completedBooks);
-            completed.classList.toggle('library-cards-completed--by-year', completedBooks.length > 0);
-        }
-    }
-
-    _renderCompletedByYear(completedBooks) {
-        if (!completedBooks || completedBooks.length === 0) {
-            return '<p class="library-empty-section">None</p>';
-        }
-        const groups = this._groupCompletedBooksByYear(completedBooks);
-        return groups
-            .map(
-                ({ year, books }) =>
-                    `<div class="library-completed-year-group">` +
-                    `<h4 class="library-year-heading">${this._escapeHtml(year)} (${books.length})</h4>` +
-                    `<div class="library-cards-grid">${this._renderCardList(books)}</div>` +
-                    `</div>`
-            )
-            .join('');
     }
 
     _renderCardList(books) {
@@ -983,11 +921,6 @@ export class LibraryController extends BaseController {
                 `<button type="button" class="rpg-btn rpg-btn-secondary library-offer-dismiss-btn" data-book-id="${idAttr}">Not this one</button>` +
                 '</div>'
             : '';
-        // Review Focus 4: the record keeps its data; the card only says the library book is gone
-        const catalog = this._libraryCatalog ? this._libraryCatalog.peek() : null;
-        const missingHtml = isLibraryMissing(book, catalog)
-            ? '<div class="library-card-missing">No longer in the household library</div>'
-            : (isLibraryUnhauled(book, catalog) ? '<div class="library-card-unhauled">Unhauled</div>' : '');
         return `
             <div class="library-card" data-book-id="${idAttr}">
                 <div class="library-card-cover-wrap">
@@ -999,7 +932,6 @@ export class LibraryController extends BaseController {
                         <div class="library-card-title">${titleEsc}</div>
                         <div class="library-card-author">${authorEsc}</div>
                         <div class="library-card-meta">${pageStr || ''}</div>
-                        ${missingHtml}
                     </div>
                     <div class="library-card-actions">
                         ${markCompleteBtn}
