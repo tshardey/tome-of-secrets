@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import Anthropic from "@anthropic-ai/sdk";
-import { backoffAt, classifyAiError, clip, costMicro, escapeData, PRICES, thinkingFor } from "./library-ai.ts";
+import { backoffAt, classifyAiError, clip, costMicro, escapeData, fakeAllowed, PRICES, thinkingFor } from "./library-ai.ts";
 
 const h = new Headers();
 
@@ -90,4 +90,16 @@ Deno.test("thinkingFor: sonnet adaptive, haiku disabled", () => {
     thinking: { type: "disabled" },
     output_config: { effort: "low" },
   });
+});
+
+Deno.test("fakeAllowed: the flag is 1 and SUPABASE_URL is a local host (D8)", () => {
+  const env = (m: Record<string, string>) => (n: string) => m[n];
+  for (const url of ["http://kong:8000", "http://127.0.0.1:54321", "http://localhost:54321"]) {
+    assert.equal(fakeAllowed(env({ F: "1", SUPABASE_URL: url }), "F"), true);
+  }
+  assert.equal(fakeAllowed(env({ F: "1", SUPABASE_URL: "https://abc.supabase.co" }), "F"), false);
+  assert.equal(fakeAllowed(env({ F: "1", SUPABASE_URL: "not a url" }), "F"), false);
+  assert.equal(fakeAllowed(env({ F: "1" }), "F"), false);
+  assert.equal(fakeAllowed(env({ F: "true", SUPABASE_URL: "http://kong:8000" }), "F"), false);
+  assert.equal(fakeAllowed(env({ SUPABASE_URL: "http://kong:8000" }), "F"), false);
 });

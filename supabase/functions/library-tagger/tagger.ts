@@ -4,7 +4,15 @@
 // Nothing here logs.
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { type AiFailure, type AiModel, classifyAiError, costMicro, thinkingFor, type Usage } from "../_shared/library-ai.ts";
+import {
+  type AiFailure,
+  type AiModel,
+  classifyAiError,
+  costMicro,
+  fakeAllowed,
+  thinkingFor,
+  type Usage,
+} from "../_shared/library-ai.ts";
 import { buildTagContent, TAG_SYSTEM_PROMPT, type TagInput, type TagResult, TagResultSchema, worstCaseTagTokens } from "./prompt.ts";
 
 /** Set from the Task 2 measurement (Sonnet 5.5 vs Haiku 5.5 on the synthetic set). */
@@ -130,16 +138,7 @@ export function fakeTagger(): Tagger {
   };
 }
 
-const LOCAL_HOSTS = new Set(["kong", "127.0.0.1", "localhost"]);
-
 /** The fake runs only when asked for and only against a local stack (D8). */
 export function chooseTagger(getEnv: (name: string) => string | undefined): "fake" | "anthropic" {
-  if (getEnv("LIBRARY_TAGGER_FAKE") !== "1") return "anthropic";
-  let host = "";
-  try {
-    host = new URL(getEnv("SUPABASE_URL") ?? "").hostname;
-  } catch {
-    return "anthropic";
-  }
-  return LOCAL_HOSTS.has(host) ? "fake" : "anthropic";
+  return fakeAllowed(getEnv, "LIBRARY_TAGGER_FAKE") ? "fake" : "anthropic";
 }

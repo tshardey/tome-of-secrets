@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { classifyAiError, PRICES, thinkingFor } from "../_shared/library-ai.ts";
 import { ASK_SYSTEM_PROMPT, type AskBook, type AskResult, buildAskList, READ_DESCRIPTIONS_TOOL } from "./prompt.ts";
-import { anthropicAsker, askReserveMicro, fakeAsker, MAX_TOKENS, MODEL } from "./asker.ts";
+import { anthropicAsker, askReserveMicro, chooseAsker, fakeAsker, MAX_TOKENS, MODEL } from "./asker.ts";
 
 const book = (ref: number): AskBook => ({
   ref,
@@ -280,4 +280,32 @@ Deno.test("fakeAsker: first 3 refs at 80/60/40, Fake match., count 1000", async 
     usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
     rounds: 1,
   });
+});
+
+Deno.test("a throwing description read still answers round 2 (is_error result) and sums both rounds' usage", async () => {
+  const { fetchImpl, calls } = seq({ body: toolUse([1, 2]) }, { body: message() });
+  const r = await anthropicAsker("k", { fetchImpl }).ask(BOOKS, "p", () => Promise.reject(new Error("db down")));
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].body.tool_choice, { type: "none" });
+  const msgs = calls[1].body.messages as { content: Block[] }[];
+  const tr = msgs[2].content[0] as { type: string; is_error?: boolean; content: string };
+  assert.equal(tr.type, "tool_result");
+  assert.equal(tr.is_error, true);
+  assert.ok(!tr.content.includes("db down"));
+  assert.equal(r.kind, "ok");
+  if (r.kind === "ok") {
+    assert.equal(r.rounds, 2);
+    assert.equal(r.usage.outputTokens, 90);
+  }
+});
+
+Deno.test("chooseAsker: fake only when asked for and local", () => {
+  const env = (m: Record<string, string>) => (n: string) => m[n];
+  assert.equal(chooseAsker(env({ LIBRARY_ASK_FAKE: "1", SUPABASE_URL: "http://kong:8000" })), "fake");
+  assert.equal(chooseAsker(env({ LIBRARY_ASK_FAKE: "1", SUPABASE_URL: "http://127.0.0.1:54321" })), "fake");
+  assert.equal(chooseAsker(env({ LIBRARY_ASK_FAKE: "1", SUPABASE_URL: "http://localhost:54321" })), "fake");
+  assert.equal(chooseAsker(env({ LIBRARY_ASK_FAKE: "1", SUPABASE_URL: "https://abc.supabase.co" })), "anthropic");
+  assert.equal(chooseAsker(env({ LIBRARY_ASK_FAKE: "1", SUPABASE_URL: "not a url" })), "anthropic");
+  assert.equal(chooseAsker(env({ LIBRARY_TAGGER_FAKE: "1", SUPABASE_URL: "http://kong:8000" })), "anthropic");
+  assert.equal(chooseAsker(env({ SUPABASE_URL: "http://kong:8000" })), "anthropic");
 });

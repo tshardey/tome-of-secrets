@@ -11,6 +11,7 @@ import {
   classifyAiError,
   clip,
   escapeData,
+  fakeAllowed,
   PRICES,
   thinkingFor,
   type Usage,
@@ -196,10 +197,22 @@ export function anthropicAsker(
 
       // One read, for the first call; any further call in the same turn is told no.
       const refs = refsToRead(uses[0].input, books.length);
-      const found = refs.length ? await readDescriptions(refs) : new Map<number, string>();
+      // Round 1 is already billed, so a failed read must not lose its usage:
+      // the model is told the descriptions are unavailable and still answers.
+      let found = new Map<number, string>();
+      let readFailed = false;
+      if (refs.length) {
+        try {
+          found = await readDescriptions(refs);
+        } catch {
+          readFailed = true;
+        }
+      }
       const results: Anthropic.ToolResultBlockParam[] = uses.map((u, i) =>
         i === 0
-          ? { type: "tool_result", tool_use_id: u.id, content: descriptionsText(refs, found) }
+          ? readFailed
+            ? { type: "tool_result", tool_use_id: u.id, content: "Descriptions are unavailable.", is_error: true }
+            : { type: "tool_result", tool_use_id: u.id, content: descriptionsText(refs, found) }
           : { type: "tool_result", tool_use_id: u.id, content: "read_descriptions may be called once.", is_error: true }
       );
 
@@ -243,4 +256,9 @@ export function fakeAsker(): Asker {
         rounds: 1,
       }),
   };
+}
+
+/** The fake runs only when asked for and only against a local stack (D8). */
+export function chooseAsker(getEnv: (name: string) => string | undefined): "fake" | "anthropic" {
+  return fakeAllowed(getEnv, "LIBRARY_ASK_FAKE") ? "fake" : "anthropic";
 }

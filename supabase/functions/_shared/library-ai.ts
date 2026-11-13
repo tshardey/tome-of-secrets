@@ -113,3 +113,18 @@ export function thinkingFor(
     output_config: { effort },
   };
 }
+
+const LOCAL_HOSTS = new Set(["kong", "127.0.0.1", "localhost"]);
+
+/**
+ * The fake runs only when its flag is "1" and SUPABASE_URL's host is local
+ * (D8, as Plan 5's chooseScreener), so a flag left set can't reach production.
+ */
+export function fakeAllowed(getEnv: (name: string) => string | undefined, flag: string): boolean {
+  if (getEnv(flag) !== "1") return false;
+  try {
+    return LOCAL_HOSTS.has(new URL(getEnv("SUPABASE_URL") ?? "").hostname);
+  } catch {
+    return false;
+  }
+}
