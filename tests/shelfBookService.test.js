@@ -32,6 +32,10 @@ import {
   dismissShelfOffer,
   unlinkFromLibrary,
   isLibraryMissing,
+  isQuestLinked,
+  isShelfListed,
+  listedCatalog,
+  isLibraryUnhauled,
   startLibrarySync
 } from '../assets/js/services/ShelfBookService.js';
 
@@ -918,5 +922,67 @@ describe('startLibrarySync: a tab returning to view (R37)', () => {
 
     expect(a.getBook(rec.id).title).toBe('Glass Orchard');
     expect(a.getBook(rec.id).tags).toEqual([F]);
+  });
+});
+
+
+describe('unhauled library books (Plan 6, D10)', () => {
+  const U = '00000000-0000-4000-8000-0000000000b1';
+  const V = '00000000-0000-4000-8000-0000000000b2';
+
+  function setup() {
+    const lib = createFakeLibrary();
+    lib.addBook({ id: L, title: 'The Salt Road', authors: ['Member A'] });
+    lib.addBook({ id: U, title: 'Glass Orchard', authors: ['Member B'], unhauled: true });
+    lib.addBook({ id: V, title: 'The Ember Gate', authors: ['Member B'], unhauled: true });
+    const a = newAdapter();
+    const rec = addShelf(a, U, { title: 'Glass Orchard', author: 'Member B' });
+    a.addActiveQuests({ id: 'q-1', type: '♥ Organize the Stacks', prompt: 'Fantasy', book: 'Glass Orchard', bookId: rec.id, buffs: [] });
+    a.linkQuestToBook(rec.id, 'q-1');
+    return { lib, a, rec };
+  }
+
+  it('a quest-linked unhauled book stays listed; an unlinked one does not', () => {
+    const { lib, a } = setup();
+    const catalog = lib.catalog();
+    const u = catalog.books.find(b => b.id === U);
+    const v = catalog.books.find(b => b.id === V);
+    expect(isQuestLinked(a, U)).toBe(true);
+    expect(isQuestLinked(a, V)).toBe(false);
+    expect(isShelfListed(a, u)).toBe(true);
+    expect(isShelfListed(a, v)).toBe(false);
+    expect(isShelfListed(a, catalog.books.find(b => b.id === L))).toBe(true);
+  });
+
+  it('a discarded quest no longer lists the book', () => {
+    const { lib, a } = setup();
+    a.removeQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, 0);
+    expect(isShelfListed(a, lib.catalog().books.find(b => b.id === U))).toBe(false);
+  });
+
+  it('listedCatalog drops unlinked unhauled books without touching the original', () => {
+    const { lib, a } = setup();
+    const catalog = lib.catalog();
+    const listed = listedCatalog(catalog, a);
+    expect(listed.books.map(b => b.id).sort()).toEqual([L, U].sort());
+    expect(catalog.books).toHaveLength(3);
+    const down = { status: 'unavailable', books: [] };
+    expect(listedCatalog(down, a)).toBe(down);
+    expect(listedCatalog(null, a)).toBeNull();
+  });
+
+  it('a linked unhauled record is not missing but is unhauled', () => {
+    const { lib, a, rec } = setup();
+    const catalog = lib.catalog();
+    expect(isLibraryMissing(a.getBook(rec.id), catalog)).toBe(false);
+    expect(isLibraryUnhauled(a.getBook(rec.id), catalog)).toBe(true);
+    expect(isLibraryUnhauled(a.getBook(rec.id), { status: 'unavailable', books: [] })).toBe(false);
+    expect(isLibraryUnhauled(a.addBook({ title: 'x', author: 'y', type: 'physical' }), catalog)).toBe(false);
+  });
+
+  it('offers never point at an unlinked unhauled book', () => {
+    const { lib, a } = setup();
+    a.addBook({ title: 'The Ember Gate', author: 'Member B', type: 'physical' });
+    expect(findShelfOffers(a, lib.catalog())).toEqual([]);
   });
 });

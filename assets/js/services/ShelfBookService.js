@@ -362,6 +362,38 @@ export async function refreshShelfRecords(stateAdapter, catalog, service = libra
 }
 
 /**
+ * Whether some shelf record of the library book is linked to a live quest (D10).
+ * @returns {boolean}
+ */
+export function isQuestLinked(stateAdapter, libraryBookId) {
+    if (typeof libraryBookId !== 'string' || !libraryBookId) return false;
+    return stateAdapter.getBooks().some((record) => isShelfRecord(record)
+        && record.libraryBookId === libraryBookId
+        && stateAdapter.getLinkedQuestIdsForBook(record.id).length > 0);
+}
+
+/** An unhauled library book is listed only while a quest is linked to it (D10). */
+export function isShelfListed(stateAdapter, libraryBook) {
+    return !libraryBook.unhauled || isQuestLinked(stateAdapter, libraryBook.id);
+}
+
+/**
+ * The catalogue without its unhauled, not quest-linked books. Anything not ready is returned
+ * as it is. The original is not changed.
+ */
+export function listedCatalog(catalog, stateAdapter) {
+    if (!catalog || catalog.status !== 'ready' || !Array.isArray(catalog.books)) return catalog;
+    return { ...catalog, books: catalog.books.filter((libraryBook) => isShelfListed(stateAdapter, libraryBook)) };
+}
+
+/** Whether a shelf record's library book is unhauled, in a ready catalogue. */
+export function isLibraryUnhauled(book, catalog) {
+    if (!isShelfRecord(book)) return false;
+    if (!catalog || catalog.status !== 'ready' || !Array.isArray(catalog.books)) return false;
+    return catalog.books.some((libraryBook) => libraryBook.id === book.libraryBookId && libraryBook.unhauled === true);
+}
+
+/**
  * "Found on our shelf — link it?" (D7): `physical` books with exactly one strong match that
  * is not their dismissed match. Never links anything.
  * @returns {Array<{ bookId: string, libraryBook: Object }>}
@@ -369,9 +401,10 @@ export async function refreshShelfRecords(stateAdapter, catalog, service = libra
 export function findShelfOffers(stateAdapter, catalog) {
     if (!catalog || catalog.status !== 'ready' || !Array.isArray(catalog.books) || catalog.books.length === 0) return [];
     const offers = [];
+    const listed = listedCatalog(catalog, stateAdapter).books;
     for (const book of stateAdapter.getBooks()) {
         if (book.type !== 'physical') continue;
-        const { strong } = matchToLibrary(book, catalog.books);
+        const { strong } = matchToLibrary(book, listed);
         if (strong.length !== 1) continue;
         if (strong[0].id === book.shelfMatchDismissed) continue;
         offers.push({ bookId: book.id, libraryBook: strong[0] });
