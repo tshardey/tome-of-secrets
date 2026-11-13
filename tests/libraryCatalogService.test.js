@@ -363,6 +363,15 @@ describe('LibraryCatalogService.getCatalog', () => {
         });
     });
 
+    it('treats a rejected select (PostgREST 42703, a column not yet pushed) as unavailable, like any other error', async () => {
+        const fake = makeFakeClient({
+            handlers: { ...readyHandlers(), books: () => ({ data: null, error: { code: '42703', message: 'column does not exist' } }) }
+        });
+        const { service } = makeService(fake);
+        const result = await service.getCatalog();
+        expect(result.status).toBe('unavailable');
+    });
+
     it('gives no-household on 42501 from the books read and does not retry before 60 s', async () => {
         const fake = makeFakeClient({
             handlers: { ...readyHandlers(), books: () => ({ data: null, error: { code: '42501', message: 'permission denied' } }) }

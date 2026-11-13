@@ -909,6 +909,52 @@ describe('LibraryController and the household library', () => {
         selector.destroy();
     });
 
+    describe('unhauled books (Plan 6, D10)', () => {
+        const U = '00000000-0000-4000-8000-0000000000b1';
+        const V = '00000000-0000-4000-8000-0000000000b2';
+
+        beforeEach(() => {
+            catalog = fakeCatalog([
+                libraryBook(L1),
+                libraryBook(U, { title: 'Glass Orchard', unhauled: true }),
+                libraryBook(V, { title: 'The Ember Gate', unhauled: true })
+            ]);
+            deps.libraryCatalog = catalog;
+        });
+
+        it('a linked unhauled record\'s card says Unhauled, not the missing note', () => {
+            const record = adapter.addBook({
+                title: 'Glass Orchard', type: 'shelf', libraryBookId: U, status: 'completed',
+                dateCompleted: '2026-03-05T00:00:00.000Z'
+            });
+            start();
+            const card = document.querySelector(`.library-card[data-book-id="${record.id}"]`);
+            const mark = card.querySelector('.library-card-unhauled');
+            expect(mark).toBeTruthy();
+            expect(mark.textContent).toBe('Unhauled');
+            expect(card.querySelector('.library-card-missing')).toBeNull();
+        });
+
+        it('the Add-form shelf results leave out an unlinked unhauled book', async () => {
+            start();
+            document.getElementById('library-book-title').value = 'gate';
+            document.getElementById('library-book-search-btn').click();
+            await flush();
+            expect(document.querySelector('.library-shelf-result')).toBeNull();
+        });
+
+        it('the Add-form shelf results keep a quest-linked unhauled book', async () => {
+            const record = adapter.addBook({ title: 'Glass Orchard', type: 'shelf', libraryBookId: U });
+            adapter.addActiveQuests({ id: 'q-1', type: 'Organize the Stacks', prompt: 'Fantasy', book: 'Glass Orchard', bookId: record.id, buffs: [] });
+            adapter.linkQuestToBook(record.id, 'q-1');
+            start();
+            document.getElementById('library-book-title').value = 'glass';
+            document.getElementById('library-book-search-btn').click();
+            await flush();
+            expect(document.querySelector('.library-shelf-result')).toBeTruthy();
+        });
+    });
+
     describe('drawer tag saves (PR review fixes)', () => {
         /** The library's tags per book; a book missing from the map is deleted (null). */
         function libraryTags(map) {

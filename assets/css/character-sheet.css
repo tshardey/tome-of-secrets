@@ -1691,7 +1691,8 @@
     padding: 3px 8px;
 }
 
-.library-card-missing {
+.library-card-missing,
+.library-card-unhauled {
     font-size: 0.8rem;
     font-style: italic;
     color: #b89f62;
