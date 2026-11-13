@@ -26,7 +26,7 @@ export const SCREEN_SYSTEM_PROMPT = [
   "",
   "Give every candidate exactly one verdict:",
   "- ok: a clean, flat image of the front cover of this book, in an English-language edition, readable at thumbnail size.",
-  "- not_english: the cover's text is not in English. Many of these books are English translations of works first published in another language. For those, the right cover is the English translation's; a cover of the original-language edition, or of any other non-English edition, is not_english even when the title and author match.",
+  "- not_english: the cover's text is not in English. Many of these books are English translations of works first published in another language. For those, the right cover is the English translation's; a cover of the original-language edition, or of any other non-English edition, is not_english even when the title and author match. Series names, imprint or publisher text, taglines, and spine or back-cover text in another language also make a cover not_english, even when the title reads the same in English.",
   '- placeholder: a publisher placeholder such as "cover coming soon" or "image not available", or plain text on a coloured block with no cover design.',
   "- other_book: the cover of a different book: another title, another author, or another volume of the same series.",
   "- unusable: too small or blurred to read, a photo of a physical copy, a 3D mock-up, a cover with large stickers, watermarks or borders, or not a book cover at all.",
