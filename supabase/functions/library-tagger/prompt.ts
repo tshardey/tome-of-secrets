@@ -222,17 +222,22 @@ const MAX_COVER_COLOURS = 2;
  * D7: allowed ids only (the ones sent), none removed by hand, never audio,
  * cover-* only with an image, at most two cover colours, and suggestions
  * checked (at most three; a suggestion already in the vocabulary becomes a
- * tag). Unknown or refused ids are dropped silently.
+ * tag; one equal to any ToS id in tosIds, the whole published list, is
+ * dropped). Unknown or refused ids are dropped silently.
  */
 export function sanitizeTagResult(
   r: TagResult,
   input: TagInput,
   removed: { tos: string[]; library: string[] },
+  tosIds: Iterable<string> = [],
 ): CleanTagResult {
   const hasImage = input.image !== null;
   const removedTos = new Set(removed.tos);
   const removedLibrary = new Set(removed.library);
   const tosAllowed = new Set(input.tosTags);
+  // Every id in the ToS list, whatever its category and whether it was sent:
+  // a suggestion must never become a library tag that collides with one (D3).
+  const tosAll = new Set([...input.tosTags, ...tosIds]);
   const category = new Map(input.vocab.map((v) => [v.id, v.category]));
 
   const tosTags = unique(r.tos_tags).filter((id) => id !== "audio" && tosAllowed.has(id) && !removedTos.has(id));
@@ -258,7 +263,7 @@ export function sanitizeTagResult(
     const label = s.label.trim();
     if (
       !ID_RE.test(s.id) || s.id.length > ID_MAX || !categories.has(s.category) ||
-      label.length < 1 || seen.has(s.id) || category.has(s.id) || tosAllowed.has(s.id) ||
+      label.length < 1 || seen.has(s.id) || category.has(s.id) || tosAll.has(s.id) ||
       removedLibrary.has(s.id) || (s.id.startsWith("cover-") && !hasImage)
     ) continue;
     seen.add(s.id);

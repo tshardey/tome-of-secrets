@@ -43,7 +43,13 @@ export interface FinishResult {
   suggestions: { id: string; label: string; category: string; why: string }[];
 }
 
-export type ReleaseError = "misconfigured" | "billing" | "tag_refused" | "tag_rejected" | "tag_unreadable";
+export type ReleaseError =
+  | "misconfigured"
+  | "billing"
+  | "tos_tags_unavailable"
+  | "tag_refused"
+  | "tag_rejected"
+  | "tag_unreadable";
 
 export interface TaggerDb {
   claim(id: string): Promise<Claim>;
@@ -121,12 +127,20 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const token = claim.claimToken;
     if (!token || !claim.book) throw Object.assign(new Error("claim_incomplete"), { code: "claim_incomplete" });
 
-    // The ToS list unreachable: transient, before any Claude call, cost 0 (D7).
+    // The ToS list unreachable: transient, before any Claude call, cost 0, and
+    // the attempt is given back since nothing was sent (D7).
     let tosList;
     try {
       tosList = await loadTosTagList(tosTagsUrl, fetchImpl);
     } catch {
-      const status = await db.release(jobId, token, null, backoffAt(now(), claim.attempts, null), null, 0);
+      const status = await db.release(
+        jobId,
+        token,
+        "tos_tags_unavailable",
+        backoffAt(now(), claim.attempts, null),
+        null,
+        0,
+      );
       return outcome(afterRetry(status));
     }
 
@@ -153,7 +167,12 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const call = await tagger.tag(input);
     switch (call.kind) {
       case "ok": {
-        const clean = sanitizeTagResult(call.result, input, claim.removed);
+        const clean = sanitizeTagResult(call.result, input, claim.removed, tosList.map((t) => t.id));
+        // A full job must leave a card, or every later run would bill it again.
+        if (full && clean.summary.trim() === "") {
+          await db.release(jobId, token, "tag_unreadable", null, storedUsage(call.usage), costMicro(MODEL, call.usage));
+          return outcome("failed");
+        }
         const result: FinishResult = {
           tos: clean.tosTags,
           library: clean.libraryTags,

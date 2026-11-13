@@ -351,6 +351,13 @@ $$;
 -- active queued job is upgraded to full; a processing one is left alone
 -- (finish_tag_job requeues it from the source hash); otherwise a full
 -- changed job.
+--
+-- The active job is locked first. When finish_tag_job holds it (a job being
+-- finished), this update waits for that finish to commit and then sees the
+-- job done, so it queues the changed job itself instead of relying on
+-- finish's source-hash check, which can't see this uncommitted change. No
+-- deadlock: finish takes only FOR KEY SHARE on the book (its foreign-key
+-- checks), which doesn't conflict with this update's FOR NO KEY UPDATE.
 create or replace function library.enqueue_tagging()
 returns trigger
 language plpgsql
@@ -359,6 +366,9 @@ set search_path = ''
 as $$
 begin
   if tg_op = 'UPDATE' then
+    perform 1 from library.tag_jobs j
+      where j.book_id = new.id and j.status in ('queued', 'processing')
+      for update;
     update library.tag_jobs j set kind = 'full'
      where j.book_id = new.id and j.status = 'queued' and j.kind <> 'full';
     if exists (select 1 from library.tag_jobs j
@@ -598,7 +608,6 @@ set search_path = ''
 as $$
 declare
   v_job      library.tag_jobs%rowtype;
-  v_book     library.books%rowtype;
   v_since    int := 0;
   v_full     boolean;
   v_seen     boolean;
@@ -634,8 +643,12 @@ begin
     raise exception 'invalid_result' using errcode = '22023';
   end if;
 
-  select b.* into v_book from library.books b where b.id = v_job.book_id;
   v_full := v_job.kind = 'full';
+  -- A full job must leave a card; without one every later run would bill the
+  -- book again. The function releases a blank summary as tag_unreadable.
+  if v_full and coalesce(btrim(p_result ->> 'summary'), '') = '' then
+    raise exception 'invalid_result' using errcode = '22023';
+  end if;
   v_seen := v_full and coalesce(p_result -> 'coverSeen', 'false'::jsonb) = 'true'::jsonb;
   if not v_full then
     v_since := coalesce((select c.vocab_version from library.book_cards c where c.book_id = v_job.book_id), 0);
@@ -685,19 +698,17 @@ begin
   if v_full then
     v_summary := btrim(left(btrim(p_result ->> 'summary'), 800));
     v_cover   := case when v_seen then nullif(btrim(left(btrim(p_result ->> 'coverDescription'), 300)), '') end;
-    if coalesce(v_summary, '') <> '' then
-      insert into library.book_cards as c (book_id, household_id, summary, cover_description, model,
-                                           vocab_version, cover_url_seen, written_at)
-      values (v_job.book_id, v_job.household_id, v_summary, v_cover, p_model, v_job.vocab_version,
-              case when v_seen then v_job.cover_at_claim end, now())
-      on conflict (book_id) do update
-        set summary           = excluded.summary,
-            cover_description = case when v_seen then excluded.cover_description else c.cover_description end,
-            cover_url_seen    = case when v_seen then excluded.cover_url_seen else c.cover_url_seen end,
-            model             = excluded.model,
-            vocab_version     = excluded.vocab_version,
-            written_at        = excluded.written_at;
-    end if;
+    insert into library.book_cards as c (book_id, household_id, summary, cover_description, model,
+                                         vocab_version, cover_url_seen, written_at)
+    values (v_job.book_id, v_job.household_id, v_summary, v_cover, p_model, v_job.vocab_version,
+            case when v_seen then v_job.cover_at_claim end, now())
+    on conflict (book_id) do update
+      set summary           = excluded.summary,
+          cover_description = case when v_seen then excluded.cover_description else c.cover_description end,
+          cover_url_seen    = case when v_seen then excluded.cover_url_seen else c.cover_url_seen end,
+          model             = excluded.model,
+          vocab_version     = excluded.vocab_version,
+          written_at        = excluded.written_at;
   else
     update library.book_cards c
        set vocab_version = greatest(c.vocab_version, v_job.vocab_version)
@@ -741,11 +752,23 @@ begin
     insert into library.tag_suggestions (household_id, tag_id, label, category)
     values (v_job.household_id, v_id, v_label, v_category)
     on conflict (household_id, tag_id) do nothing;
+    -- FOR SHARE: an approve or dismiss in flight finishes first, and none
+    -- can start until this commits, so a book linked here is one the approve
+    -- will see.
     select s.id, s.status into v_sid, v_sstatus
-      from library.tag_suggestions s where s.household_id = v_job.household_id and s.tag_id = v_id;
+      from library.tag_suggestions s where s.household_id = v_job.household_id and s.tag_id = v_id
+       for share;
     if v_sstatus = 'pending' then
       insert into library.tag_suggestion_books (suggestion_id, book_id, household_id, why)
       values (v_sid, v_job.book_id, v_job.household_id, v_why)
+      on conflict do nothing;
+    elsif v_sstatus = 'approved' then
+      -- Approved since the vocabulary check above: now a tag like any other.
+      insert into library.book_library_tags (book_id, household_id, tag_id, added_by)
+      select v_job.book_id, v_job.household_id, t.id, 'tagger'
+        from library.library_tags t
+       where t.id = v_id and t.active
+         and (t.household_id is null or t.household_id = v_job.household_id)
       on conflict do nothing;
     end if;
     v_suggested := v_suggested + 1;
@@ -760,7 +783,11 @@ begin
    where j.id = p_job;
 
   -- The synopsis or cover changed mid-job: tag it again (Review Focus 3).
-  if md5(coalesce(v_book.synopsis, '') || '|' || coalesce(v_book.cover_url, '')) is distinct from v_job.source_hash then
+  -- Read now, after the writes, so a change committed while this ran is seen.
+  -- A change still uncommitted is waiting on this job's lock in
+  -- enqueue_tagging and queues its own job once this commits.
+  if (select md5(coalesce(b.synopsis, '') || '|' || coalesce(b.cover_url, ''))
+        from library.books b where b.id = v_job.book_id) is distinct from v_job.source_hash then
     insert into library.tag_jobs (household_id, book_id, kind, reason, requested_by)
     values (v_job.household_id, v_job.book_id, 'full', 'changed', auth.uid())
     on conflict (book_id) where status in ('queued', 'processing') do nothing;
@@ -772,6 +799,8 @@ $$;
 
 -- Ends a claim without a result. Returns the new status, or stale.
 --   misconfigured | billing                             queued; attempt and call given back; cost 0
+--   tos_tags_unavailable with p_retry_at                queued with retry_at; attempt and call given
+--                                                       back; cost 0 (no Claude call was made)
 --   null error with p_retry_at, attempts < 3            queued with retry_at
 --   null error with p_retry_at, attempts = 3            failed, tag_unavailable
 --   tag_refused | tag_rejected | tag_unreadable         failed with that code
@@ -806,6 +835,12 @@ begin
 
   if p_error in ('misconfigured', 'billing') then
     v_status   := 'queued';
+    v_attempts := greatest(0, v_job.attempts - 1);
+    v_uncount  := true;
+    v_cost     := 0;
+  elsif p_error = 'tos_tags_unavailable' and p_retry_at is not null then
+    v_status   := 'queued';
+    v_retry_at := p_retry_at;
     v_attempts := greatest(0, v_job.attempts - 1);
     v_uncount  := true;
     v_cost     := 0;

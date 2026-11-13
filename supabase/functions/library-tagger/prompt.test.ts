@@ -192,3 +192,17 @@ Deno.test("sanitizeTagResult: at most three suggestions, none for removed or cov
   assert.deepEqual(removed.suggestions, []);
   assert.ok(!removed.libraryTags.includes("vampires"));
 });
+
+Deno.test("sanitizeTagResult: a suggestion equal to any id in tosIds is dropped, sent or not", () => {
+  const r = {
+    ...RESULT,
+    suggestions: [
+      { id: "special-edition", label: "Special", category: "theme", why: "x" },
+      { id: "salt-flats", label: "Salt flats", category: "setting", why: "y" },
+    ],
+  };
+  const without = sanitizeTagResult(r, INPUT, { tos: [], library: [] });
+  assert.ok(without.suggestions.some((s) => s.id === "special-edition"));
+  const out = sanitizeTagResult(r, INPUT, { tos: [], library: [] }, ["special-edition", "fantasy"]);
+  assert.deepEqual(out.suggestions.map((s) => s.id), ["salt-flats"]);
+});

@@ -10,7 +10,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(164);
+select plan(171);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -515,6 +515,29 @@ select is(pg_temp.release(20, null, now() + interval '1 minute', 0) || '|' || pg
           'failed|failed:3:tag_unavailable', 'a retry on the third attempt fails tag_unavailable');
 select is(pg_temp.req(pg_temp.hh(), array[19, 20], 'run'), '{skipped,skipped}',
           'failed books stay out of runs');
+
+-- Review fixes: a blank summary, and the ToS list unavailable.
+select pg_temp.req(pg_temp.hh(), array[23, 24], 'manual');
+select is(pg_temp.claim(23), 'claimed:1', 'A: claims book 23');
+select throws_ok($$ select pg_temp.finish(23, pg_temp.res('{fantasy}', '{}', false) || '{"summary": "   "}'::jsonb) $$,
+                 '22023', null, 'a full job with a blank summary raises 22023 (released as tag_unreadable instead)');
+select is(pg_temp.ttags(23) || '|' || (select count(*) from library.book_cards c where c.book_id = pg_temp.book(23))
+          || '|' || pg_temp.jst(pg_temp.jid(23)),
+          '|0|processing:1:', 'the refused finish wrote nothing');
+
+reset role;
+select pg_temp.save('before24', pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()) || ':'
+                                || pg_temp.calls(pg_temp.hh(), 'tagging', pg_temp.m()));
+set local role authenticated;
+select is(pg_temp.claim(24), 'claimed:1', 'A: claims book 24');
+select throws_ok($$ select pg_temp.release(24, 'tos_tags_unavailable', null, 0) $$, '22023', null,
+                 'tos_tags_unavailable needs a retry_at');
+select is(pg_temp.release(24, 'tos_tags_unavailable', now() + interval '1 minute', 5000) || '|'
+          || pg_temp.jst(pg_temp.jid(24)) || '|'
+          || pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()) || ':' || pg_temp.calls(pg_temp.hh(), 'tagging', pg_temp.m()),
+          'queued|queued:0:|' || pg_temp.val('before24'),
+          'the ToS list unavailable: queued, the attempt, call and reservation given back');
+select is(pg_temp.claim(24), 'retry_later:0', 'and it waits for its retry_at');
 
 ---------------------------------------------------------------------------
 -- Ask.

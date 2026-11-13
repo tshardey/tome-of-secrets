@@ -58,7 +58,7 @@ function fakeDb(claim: Claim | (() => never), opts: { finish?: string; release?:
     },
     release(...args) {
       calls.release.push(args);
-      return Promise.resolve(opts.release ?? (args[2] && args[2] !== "misconfigured" && args[2] !== "billing" ? "failed" : "queued"));
+      return Promise.resolve(opts.release ?? (args[2] && !["misconfigured", "billing", "tos_tags_unavailable"].includes(args[2] as string) ? "failed" : "queued"));
     },
   };
   return { db, calls };
@@ -137,7 +137,7 @@ Deno.test("non-claimed outcomes return at once: no fetch, no tag call", async ()
   }
 });
 
-Deno.test("the ToS list failing releases retry_later at cost 0, with no tag call", async () => {
+Deno.test("the ToS list failing releases tos_tags_unavailable (attempt given back) at cost 0, with no tag call", async () => {
   const { body, inputs, calls } = await run(claimed(), { kind: "ok", result: RESULT, usage: USAGE }, {
     fetch: fakeFetch({ tosStatus: 503 }),
   });
@@ -147,7 +147,7 @@ Deno.test("the ToS list failing releases retry_later at cost 0, with no tag call
   const [id, token, error, retryAt, usage, cost] = calls.release[0];
   assert.equal(id, JOB);
   assert.equal(token, TOKEN);
-  assert.equal(error, null);
+  assert.equal(error, "tos_tags_unavailable");
   assert.equal((retryAt as Date).toISOString(), "2026-11-13T12:00:30.000Z");
   assert.equal(usage, null);
   assert.equal(cost, 0);
@@ -377,4 +377,45 @@ Deno.test("rpcDb: an RPC error is thrown with its code", async () => {
     schema: () => ({ rpc: () => Promise.resolve({ data: null, error: { code: "42501", message: "x" } }) }),
   };
   await assert.rejects(rpcDb(supabase).claim(JOB), (e: { code?: string }) => e.code === "42501");
+});
+
+Deno.test("a blank summary on a full job releases tag_unreadable at its actual cost, with no finish", async () => {
+  const { body, calls } = await run(claimed(), { kind: "ok", result: { ...RESULT, summary: "   " }, usage: USAGE });
+  assert.deepEqual(body, { outcome: "failed" });
+  assert.equal(calls.finish.length, 0);
+  const [, , error, retryAt, usage, cost] = calls.release[0];
+  assert.equal(error, "tag_unreadable");
+  assert.equal(retryAt, null);
+  assert.equal((usage as Record<string, number>).computedCostMicro, costMicro(MODEL, USAGE));
+  assert.equal(cost, costMicro(MODEL, USAGE));
+});
+
+Deno.test("a blank summary on a new_tags job still finishes (the card stays)", async () => {
+  const claim = claimed({ kind: "new_tags", card: { summary: "A short card.", coverDescription: null } });
+  const { body, calls } = await run(claim, { kind: "ok", result: { ...RESULT, summary: "" }, usage: USAGE });
+  assert.deepEqual(body, { outcome: "done" });
+  assert.equal(calls.finish.length, 1);
+});
+
+const sugg = (id: string) => ({ id, label: "Some label", category: "setting", why: "A reason." });
+
+Deno.test("a suggestion equal to any ToS id in the list is dropped, on both job kinds", async () => {
+  const result = { ...RESULT, suggestions: [sugg("special-edition"), sugg("audio"), sugg("salt-flats")] };
+  const full = await run(claimed(), { kind: "ok", result, usage: USAGE });
+  assert.deepEqual((full.calls.finish[0][2] as FinishResult).suggestions.map((s) => s.id), ["salt-flats"]);
+
+  const newTags = claimed({ kind: "new_tags", card: { summary: "A short card.", coverDescription: null } });
+  const nt = await run(newTags, { kind: "ok", result: { ...result, suggestions: [sugg("fantasy"), sugg("salt-flats")] }, usage: USAGE });
+  assert.deepEqual((nt.calls.finish[0][2] as FinishResult).suggestions.map((s) => s.id), ["salt-flats"]);
+});
+
+Deno.test("a ToS id past the 120-id clamp is still refused as a suggestion", async () => {
+  const big = Array.from({ length: 200 }, (_, i) => ({ id: `genre-${i}`, label: `Genre ${i}`, category: "genre" }));
+  const { calls, inputs } = await run(claimed(), {
+    kind: "ok",
+    result: { ...RESULT, suggestions: [sugg("genre-150"), sugg("salt-flats")] },
+    usage: USAGE,
+  }, { fetch: fakeFetch({ tosList: big }) });
+  assert.ok(!inputs[0].tosTags.includes("genre-150"));
+  assert.deepEqual((calls.finish[0][2] as FinishResult).suggestions.map((s) => s.id), ["salt-flats"]);
 });
