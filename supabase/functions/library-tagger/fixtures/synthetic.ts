@@ -43,7 +43,7 @@ export const SYNTHETIC_BOOKS: SyntheticBook[] = [
   // 8 plain books with rich descriptions
   {
     ref: 1,
-    title: "Blackthorn Winter",
+    title: "Bramblecoat Winter",
     authors: ["Ilsa Varga"],
     seriesName: null,
     seriesVolume: null,
@@ -111,7 +111,7 @@ export const SYNTHETIC_BOOKS: SyntheticBook[] = [
   },
   {
     ref: 5,
-    title: "Drowned Bell",
+    title: "Dunmere Underbell",
     authors: ["Cornelius Abbott"],
     seriesName: null,
     seriesVolume: null,
@@ -291,7 +291,7 @@ export const SYNTHETIC_BOOKS: SyntheticBook[] = [
   },
   {
     ref: 16,
-    title: "Field Notes from the Edge",
+    title: "Notes from Sallowmere Fen",
     authors: ["Rafaela Brandao"],
     seriesName: null,
     seriesVolume: null,
@@ -352,7 +352,7 @@ export const SYNTHETIC_BOOKS: SyntheticBook[] = [
   },
   {
     ref: 20,
-    title: "The Last Locksmith",
+    title: "The Ninth Tumbler of Varrowgate",
     authors: ["Anselm Quarrie"],
     seriesName: null,
     seriesVolume: null,

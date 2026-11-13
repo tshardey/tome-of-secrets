@@ -173,24 +173,37 @@ export function buildTagContent(input: TagInput): unknown[] {
 
 /** Household tag cap (400) plus the starting vocabulary (144), per D6. */
 const VOCAB_CAP = 400 + 144;
+/** A generous cap on the ToS ids sent (the allowed list has about 34 today). */
+const TOS_TAG_CAP = 120;
 const ID_MAX = 40;
+/**
+ * Message framing and the structured-output instructions the API adds for the
+ * json_schema format. Measured overhead was well under this (Task 2).
+ */
+export const REQUEST_OVERHEAD_TOKENS = 1000;
 
 /**
- * The most input tokens one tagging call can use (D6):
- *   ceil(system prompt chars / 3)
- *   + 4,800 (one image)
- *   + ceil(vocabulary chars / 3), the vocabulary at its cap of 544 ids of 40
- *     characters, formatted by buildVocabText
- *   + TEXT_TOKEN_ALLOWANCE (6,000).
- * Output is priced separately from max_tokens.
+ * The most input tokens one tagging call can use (D6, with the ToS id line):
+ *   plain: ceil(system prompt chars / 3) + 4,800 (one image)
+ *          + TEXT_TOKEN_ALLOWANCE (6,000) + REQUEST_OVERHEAD_TOKENS (1,000)
+ *   vocab: ceil(vocabulary chars / 3), the vocabulary block as buildVocabText
+ *          formats it at its caps: 120 ToS ids and 544 library ids, each of
+ *          40 characters.
+ * The vocabulary block carries cache_control, so its tokens are priced at the
+ * 1.25x cache-write rate by the caller; plain tokens at the input rate.
  */
-export function worstCaseTagTokens(): number {
+export function worstCaseTagTokens(): { plain: number; vocab: number } {
+  const id = (p: string, i: number) => (p + String(i).padStart(3, "0")).padEnd(ID_MAX, "x");
+  const tos = Array.from({ length: TOS_TAG_CAP }, (_, i) => id("s", i));
   const vocab = Array.from({ length: VOCAB_CAP }, (_, i) => ({
-    id: ("t" + String(i).padStart(3, "0")).padEnd(ID_MAX, "x"),
+    id: id("t", i),
     category: TAG_CATEGORIES[i % TAG_CATEGORIES.length] as string,
   }));
-  const vocabChars = buildVocabText([], vocab).length;
-  return Math.ceil(TAG_SYSTEM_PROMPT.length / 3) + IMAGE_TOKEN_MAX + Math.ceil(vocabChars / 3) + TEXT_TOKEN_ALLOWANCE;
+  const vocabChars = buildVocabText(tos, vocab).length;
+  return {
+    plain: Math.ceil(TAG_SYSTEM_PROMPT.length / 3) + IMAGE_TOKEN_MAX + TEXT_TOKEN_ALLOWANCE + REQUEST_OVERHEAD_TOKENS,
+    vocab: Math.ceil(vocabChars / 3),
+  };
 }
 
 export interface CleanTagResult {

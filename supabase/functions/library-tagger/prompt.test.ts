@@ -6,6 +6,7 @@ import {
   TAG_SYSTEM_PROMPT,
   type TagInput,
   TagResultSchema,
+  REQUEST_OVERHEAD_TOKENS,
   TEXT_TOKEN_ALLOWANCE,
   worstCaseTagTokens,
 } from "./prompt.ts";
@@ -101,21 +102,25 @@ Deno.test("new_tags sends the card, no image, and the only-consider line", () =>
   assert.ok(!blocks(INPUT)[0].text!.includes("Only consider"));
 });
 
-Deno.test("worstCaseTagTokens equals the D6 input formula at the 544-tag cap", () => {
+Deno.test("worstCaseTagTokens: D6 input at the caps, with 120 ToS ids, vocabulary counted apart", () => {
   const cats = [
     "trope", "creature", "setting", "era", "theme", "mood", "plot",
     "protagonist", "audience", "subgenre", "cover-colour", "cover-motif", "fact",
   ];
-  const vocab = Array.from({ length: 544 }, (_, i) => ({
-    id: ("t" + String(i).padStart(3, "0")).padEnd(40, "x"),
-    category: cats[i % cats.length],
-  }));
+  const id = (p: string, i: number) => (p + String(i).padStart(3, "0")).padEnd(40, "x");
+  const tosTags = Array.from({ length: 120 }, (_, i) => id("s", i));
+  const vocab = Array.from({ length: 544 }, (_, i) => ({ id: id("t", i), category: cats[i % cats.length] }));
   assert.equal(vocab[0].id.length, 40);
-  const text = blocks({ ...INPUT, tosTags: [], vocab, image: null })[0].text!;
-  const expected = Math.ceil(TAG_SYSTEM_PROMPT.length / 3) + 4800 + Math.ceil(text.length / 3) + TEXT_TOKEN_ALLOWANCE;
+  assert.equal(tosTags[0].length, 40);
+  const text = blocks({ ...INPUT, tosTags, vocab, image: null })[0].text!;
   assert.equal(TEXT_TOKEN_ALLOWANCE, 6000);
-  assert.equal(worstCaseTagTokens(), expected);
-  assert.ok(worstCaseTagTokens() > 15000 && worstCaseTagTokens() < 25000);
+  assert.equal(REQUEST_OVERHEAD_TOKENS, 1000);
+  assert.deepEqual(worstCaseTagTokens(), {
+    plain: Math.ceil(TAG_SYSTEM_PROMPT.length / 3) + 4800 + TEXT_TOKEN_ALLOWANCE + REQUEST_OVERHEAD_TOKENS,
+    vocab: Math.ceil(text.length / 3),
+  });
+  const w = worstCaseTagTokens();
+  assert.ok(w.vocab > 8000 && w.vocab < 12000);
 });
 
 Deno.test("TagResultSchema parses the documented shape", () => {
