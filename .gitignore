@@ -1,4 +1,5 @@
 .env/
+*.env
 .troubleshoot/
 .devcontainer/
 .worktrees/
@@ -38,3 +39,4 @@ _config.supabase.yml
 /tests/test-results/
 /tests/playwright-report/
 /tests/blob-report/
+
