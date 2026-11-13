@@ -211,7 +211,7 @@ select null, v.id, v.label, v.category, 1
   ('nonhuman-mc', 'Nonhuman main character', 'protagonist'),
   ('older-mc', 'Older main character', 'protagonist'),
   ('child-mc', 'Child main character', 'protagonist'),
-  ('single-pov', 'Single pov', 'protagonist'),
+  ('single-pov', 'Single POV', 'protagonist'),
   -- audience
   ('audience-middle-grade', 'Middle grade', 'audience'),
   ('audience-ya', 'YA', 'audience'),
