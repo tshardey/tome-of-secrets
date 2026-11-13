@@ -850,40 +850,6 @@
     font-size: 1.2em;
 }
 
-/* Completed section: year groups so year heading doesn't take a grid cell */
-#library-cards-completed.library-cards-completed--by-year {
-    display: block;
-}
-
-.library-completed-year-group {
-    margin-bottom: 24px;
-}
-
-.library-completed-year-group:last-child {
-    margin-bottom: 0;
-}
-
-.library-completed-year-group .library-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
-}
-
-/* Match quest section title style (Dungeon Rooms, etc.) */
-.library-year-heading {
-    margin: 0 0 16px 0;
-    font-family: 'Lora', serif;
-    font-size: 1.3rem;
-    color: #b89f62;
-}
-
-.library-year-heading:first-child {
-    margin-top: 0;
-}
-.library-completed-year-group:not(:first-child) .library-year-heading {
-    margin-top: 24px;
-}
-
 .library-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1689,13 +1655,6 @@
 .library-card-offer .rpg-btn {
     font-size: 0.8rem;
     padding: 3px 8px;
-}
-
-.library-card-missing,
-.library-card-unhauled {
-    font-size: 0.8rem;
-    font-style: italic;
-    color: #b89f62;
 }
 
 /* Library tab: "Tidy your ToS library" (Plan 4, D9) */
