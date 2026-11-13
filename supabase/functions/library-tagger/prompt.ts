@@ -172,9 +172,9 @@ export function buildTagContent(input: TagInput): unknown[] {
 }
 
 /** Household tag cap (400) plus the starting vocabulary (144), per D6. */
-const VOCAB_CAP = 400 + 144;
+export const VOCAB_CAP = 400 + 144;
 /** A generous cap on the ToS ids sent (the allowed list has about 34 today). */
-const TOS_TAG_CAP = 120;
+export const TOS_TAG_CAP = 120;
 const ID_MAX = 40;
 /**
  * Message framing and the structured-output instructions the API adds for the
