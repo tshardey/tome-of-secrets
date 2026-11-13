@@ -19,7 +19,7 @@ import { ensureShelfRecord, syncShelfTags } from '../assets/js/services/ShelfBoo
 import { libraryCatalog } from '../assets/js/services/LibraryCatalogService.js';
 import { toast } from '../assets/js/ui/toast.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
-import { createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
+import { createEmptyCharacterState, STORAGE_KEYS } from '../assets/js/character-sheet/storageKeys.js';
 
 describe('bookSelector', () => {
     let container;
@@ -504,6 +504,76 @@ describe('bookSelector with the household library', () => {
         group(open(), 'shelf').querySelector(`[data-library-book-id="${L1}"]`).click();
         expect(addSpy).toHaveBeenCalledTimes(1);
         expect(onSelect).toHaveBeenLastCalledWith(id);
+    });
+
+    describe('unhauled books (Plan 6, D10)', () => {
+        const A = '00000000-0000-4000-8000-0000000000a1';
+        const U = '00000000-0000-4000-8000-0000000000b1';
+        const V = '00000000-0000-4000-8000-0000000000b2';
+
+        function setup() {
+            const catalog = fakeCatalog(readyCatalog([
+                libraryBook(A, { title: 'The Salt Road' }),
+                libraryBook(U, { title: 'Glass Orchard', unhauled: true }),
+                libraryBook(V, { title: 'The Ember Gate', unhauled: true })
+            ]));
+            const record = adapter.addBook({ title: 'Glass Orchard', type: 'shelf', libraryBookId: U });
+            adapter.addActiveQuests({ id: 'q-1', type: 'Organize the Stacks', prompt: 'Fantasy', book: 'Glass Orchard', bookId: record.id, buffs: [] });
+            adapter.linkQuestToBook(record.id, 'q-1');
+            return { catalog, record };
+        }
+
+        const shelfIds = (dropdown) => Array.from(group(dropdown, 'shelf').querySelectorAll('[data-library-book-id]'))
+            .map((el) => el.getAttribute('data-library-book-id'));
+
+        it('lists the on-shelf and the quest-linked unhauled book, not the unlinked one, and marks the linked one', () => {
+            const { catalog } = setup();
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog });
+            const dropdown = open();
+            expect(shelfIds(dropdown).sort()).toEqual([A, U].sort());
+            const u = group(dropdown, 'shelf').querySelector(`[data-library-book-id="${U}"]`);
+            expect(u.textContent).toContain('Unhauled');
+            const a = group(dropdown, 'shelf').querySelector(`[data-library-book-id="${A}"]`);
+            expect(a.textContent).not.toContain('Unhauled');
+        });
+
+        it('a search matching only the unlinked unhauled book lists nothing from the shelf', () => {
+            const { catalog } = setup();
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog });
+            const dropdown = open();
+            search(dropdown, 'Gate');
+            expect(shelfIds(dropdown)).toEqual([]);
+        });
+
+        it('Your books marks the record Unhauled once a discarded quest drops it from the shelf group', () => {
+            const { catalog, record } = setup();
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog });
+            let dropdown = open();
+            // While the shelf group lists it, the record is left out of Your books.
+            expect(group(dropdown, 'yours').querySelector(`[data-book-id="${record.id}"]`)).toBeNull();
+            api.destroy();
+
+            adapter.removeQuest(STORAGE_KEYS.ACTIVE_ASSIGNMENTS, 0);
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog });
+            dropdown = open();
+            expect(shelfIds(dropdown)).toEqual([A]);
+            const mine = group(dropdown, 'yours').querySelector(`[data-book-id="${record.id}"]`);
+            expect(mine.textContent).toContain('Unhauled');
+        });
+
+        it('the selected book line says Unhauled', () => {
+            const { catalog, record } = setup();
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog, selectedBookId: record.id });
+            expect(container.querySelector('.book-selector-selected').textContent).toContain('Unhauled');
+        });
+
+        it('picking a listed unhauled book resolves it from the full catalogue', () => {
+            const { catalog, record } = setup();
+            api = createBookSelector(container, adapter, { libraryCatalog: catalog });
+            const dropdown = open();
+            group(dropdown, 'shelf').querySelector(`[data-library-book-id="${U}"]`).click();
+            expect(api.getSelectedBookId()).toBe(record.id);
+        });
     });
 
     describe('when the library is unavailable', () => {

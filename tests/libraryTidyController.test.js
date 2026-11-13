@@ -359,6 +359,45 @@ describe('rows (signed in, library ready)', () => {
     expect(applyTidy.mock.calls[0][0].decisions).toEqual([{ bookId: bookId(1), kind: 'link', libraryBookId: libId(30) }]);
   });
 
+  describe('unhauled books (Plan 6, D10)', () => {
+    // 40: unhauled, unlinked. 41: unhauled, linked through a shelf record to an active quest.
+    function unhauledScenario() {
+      const shelf = makeBook(90, { type: 'shelf', libraryBookId: libId(41), status: 'reading' });
+      const adapter = makeAdapter([makeBook(1, { title: titleFor(40) }), makeBook(2, { title: titleFor(41) }), shelf]);
+      adapter.addActiveQuests({ id: 'q-1', type: 'Organize the Stacks', prompt: 'Fantasy', book: shelf.title, bookId: shelf.id, buffs: [] });
+      adapter.linkQuestToBook(shelf.id, 'q-1');
+      const catalogService = makeCatalogService(makeCatalog([
+        makeLibraryBook(40, { unhauled: true }),
+        makeLibraryBook(41, { unhauled: true })
+      ]));
+      return { adapter, catalogService };
+    }
+
+    test('an Unsorted book whose only strong match is an unlinked unhauled book gets no candidate or preselection', async () => {
+      const { adapter, catalogService } = unhauledScenario();
+      await start(adapter, { client: signedInClient(), catalogService });
+      expect(row(bookId(1)).innerHTML).not.toContain(libId(40));
+      expect(controller._plan.find(r => r.bookId === bookId(1))).toEqual(expect.objectContaining({ candidates: [], preselected: null }));
+    });
+
+    test('searching an unlinked unhauled title finds nothing', async () => {
+      const { adapter, catalogService } = unhauledScenario();
+      await start(adapter, { client: signedInClient(), catalogService });
+      row(bookId(1)).querySelector('.library-tidy-find-btn').click();
+      const input = row(bookId(1)).querySelector('.library-tidy-search-input');
+      input.value = titleFor(40).slice(0, 5);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(row(bookId(1)).querySelector('.library-tidy-search-result')).toBeNull();
+    });
+
+    test('an Unsorted book matching a quest-linked unhauled book gets it as a candidate', async () => {
+      const { adapter, catalogService } = unhauledScenario();
+      await start(adapter, { client: signedInClient(), catalogService });
+      const plan = controller._plan.find(r => r.bookId === bookId(2));
+      expect(plan.candidates.map(c => c.libraryBookId || c.id)).toContain(libId(41));
+    });
+  });
+
   test('Apply passes exactly the chosen decisions, and confirm states the counts', async () => {
     const { adapter, catalogService } = scenario52();
     await start(adapter, { client: signedInClient(), catalogService });

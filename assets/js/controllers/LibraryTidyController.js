@@ -24,7 +24,7 @@ import {
     isProtected
 } from '../services/LibraryTidyService.js';
 import { resolveLibraryCatalog, LIBRARY_TIMEOUT_MS } from '../services/LibraryCatalogService.js';
-import { searchShelf } from '../services/ShelfBookService.js';
+import { searchShelf, listedCatalog } from '../services/ShelfBookService.js';
 import { getSupabaseClient } from '../services/supabaseClient.js';
 import { checkReadyForDeliberateChange, pushDeliberateChange } from '../services/cloudSync.js';
 import { runExclusiveSync } from '../services/syncLock.js';
@@ -256,10 +256,16 @@ export class LibraryTidyController extends BaseController {
         return this._source === 'ready' ? this._catalog : null;
     }
 
+    /** The ready catalogue without unhauled books no quest links (D10): what matching and search read. */
+    _listedCatalog() {
+        const catalog = this._readyCatalog();
+        return catalog ? listedCatalog(catalog, this.stateAdapter) : null;
+    }
+
     /** Recompute the rows from live state, keeping the player's choices where they still apply. */
     _replan() {
         const catalog = this._readyCatalog();
-        this._plan = planTidy(this.stateAdapter.state, catalog);
+        this._plan = planTidy(this.stateAdapter.state, this._listedCatalog());
         const libraryIds = new Set(catalog ? catalog.books.map((book) => book.id) : []);
         const rowIds = new Set(this._plan.map((row) => row.bookId));
         for (const id of [...this._choices.keys(), ...this._touched, ...this._revealed, ...this._searching.keys()]) {
@@ -888,7 +894,7 @@ export class LibraryTidyController extends BaseController {
     _searchResultsHtml(query) {
         const q = String(query || '').trim();
         if (!q) return '';
-        const matches = searchShelf(this._readyCatalog(), q, SEARCH_LIMIT);
+        const matches = searchShelf(this._listedCatalog(), q, SEARCH_LIMIT);
         if (matches.length === 0) return '<span class="book-search-empty">No books on our shelf match.</span>';
         return matches.map((libraryBook) => {
             const authors = (libraryBook.authors || []).join(', ');

@@ -18,7 +18,7 @@ const HOUSEHOLD_B = '00000000-0000-4000-8000-0000000000b2';
 const BOOK_1 = '00000000-0000-4000-8000-000000000001';
 const BOOK_2 = '00000000-0000-4000-8000-000000000002';
 
-const BOOKS_SELECT = 'id, title, authors, cover_url, page_count, series_name, series_volume, copies(edition_note)';
+const BOOKS_SELECT = 'id, title, authors, cover_url, page_count, series_name, series_volume, on_shelf, copies(edition_note, deluxe, unhauled_at)';
 
 /**
  * A chainable stand-in for supabase-js. `schema('library').from(t)` returns a builder that
@@ -173,6 +173,44 @@ describe('LibraryCatalogService.getCatalog', () => {
         expect(members.call('limit')).toEqual(['limit', 1]);
     });
 
+    it('reads on_shelf and deluxe copies into unhauled and editionLabels', async () => {
+        const books = [
+            bookRow(BOOK_1, { on_shelf: false, copies: [{ edition_note: null, deluxe: true, unhauled_at: '2026-01-01T00:00:00Z' }] }),
+            bookRow(BOOK_2, { on_shelf: true, copies: [{ edition_note: null, deluxe: true, unhauled_at: null }] }),
+            bookRow('b3', { copies: [{ edition_note: 'Deluxe Edition', deluxe: true }] }),
+            bookRow('b4', {
+                on_shelf: true,
+                copies: [
+                    { edition_note: 'Paperback', deluxe: false, unhauled_at: null },
+                    { edition_note: 'Hardcover', deluxe: false, unhauled_at: '2026-01-01T00:00:00Z' }
+                ]
+            }),
+            bookRow('b5', {
+                on_shelf: false,
+                copies: [
+                    { edition_note: 'Paperback', unhauled_at: '2026-01-01T00:00:00Z' },
+                    { edition_note: 'Hardcover', unhauled_at: '2026-01-02T00:00:00Z' }
+                ]
+            })
+        ];
+        const fake = makeFakeClient({ handlers: readyHandlers({ books }) });
+        const { service } = makeService(fake);
+        const result = await service.getCatalog();
+        const by = Object.fromEntries(result.books.map(b => [b.id, b]));
+        expect(by[BOOK_1].unhauled).toBe(true);
+        expect(by[BOOK_1].editionLabels).toEqual(['Deluxe']);
+        expect(by[BOOK_2].unhauled).toBe(false);
+        expect(by[BOOK_2].editionLabels).toEqual(['Deluxe']);
+        expect(by.b3.unhauled).toBe(false);
+        expect(by.b3.editionLabels).toEqual(['Deluxe Edition']);
+        expect(by.b4.editionLabels).toEqual(['Paperback']);
+        expect(by.b5.unhauled).toBe(true);
+        expect(by.b5.editionLabels).toEqual(['Paperback', 'Hardcover']);
+        const [booksQuery] = fake.ofTable('books');
+        expect(booksQuery.call('select')[1]).toContain('on_shelf');
+        expect(booksQuery.call('select')[1]).toContain('copies(edition_note, deluxe, unhauled_at)');
+    });
+
     it('maps books and household tags to LibraryBook when ready', async () => {
         const books = [
             bookRow(BOOK_1, {
@@ -216,6 +254,7 @@ describe('LibraryCatalogService.getCatalog', () => {
                 seriesName: 'Glass Orchard Cycle',
                 seriesVolume: 2.5,
                 editionLabels: ['Hardcover', 'Signed'],
+                unhauled: false,
                 tags: ['cozy', 'reread']
             },
             {
@@ -227,6 +266,7 @@ describe('LibraryCatalogService.getCatalog', () => {
                 seriesName: null,
                 seriesVolume: null,
                 editionLabels: [],
+                unhauled: false,
                 tags: ['cozy']
             }
         ]);
@@ -321,6 +361,15 @@ describe('LibraryCatalogService.getCatalog', () => {
             const logged = JSON.stringify(warnSpy.mock.calls);
             expect(logged).not.toContain('The Salt Road');
         });
+    });
+
+    it('treats a rejected select (PostgREST 42703, a column not yet pushed) as unavailable, like any other error', async () => {
+        const fake = makeFakeClient({
+            handlers: { ...readyHandlers(), books: () => ({ data: null, error: { code: '42703', message: 'column does not exist' } }) }
+        });
+        const { service } = makeService(fake);
+        const result = await service.getCatalog();
+        expect(result.status).toBe('unavailable');
     });
 
     it('gives no-household on 42501 from the books read and does not retry before 60 s', async () => {

@@ -13,6 +13,8 @@ import { searchBooks } from '../services/BookMetadataService.js';
 import { resolveLibraryCatalog } from '../services/LibraryCatalogService.js';
 import {
     searchShelf,
+    listedCatalog,
+    isLibraryUnhauled,
     syncShelfTags,
     fillSeriesForBook,
     linkPhysicalToShelf,
@@ -222,7 +224,7 @@ export class LibraryController extends BaseController {
             if (token !== this._shelfSearchToken) return;
             const target = resultsContainer.querySelector('.library-shelf-results');
             if (!target) return;
-            const matches = searchShelf(catalog, query);
+            const matches = searchShelf(listedCatalog(catalog, this.stateAdapter), query);
             if (matches.length === 0) {
                 target.innerHTML = '';
                 return;
@@ -237,7 +239,7 @@ export class LibraryController extends BaseController {
                     const authorHtml = authors ? ` — ${this._escapeHtml(authors)}` : '';
                     return `<div class="library-shelf-result">${cover}` +
                         `<span class="book-search-result-text">${this._escapeHtml(libraryBook.title || '')}${authorHtml}</span>` +
-                        '<span class="library-shelf-result-note">Link it from a quest</span></div>';
+                        `<span class="library-shelf-result-note">${libraryBook.unhauled ? 'Unhauled · ' : ''}Link it from a quest</span></div>`;
                 }).join('');
         };
         paint(catalogService.peek());
@@ -985,7 +987,7 @@ export class LibraryController extends BaseController {
         const catalog = this._libraryCatalog ? this._libraryCatalog.peek() : null;
         const missingHtml = isLibraryMissing(book, catalog)
             ? '<div class="library-card-missing">No longer in the household library</div>'
-            : '';
+            : (isLibraryUnhauled(book, catalog) ? '<div class="library-card-unhauled">Unhauled</div>' : '');
         return `
             <div class="library-card" data-book-id="${idAttr}">
                 <div class="library-card-cover-wrap">

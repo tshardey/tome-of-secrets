@@ -20,7 +20,7 @@ export const RETRY_AFTER_MS = 60000;
 
 const PAGE_SIZE = 1000;
 const SERIES_NAME_MAX = 200;
-const BOOKS_SELECT = 'id, title, authors, cover_url, page_count, series_name, series_volume, copies(edition_note)';
+const BOOKS_SELECT = 'id, title, authors, cover_url, page_count, series_name, series_volume, on_shelf, copies(edition_note, deluxe, unhauled_at)';
 const CHECK_VIOLATION = '23514';
 const INSUFFICIENT_PRIVILEGE = '42501';
 
@@ -64,16 +64,26 @@ function cleanSeriesName(name) {
   return Array.from(name.trim()).slice(0, SERIES_NAME_MAX).join('').trim();
 }
 
-function editionLabels(copies) {
+/**
+ * Edition labels of the counted copies: the on-shelf copies, or every copy when the book is
+ * unhauled. A deluxe copy adds "Deluxe" unless a label already says so (D10).
+ */
+function editionLabels(copies, unhauled = false) {
+  const all = Array.isArray(copies) ? copies : [];
+  const counted = unhauled ? all : all.filter(copy => !copy?.unhauled_at);
   const labels = [];
-  for (const copy of Array.isArray(copies) ? copies : []) {
+  for (const copy of counted) {
     const note = typeof copy?.edition_note === 'string' ? copy.edition_note.trim() : '';
     if (note && !labels.includes(note)) labels.push(note);
+  }
+  if (counted.some(copy => copy?.deluxe === true) && !labels.some(label => label.toLowerCase().includes('deluxe'))) {
+    labels.push('Deluxe');
   }
   return labels;
 }
 
 function toLibraryBook(row, tags) {
+  const unhauled = row.on_shelf === false;
   return {
     id: row.id,
     title: typeof row.title === 'string' ? row.title : '',
@@ -82,7 +92,8 @@ function toLibraryBook(row, tags) {
     pageCount: Number.isFinite(row.page_count) ? row.page_count : null,
     seriesName: row.series_name ?? null,
     seriesVolume: row.series_volume === null || row.series_volume === undefined ? null : Number(row.series_volume),
-    editionLabels: editionLabels(row.copies),
+    editionLabels: editionLabels(row.copies, unhauled),
+    unhauled,
     tags
   };
 }

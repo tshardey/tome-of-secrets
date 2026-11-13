@@ -23,6 +23,8 @@ import {
     ensureShelfRecord,
     findShelfRecord,
     searchShelf,
+    listedCatalog,
+    isLibraryUnhauled,
     syncShelfTags,
     fillSeriesForBook,
     isLibraryMissing
@@ -31,6 +33,7 @@ import { toast } from '../ui/toast.js';
 
 const SPECIAL_EDITION_TAG = 'special-edition';
 const MISSING_NOTE = 'No longer in the household library';
+const UNHAULED_NOTE = 'Unhauled';
 
 /** Library books whose edition suggestion was shown on this page (shown once each). */
 const suggestedEditions = new Set();
@@ -214,7 +217,8 @@ export function createBookSelector(container, stateAdapter, options = {}) {
     /** The shelf results the group lists right now: none while loading or unavailable. */
     function shelfMatches(catalog, query) {
         if (!libraryCatalog || !catalog || view.retrying || catalog.status !== 'ready') return [];
-        return searchShelf(catalog, query);
+        // Unhauled books are listed only while a quest links them (D10)
+        return searchShelf(listedCatalog(catalog, stateAdapter), query);
     }
 
     /** '' when the group is hidden (signed out, no household). */
@@ -237,7 +241,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
                     cover: libraryBook.coverUrl,
                     title: libraryBook.title,
                     author: (libraryBook.authors || []).join(', '),
-                    note: status.note,
+                    note: [status.note, libraryBook.unhauled ? UNHAULED_NOTE : ''].filter(Boolean).join(' · '),
                     disabled: status.disabled === true,
                     extraClass: ' book-selector-shelf-option'
                 });
@@ -272,6 +276,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
                 const notes = [];
                 if (status.note) notes.push(status.note);
                 if (isLibraryMissing(book, catalog)) notes.push(MISSING_NOTE);
+                if (isLibraryUnhauled(book, catalog)) notes.push(UNHAULED_NOTE);
                 return optionHtml({
                     attrs: `data-book-id="${escapeAttr(book.id)}"`,
                     cover: book.cover,
@@ -656,7 +661,9 @@ export function createBookSelector(container, stateAdapter, options = {}) {
         if (selectedBook) {
             const titleEsc = escapeHtml(selectedBook.title || 'Untitled');
             const authorEsc = escapeHtml(selectedBook.author || '');
-            const missing = libraryCatalog && isLibraryMissing(selectedBook, peekCatalog());
+            const selectedCatalog = libraryCatalog ? peekCatalog() : null;
+            const missing = libraryCatalog && isLibraryMissing(selectedBook, selectedCatalog);
+            const unhauled = Boolean(libraryCatalog) && isLibraryUnhauled(selectedBook, selectedCatalog);
             const tagsBtn = showTagsAndSeries
                 ? `<button type="button" class="rpg-btn rpg-btn-secondary book-selector-tags-btn" aria-expanded="${tagsPanelOpen ? 'true' : 'false'}">Tags &amp; series</button>`
                 : '';
@@ -667,6 +674,7 @@ export function createBookSelector(container, stateAdapter, options = {}) {
                         <span class="book-selector-selected-title">${titleEsc}</span>
                         ${authorEsc ? `<span class="book-selector-selected-author">${authorEsc}</span>` : ''}
                         ${missing ? `<span class="book-selector-option-note">${escapeHtml(MISSING_NOTE)}</span>` : ''}
+                        ${unhauled ? `<span class="book-selector-option-note">${escapeHtml(UNHAULED_NOTE)}</span>` : ''}
                     </span>
                     ${tagsBtn}
                     <button type="button" class="rpg-btn rpg-btn-secondary book-selector-unlink" aria-label="${escapeAttr(unlinkLabel)}">${escapeHtml(unlinkLabel)}</button>
