@@ -952,6 +952,7 @@ describe('LibraryController and the household library', () => {
             document.getElementById('library-book-search-btn').click();
             await flush();
             expect(document.querySelector('.library-shelf-result')).toBeTruthy();
+            expect(document.querySelector('.library-shelf-result-note').textContent).toContain('Unhauled');
         });
     });
 

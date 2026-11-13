@@ -239,7 +239,7 @@ export class LibraryController extends BaseController {
                     const authorHtml = authors ? ` — ${this._escapeHtml(authors)}` : '';
                     return `<div class="library-shelf-result">${cover}` +
                         `<span class="book-search-result-text">${this._escapeHtml(libraryBook.title || '')}${authorHtml}</span>` +
-                        '<span class="library-shelf-result-note">Link it from a quest</span></div>';
+                        `<span class="library-shelf-result-note">${libraryBook.unhauled ? 'Unhauled · ' : ''}Link it from a quest</span></div>`;
                 }).join('');
         };
         paint(catalogService.peek());
