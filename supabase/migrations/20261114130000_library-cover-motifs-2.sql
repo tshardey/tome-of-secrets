@@ -24,6 +24,6 @@ insert into library.library_tags (household_id, id, label, category, added_versi
 select null, v.id, v.label, 'cover-motif', 1
   from (values
   ('cover-jewelry', 'Jewelry'),
-  ('cover-food-drink', 'Food drink')
+  ('cover-food-drink', 'Food and drink')
   ) as v (id, label)
 on conflict (household_id, id) do nothing;
