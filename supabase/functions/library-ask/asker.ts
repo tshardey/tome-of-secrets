@@ -46,7 +46,9 @@ export function askReserveMicro(inputTokens: number, model: AiModel = MODEL): nu
 export type AskCall =
   | { kind: "ok"; result: AskResult; usage: Usage; rounds: 1 | 2 }
   | { kind: "fail"; code: "ask_refused" | "ask_unreadable"; usage: Usage }
-  | AiFailure;
+  // billing on round 2 carries round 1's usage, which was billed.
+  | { kind: "billing"; usage?: Usage }
+  | Exclude<AiFailure, { kind: "billing" }>;
 
 export interface Asker {
   /** messages.countTokens over the round-1 request (free). Rejects with the SDK error. */
@@ -226,7 +228,7 @@ export function anthropicAsker(
         // Round 1 was billed, so a failure now is billed at the reservation
         // (which covers it) unless the account itself is out of credit.
         const c = classifyAiError(err);
-        return c.kind === "billing" ? c : { kind: "retry", retryAfterSeconds: null, billedUnknown: true };
+        return c.kind === "billing" ? { kind: "billing", usage: u1 } : { kind: "retry", retryAfterSeconds: null, billedUnknown: true };
       }
       const usage = add(u1, usageOf(m2.usage));
       const stop2 = badStop(m2, usage);

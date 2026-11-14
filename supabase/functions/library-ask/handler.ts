@@ -134,8 +134,16 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
         await db.release(call, result.billedUnknown ? reserve : 0, null);
         callId = null;
         return outcome("retry_later");
-      case "misconfigured":
       case "billing":
+        // Round 2 can fail on billing after a billed round 1: that spend is real.
+        if (result.usage) {
+          await db.release(call, costMicro(MODEL, result.usage), storedUsage(result.usage));
+        } else {
+          await db.release(call, 0, null);
+        }
+        callId = null;
+        return outcome("billing");
+      case "misconfigured":
       case "rejected":
         await db.release(call, 0, null);
         callId = null;

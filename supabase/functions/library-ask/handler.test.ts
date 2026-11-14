@@ -279,6 +279,22 @@ Deno.test("release policy: billed-unknown at the reservation, unbilled and 4xx a
   }
 });
 
+Deno.test("round-2 billing keeps round 1 actual cost", async () => {
+  const { db, calls } = fakeDb();
+  const { asker } = fakeAsker({ ask: () => Promise.resolve({ kind: "billing", usage: USAGE }) });
+  assert.deepEqual(await (await handle(req(valid()), { db, asker })).json(), { outcome: "billing" });
+  const cost = costMicro(MODEL, USAGE);
+  assert.deepEqual(calls.release, [[CALL, cost, { ...USAGE, computedCostMicro: cost }]]);
+  assert.ok(cost > 0);
+});
+
+Deno.test("round-2 misconfigured/rejected arrive as billed-unknown retries and release at the reservation", async () => {
+  const { db, calls } = fakeDb();
+  const { asker } = fakeAsker({ ask: () => Promise.resolve({ kind: "retry", retryAfterSeconds: null, billedUnknown: true }) });
+  assert.deepEqual(await (await handle(req(valid()), { db, asker })).json(), { outcome: "retry_later" });
+  assert.deepEqual(calls.release, [[CALL, RESERVE, null]]);
+});
+
 Deno.test("refusal and unreadable -> failed, released at the actual cost with usage", async () => {
   for (const code of ["ask_refused", "ask_unreadable"] as const) {
     const { db, calls } = fakeDb();

@@ -221,8 +221,16 @@ Deno.test("an error on round 2 is billed unknown (round 1 was billed); billing s
   const b = seq({ body: toolUse([1]) }, { status: 402, body: apiError("billing_error") });
   assert.deepEqual(
     await anthropicAsker("k", { fetchImpl: b.fetchImpl }).ask(BOOKS, "p", () => Promise.resolve(new Map())),
-    { kind: "billing" },
+    { kind: "billing", usage: { inputTokens: 100, outputTokens: 40, cacheCreationTokens: 2000, cacheReadTokens: 0 } },
   );
+});
+
+Deno.test("round 2 misconfigured (401) or rejected (400) is billed unknown, never a free failure", async () => {
+  for (const [status, type] of [[401, "authentication_error"], [400, "invalid_request_error"]] as const) {
+    const { fetchImpl } = seq({ body: toolUse([1]) }, { status, body: apiError(type) });
+    const r = await anthropicAsker("k", { fetchImpl }).ask(BOOKS, "p", () => Promise.resolve(new Map()));
+    assert.deepEqual(r, { kind: "retry", retryAfterSeconds: null, billedUnknown: true });
+  }
 });
 
 Deno.test("count: one count_tokens request with the same system, tools and messages", async () => {
