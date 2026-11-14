@@ -32,7 +32,7 @@ const TIMEOUT_MS = 120_000;
  *           + 6,000 (book text and card) + 1,000 (framing and the
  *           structured-output instructions), at the input rate;
  *   vocab = ceil(vocabulary block chars / 3) at its caps (120 ToS ids and
- *           576 library ids, 40 characters each), at the 1.25x cache-write
+ *           578 library ids, 40 characters each), at the 1.25x cache-write
  *           rate, since that block carries cache_control.
  * Thinking shares max_tokens, so output never exceeds MAX_TOKENS.
  */
