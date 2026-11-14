@@ -24,7 +24,7 @@ create function pg_temp.book() returns uuid language sql as
 $$ select 'eeeeeeee-0000-0000-0000-000000000002'::uuid $$;
 
 create temporary table expected (id text primary key, label text);
-insert into expected values ('cover-jewelry', 'Jewelry'), ('cover-food-drink', 'Food drink');
+insert into expected values ('cover-jewelry', 'Jewelry'), ('cover-food-drink', 'Food and drink');
 grant select on expected to authenticated;
 
 set local role authenticated;
@@ -49,14 +49,14 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'cover-jewelry', 'Jewelry', 'cover-motif') $$,
                  '23505', null, 'add_library_tag refuses cover-jewelry, now shared');
-select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'cover-food-drink', 'Food drink', 'cover-motif') $$,
+select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'cover-food-drink', 'Food and drink', 'cover-motif') $$,
                  '23505', null, 'add_library_tag refuses cover-food-drink, now shared');
 
 -- A household row with a later-shared id survives a re-run of the insert.
 reset role;
 set local request.jwt.claims = '{}';
 insert into library.library_tags (household_id, id, label, category, added_version)
-values (pg_temp.hh(), 'cover-food-drink', 'Food drink (mine)', 'cover-motif', 2);
+values (pg_temp.hh(), 'cover-food-drink', 'Food and drink (mine)', 'cover-motif', 2);
 
 insert into library.library_tags (household_id, id, label, category, added_version)
 select null, e.id, e.label, 'cover-motif', 1 from expected e
@@ -64,7 +64,7 @@ on conflict (household_id, id) do nothing;
 
 select is((select string_agg(coalesce(household_id::text, 'shared') || '=' || label, ',' order by household_id nulls first)
              from library.library_tags where id = 'cover-food-drink'),
-          'shared=Food drink,' || pg_temp.hh() || '=Food drink (mine)',
+          'shared=Food and drink,' || pg_temp.hh() || '=Food and drink (mine)',
           'the re-run adds nothing; the shared and household rows coexist unchanged');
 select is((select count(*)::int from library.library_tags where id = 'cover-jewelry'),
           1, 'cover-jewelry is not duplicated by the re-run');
