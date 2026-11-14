@@ -220,6 +220,16 @@ Deno.test("the ToS list is clamped to TOS_TAG_CAP ids, so ceilingMicro stays a b
   assert.deepEqual(inputs[0].tosTags.slice(0, 2), ["genre-0", "genre-1"]);
 });
 
+Deno.test("a vocabulary id repeated by a household row is sent once", async () => {
+  const vocab = [
+    { id: "cover-sword", category: "cover-motif" },
+    { id: "cover-sword", category: "cover-motif" },
+    { id: "vampires", category: "creature" },
+  ];
+  const { inputs } = await run(claimed({ vocab }), { kind: "ok", result: RESULT, usage: USAGE });
+  assert.deepEqual(inputs[0].vocab.map((v) => v.id), ["cover-sword", "vampires"]);
+});
+
 Deno.test("new_tags: the card, no image fetch, no ToS ids, only the vocabulary claimed", async () => {
   const claim = claimed({
     kind: "new_tags",
