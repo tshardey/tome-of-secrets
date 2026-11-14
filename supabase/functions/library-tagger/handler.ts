@@ -7,7 +7,7 @@
 // Logs carry error codes only: never titles, authors, descriptions, tags or URLs.
 import { backoffAt, costMicro, type Usage } from "../_shared/library-ai.ts";
 import { fetchImages, hostAllowed } from "../library-covers/images.ts";
-import { sanitizeTagResult, type TagInput, TOS_TAG_CAP, VOCAB_CAP } from "./prompt.ts";
+import { dedupeVocab, sanitizeTagResult, type TagInput, TOS_TAG_CAP, VOCAB_CAP } from "./prompt.ts";
 import { MODEL, TAG_RESERVE_MICRO, type Tagger } from "./tagger.ts";
 import { allowedTosTags, loadTosTagList } from "./tos-tags.ts";
 
@@ -145,10 +145,10 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     }
 
     const full = claim.kind === "full";
-    // Clamped so ceilingMicro (120 ToS ids, 544 vocabulary ids) stays a true bound.
+    // Clamped so ceilingMicro (120 ToS ids, 576 vocabulary ids) stays a true bound.
     // A new_tags job considers only the vocabulary added since its card, so no ToS ids.
     const tosTags = full ? allowedTosTags(tosList).slice(0, TOS_TAG_CAP) : [];
-    const vocab = claim.vocab.slice(0, VOCAB_CAP);
+    const vocab = dedupeVocab(claim.vocab).slice(0, VOCAB_CAP);
     const image = full ? await loadCover(claim.book.coverUrl, fetchImpl) : null;
 
     const input: TagInput = {

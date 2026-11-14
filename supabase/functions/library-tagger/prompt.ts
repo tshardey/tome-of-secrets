@@ -9,7 +9,7 @@ export const TAG_SYSTEM_PROMPT = [
   "",
   "Return:",
   "- tos_tags: ids from the Tome of Secrets list that clearly fit the book itself.",
-  "- library_tags: ids from the library list that clearly fit. Cover tags (ids starting cover-) describe only the cover image you were shown: its one or two dominant colours and any clear motifs. Give no cover tags when no image is shown.",
+  "- library_tags: ids from the library list that clearly fit. Cover tags (ids starting cover-) describe only the cover image you were shown: its one or two dominant colours, every clearly visible object on it, and its style. For each, use the most specific matching cover tag; several are fine. Use cover-illustrated or cover-figure only when nothing more specific fits. Likewise use cover-weapon only for weapons other than swords, cover-animal for animals other than birds, wolves, cats and dragons, cover-plants for plants other than trees, flowers and mushrooms, and cover-landscape for countryside scenes not better described by sky, castle, city skyline or architectural. Definitions: cover-abstract is blotchy or painterly fields of colour or shapes with no clear object; cover-photo-realistic is a photograph or photo-like image; cover-creature is monsters and mythical beings (cover-dragon for a dragon, cover-animal for real animals); cover-celestial is sun, planets, constellations and cosmic imagery (cover-moon-stars for a moon or stars alone); cover-historical is period dress or a clearly historical scene; cover-architectural is buildings or structures as the subject; cover-typography-only is lettering as the whole design; cover-geometric is clean geometric shapes or patterns. Give no cover tags when no image is shown.",
   "- summary: two or three sentences on what the book is about, for someone choosing what to read next. It is about the story or subject, never the edition.",
   "- cover_description: one line on the cover's colours, objects and style, or null when no image is shown.",
   "- suggestions: at most three tags the library list lacks that would clearly help someone find this book, each with a lowercase hyphenated id, a short label, a category from the list, and a one-line reason. Usually there are none.",
@@ -81,6 +81,12 @@ export interface TagInput {
   /** Active library vocabulary (new tags only, for new_tags). */
   vocab: { id: string; category: string }[];
   image: { mediaType: string; bytes: Uint8Array } | null;
+}
+
+/** The vocabulary with each id once, the first occurrence winning: a household may own a tag whose id is also a shared one. */
+export function dedupeVocab<T extends { id: string }>(vocab: T[]): T[] {
+  const seen = new Set<string>();
+  return vocab.filter((v) => !seen.has(v.id) && seen.add(v.id));
 }
 
 const field = (s: string, n: number) => escapeData(clip(s, n));
@@ -171,8 +177,8 @@ export function buildTagContent(input: TagInput): unknown[] {
   return blocks;
 }
 
-/** Household tag cap (400) plus the starting vocabulary (144), per D6. */
-export const VOCAB_CAP = 400 + 144;
+/** Household tag cap (400) plus the shared vocabulary (176: 144 starting + 32 cover motifs), per D6. */
+export const VOCAB_CAP = 400 + 176;
 /** A generous cap on the ToS ids sent (the allowed list has about 34 today). */
 export const TOS_TAG_CAP = 120;
 const ID_MAX = 40;
@@ -187,7 +193,7 @@ export const REQUEST_OVERHEAD_TOKENS = 1000;
  *   plain: ceil(system prompt chars / 3) + 4,800 (one image)
  *          + TEXT_TOKEN_ALLOWANCE (6,000) + REQUEST_OVERHEAD_TOKENS (1,000)
  *   vocab: ceil(vocabulary chars / 3), the vocabulary block as buildVocabText
- *          formats it at its caps: 120 ToS ids and 544 library ids, each of
+ *          formats it at its caps: 120 ToS ids and 576 library ids, each of
  *          40 characters.
  * The vocabulary block carries cache_control, so its tokens are priced at the
  * 1.25x cache-write rate by the caller; plain tokens at the input rate.

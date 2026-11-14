@@ -208,7 +208,7 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
 Deno.test("TAG_RESERVE_MICRO is ceilingMicro(MODEL) rounded up to 1,000", () => {
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
   assert.equal(TAG_RESERVE_MICRO, Math.ceil(ceilingMicro(MODEL) / 1000) * 1000);
-  assert.equal(TAG_RESERVE_MICRO, 69_000);
+  assert.equal(TAG_RESERVE_MICRO, 71_000);
 });
 
 Deno.test("fakeTagger: fantasy, cover-blue only with an image, fixed summary, usage 0", async () => {

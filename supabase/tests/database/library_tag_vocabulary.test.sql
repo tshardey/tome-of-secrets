@@ -1,5 +1,5 @@
 -- pgTAP: library tag vocabulary, library tag rows, the added-by marker and
--- hand-removal records. Proves the 144 starting tags, that clients can't
+-- hand-removal records. Proves the 176 shared tags, that clients can't
 -- write added_by, that ToS's exact write shapes (the book_tags upsert and the
 -- delete) keep working under the column grant, that a removal is recorded
 -- however it happens (but not by a book delete or the tagger replacing its own
@@ -56,10 +56,10 @@ select pg_temp.book(n), case when n = 9 then pg_temp.hh2() else pg_temp.hh() end
 ---------------------------------------------------------------------------
 -- The starting vocabulary
 ---------------------------------------------------------------------------
-select is((select count(*)::int from library.library_tags where household_id is null), 144,
-          '144 starting tags');
+select is((select count(*)::int from library.library_tags where household_id is null), 176,
+          '176 shared tags');
 select is((select count(*)::int from library.library_tags
-            where household_id is null and added_version = 1 and active), 144,
+            where household_id is null and added_version = 1 and active), 176,
           'all at version 1 and active');
 select is((select count(*)::int from library.library_tags
             where id !~ '^[a-z0-9]+(-[a-z0-9]+)*$' or char_length(id) > 40), 0,
@@ -78,10 +78,10 @@ select is((select category from library.library_tags where id = 'thriller'), 'su
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 select is(library.vocab_version(pg_temp.hh()), 1, 'vocab_version starts at 1');
-select is((select count(*)::int from library.library_tags), 144, 'A sees the 144');
+select is((select count(*)::int from library.library_tags), 176, 'A sees the 176');
 
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
-select is((select count(*)::int from library.library_tags), 144, 'C sees the 144');
+select is((select count(*)::int from library.library_tags), 176, 'C sees the 176');
 select throws_ok($$ select library.vocab_version(pg_temp.hh()) $$, '42501', null, 'C cannot read H''s version');
 
 ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","r
 select is(library.add_library_tag(pg_temp.hh(), 'cozy-mystery', 'Cozy mystery', 'subgenre'), 2,
           'adding a tag returns version 2');
 select is(library.vocab_version(pg_temp.hh()), 2, 'the household is at version 2');
-select is((select count(*)::int from library.library_tags), 145, 'A sees the addition');
+select is((select count(*)::int from library.library_tags), 177, 'A sees the addition');
 select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'cozy-mystery', 'Again', 'subgenre') $$,
                  '23505', null, 'a repeated household id is refused');
 select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'vampires', 'Vampires', 'creature') $$,
@@ -104,7 +104,7 @@ select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'new-tag', '   
                  '22023', null, 'a blank label is refused');
 
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
-select is((select count(*)::int from library.library_tags), 144, 'A''s tag is invisible to C');
+select is((select count(*)::int from library.library_tags), 176, 'A''s tag is invisible to C');
 select throws_ok($$ select library.add_library_tag(pg_temp.hh(), 'sneaky', 'Sneaky', 'trope') $$,
                  '42501', null, 'C cannot add to H');
 

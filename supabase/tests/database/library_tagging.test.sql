@@ -169,7 +169,7 @@ select ok((select bool_and(relrowsecurity) from pg_class
                           'library.ask_calls'::regclass)),
           'RLS is enabled on every new table');
 
-select is(library.tag_reserve_micro(), 69000, 'tag_reserve_micro is 69000 (tagger.ts TAG_RESERVE_MICRO)');
+select is(library.tag_reserve_micro(), 71000, 'tag_reserve_micro is 71000 (tagger.ts TAG_RESERVE_MICRO)');
 select is(library.ask_max_reserve_micro(), 600000, 'ask_max_reserve_micro is 600000');
 select is(library.ai_global_budget_micro('tagging'), 5000000::bigint, 'global tagging budget is 5000000');
 select is(library.ai_global_budget_micro('ask'), 2000000::bigint, 'global ask budget is 2000000');
@@ -249,7 +249,7 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","r
 select is(pg_temp.claim(8), 'claimed:1', 'A: claims book 8');
 select is(pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()) || ':' || pg_temp.tspent('tagging', pg_temp.m())
           || ':' || pg_temp.calls(pg_temp.hh(), 'tagging', pg_temp.m()),
-          '69000:69000:1', 'the claim reserves tag_reserve_micro() on the household and total rows');
+          '71000:71000:1', 'the claim reserves tag_reserve_micro() on the household and total rows');
 select is(pg_temp.claim(8), 'busy:1', 'A: a second claim is busy');
 select pg_temp.save('tok8a', pg_temp.tok(8)::text);
 
@@ -282,18 +282,18 @@ select is(library.ai_budget_micro(pg_temp.hh2(), 'ask', pg_temp.m()), 2000000::b
           'the Ask budget is always 2000000');
 
 insert into library.ai_usage (household_id, feature, month, spent_micro, calls)
-values (pg_temp.hh(), 'tagging', pg_temp.m(), 2000000 - 69000 + 1, 1);
+values (pg_temp.hh(), 'tagging', pg_temp.m(), 2000000 - 71000 + 1, 1);
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 select is(pg_temp.claim(9) || '|' || pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()) || '|'
           || pg_temp.tspent('tagging', pg_temp.m()) || '|' || pg_temp.jst(pg_temp.jid(9)),
-          'budget:0|1931001|0|queued:0:', 'at budget - reserve + 1 the claim gives budget and nothing changes');
+          'budget:0|1929001|0|queued:0:', 'at budget - reserve + 1 the claim gives budget and nothing changes');
 
 select is((select b.month || ':' || b.spent_micro || ':' || b.budget_micro || ':' || b.reserve_micro || ':'
                   || b.global_spent_micro || ':' || b.global_budget_micro
              from library.ai_budget(pg_temp.hh(), 'tagging') b),
-          pg_temp.m() || ':1931001:2000000:69000:0:5000000', 'ai_budget reads the tagging month');
+          pg_temp.m() || ':1929001:2000000:71000:0:5000000', 'ai_budget reads the tagging month');
 select is((select b.reserve_micro || ':' || b.budget_micro from library.ai_budget(pg_temp.hh(), 'ask') b),
           '0:2000000', 'ai_budget for Ask has no per-call reserve');
 
@@ -303,7 +303,7 @@ set local role authenticated;
 select is(pg_temp.claim(9), 'claimed:1', 'last month''s full row doesn''t block this month');
 
 reset role;
-update library.ai_usage_total set spent_micro = 5000000 - 69000 + 1 where feature = 'tagging' and month = pg_temp.m();
+update library.ai_usage_total set spent_micro = 5000000 - 71000 + 1 where feature = 'tagging' and month = pg_temp.m();
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
 select is(pg_temp.claim(41) || '|' || pg_temp.spent(pg_temp.hh2(), 'tagging', pg_temp.m()),
@@ -341,25 +341,25 @@ select is((select c.summary || '|' || c.cover_description || '|' || c.model || '
           'finish: the card is written');
 select is((select j.cost_micro || ':' || (j.usage ->> 'computedCostMicro') || ':' || j.status
              from library.tag_jobs j where j.id = pg_temp.jid(10)),
-          '69000:90000:done', 'a cost above the reservation is clamped; computedCostMicro is kept');
+          '71000:90000:done', 'a cost above the reservation is clamped; computedCostMicro is kept');
 select is(pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()) || ':' || pg_temp.tspent('tagging', pg_temp.m()),
-          '69000:69000', 'the clamped cost is what stays spent');
+          '71000:71000', 'the clamped cost is what stays spent');
 select is(pg_temp.claim(10), 'done:1', 'a done job claims done (never re-billed)');
 
 -- Refunds go to reserved_month.
 select is(pg_temp.claim(11), 'claimed:1', 'A: claims book 11');
 reset role;
 update library.tag_jobs set reserved_month = pg_temp.lm() where id = pg_temp.jid(11);
-update library.ai_usage set spent_micro = spent_micro - 69000 where feature = 'tagging' and month = pg_temp.m();
-update library.ai_usage_total set spent_micro = spent_micro - 69000 where feature = 'tagging' and month = pg_temp.m();
+update library.ai_usage set spent_micro = spent_micro - 71000 where feature = 'tagging' and month = pg_temp.m();
+update library.ai_usage_total set spent_micro = spent_micro - 71000 where feature = 'tagging' and month = pg_temp.m();
 insert into library.ai_usage (household_id, feature, month, spent_micro, calls)
-values (pg_temp.hh(), 'tagging', pg_temp.lm(), 69000, 1);
-insert into library.ai_usage_total (feature, month, spent_micro, calls) values ('tagging', pg_temp.lm(), 69000, 1);
+values (pg_temp.hh(), 'tagging', pg_temp.lm(), 71000, 1);
+insert into library.ai_usage_total (feature, month, spent_micro, calls) values ('tagging', pg_temp.lm(), 71000, 1);
 set local role authenticated;
 select is(pg_temp.finish(11, pg_temp.res('{}', '{}', false), 1000), 'done', 'finish book 11');
 select is(pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.lm()) || ':' || pg_temp.tspent('tagging', pg_temp.lm())
           || ':' || pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()),
-          '1000:1000:69000', 'the refund goes to the reserved month, not this month');
+          '1000:1000:71000', 'the refund goes to the reserved month, not this month');
 
 ---------------------------------------------------------------------------
 -- Cover replacement (Review Focus 3).
