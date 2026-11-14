@@ -65,7 +65,7 @@ select is((select count(*)::int from original o
             where t.category = 'cover-motif' and t.label = o.label and t.added_version = 1 and t.active),
           15, 'the 15 original cover motifs are unchanged');
 select is((select count(*)::int from library.library_tags where household_id is null and category = 'cover-motif'),
-          47, 'there are 47 shared cover motifs and no others');
+          49, 'there are 49 shared cover motifs (47 plus the 2 in library-cover-motifs-2)');
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';

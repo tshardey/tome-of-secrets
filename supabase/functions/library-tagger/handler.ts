@@ -145,7 +145,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     }
 
     const full = claim.kind === "full";
-    // Clamped so ceilingMicro (120 ToS ids, 576 vocabulary ids) stays a true bound.
+    // Clamped so ceilingMicro (120 ToS ids, 578 vocabulary ids) stays a true bound.
     // A new_tags job considers only the vocabulary added since its card, so no ToS ids.
     const tosTags = full ? allowedTosTags(tosList).slice(0, TOS_TAG_CAP) : [];
     const vocab = dedupeVocab(claim.vocab).slice(0, VOCAB_CAP);
