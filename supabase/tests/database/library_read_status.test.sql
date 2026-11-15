@@ -263,8 +263,8 @@ select is(pg_temp.hist(1, pg_temp.ua(), 'read', '2026-07-07'), 'true', 'no row: 
 select is(pg_temp.st(1, pg_temp.ua()), 'read/storygraph/2026-07-07/null', 'inserted as storygraph with its date');
 select is(pg_temp.hist(2, pg_temp.ua(), 'read', '2026-08-08'), 'true', 'a storygraph dnf and read: upgraded');
 select is(pg_temp.st(2, pg_temp.ua()), 'read/storygraph/2026-08-08/null', 'now read with the date');
-select is(pg_temp.hist(3, pg_temp.ua(), 'dnf', '2026-09-09'), 'true', 'a storygraph read and dnf: the date still follows');
-select is(pg_temp.st(3, pg_temp.ua()), 'read/storygraph/2026-09-09/null', 'but it stays read');
+select is(pg_temp.hist(3, pg_temp.ua(), 'dnf', '2026-09-09'), 'false', 'a storygraph read and dnf with a date: unchanged');
+select is(pg_temp.st(3, pg_temp.ua()), 'read/storygraph/2026-04-01/null', 'it stays read and keeps its date');
 select is(pg_temp.hist(3, pg_temp.ua(), 'dnf', null), 'false', 'a storygraph read and dnf with no date: unchanged');
 select is(pg_temp.hist(4, pg_temp.ua(), 'read', '2026-07-07'), 'false', 'an app cleared row and read: unchanged');
 select is(pg_temp.st(4, pg_temp.ua()), 'cleared/app//null', 'and it stays cleared');

@@ -206,7 +206,7 @@ $$;
 
 -- Returns whether it wrote. No row: insert sg_status as a storygraph row. A
 -- storygraph row: upgrade dnf to read (never back) and take last_read when it
--- isn't null. An app or tos row, including every cleared row, is never touched.
+-- isn't null and the row isn't being downgraded. An app or tos row, including every cleared row, is never touched.
 create or replace function library._apply_history(
   p_household uuid, p_user uuid, p_book uuid, p_sg_status text, p_last_read date)
 returns boolean
@@ -237,7 +237,12 @@ begin
     return false;
   end if;
 
-  v_status := case when p_sg_status = 'read' then 'read' else v_row.status end;
+  -- A dnf onto a read row is a downgrade: it changes nothing, not even the date.
+  if p_sg_status = 'dnf' and v_row.status = 'read' then
+    return false;
+  end if;
+
+  v_status := p_sg_status;
   v_date   := coalesce(p_last_read, v_row.finished_on);
   if v_status = v_row.status and v_date is not distinct from v_row.finished_on then
     return false;
