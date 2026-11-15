@@ -24,7 +24,7 @@ const BOOKS_SELECT = 'id, title, authors, cover_url, page_count, series_name, se
  * A chainable stand-in for supabase-js. `schema('library').from(t)` returns a builder that
  * records every call and, when awaited, resolves with `handlers[t](builder)`.
  */
-function makeFakeClient({ session = { user: { id: USER } }, handlers = {}, sessionPromise } = {}) {
+function makeFakeClient({ session = { user: { id: USER } }, handlers = {}, sessionPromise, rpc = async () => ({ data: [], error: null }) } = {}) {
     const queries = [];
     let currentSession = session;
     const builderFor = (schemaName, table) => {
@@ -55,12 +55,15 @@ function makeFakeClient({ session = { user: { id: USER } }, handlers = {}, sessi
         auth: {
             getSession: jest.fn(() => sessionPromise || Promise.resolve({ data: { session: currentSession }, error: null }))
         },
-        schema: jest.fn(() => ({ from })),
+        rpcFn: null,
+        schema: jest.fn(() => ({ from, rpc: client.rpcFn })),
         from: jest.fn(() => { throw new Error('library queries must go through schema()'); })
     };
+    client.rpcFn = jest.fn(rpc);
     return {
         client,
         from,
+        rpc: client.rpcFn,
         queries,
         ofTable: (t) => queries.filter(q => q.table === t),
         setSession: (next) => { currentSession = next; }
@@ -867,5 +870,71 @@ describe('LibraryCatalogService.currentHouseholdId (R22)', () => {
         const failing = makeFakeClient({ handlers: readyHandlers() });
         failing.client.auth.getSession.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')));
         await expect(makeService(failing).service.currentHouseholdId()).resolves.toBeNull();
+    });
+});
+
+describe('LibraryCatalogService.recordReads (Plan 8)', () => {
+    let warnSpy;
+    beforeEach(() => {
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+        warnSpy.mockRestore();
+        jest.useRealTimers();
+    });
+
+    const items = [{ bookId: BOOK_1, completedAt: '2026-03-02T12:00:00.000Z', finishedOn: '2026-03-02' }];
+
+    it('calls record_tos_reads on the library schema and returns the outcomes', async () => {
+        const rows = [{ book_id: BOOK_1, outcome: 'added' }];
+        const fake = makeFakeClient({ rpc: async () => ({ data: rows, error: null }) });
+        const { service } = makeService(fake);
+        await expect(service.recordReads(HOUSEHOLD, items)).resolves.toEqual({ outcomes: rows });
+        expect(fake.client.schema).toHaveBeenCalledWith('library');
+        expect(fake.rpc).toHaveBeenCalledWith('record_tos_reads', { p_household: HOUSEHOLD, p_items: items });
+    });
+
+    it('treats a null answer as no outcomes', async () => {
+        const fake = makeFakeClient({ rpc: async () => ({ data: null, error: null }) });
+        await expect(makeService(fake).service.recordReads(HOUSEHOLD, items)).resolves.toEqual({ outcomes: [] });
+    });
+
+    it('does not make the catalogue stale', async () => {
+        const fake = makeFakeClient({ handlers: readyHandlers() });
+        const { service } = makeService(fake);
+        await service.getCatalog();
+        const loads = fake.ofTable('household_members').length;
+        await service.recordReads(HOUSEHOLD, items);
+        await service.getCatalog();
+        expect(fake.ofTable('household_members')).toHaveLength(loads);
+    });
+
+    it('maps a timeout to LibraryUnavailableError(timeout)', async () => {
+        jest.useFakeTimers();
+        const fake = makeFakeClient({ rpc: () => new Promise(() => {}) });
+        const { service } = makeService(fake);
+        const call = service.recordReads(HOUSEHOLD, items).catch(e => e);
+        await jest.advanceTimersByTimeAsync(LIBRARY_WRITE_TIMEOUT_MS);
+        const error = await call;
+        expect(error).toBeInstanceOf(LibraryUnavailableError);
+        expect(error.reason).toBe('timeout');
+    });
+
+    it('keeps the PostgREST code on the error, and maps 42501 to denied', async () => {
+        const fake = makeFakeClient({ rpc: async () => ({ data: null, error: { code: 'PGRST202', message: 'The Salt Road' } }) });
+        const error = await makeService(fake).service.recordReads(HOUSEHOLD, items).catch(e => e);
+        expect(error).toBeInstanceOf(LibraryUnavailableError);
+        expect(error.code).toBe('PGRST202');
+
+        const denied = makeFakeClient({ rpc: async () => ({ data: null, error: { code: '42501', message: 'no' } }) });
+        const deniedError = await makeService(denied).service.recordReads(HOUSEHOLD, items).catch(e => e);
+        expect(deniedError.reason).toBe('denied');
+        expect(deniedError.code).toBe('42501');
+    });
+
+    it('makes no request for an empty list', async () => {
+        const fake = makeFakeClient();
+        await expect(makeService(fake).service.recordReads(HOUSEHOLD, [])).resolves.toEqual({ outcomes: [] });
+        expect(fake.rpc).not.toHaveBeenCalled();
     });
 });

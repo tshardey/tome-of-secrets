@@ -53,7 +53,7 @@ function toUnavailable(error) {
 }
 
 /** A short code for logs: a PostgREST code or an error name, never a message. */
-function logCode(error) {
+export function logCode(error) {
   if (!error || typeof error !== 'object') return 'unknown';
   return String(error.code || error.reason || error.name || 'unknown');
 }
@@ -373,6 +373,32 @@ export class LibraryCatalogService {
     } finally {
       this._writeGen += 1;
       this._stale = true;
+    }
+  }
+
+  /**
+   * Record ToS completions as read (Plan 8): one record_tos_reads call for up to 500 items
+   * [{ bookId, completedAt, finishedOn }]. It changes no catalogue row, so it does not go
+   * through _write and does not make the catalogue stale. The thrown error keeps the
+   * PostgREST code so the caller can tell a missing function (PGRST202) from a denial (42501).
+   * Logging is the caller's: it logs the code only.
+   * @returns {Promise<{outcomes: {book_id: string, outcome: string}[]}>}
+   * @throws {LibraryUnavailableError}
+   */
+  async recordReads(householdId, items) {
+    const list = Array.isArray(items) ? items : [];
+    if (list.length === 0) return { outcomes: [] };
+    try {
+      return await this._withTimeout((async () => {
+        const library = await this._library();
+        const { data, error } = await library.rpc('record_tos_reads', { p_household: householdId, p_items: list });
+        if (error) throw error;
+        return { outcomes: Array.isArray(data) ? data : [] };
+      })(), LIBRARY_WRITE_TIMEOUT_MS);
+    } catch (error) {
+      const unavailable = toUnavailable(error);
+      if (error && typeof error === 'object' && error.code) unavailable.code = String(error.code);
+      throw unavailable;
     }
   }
 
