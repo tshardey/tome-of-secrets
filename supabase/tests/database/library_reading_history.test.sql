@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(83);
+select plan(134);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -379,6 +379,267 @@ select is(library._match_history_row((select h.id from library.reading_history h
           'possible', 're-running the matcher on a possible row gives the same state');
 select is(pg_temp.cands(pg_temp.ua(), 'Glass Orchard'), '2:title_author_differs:pending,5:title_prefix:pending',
           'and the same candidates');
+
+---------------------------------------------------------------------------
+-- The new-book hook (D4), Link and Not this book.
+---------------------------------------------------------------------------
+-- A history row put straight in and left unmatched, as if it had been
+-- uploaded before its book was on the shelf. Keys as the upload computes them.
+create function pg_temp.hist(u uuid, p_title text, p_authors text[], p_isbn text, p_status text, p_last date)
+returns uuid language sql as
+$$ insert into library.reading_history (household_id, user_id, sg_key, title, authors, isbn13, sg_status, last_read,
+                                        title_key, base_title_key, author_keys)
+   values (pg_temp.hh(), u, 'test:' || p_title, p_title, p_authors, p_isbn, p_status, p_last,
+           library.match_title_key(p_title), library.match_base_title_key(p_title),
+           array(select library.match_author_key(a) from unnest(p_authors) a))
+   returning id $$;
+
+-- The id of u's history row with this title.
+create function pg_temp.hid(u uuid, p_title text) returns uuid language sql security definer as
+$$ select h.id from library.reading_history h where h.user_id = u and h.title = p_title $$;
+
+-- A book in C's household, for the cross-household Link.
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(30), pg_temp.hh2(), 'Lantern Keep', '{Wilhelmina Strand}');
+
+select has_trigger('library', 'books', 'books_match_reading_history', 'books carry the reading-history trigger');
+select ok(not has_function_privilege('authenticated', 'library.match_history_for_book()', 'execute')
+          and not has_function_privilege('anon', 'library.match_history_for_book()', 'execute'),
+          'no client can execute match_history_for_book');
+select ok(has_function_privilege('authenticated', 'library.link_reading_history(uuid, uuid)', 'execute')
+          and has_function_privilege('authenticated', 'library.dismiss_reading_match(uuid, uuid)', 'execute')
+          and not has_function_privilege('anon', 'library.link_reading_history(uuid, uuid)', 'execute')
+          and not has_function_privilege('anon', 'library.dismiss_reading_match(uuid, uuid)', 'execute'),
+          'authenticated, not anon, can execute Link and Not this book');
+
+-- History for books not on the shelf yet.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select is(pg_temp.up(pg_temp.hh(), jsonb_build_array(
+    pg_temp.r('Cinder Almanac', '{Odile Farthing}', '9780000000033', 'read', '2026-06-01'),
+    pg_temp.r('Hollow Bell', '{Tamsin Greaves}', '9780000000040', 'dnf', '2026-06-02'),
+    pg_temp.r('Ivory Cartouche', '{Remy Falk}', '9780000000064', 'read', null),
+    pg_temp.r('Wren Lattice', '{Corin Pell}', null, 'read', '2026-06-05'))),
+  '4/0/0/0/4', 'A uploads four books not on the shelf yet: all unmatched');
+
+set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
+select is(pg_temp.up(pg_temp.hh(), jsonb_build_array(
+    pg_temp.r('Wren Lattice', '{Corin Pell}', null, 'dnf', '2026-06-06'))),
+  '1/0/0/0/1', 'B uploads one book not on the shelf yet');
+
+-- B adds a book with the ISBN of A's row.
+insert into library.books (id, household_id, title, authors, isbn13)
+values (pg_temp.book(20), pg_temp.hh(), 'Cinder Almanac', '{Odile Farthing}', '{9780000000033}');
+select is(pg_temp.hs(pg_temp.ua(), 'Cinder Almanac'), 'matched:20',
+          'B adding a book with the ISBN of A''s history row matches the row');
+select is(pg_temp.st(20, pg_temp.ua()) || ',' || pg_temp.st(20, pg_temp.ub()), 'read/storygraph/2026-06-01/null,none',
+          'and marks A read from A''s own history, and B nothing');
+
+-- A book that gains the ISBN by update.
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(21), pg_temp.hh(), 'Hollow Bell', '{}');
+select is(pg_temp.hs(pg_temp.ua(), 'Hollow Bell') || ' ' || pg_temp.cands(pg_temp.ua(), 'Hollow Bell'),
+          'possible: 21:title_author_differs:pending', 'a same-titled book with no author is only possible');
+update library.books set isbn13 = '{9780000000040}' where id = pg_temp.book(21);
+select is(pg_temp.hs(pg_temp.ua(), 'Hollow Bell') || ' ' || pg_temp.cands(pg_temp.ua(), 'Hollow Bell'),
+          'matched:21 ', 'adding the row''s ISBN to the book by update matches it');
+select is(pg_temp.st(21, pg_temp.ua()), 'dnf/storygraph/2026-06-02/null', 'and applies A''s dnf');
+
+-- An uncertain new book.
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(22), pg_temp.hh(), 'Ivory Cartouche', '{Remi Falke}');
+select is(pg_temp.hs(pg_temp.ua(), 'Ivory Cartouche') || ' ' || pg_temp.cands(pg_temp.ua(), 'Ivory Cartouche'),
+          'possible: 22:title_author_differs:pending', 'an uncertain new book adds a candidate');
+select is(pg_temp.st(22, pg_temp.ua()), 'none', 'and writes no status');
+
+-- Both members' history on one insert.
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(25), pg_temp.hh(), 'Wren Lattice', '{Corin Pell}');
+select is(pg_temp.hs(pg_temp.ua(), 'Wren Lattice') || ',' || pg_temp.hs(pg_temp.ub(), 'Wren Lattice'),
+          'matched:25,matched:25', 'one insert checks A''s and B''s history');
+select is(pg_temp.st(25, pg_temp.ua()) || ',' || pg_temp.st(25, pg_temp.ub()),
+          'read/storygraph/2026-06-05/null,dnf/storygraph/2026-06-06/null', 'and marks each member from their own row');
+
+-- A title edit re-runs the matcher; a synopsis edit doesn't.
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(23), pg_temp.hh(), 'Brass Meridian', '{Quentin Hale}');
+reset role;
+set local request.jwt.claims = '{}';
+insert into test_vals (k, v)
+select 'brass', pg_temp.hist(pg_temp.ua(), 'Brass Meridian', '{Quentin Hale}', null, 'read', '2026-06-03')::text;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+update library.books set synopsis = 'A synthetic synopsis.' where id = pg_temp.book(23);
+select is(pg_temp.hs(pg_temp.ua(), 'Brass Meridian'), 'unmatched:', 'a synopsis-only edit does not run the matcher');
+update library.books set title = title, authors = authors where id = pg_temp.book(23);
+select is(pg_temp.hs(pg_temp.ua(), 'Brass Meridian'), 'unmatched:',
+          'an update that leaves title, authors and ISBNs as they were does not run it');
+update library.books set title = 'Brass Meridian: A Novel' where id = pg_temp.book(23);
+select is(pg_temp.hs(pg_temp.ua(), 'Brass Meridian'), 'matched:23', 'a title-only edit runs it');
+select is(pg_temp.st(23, pg_temp.ua()), 'read/storygraph/2026-06-03/null', 'and applies the read');
+
+-- A new book whose title is a prefix of the row's, then retitled away.
+reset role;
+set local request.jwt.claims = '{}';
+insert into test_vals (k, v)
+select 'saffron', pg_temp.hist(pg_temp.ua(), 'Saffron Weir Chronicle', '{Nell Ardent}', null, 'read', null)::text;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(28), pg_temp.hh(), 'Saffron Weir', '{Nell Ardent}');
+select is(pg_temp.hs(pg_temp.ua(), 'Saffron Weir Chronicle') || ' ' || pg_temp.cands(pg_temp.ua(), 'Saffron Weir Chronicle'),
+          'possible: 28:title_prefix:pending', 'a new book whose title is a prefix of the row''s is a title_prefix candidate');
+update library.books set title = 'Marrow Tide' where id = pg_temp.book(28);
+select is(pg_temp.hs(pg_temp.ua(), 'Saffron Weir Chronicle') || ' ' || pg_temp.cands(pg_temp.ua(), 'Saffron Weir Chronicle'),
+          'unmatched: ', 'retitling the candidate book away re-runs the row and drops the candidate');
+
+-- A cleared book (Review Focus 1).
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(24), pg_temp.hh(), 'Pale Orrery', '{Sabine Lark}');
+select library.set_read_status(pg_temp.hh(), array[pg_temp.book(24)], 'unread', null, false);
+reset role;
+set local request.jwt.claims = '{}';
+insert into test_vals (k, v)
+select 'pale', pg_temp.hist(pg_temp.ua(), 'Pale Orrery', '{Sabine Lark}', '9780000000057', 'read', '2026-06-04')::text;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+update library.books set isbn13 = '{9780000000057}' where id = pg_temp.book(24);
+select is(pg_temp.hs(pg_temp.ua(), 'Pale Orrery'), 'matched:24', 'a cleared book gaining the row''s ISBN links the row');
+select is(pg_temp.st(24, pg_temp.ua()), 'cleared/app//true', 'and the status stays cleared (Review Focus 1)');
+
+---------------------------------------------------------------------------
+-- A matching failure never blocks a book write (Review Focus 3). The key
+-- functions back indexes on books, so a failing one would fail the insert
+-- before the hook runs; the failure is injected into the matcher instead.
+---------------------------------------------------------------------------
+reset role;
+set local request.jwt.claims = '{}';
+insert into test_vals (k, v)
+select 'matcher_def', pg_get_functiondef('library._match_history_row(uuid)'::regprocedure);
+create temporary sequence match_calls;
+create or replace function library._match_history_row(p_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform nextval('pg_temp.match_calls');
+  raise exception 'test_matcher_failure';
+end;
+$$;
+insert into test_vals (k, v)
+select 'gilt', pg_temp.hist(pg_temp.ua(), 'Gilt Sextant', '{Ada Morrow}', null, 'read', '2026-06-07')::text;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select lives_ok($$ insert into library.books (id, household_id, title, authors)
+                   values (pg_temp.book(26), pg_temp.hh(), 'Gilt Sextant', '{Ada Morrow}') $$,
+                'a failing matcher never blocks a book insert (Review Focus 3)');
+reset role;
+set local request.jwt.claims = '{}';
+select ok((select is_called from pg_temp.match_calls), 'the failing matcher was reached, and its error was caught');
+select is((select count(*)::int from library.books where id = pg_temp.book(26)), 1, 'the book is saved');
+select is(pg_temp.hs(pg_temp.ua(), 'Gilt Sextant') || ' ' || pg_temp.st(26, pg_temp.ua()), 'unmatched: none',
+          'and the failed matching left nothing behind');
+select matches(pg_get_functiondef('library.match_history_for_book()'::regprocedure),
+               'exception\s+when\s+others\s+then\s+raise\s+warning\s+''read_history_match_failed %'',\s*sqlstate',
+               'the hook turns a matching error into a warning, not an error');
+
+do $$ begin execute pg_temp.val('matcher_def'); end $$;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+update library.books set title = 'Gilt Sextant: A Novel' where id = pg_temp.book(26);
+select is(pg_temp.hs(pg_temp.ua(), 'Gilt Sextant'), 'matched:26', 'with the matcher restored, the next edit links the row');
+
+---------------------------------------------------------------------------
+-- Bulk (Review Focus 3): 2,000 history rows, a 300-book import, 30 matches.
+---------------------------------------------------------------------------
+reset role;
+set local request.jwt.claims = '{}';
+insert into library.reading_history (household_id, user_id, sg_key, title, authors, sg_status,
+                                     title_key, base_title_key, author_keys)
+select pg_temp.hh(), pg_temp.ua(), 'bulk:' || g, 'Quillon Register ' || g, '{Hesper Vantablue}', 'read',
+       library.match_title_key('Quillon Register ' || g), library.match_base_title_key('Quillon Register ' || g),
+       '{hesper vantablue}'
+  from generate_series(1, 2000) g;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select lives_ok($$ insert into library.books (household_id, title, authors)
+                   select pg_temp.hh(),
+                          case when g <= 30 then 'Quillon Register ' || g else 'Nonesuch Folio ' || g end,
+                          '{Hesper Vantablue}'
+                     from generate_series(1, 300) g $$,
+                'a 300-book import into a household with 2,000 history rows succeeds');
+reset role;
+set local request.jwt.claims = '{}';
+select is((select count(*)::int from library.books
+            where household_id = pg_temp.hh() and (title like 'Quillon Register %' or title like 'Nonesuch Folio %')),
+          300, 'all 300 books are inserted');
+select is((select count(*)::int from library.reading_history h join library.books b on b.id = h.book_id
+            where h.user_id = pg_temp.ua() and h.title like 'Quillon Register %'
+              and h.match_state = 'matched' and b.title = h.title),
+          30, 'exactly the 30 matching rows are matched, each to its own book');
+select is((select count(*)::int from library.reading_history h
+            where h.user_id = pg_temp.ua() and h.title like 'Quillon Register %' and h.match_state <> 'unmatched'),
+          30, 'and the other 1,970 stay unmatched');
+select is((select count(*)::int from library.read_statuses s join library.books b on b.id = s.book_id
+            where s.user_id = pg_temp.ua() and b.title like 'Quillon Register %'
+              and s.status = 'read' and s.source = 'storygraph'),
+          30, 'and A has 30 new statuses');
+
+---------------------------------------------------------------------------
+-- Link and Not this book, as A.
+---------------------------------------------------------------------------
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+insert into library.books (id, household_id, title, authors)
+values (pg_temp.book(27), pg_temp.hh(), 'Ember Folio', '{Lysander Quell}');
+select is(pg_temp.cands(pg_temp.ua(), 'Ember Folio'), '4:several_books:pending,27:several_books:pending',
+          'a second same-titled book added offers both as several_books (Review Focus 2)');
+select is(pg_temp.st(4, pg_temp.ua()) || ',' || pg_temp.st(27, pg_temp.ua()), 'none,none', 'and marks neither');
+
+select is(library.link_reading_history(pg_temp.hid(pg_temp.ua(), 'Ember Folio'), pg_temp.book(27)), 'linked',
+          'Link on one Ember Folio candidate is linked');
+select is(pg_temp.hs(pg_temp.ua(), 'Ember Folio') || ' ' || pg_temp.cands(pg_temp.ua(), 'Ember Folio'), 'matched:27 ',
+          'the row is matched to it and the other candidate is gone');
+select is(pg_temp.st(27, pg_temp.ua()) || ',' || pg_temp.st(4, pg_temp.ua()), 'read/storygraph/2026-02-02/null,none',
+          'and the status is applied to the linked book only');
+
+select is(library.link_reading_history(pg_temp.hid(pg_temp.ub(), 'Moth Cartography'), pg_temp.book(7)), 'not_found',
+          'Link on B''s row as A is not_found');
+select is(library.link_reading_history(pg_temp.hid(pg_temp.ua(), 'Lantern Keep'), pg_temp.book(30)), 'not_found',
+          'Link to a book in another household is not_found');
+select is(pg_temp.hs(pg_temp.ua(), 'Lantern Keep'), 'unmatched:', 'and changes nothing');
+select throws_ok($$ select library.link_reading_history(null, pg_temp.book(4)) $$, '22023', null,
+                 'Link without a history row is 22023');
+
+select is(library.dismiss_reading_match(pg_temp.hid(pg_temp.ua(), 'Ivory Cartouche'), pg_temp.book(22)), 'dismissed',
+          'Not this book is dismissed');
+select is(pg_temp.hs(pg_temp.ua(), 'Ivory Cartouche') || ' ' || pg_temp.cands(pg_temp.ua(), 'Ivory Cartouche'),
+          'dismissed: 22:title_author_differs:dismissed', 'with nothing else pending the row is dismissed');
+update library.books set isbn13 = '{9780000000064}', authors = '{Remy Falk}' where id = pg_temp.book(22);
+select is(pg_temp.hs(pg_temp.ua(), 'Ivory Cartouche') || ' ' || pg_temp.cands(pg_temp.ua(), 'Ivory Cartouche')
+            || ' ' || pg_temp.st(22, pg_temp.ua()),
+          'dismissed: 22:title_author_differs:dismissed none',
+          'a dismissed pair is never proposed or clear-matched again, even after the book gains the row''s ISBN');
+
+select is(library.dismiss_reading_match(pg_temp.hid(pg_temp.ua(), 'Glass Orchard'), pg_temp.book(5)), 'dismissed',
+          'Not this book on one of two candidates is dismissed');
+select is(pg_temp.hs(pg_temp.ua(), 'Glass Orchard') || ' ' || pg_temp.cands(pg_temp.ua(), 'Glass Orchard'),
+          'possible: 2:title_author_differs:pending,5:title_prefix:dismissed', 'and leaves the row possible');
+select is(library.dismiss_reading_match(pg_temp.hid(pg_temp.ub(), 'Wren Lattice'), pg_temp.book(25)), 'not_found',
+          'Not this book on B''s row as A is not_found');
+select is(library.dismiss_reading_match(pg_temp.hid(pg_temp.ua(), 'Lantern Keep'), pg_temp.book(9)), 'not_found',
+          'Not this book for a book that is not a candidate is not_found');
+
+set local request.jwt.claims = '{}';
+select throws_ok($$ select library.link_reading_history(gen_random_uuid(), pg_temp.book(4)) $$, '42501', null,
+                 'Link signed out is 42501');
+select throws_ok($$ select library.dismiss_reading_match(gen_random_uuid(), pg_temp.book(4)) $$, '42501', null,
+                 'Not this book signed out is 42501');
 
 select * from finish();
 rollback;

@@ -14,12 +14,19 @@
 -- rule for rule; see the notes on each function. Books carry expression indexes
 -- on them so the matcher looks books up by key instead of scanning.
 --
--- _match_history_row(id)      the one matcher (the upload here, the books trigger
---                             later). Pure matching: it sets book_id/match_state
+-- _match_history_row(id)      the one matcher (the upload and the books trigger).
+--                             Pure matching: it sets book_id/match_state
 --                             and candidates and returns the new state; the
 --                             caller applies the status with _apply_history.
 -- upload_reading_history      the RPC. 1..500 rows for auth.uid(), upserted on
 --                             sg_key (D7), matched, and applied.
+-- match_history_for_book      the "check history on new book" hook (D4): a
+--                             trigger on books, after insert or a change of
+--                             title, authors or ISBNs. It re-matches every
+--                             member's non-matched rows the book could match.
+--                             A matching error is a warning, never a failed write.
+-- link_reading_history        Link: the caller's row to a household book.
+-- dismiss_reading_match       Not this book: dismiss one candidate for good.
 --
 -- No client insert, update or delete. Idempotent: safe to re-run. If a key
 -- function's rules change, the books_match_* indexes must be rebuilt (REINDEX).
@@ -209,8 +216,10 @@ create table if not exists library.reading_history (
 
 create index if not exists reading_history_isbn13_idx
   on library.reading_history (household_id, isbn13) where isbn13 is not null;
+-- text_pattern_ops: equality, plus the books trigger's bytewise "starts with"
+-- range on base_title_key.
 create index if not exists reading_history_base_title_key_idx
-  on library.reading_history (household_id, base_title_key);
+  on library.reading_history (household_id, base_title_key text_pattern_ops);
 create index if not exists reading_history_book_id_idx
   on library.reading_history (book_id) where book_id is not null;
 create index if not exists reading_history_user_id_idx
@@ -557,6 +566,189 @@ end;
 $$;
 
 ---------------------------------------------------------------------------
+-- The new-book hook (D4)
+---------------------------------------------------------------------------
+
+-- After a book is inserted, or its title, authors or ISBNs change: every
+-- member's history rows in the book's household that aren't matched and that
+-- the book could match go through _match_history_row; a clear match has its
+-- status applied for that row's member (from their own history only) through
+-- _apply_history, which never touches an app, tos or cleared row.
+--
+-- Prefilter, a superset of what the matcher can match, all by index:
+--   - the row's isbn13 is one of the book's ISBN-13s;
+--   - the row's base title key is a token prefix of one of the book's keys
+--     (or empty or a lone article) and either has 2+ tokens or the row's title
+--     key or base title key equals one of the book's keys;
+--   - the book's base title key (2+ tokens) is a token prefix of the row's;
+--   - the row has a pending candidate for this book (an edit can drop it).
+-- A row's base title key is a token prefix of its title key, so "the row's
+-- title key equals a book key" is reached through the first lookup.
+--
+-- Any error is caught and raised as a warning: intake matters more than a
+-- missed auto-link, and the next upload re-runs matching.
+create or replace function library.match_history_for_book()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_isbns text[];
+  v_btk   text;
+  v_keys  text[];
+  v_pref  text[];
+  v_id    uuid;
+  h       library.reading_history;
+begin
+  if tg_op = 'UPDATE'
+     and old.title is not distinct from new.title
+     and old.authors is not distinct from new.authors
+     and old.isbn13 is not distinct from new.isbn13
+     and old.isbn10 is not distinct from new.isbn10 then
+    return null;
+  end if;
+
+  begin
+    v_isbns := library._isbn13s(new.isbn13, new.isbn10);
+    v_btk   := library.match_base_title_key(new.title);
+    v_keys  := array(select distinct k
+                       from unnest(array[library.match_title_key(new.title), v_btk]) k
+                      where k <> '');
+    v_pref  := array(select distinct array_to_string(s.t[1:n], ' ')
+                       from (select string_to_array(k, ' ') as t from unnest(v_keys) k) s
+                      cross join lateral generate_series(1, cardinality(s.t)) n)
+               || array['', 'the', 'a', 'an'];
+
+    for v_id in
+      select r.id from library.reading_history r
+       where r.household_id = new.household_id and r.match_state <> 'matched'
+         and r.isbn13 = any(v_isbns)
+      union
+      select r.id from library.reading_history r
+       where r.household_id = new.household_id and r.match_state <> 'matched'
+         and r.base_title_key = any(v_pref)
+         and (r.base_title_key ~ ' ' or r.base_title_key = any(v_keys) or r.title_key = any(v_keys))
+      union
+      select r.id from library.reading_history r
+       where r.household_id = new.household_id and r.match_state <> 'matched'
+         and v_btk ~ ' '
+         and r.base_title_key ~>=~ (v_btk || ' ')
+         and r.base_title_key ~<~ (v_btk || '!')
+      union
+      select c.history_id from library.reading_history_candidates c
+        join library.reading_history r on r.id = c.history_id
+       where c.book_id = new.id and c.household_id = new.household_id
+         and c.state = 'pending' and r.match_state <> 'matched'
+      order by 1
+    loop
+      if library._match_history_row(v_id) = 'matched' then
+        select * into h from library.reading_history r where r.id = v_id;
+        perform library._apply_history(h.household_id, h.user_id, h.book_id, h.sg_status, h.last_read);
+      end if;
+    end loop;
+  exception when others then raise warning 'read_history_match_failed %', sqlstate;
+  end;
+  return null;
+end;
+$$;
+
+-- One trigger for both events: a WHEN clause can't name OLD on insert, so the
+-- "did a matching column change" check is the function's first step.
+drop trigger if exists books_match_reading_history on library.books;
+create trigger books_match_reading_history
+  after insert or update of title, authors, isbn13, isbn10 on library.books
+  for each row execute function library.match_history_for_book();
+
+---------------------------------------------------------------------------
+-- Link and Not this book
+---------------------------------------------------------------------------
+
+-- Link: the caller's history row to a book of the row's household. Sets
+-- book_id and matched, deletes the row's pending candidates (and any
+-- candidate for this book), and applies the row's status through
+-- _apply_history. 'linked', or 'not_found' when the row isn't the caller's or
+-- the book isn't in the row's household.
+create or replace function library.link_reading_history(p_history uuid, p_book uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  r      library.reading_history;
+begin
+  if v_user is null then
+    raise exception 'not_authorized' using errcode = '42501';
+  end if;
+  if p_history is null or p_book is null then
+    raise exception 'invalid_input' using errcode = '22023';
+  end if;
+
+  select * into r from library.reading_history h
+   where h.id = p_history and h.user_id = v_user
+     for update;
+  if not found or not library.is_member(r.household_id) then
+    return 'not_found';
+  end if;
+  if not exists (select 1 from library.books b where b.id = p_book and b.household_id = r.household_id) then
+    return 'not_found';
+  end if;
+
+  delete from library.reading_history_candidates c
+   where c.history_id = p_history and (c.state = 'pending' or c.book_id = p_book);
+  update library.reading_history h set book_id = p_book, match_state = 'matched' where h.id = p_history;
+  perform library._apply_history(r.household_id, v_user, p_book, r.sg_status, r.last_read);
+  return 'linked';
+end;
+$$;
+
+-- Not this book: the pair is dismissed for good (the matcher skips it). The
+-- row's state is recomputed without re-matching: possible while a candidate is
+-- pending, else dismissed. A matched row keeps its match. 'dismissed', or
+-- 'not_found' when the row isn't the caller's or the book isn't its candidate.
+create or replace function library.dismiss_reading_match(p_history uuid, p_book uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  r      library.reading_history;
+begin
+  if v_user is null then
+    raise exception 'not_authorized' using errcode = '42501';
+  end if;
+  if p_history is null or p_book is null then
+    raise exception 'invalid_input' using errcode = '22023';
+  end if;
+
+  select * into r from library.reading_history h
+   where h.id = p_history and h.user_id = v_user
+     for update;
+  if not found or not library.is_member(r.household_id) then
+    return 'not_found';
+  end if;
+
+  update library.reading_history_candidates c set state = 'dismissed'
+   where c.history_id = p_history and c.book_id = p_book;
+  if not found then
+    return 'not_found';
+  end if;
+
+  update library.reading_history h
+     set match_state = case
+           when exists (select 1 from library.reading_history_candidates c
+                         where c.history_id = p_history and c.state = 'pending') then 'possible'
+           else 'dismissed' end
+   where h.id = p_history and h.match_state <> 'matched';
+  return 'dismissed';
+end;
+$$;
+
+---------------------------------------------------------------------------
 -- RLS and grants
 ---------------------------------------------------------------------------
 
@@ -593,6 +785,9 @@ revoke execute on function library.book_isbn13s(library.books)         from publ
 revoke execute on function library.upload_reading_history(uuid, jsonb) from public, anon;
 revoke execute on function library._match_history_row(uuid)            from public, anon, authenticated;
 revoke execute on function library.reading_history_free_row()          from public, anon, authenticated;
+revoke execute on function library.match_history_for_book()            from public, anon, authenticated;
+revoke execute on function library.link_reading_history(uuid, uuid)    from public, anon;
+revoke execute on function library.dismiss_reading_match(uuid, uuid)   from public, anon;
 
 grant execute on function library.match_norm(text)                    to authenticated, service_role;
 grant execute on function library.match_title_key(text)               to authenticated, service_role;
@@ -602,3 +797,5 @@ grant execute on function library.match_isbn13(text)                  to authent
 grant execute on function library._isbn13s(text[], text[])            to authenticated, service_role;
 grant execute on function library.book_isbn13s(library.books)         to authenticated, service_role;
 grant execute on function library.upload_reading_history(uuid, jsonb) to authenticated;
+grant execute on function library.link_reading_history(uuid, uuid)    to authenticated;
+grant execute on function library.dismiss_reading_match(uuid, uuid)   to authenticated;
