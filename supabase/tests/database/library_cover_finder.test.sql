@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(174);
+select plan(177);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -268,6 +268,11 @@ select throws_ok($$ select library.mark_for_cover(pg_temp.book(1), '{bogus}', nu
                  '23514', null, 'B: an unknown reason violates the check');
 select throws_ok($$ select library.mark_for_cover(pg_temp.book(1), '{placeholder}', repeat('n', 501)) $$,
                  '23514', null, 'B: a 501-character note violates the check');
+
+select lives_ok($$ select library.mark_for_cover(pg_temp.book(1), '{angled,low_quality}', null) $$,
+                'B: the angled reason is accepted on a mark');
+select is((select reasons::text from library.cover_marks where book_id = pg_temp.book(1)),
+          '{angled,low_quality}', 'B: the angled mark is stored');
 
 select is(library.unmark_for_cover(pg_temp.book(1)), true, 'B: unmark_for_cover returns true');
 select is(library.unmark_for_cover(pg_temp.book(1)), false, 'B: unmark_for_cover again returns false');
@@ -586,8 +591,10 @@ select is(pg_temp.req(array[5], false), '{queued}', 'A: a new note makes book 5 
 ---------------------------------------------------------------------------
 -- Apply and the two reviewers.
 ---------------------------------------------------------------------------
-select library.mark_for_cover(pg_temp.book(21), '{low_quality}', null);
+select library.mark_for_cover(pg_temp.book(21), '{angled}', null);
 select pg_temp.prep(21, 3);
+select is((select reasons::text from library.cover_searches where id = pg_temp.search_of(21)), '{angled}',
+          'A: the angled reason is accepted on a search (snapshotted from the mark)');
 select is(pg_temp.claim(21), 'claimed:1', 'A: claims book 21');
 select is(pg_temp.finish(21, array[pg_temp.url(21, 1), pg_temp.url(21, 2)], 500), 'ready',
           'A: book 21 is ready with two results');
