@@ -48,6 +48,7 @@ import { FundController } from './controllers/FundController.js';
 import { LibraryTidyController } from './controllers/LibraryTidyController.js';
 import { getSupabaseClient } from './services/supabaseClient.js';
 import { startLibrarySync } from './services/ShelfBookService.js';
+import { startReadStatusSync } from './services/ReadStatusSync.js';
 
 // Track unique books completed for XP calculation
 let completedBooksSet = new Set();
@@ -214,7 +215,11 @@ export async function initializeCharacterSheet() {
     getSupabaseClient()
         .then((client) => {
             // "Found on our shelf — link it?" offers land on the Library tab's physical cards (D7)
-            if (client) startLibrarySync(stateAdapter, { onOffers: (offers) => libraryController.setShelfOffers(offers) });
+            if (client) {
+                startLibrarySync(stateAdapter, { onOffers: (offers) => libraryController.setShelfOffers(offers) });
+                // Completed shelf books mark the library book read (Plan 8): catch-up now, then on change.
+                startReadStatusSync(stateAdapter);
+            }
         })
         .catch((error) => console.warn('[Library] client unavailable:', error?.name || 'unknown'));
 
