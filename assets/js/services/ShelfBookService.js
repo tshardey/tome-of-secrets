@@ -13,7 +13,8 @@
  * Logs carry an error code only, never titles, authors or tags.
  */
 import { libraryCatalog } from './LibraryCatalogService.js';
-import { matchToLibrary, baseNormalize } from '../utils/bookMatching.js';
+import { matchToLibrary } from '../utils/bookMatching.js';
+import { searchWords, matchesSearchWords } from '../utils/searchWords.js';
 import { isSharedTag, sharedTags } from '../utils/bookTagRules.js';
 
 /** At most this many "On our shelf" results (D7). */
@@ -301,8 +302,9 @@ export async function fillSeriesForBook(stateAdapter, bookId, service = libraryC
 }
 
 /**
- * "On our shelf" search (D7): catalogue books whose title or author contains the query, with
- * accents and case folded, ordered by title. An empty query matches every book.
+ * "On our shelf" search (D7): catalogue books whose title, authors or edition labels contain every
+ * query word (searchWords: any order, "the"/"a"/"an" dropped, one typo tolerated), with accents
+ * and case folded, ordered by title. An empty query matches every book.
  * @param {Object|null} catalog - a getCatalog() result
  * @param {string} query
  * @param {number} [limit]
@@ -310,12 +312,12 @@ export async function fillSeriesForBook(stateAdapter, bookId, service = libraryC
  */
 export function searchShelf(catalog, query, limit = SHELF_SEARCH_LIMIT) {
     if (!catalog || catalog.status !== 'ready' || !Array.isArray(catalog.books)) return [];
-    const q = baseNormalize(query);
-    const matches = catalog.books.filter((libraryBook) => {
-        if (!q) return true;
-        if (baseNormalize(libraryBook.title).includes(q)) return true;
-        return (libraryBook.authors || []).some((author) => baseNormalize(author).includes(q));
-    });
+    const words = searchWords(query);
+    const matches = catalog.books.filter((libraryBook) => matchesSearchWords(words, [
+        libraryBook.title || '',
+        ...(libraryBook.authors || []),
+        ...(libraryBook.editionLabels || [])
+    ]));
     return matches
         .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')) || String(a.id).localeCompare(String(b.id)))
         .slice(0, limit);
