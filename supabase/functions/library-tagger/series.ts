@@ -90,8 +90,10 @@ export function householdSeriesText(names: string[]): string | null {
   let chars = HOUSEHOLD_HEADER.length;
   for (const raw of names) {
     if (lines.length >= SERIES_NAMES_CAP) break;
-    if (raw.trim() === "") continue;
-    const line = escapeData(clip(raw, NAME_MAX));
+    // One name per line: whitespace (newlines included) collapses to a single space.
+    const flat = raw.replace(/\s+/g, " ").trim();
+    if (flat === "") continue;
+    const line = escapeData(clip(flat, NAME_MAX));
     if (chars + 1 + line.length > SERIES_BLOCK_CHARS) break;
     lines.push(line);
     chars += 1 + line.length;
