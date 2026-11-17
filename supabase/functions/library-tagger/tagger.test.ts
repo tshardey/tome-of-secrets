@@ -19,6 +19,7 @@ const INPUT: TagInput = {
   seriesVolume: null,
   description: "A courier crosses a dry sea.",
   card: null,
+  seriesNames: [],
   tosTags: ["fantasy", "mystery"],
   vocab: [{ id: "found-family", category: "trope" }, { id: "cover-blue", category: "cover-colour" }],
   image: { mediaType: "image/png", bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) },
@@ -30,6 +31,7 @@ const RESULT: TagResult = {
   summary: "A courier crosses a dry sea.",
   cover_description: "A blue field.",
   suggestions: [],
+  series: null,
 };
 
 function message(over: Record<string, unknown> = {}) {
@@ -194,12 +196,12 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
   const w = worstCaseTagTokens();
   for (const model of ["claude-sonnet-5-5", "claude-haiku-5-5"] as const) {
     const p = PRICES[model];
-    const want = Math.ceil(w.plain * p.input + w.vocab * 1.25 * p.input + MAX_TOKENS * p.output);
+    const want = Math.ceil(w.plain * p.input + (w.vocab + w.series) * 1.25 * p.input + MAX_TOKENS * p.output);
     assert.equal(ceilingMicro(model), want, model);
     // the same number costMicro gives for that usage
     assert.equal(
       ceilingMicro(model),
-      costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.vocab, cacheReadTokens: 0, outputTokens: MAX_TOKENS }),
+      costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.vocab + w.series, cacheReadTokens: 0, outputTokens: MAX_TOKENS }),
     );
   }
   assert.equal(ceilingMicro(), ceilingMicro(MODEL));
@@ -208,7 +210,7 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
 Deno.test("TAG_RESERVE_MICRO is ceilingMicro(MODEL) rounded up to 1,000", () => {
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
   assert.equal(TAG_RESERVE_MICRO, Math.ceil(ceilingMicro(MODEL) / 1000) * 1000);
-  assert.equal(TAG_RESERVE_MICRO, 71_000);
+  assert.equal(TAG_RESERVE_MICRO, 82_000);
 });
 
 Deno.test("fakeTagger: fantasy, cover-blue only with an image, fixed summary, usage 0", async () => {

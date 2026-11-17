@@ -159,6 +159,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       seriesVolume: claim.book.seriesVolume,
       description: claim.book.description,
       card: claim.card,
+      seriesNames: [], // wired to the claim in Plan 10 Task 3
       tosTags,
       vocab,
       image,

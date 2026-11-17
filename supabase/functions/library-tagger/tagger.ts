@@ -26,23 +26,25 @@ const TIMEOUT_MS = 120_000;
 
 /**
  * The most one tagging call can cost, in micro-dollars (D6):
- *   ceil( plain x in + vocab x 1.25 x in + MAX_TOKENS x out )
+ *   ceil( plain x in + (vocab + series) x 1.25 x in + MAX_TOKENS x out )
  * where worstCaseTagTokens() gives
  *   plain = ceil(system prompt chars / 3) + 4,800 (one image)
  *           + 6,000 (book text and card) + 1,000 (framing and the
  *           structured-output instructions), at the input rate;
  *   vocab = ceil(vocabulary block chars / 3) at its caps (120 ToS ids and
  *           578 library ids, 40 characters each), at the 1.25x cache-write
- *           rate, since that block carries cache_control.
+ *           rate, since that block carries cache_control;
+ *   series = ceil(household series block chars / 3) at its caps (Plan 10 D4),
+ *           also cache-written, so at the same 1.25x rate.
  * Thinking shares max_tokens, so output never exceeds MAX_TOKENS.
  */
 export function ceilingMicro(model: AiModel = MODEL): number {
   const w = worstCaseTagTokens();
-  return costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.vocab, cacheReadTokens: 0, outputTokens: MAX_TOKENS });
+  return costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.vocab + w.series, cacheReadTokens: 0, outputTokens: MAX_TOKENS });
 }
 
 /** Must equal library.tag_reserve_micro(): ceilingMicro(MODEL) rounded up to 1,000. */
-export const TAG_RESERVE_MICRO = 71_000;
+export const TAG_RESERVE_MICRO = 82_000;
 
 export type TagCall =
   | { kind: "ok"; result: TagResult; usage: Usage }
@@ -131,6 +133,7 @@ export function fakeTagger(): Tagger {
           summary: "A fake summary written by the local tagger.",
           cover_description: image ? "A plain blue cover." : null,
           suggestions: [],
+          series: null, // fakeSeries(title) is wired in Plan 10 Task 3
         },
         usage: { ...ZERO },
       });

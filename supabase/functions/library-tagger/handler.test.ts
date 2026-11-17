@@ -70,6 +70,7 @@ const RESULT: TagResult = {
   summary: "A courier crosses a dry sea.",
   cover_description: "A blue field.",
   suggestions: [],
+  series: null,
 };
 
 function fakeTag(result: TagCall | (() => never)) {
