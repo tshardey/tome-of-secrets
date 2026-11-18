@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { costMicro, type Usage } from "../_shared/library-ai.ts";
 import { type Claim, type FinishResult, handle, rpcDb, type SupabaseLike, type TaggerDb } from "./handler.ts";
 import type { TagInput, TagResult } from "./prompt.ts";
-import { TOS_TAG_CAP } from "./prompt.ts";
-import { MODEL, TAG_RESERVE_MICRO, type TagCall, type Tagger } from "./tagger.ts";
+import { buildTagContent, TOS_TAG_CAP } from "./prompt.ts";
+import type { SeriesInput } from "./series.ts";
+import { MODEL, type SeriesCall, SERIES_RESERVE_MICRO, TAG_RESERVE_MICRO, type TagCall, type Tagger } from "./tagger.ts";
 
 const JOB = "0b6f4f6e-6a3c-4c1e-9d55-2f1f0f3a9b10";
 const TOKEN = "7d1f3a52-8e0b-4b6e-a7c4-5a1e9c2d4f01";
@@ -41,6 +42,7 @@ function claimed(over: Partial<Claim> = {}): Claim {
     card: null,
     vocab: [{ id: "found-family", category: "trope" }, { id: "cover-blue", category: "cover-colour" }],
     removed: { tos: [], library: [] },
+    seriesNames: [],
     ...over,
   };
 }
@@ -70,17 +72,23 @@ const RESULT: TagResult = {
   summary: "A courier crosses a dry sea.",
   cover_description: "A blue field.",
   suggestions: [],
+  series: null,
 };
 
-function fakeTag(result: TagCall | (() => never)) {
+function fakeTag(result: TagCall | (() => never), series: SeriesCall | (() => never) = { kind: "billing" }) {
   const inputs: TagInput[] = [];
+  const seriesInputs: SeriesInput[] = [];
   const tagger: Tagger = {
     tag(input) {
       inputs.push(input);
       return Promise.resolve(typeof result === "function" ? result() : result);
     },
+    findSeries(input) {
+      seriesInputs.push(input);
+      return Promise.resolve(typeof series === "function" ? series() : series);
+    },
   };
-  return { tagger, inputs };
+  return { tagger, inputs, seriesInputs };
 }
 
 /** Serves the ToS list at any tos.example URL and a JPEG on the cover host; records every URL. */
@@ -112,9 +120,10 @@ async function run(claim: Claim | (() => never), result: TagCall | (() => never)
   fetch?: ReturnType<typeof fakeFetch>;
   finish?: string;
   release?: string;
+  series?: SeriesCall | (() => never);
 } = {}) {
   const { db, calls } = fakeDb(claim, opts);
-  const { tagger, inputs } = fakeTag(result);
+  const { tagger, inputs, seriesInputs } = fakeTag(result, opts.series);
   const f = opts.fetch ?? fakeFetch();
   const res = await handle(post({ jobId: JOB }), {
     db,
@@ -123,7 +132,7 @@ async function run(claim: Claim | (() => never), result: TagCall | (() => never)
     tosTagsUrl: tosUrl(),
     now: () => NOW,
   });
-  return { res, body: await res.json(), calls, inputs, urls: f.urls };
+  return { res, body: await res.json(), calls, inputs, seriesInputs, urls: f.urls };
 }
 
 Deno.test("non-claimed outcomes return at once: no fetch, no tag call", async () => {
@@ -182,6 +191,7 @@ Deno.test("ok: finishes with costMicro(MODEL, usage), computedCostMicro, the san
     coverDescription: "A blue field.",
     coverSeen: true,
     suggestions: [],
+    series: null,
   });
   assert.equal(cost, costMicro(MODEL, USAGE));
   assert.equal(usage.computedCostMicro, costMicro(MODEL, USAGE));
@@ -368,8 +378,17 @@ Deno.test("rpcDb maps the claim row and passes the finish and release arguments"
     card: null,
     vocab: [{ id: "quest", category: "trope" }],
     removed: { tos: ["romance"], library: [] },
+    seriesNames: [],
   });
-  const result: FinishResult = { tos: [], library: [], summary: "s", coverDescription: null, coverSeen: false, suggestions: [] };
+  const result: FinishResult = {
+    tos: [],
+    library: [],
+    summary: "s",
+    coverDescription: null,
+    coverSeen: false,
+    suggestions: [],
+    series: null,
+  };
   assert.equal(await db.finish(JOB, TOKEN, result, { a: 1 }, 5, MODEL), "done");
   assert.deepEqual(sent[1], {
     fn: "finish_tag_job",
@@ -428,4 +447,181 @@ Deno.test("a ToS id past the 120-id clamp is still refused as a suggestion", asy
   }, { fetch: fakeFetch({ tosList: big }) });
   assert.ok(!inputs[0].tosTags.includes("genre-150"));
   assert.deepEqual((calls.finish[0][2] as FinishResult).suggestions.map((s) => s.id), ["salt-flats"]);
+});
+
+// ---------------------------------------------------------------------------
+// Plan 10: the household series names, the series result, series claims
+// ---------------------------------------------------------------------------
+
+const SERIES_NAMES = ["Lantern Vale", "Thornmere Cycle"];
+const CARD = { summary: "A keeper lights the last lamp.", coverDescription: "A lamp on a hill." };
+
+Deno.test("a full claim's series names reach the tagger (and so the household block)", async () => {
+  const { inputs } = await run(claimed({ seriesNames: SERIES_NAMES }), { kind: "ok", result: RESULT, usage: USAGE });
+  assert.deepEqual(inputs[0].seriesNames, SERIES_NAMES);
+  const content = buildTagContent(inputs[0]) as { text?: string; cache_control?: unknown }[];
+  assert.ok(content.some((b) => b.cache_control && b.text?.startsWith("Household series") && b.text.includes("Lantern Vale")));
+});
+
+Deno.test("a full ok finishes with the series cleaned; a placeholder name becomes null", async () => {
+  const named = await run(claimed(), {
+    kind: "ok",
+    result: { ...RESULT, series: { name: "  Lantern Vale ", volume: 1, why: "The title numbers it." } },
+    usage: USAGE,
+  });
+  assert.deepEqual((named.calls.finish[0][2] as FinishResult).series, { name: "Lantern Vale", volume: 1, why: "The title numbers it." });
+  const standalone = await run(claimed(), {
+    kind: "ok",
+    result: { ...RESULT, series: { name: "Standalone", volume: null, why: "x" } },
+    usage: USAGE,
+  });
+  const result = standalone.calls.finish[0][2] as FinishResult;
+  assert.ok("series" in result);
+  assert.equal(result.series, null);
+});
+
+Deno.test("rpcDb: series_names maps to seriesNames, and a series kind reads as series", async () => {
+  const row = (extra: Record<string, unknown>) => ({
+    outcome: "claimed",
+    claim_token: TOKEN,
+    attempts: 1,
+    kind: "series",
+    book: { title: "Lantern Vale #1", authors: [], seriesName: null, seriesVolume: null, description: null, coverUrl: null },
+    card: CARD,
+    vocab: [],
+    removed: { tos: [], library: [] },
+    ...extra,
+  });
+  const db = (r: Record<string, unknown>) => rpcDb({ schema: () => ({ rpc: () => Promise.resolve({ data: [r], error: null }) }) });
+  const withNames = await db(row({ series_names: ["Lantern Vale", 7, "Ember Loom"] })).claim(JOB);
+  assert.equal(withNames.kind, "series");
+  assert.deepEqual(withNames.seriesNames, ["Lantern Vale", "Ember Loom"]);
+  const without = await db(row({})).claim(JOB);
+  assert.deepEqual(without.seriesNames, []);
+});
+
+Deno.test("a claim row without series_names sends no household block and still finishes", async () => {
+  const supabase: SupabaseLike = {
+    schema: () => ({
+      rpc(fn) {
+        if (fn === "claim_tag_job") {
+          return Promise.resolve({
+            data: [{
+              outcome: "claimed",
+              claim_token: TOKEN,
+              attempts: 1,
+              kind: "full",
+              book: { title: "The Salt Road", authors: ["Member A"], seriesName: null, seriesVolume: null, description: "d", coverUrl: null },
+              card: null,
+              vocab: [{ id: "found-family", category: "trope" }],
+              removed: { tos: [], library: [] },
+            }],
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: "done", error: null });
+      },
+    }),
+  };
+  const { tagger, inputs } = fakeTag({ kind: "ok", result: RESULT, usage: USAGE });
+  const res = await handle(post({ jobId: JOB }), {
+    db: rpcDb(supabase),
+    tagger,
+    fetchImpl: fakeFetch().fetchImpl,
+    tosTagsUrl: tosUrl(),
+    now: () => NOW,
+  });
+  assert.deepEqual(await res.json(), { outcome: "done" });
+  assert.deepEqual(inputs[0].seriesNames, []);
+  const content = buildTagContent(inputs[0]) as { text?: string }[];
+  assert.ok(!content.some((b) => b.text?.startsWith("Household series")));
+});
+
+const seriesClaim = (over: Partial<Claim> = {}) =>
+  claimed({
+    kind: "series",
+    card: CARD,
+    vocab: [],
+    seriesNames: SERIES_NAMES,
+    book: { ...claimed().book!, title: "Lantern Vale #1" },
+    ...over,
+  });
+
+Deno.test("a series claim calls findSeries only, fetches nothing, and finishes with series and the cost", async () => {
+  const series = { name: "Lantern Vale", volume: 1, why: "The title numbers it." };
+  const { body, inputs, seriesInputs, urls, calls } = await run(
+    seriesClaim(),
+    () => {
+      throw new Error("tag must not be called");
+    },
+    { series: { kind: "ok", series, usage: USAGE } },
+  );
+  assert.deepEqual(body, { outcome: "done" });
+  assert.equal(inputs.length, 0);
+  assert.equal(urls.length, 0); // no ToS list, no cover
+  assert.deepEqual(seriesInputs, [{ title: "Lantern Vale #1", authors: ["Member A"], card: CARD, seriesNames: SERIES_NAMES }]);
+  const [, , result, usage, cost, model] = calls.finish[0] as [string, string, FinishResult, Record<string, number>, number, string];
+  assert.deepEqual(result, {
+    tos: [],
+    library: [],
+    summary: null,
+    coverDescription: null,
+    coverSeen: false,
+    suggestions: [],
+    series,
+  });
+  assert.equal(cost, costMicro(MODEL, USAGE));
+  assert.equal(usage.computedCostMicro, costMicro(MODEL, USAGE));
+  assert.equal(model, MODEL);
+});
+
+Deno.test("a series ok with a placeholder still finishes with series null (the book is marked checked)", async () => {
+  const { calls } = await run(seriesClaim(), { kind: "billing" }, {
+    series: { kind: "ok", series: { name: "unknown", volume: null, why: "" }, usage: USAGE },
+  });
+  const result = calls.finish[0][2] as FinishResult;
+  assert.ok("series" in result);
+  assert.equal(result.series, null);
+});
+
+Deno.test("a series retry billed unknown releases at SERIES_RESERVE_MICRO; a plain retry at 0", async () => {
+  const unknown = await run(seriesClaim(), { kind: "billing" }, {
+    series: { kind: "retry", retryAfterSeconds: null, billedUnknown: true },
+  });
+  assert.deepEqual(unknown.body, { outcome: "retry_later" });
+  assert.equal(unknown.calls.release[0][2], null);
+  assert.equal(unknown.calls.release[0][5], SERIES_RESERVE_MICRO);
+  const plain = await run(seriesClaim(), { kind: "billing" }, {
+    series: { kind: "retry", retryAfterSeconds: 5, billedUnknown: false },
+  });
+  assert.equal(plain.calls.release[0][5], 0);
+});
+
+Deno.test("series failures release as tagging does", async () => {
+  for (const kind of ["billing", "misconfigured"] as const) {
+    const { body, calls } = await run(seriesClaim(), { kind: "ok", result: RESULT, usage: USAGE }, { series: { kind } });
+    assert.deepEqual(body, { outcome: kind });
+    assert.deepEqual(calls.release[0].slice(2), [kind, null, null, 0]);
+  }
+  const rejected = await run(seriesClaim(), { kind: "billing" }, { series: { kind: "rejected" } });
+  assert.deepEqual(rejected.calls.release[0].slice(2), ["tag_rejected", null, null, 0]);
+  for (const code of ["tag_refused", "tag_unreadable"] as const) {
+    const { body, calls } = await run(seriesClaim(), { kind: "billing" }, { series: { kind: "fail", code, usage: USAGE } });
+    assert.deepEqual(body, { outcome: "failed" });
+    assert.equal(calls.release[0][2], code);
+    assert.equal(calls.release[0][5], costMicro(MODEL, USAGE));
+  }
+});
+
+Deno.test("a throw after a series claim releases at SERIES_RESERVE_MICRO and returns 500", async () => {
+  const { res, body, calls } = await run(seriesClaim(), { kind: "billing" }, {
+    series: () => {
+      throw new Error("Lantern Vale leaked");
+    },
+  });
+  assert.equal(res.status, 500);
+  assert.deepEqual(body, { error: "internal" });
+  assert.equal(calls.release.length, 1);
+  assert.equal(calls.release[0][2], null);
+  assert.equal(calls.release[0][5], SERIES_RESERVE_MICRO);
 });

@@ -8,8 +8,12 @@ import {
   fakeTagger,
   MAX_TOKENS,
   MODEL,
+  SERIES_MAX_TOKENS,
+  SERIES_RESERVE_MICRO,
+  seriesCeilingMicro,
   TAG_RESERVE_MICRO,
 } from "./tagger.ts";
+import { buildSeriesContent, type SeriesInput, SERIES_SYSTEM_PROMPT, worstCaseSeriesTokens } from "./series.ts";
 
 const INPUT: TagInput = {
   kind: "full",
@@ -19,6 +23,7 @@ const INPUT: TagInput = {
   seriesVolume: null,
   description: "A courier crosses a dry sea.",
   card: null,
+  seriesNames: [],
   tosTags: ["fantasy", "mystery"],
   vocab: [{ id: "found-family", category: "trope" }, { id: "cover-blue", category: "cover-colour" }],
   image: { mediaType: "image/png", bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) },
@@ -30,6 +35,7 @@ const RESULT: TagResult = {
   summary: "A courier crosses a dry sea.",
   cover_description: "A blue field.",
   suggestions: [],
+  series: null,
 };
 
 function message(over: Record<string, unknown> = {}) {
@@ -194,12 +200,12 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
   const w = worstCaseTagTokens();
   for (const model of ["claude-sonnet-5-5", "claude-haiku-5-5"] as const) {
     const p = PRICES[model];
-    const want = Math.ceil(w.plain * p.input + w.vocab * 1.25 * p.input + MAX_TOKENS * p.output);
+    const want = Math.ceil(w.plain * p.input + (w.vocab + w.series) * 1.25 * p.input + MAX_TOKENS * p.output);
     assert.equal(ceilingMicro(model), want, model);
     // the same number costMicro gives for that usage
     assert.equal(
       ceilingMicro(model),
-      costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.vocab, cacheReadTokens: 0, outputTokens: MAX_TOKENS }),
+      costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.vocab + w.series, cacheReadTokens: 0, outputTokens: MAX_TOKENS }),
     );
   }
   assert.equal(ceilingMicro(), ceilingMicro(MODEL));
@@ -208,7 +214,7 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
 Deno.test("TAG_RESERVE_MICRO is ceilingMicro(MODEL) rounded up to 1,000", () => {
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
   assert.equal(TAG_RESERVE_MICRO, Math.ceil(ceilingMicro(MODEL) / 1000) * 1000);
-  assert.equal(TAG_RESERVE_MICRO, 71_000);
+  assert.equal(TAG_RESERVE_MICRO, 82_000);
 });
 
 Deno.test("fakeTagger: fantasy, cover-blue only with an image, fixed summary, usage 0", async () => {
@@ -235,4 +241,115 @@ Deno.test("chooseTagger: fake only when asked for and local", () => {
   assert.equal(chooseTagger(env({ LIBRARY_TAGGER_FAKE: "1", SUPABASE_URL: "https://abc.supabase.co" })), "anthropic");
   assert.equal(chooseTagger(env({ LIBRARY_TAGGER_FAKE: "1", SUPABASE_URL: "not a url" })), "anthropic");
   assert.equal(chooseTagger(env({ SUPABASE_URL: "http://kong:8000" })), "anthropic");
+});
+
+// ---------------------------------------------------------------------------
+// Plan 10: findSeries, the series ceiling and the fake's series
+// ---------------------------------------------------------------------------
+
+const SERIES_INPUT: SeriesInput = {
+  title: "Lantern Vale #3",
+  authors: ["Ines Dravenholt"],
+  card: { summary: "A keeper lights the last lamp.", coverDescription: "A lamp on a hill." },
+  seriesNames: ["Lantern Vale", "Thornmere Cycle"],
+};
+const SERIES_OUT = { series: { name: "Lantern Vale", volume: 3, why: "The title numbers it." } };
+
+Deno.test("findSeries: model, SERIES_MAX_TOKENS, thinking, schema, exact prompt, household block cached", async () => {
+  const { fetchImpl, calls } = stub(200, message({ content: [{ type: "text", text: JSON.stringify(SERIES_OUT) }] }));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+  assert.equal(calls.length, 1);
+  const body = calls[0].body;
+  assert.equal(body.model, MODEL);
+  assert.equal(SERIES_MAX_TOKENS, 1024);
+  assert.equal(body.max_tokens, SERIES_MAX_TOKENS);
+  assert.equal(body.system, SERIES_SYSTEM_PROMPT);
+  const t = thinkingFor(MODEL, "low");
+  assert.deepEqual(body.thinking, t.thinking);
+  const oc = body.output_config as { effort: string; format: { type: string; schema: Record<string, unknown> } };
+  assert.equal(oc.effort, "low");
+  assert.equal(oc.format.type, "json_schema");
+  assert.ok("series" in (oc.format.schema.properties as Record<string, unknown>));
+  assert.deepEqual(body.messages, [{ role: "user", content: JSON.parse(JSON.stringify(buildSeriesContent(SERIES_INPUT))) }]);
+  const content = (body.messages as { content: Record<string, unknown>[] }[])[0].content;
+  assert.deepEqual(content[0].cache_control, { type: "ephemeral" });
+  assert.ok(!content.some((b) => b.type === "image"));
+  assert.deepEqual(r, {
+    kind: "ok",
+    series: SERIES_OUT.series,
+    usage: { inputTokens: 900, outputTokens: 300, cacheCreationTokens: 1200, cacheReadTokens: 0 },
+  });
+});
+
+Deno.test("findSeries: a null series is ok", async () => {
+  const { fetchImpl } = stub(200, message({ content: [{ type: "text", text: JSON.stringify({ series: null }) }] }));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+  assert.equal(r.kind, "ok");
+  if (r.kind === "ok") assert.equal(r.series, null);
+});
+
+Deno.test("findSeries: refusal -> tag_refused; max_tokens and bad JSON -> tag_unreadable, with usage", async () => {
+  const refused = stub(200, message({ stop_reason: "refusal", content: [{ type: "text", text: "no" }] }));
+  const r1 = await anthropicTagger("k", { fetchImpl: refused.fetchImpl }).findSeries(SERIES_INPUT);
+  assert.equal(r1.kind, "fail");
+  if (r1.kind === "fail") {
+    assert.equal(r1.code, "tag_refused");
+    assert.equal(r1.usage.outputTokens, 300);
+  }
+  for (const b of [message({ stop_reason: "max_tokens" }), message({ content: [{ type: "text", text: "{nope" }] })]) {
+    const { fetchImpl } = stub(200, b);
+    const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+    assert.equal(r.kind, "fail");
+    if (r.kind === "fail") {
+      assert.equal(r.code, "tag_unreadable");
+      assert.equal(r.usage.inputTokens, 900);
+    }
+  }
+});
+
+Deno.test("findSeries: 429 -> retry, one fetch; no key -> misconfigured", async () => {
+  const { fetchImpl, calls } = stub(429, apiError("rate_limit_error"), { "retry-after": "7" });
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+  assert.deepEqual(r, { kind: "retry", retryAfterSeconds: 7, billedUnknown: false });
+  assert.equal(calls.length, 1);
+  const none = stub(200, message());
+  assert.deepEqual(await anthropicTagger(undefined, { fetchImpl: none.fetchImpl }).findSeries(SERIES_INPUT), { kind: "misconfigured" });
+  assert.equal(none.calls.length, 0);
+});
+
+Deno.test("seriesCeilingMicro: plain at 1x, the household block at 1.25x, SERIES_MAX_TOKENS out", () => {
+  const w = worstCaseSeriesTokens();
+  for (const model of ["claude-sonnet-5-5", "claude-haiku-5-5"] as const) {
+    const p = PRICES[model];
+    const want = Math.ceil(w.plain * p.input + w.block * 1.25 * p.input + SERIES_MAX_TOKENS * p.output);
+    assert.equal(seriesCeilingMicro(model), want, model);
+  }
+  assert.equal(seriesCeilingMicro(), seriesCeilingMicro(MODEL));
+});
+
+Deno.test("SERIES_RESERVE_MICRO and TAG_RESERVE_MICRO sit within 1,000 above their ceilings", () => {
+  assert.ok(seriesCeilingMicro() <= SERIES_RESERVE_MICRO);
+  assert.ok(SERIES_RESERVE_MICRO - seriesCeilingMicro() < 1000);
+  assert.equal(SERIES_RESERVE_MICRO, Math.ceil(seriesCeilingMicro(MODEL) / 1000) * 1000);
+  // Pinned: library.series_reserve_micro() returns the same literal.
+  assert.equal(SERIES_RESERVE_MICRO, 27_000);
+  assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
+  assert.ok(TAG_RESERVE_MICRO - ceilingMicro() < 1000);
+  assert.ok(SERIES_RESERVE_MICRO < TAG_RESERVE_MICRO);
+});
+
+Deno.test("fakeTagger: tag and findSeries read the series from the title, usage 0", async () => {
+  const tagged = await fakeTagger().tag({ ...INPUT, title: "Lantern Vale #3" });
+  assert.equal(tagged.kind, "ok");
+  if (tagged.kind === "ok") assert.deepEqual(tagged.result.series, { name: "Lantern Vale", volume: 3, why: "Fake series from the title." });
+  const plain = await fakeTagger().tag(INPUT);
+  if (plain.kind === "ok") assert.equal(plain.result.series, null);
+  const found = await fakeTagger().findSeries(SERIES_INPUT);
+  assert.deepEqual(found, {
+    kind: "ok",
+    series: { name: "Lantern Vale", volume: 3, why: "Fake series from the title." },
+    usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
+  });
+  const none = await fakeTagger().findSeries({ ...SERIES_INPUT, title: "Saltglass" });
+  if (none.kind === "ok") assert.equal(none.series, null);
 });
