@@ -80,7 +80,7 @@ select is((select count(distinct v ->> 'id')::int
             where c.kind = 'full' and v ->> 'id' in ('cover-jewelry', 'cover-food-drink')
               and v ->> 'category' = 'cover-motif'),
           2, 'a full job''s claim vocabulary includes cover-jewelry and cover-food-drink');
-select is(library.tag_reserve_micro(), 82000, 'tag_reserve_micro is 82000 (tagger.ts TAG_RESERVE_MICRO)');
+select is(library.tag_reserve_micro(), 94000, 'tag_reserve_micro is 94000 (tagger.ts TAG_RESERVE_MICRO)');
 
 select * from finish();
 rollback;

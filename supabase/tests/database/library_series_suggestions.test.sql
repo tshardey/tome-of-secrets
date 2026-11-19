@@ -170,8 +170,8 @@ select has_column('library', 'book_cards', 'series_checked_at', 'book_cards.seri
 select ok((select bool_and(relrowsecurity) from pg_class
             where oid in ('library.series_suggestions'::regclass, 'library.series_suggestion_books'::regclass)),
           'RLS is enabled on both new tables');
-select is(library.series_reserve_micro(), 27000, 'series_reserve_micro is 27000 (tagger.ts SERIES_RESERVE_MICRO)');
-select is(library.tag_reserve_micro(), 82000, 'tag_reserve_micro is 82000 (tagger.ts TAG_RESERVE_MICRO)');
+select is(library.series_reserve_micro(), 150000, 'series_reserve_micro is 150000 (tagger.ts SERIES_RESERVE_MICRO)');
+select is(library.tag_reserve_micro(), 94000, 'tag_reserve_micro is 94000 (tagger.ts TAG_RESERVE_MICRO)');
 
 ---------------------------------------------------------------------------
 -- Full jobs: no series key, an existing series, the spelling, the volume.
@@ -390,8 +390,8 @@ select is(pg_temp.checked(31) || '|' || pg_temp.ser(31) || '|'
           || '|' || (select count(*) from library.book_library_tags t where t.book_id = pg_temp.book(31)),
           'checked|-:-|A card summary 31.:A grey cover.|0|0',
           'a series finish marks the card checked and changes no tags or card text');
-select is(pg_temp.jst(pg_temp.jid(31)), 'done:1::' || library.series_reserve_micro(),
-          'a series job''s cost is clamped to the series reserve');
+select is(pg_temp.jst(pg_temp.jid(31)), 'done:1::90000',
+          'a series job''s cost is its true cost (Plan 11 D10)');
 
 select pg_temp.req(pg_temp.hh(), array[39], 'series');
 select pg_temp.claim(39);

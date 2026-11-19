@@ -4,12 +4,16 @@
 -- other book becomes a per-book "existing" suggestion for that series, that an
 -- approved alias follows the same rule, that dismissing an existing-series
 -- suggestion dismisses those books only, and that approve fills only books
--- still pending, blank and not hand-set.
+-- still pending, blank and not hand-set. Part 2 (D6, D9-D11): the claim's
+-- same-author books and ISBNs; an unsure full job queues one series check
+-- that can't loop; series jobs record their true cost under a 10x guard;
+-- ai_budget holds the larger reserve; and the one-time re-check clears only
+-- the markers D11 selects.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(65);
+select plan(106);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -372,6 +376,345 @@ select is((select string_agg(c.column_default, ',' order by c.column_name)
             where (c.table_name, c.column_name) in (('series_suggestions', 'kind'), ('series_suggestion_books', 'status'))
               and c.table_schema = 'library'),
           '''new''::text,''pending''::text', 'Plan 10 rows migrate as kind new with every book pending');
+
+---------------------------------------------------------------------------
+-- Part 2 (D6, D9-D11): same-author evidence and ISBNs in the claim, the
+-- series status and its one unsure follow-up, true series cost, the budget
+-- read and the re-check. Books 31-79 in H, 82-86 in H2 (as postgres).
+---------------------------------------------------------------------------
+create function pg_temp.m() returns date language sql as
+$$ select date_trunc('month', now() at time zone 'utc')::date $$;
+
+create function pg_temp.spent(p_hh uuid) returns bigint language sql security definer as
+$$ select coalesce((select u.spent_micro from library.ai_usage u
+                     where u.household_id = p_hh and u.feature = 'tagging' and u.month = pg_temp.m()), 0) $$;
+
+-- As the current user: claims book n's active job (or the one kept), keeps the
+-- job id, token and claim row, returns outcome:attempts.
+create function pg_temp.cl(n int) returns text language plpgsql as
+$$ declare r record; v_job uuid := coalesce(pg_temp.job_of(n), pg_temp.val('job' || n)::uuid);
+   begin
+     perform pg_temp.save('job' || n, v_job::text);
+     select * into r from library.claim_tag_job(v_job);
+     perform pg_temp.save('row' || n, to_jsonb(r)::text);
+     if r.claim_token is not null then
+       perform pg_temp.save('tok' || n, r.claim_token::text);
+     end if;
+     return r.outcome || ':' || r.attempts;
+   end $$;
+
+create function pg_temp.jid(n int) returns uuid language sql as $$ select pg_temp.val('job' || n)::uuid $$;
+create function pg_temp.tok(n int) returns uuid language sql as $$ select pg_temp.val('tok' || n)::uuid $$;
+create function pg_temp.crow(n int) returns jsonb language sql as $$ select pg_temp.val('row' || n)::jsonb $$;
+
+create function pg_temp.fin(n int, res jsonb, cost int default 1000) returns text language sql as
+$$ select library.finish_tag_job(pg_temp.jid(n), pg_temp.tok(n), res, '{}'::jsonb, cost, 'claude-sonnet-5-5') $$;
+
+create function pg_temp.rel(n int, err text, retry timestamptz, cost int) returns text language sql as
+$$ select library.release_tag_job(pg_temp.jid(n), pg_temp.tok(n), err, retry, '{}'::jsonb, cost) $$;
+
+-- A full result: p_series null leaves the series key out ('null'::jsonb sends
+-- null); p_status null leaves seriesStatus out (an older tagger).
+create function pg_temp.fr(p_series jsonb, p_status text) returns jsonb language sql as
+$$ select jsonb_build_object('tos', '[]'::jsonb, 'library', '[]'::jsonb, 'suggestions', '[]'::jsonb,
+                             'summary', 'A courier crosses a dry sea.', 'coverDescription', null, 'coverSeen', false)
+          || case when p_series is null then '{}'::jsonb else jsonb_build_object('series', p_series) end
+          || case when p_status is null then '{}'::jsonb else jsonb_build_object('seriesStatus', p_status) end $$;
+
+-- A series-job result.
+create function pg_temp.sr(p_series jsonb, p_status text) returns jsonb language sql as
+$$ select jsonb_build_object('tos', '[]'::jsonb, 'library', '[]'::jsonb, 'suggestions', '[]'::jsonb,
+                             'summary', null, 'coverDescription', null, 'coverSeen', false, 'series', p_series)
+          || case when p_status is null then '{}'::jsonb else jsonb_build_object('seriesStatus', p_status) end $$;
+
+-- A full job for book n as the current user: queue (manual), claim, finish.
+create function pg_temp.ftag(n int, res jsonb, cost int default 1000) returns text language plpgsql as
+$$ begin
+     perform library.request_tagging(pg_temp.hh_of(n), array[pg_temp.book(n)], 'manual', null);
+     perform pg_temp.cl(n);
+     return pg_temp.fin(n, res, cost);
+   end $$;
+
+-- Queues a job for book n directly (as the definer).
+create function pg_temp.qjob(n int, p_kind text, p_reason text) returns void language sql security definer as
+$$ insert into library.tag_jobs (household_id, book_id, kind, reason)
+   values (pg_temp.hh_of(n), pg_temp.book(n), p_kind, p_reason) $$;
+
+create function pg_temp.card(n int, p_checked boolean default false) returns void language sql security definer as
+$$ insert into library.book_cards (book_id, household_id, summary, model, vocab_version, series_checked_at)
+   values (pg_temp.book(n), pg_temp.hh_of(n), 'A card summary ' || n || '.', 'claude-sonnet-5-5', 1,
+           case when p_checked then now() end)
+   on conflict (book_id) do update set series_checked_at = excluded.series_checked_at $$;
+
+-- Book n's jobs other than new_book, oldest first, as kind:reason:status:run ('-' for no run).
+create function pg_temp.jobs(n int) returns text language sql security definer as
+$$ select string_agg(j.kind || ':' || j.reason || ':' || j.status || ':' || case when j.run_id is null then '-' else 'run' end,
+                     ',' order by j.created_at)
+     from library.tag_jobs j where j.book_id = pg_temp.book(n) and j.reason <> 'new_book' $$;
+
+create function pg_temp.chk(n int) returns text language sql security definer as
+$$ select coalesce((select case when c.series_checked_at is null then 'unchecked' else 'checked' end
+                      from library.book_cards c where c.book_id = pg_temp.book(n)), 'nocard') $$;
+
+-- The kept job's status:cost_micro.
+create function pg_temp.jcost(n int) returns text language sql security definer as
+$$ select j.status || ':' || j.cost_micro from library.tag_jobs j where j.id = pg_temp.jid(n) $$;
+
+create function pg_temp.titles(p jsonb) returns text language sql as
+$$ select string_agg(e ->> 'title', ',' order by o) from jsonb_array_elements(p) with ordinality x(e, o) $$;
+
+insert into library.books (id, household_id, title, authors, synopsis)
+select pg_temp.book(n), pg_temp.hh_of(n), 'Invented Title ' || n, '{}', 'A made-up synopsis ' || n
+  from (select generate_series(31, 79) union all select generate_series(82, 86)) g(n);
+
+-- Same author (D6): book 31 and sixteen others by Ines Dravenholt-Ashe,
+-- written two ways, 32 newest to 47 oldest. H2's book 82 by her is newer still.
+update library.books
+   set authors = '{Ines Dravenholt-Ashe}',
+       isbn13 = '{n/a,978-0-00-000001-1,9780000000022,9780000000034}',
+       isbn10 = '{12345,000000001x,0-00-000002-1,0000000039}'
+ where id = pg_temp.book(31);
+update library.books b
+   set authors = case when right(b.id::text, 12)::int % 2 = 0 then '{Ines Dravenholt-Ashe}'::text[]
+                      else '{INES DRAVENHOLT ASHE}'::text[] end,
+       created_at = now() - make_interval(mins => right(b.id::text, 12)::int - 31)
+ where b.id in (select pg_temp.book(n) from generate_series(32, 47) n);
+update library.books set authors = '{Ines Dravenholt-Ashe}', series_name = 'Wrenfold Tales',
+                         created_at = now() + interval '1 hour'
+ where id = pg_temp.book(82);
+update library.books set authors = '{Émile Varro}' where id = pg_temp.book(74);
+update library.tag_jobs set status = 'done' where status in ('queued', 'processing');
+
+select is(pg_temp.titles(library._same_author_books(pg_temp.hh(), pg_temp.book(31))),
+          (select string_agg('Invented Title ' || n, ',' order by n) from generate_series(32, 46) n),
+          '_same_author_books: the 15 newest other books by the author (either spelling), not itself, not H2''s');
+select is(library._same_author_books(pg_temp.hh(), pg_temp.book(31)) -> 0,
+          '{"title": "Invented Title 32", "seriesName": null, "seriesVolume": null}'::jsonb,
+          '_same_author_books: a book without a series has null seriesName and seriesVolume');
+select is(library._same_author_books(pg_temp.hh(), pg_temp.book(74)),
+          '[{"title": "Invented Title 3", "seriesName": "Ember Loom", "seriesVolume": 1},
+            {"title": "Invented Title 4", "seriesName": "Ember Loom", "seriesVolume": 2}]'::jsonb,
+          '_same_author_books: Émile Varro matches Emile Varro and a co-written book, with their series');
+select is(library._same_author_books(pg_temp.hh(), pg_temp.book(48))::text || '|'
+          || library._same_author_books(pg_temp.hh(), pg_temp.book(21))::text, '[]|[]',
+          '_same_author_books: [] for an author-less book and for an empty author key');
+
+set local role authenticated;
+select pg_temp.as_a();
+select library.request_tagging(pg_temp.hh(), array[pg_temp.book(31)], 'manual', null);
+select is(pg_temp.cl(31), 'claimed:1', 'A claims book 31''s full job');
+reset role;
+select is(pg_temp.crow(31) -> 'same_author', library._same_author_books(pg_temp.hh(), pg_temp.book(31)),
+          'a full claim returns same_author');
+select is(pg_temp.crow(31) -> 'book' -> 'isbns', '["9780000000011", "9780000000022", "000000001X", "0000000021"]'::jsonb,
+          'the claim''s book.isbns: up to 2 ISBN-13s then up to 2 ISBN-10s, digits and X only');
+set local role authenticated;
+select pg_temp.as_a();
+select pg_temp.fin(31, pg_temp.fr(null, null));
+select pg_temp.qjob(31, 'series', 'series');
+select is(pg_temp.cl(31) || '|' || (pg_temp.crow(31) ->> 'kind') || '|'
+          || jsonb_array_length(pg_temp.crow(31) -> 'same_author'), 'claimed:1|series|15',
+          'a series claim returns same_author');
+select pg_temp.fin(31, pg_temp.sr('null'::jsonb, 'none'));
+select pg_temp.qjob(31, 'new_tags', 'new_tags');
+select is(pg_temp.cl(31) || '|' || (pg_temp.crow(31) ->> 'kind') || '|' || (pg_temp.crow(31) -> 'same_author')::text,
+          'claimed:1|new_tags|[]', 'a new_tags claim returns same_author []');
+
+---------------------------------------------------------------------------
+-- Status on a full job (D9).
+---------------------------------------------------------------------------
+select is(pg_temp.ftag(50, pg_temp.fr(pg_temp.s('Lantern Vale', 1, 'w50'), 'unsure')) || '|' || pg_temp.ser(50) || '|'
+          || pg_temp.chk(50) || '|' || pg_temp.nrows('new', 'lantern vale'),
+          'done|-:-|unchecked|0', 'a full job answering unsure applies nothing and leaves the card unchecked');
+select is(pg_temp.jobs(50), 'full:manual:done:-,series:unsure:queued:-',
+          'and queues one series job with reason unsure and no run, after the full job is done');
+select is(pg_temp.ftag(51, pg_temp.fr(pg_temp.s('Lantern Vale', 2, 'w51'), 'found')) || '|' || pg_temp.chk(51) || '|'
+          || pg_temp.jobs(51) || '|' || pg_temp.sugg('new', 'lantern vale'),
+          'done|checked|full:manual:done:-|pending|Lantern Vale|-|51:2.00:w51:pending',
+          'found: applied as Plan 10, checked, no follow-up');
+select is(pg_temp.ftag(52, pg_temp.fr('null'::jsonb, 'none')) || '|' || pg_temp.ser(52) || '|' || pg_temp.chk(52) || '|'
+          || pg_temp.jobs(52),
+          'done|-:-|checked|full:manual:done:-', 'none: nothing applied, checked, no follow-up');
+select is(pg_temp.ftag(53, pg_temp.fr(pg_temp.s('Lantern Vale', 3, 'w53'), null)) || '|' || pg_temp.chk(53) || '|'
+          || pg_temp.jobs(53) || '|' || pg_temp.sugg('new', 'lantern vale'),
+          'done|checked|full:manual:done:-|pending|Lantern Vale|-|51:2.00:w51:pending,53:3.00:w53:pending',
+          'no seriesStatus (an older tagger): as Plan 10');
+select library.request_tagging(pg_temp.hh(), array[pg_temp.book(49)], 'manual', null);
+select pg_temp.cl(49);
+select throws_ok($$ select pg_temp.fin(49, pg_temp.fr('null'::jsonb, 'maybe')) $$, '22023', null,
+                 'a seriesStatus other than found, none or unsure is invalid_result');
+
+---------------------------------------------------------------------------
+-- No follow-up when the book has a series, is hand-set, is checked, or its
+-- synopsis changed mid-job.
+---------------------------------------------------------------------------
+reset role;
+update library.books set series_name = 'Ember Loom' where id = pg_temp.book(54);
+update library.books set user_edited_fields = '{seriesName}' where id = pg_temp.book(55);
+select pg_temp.card(56, true);
+set local role authenticated;
+select pg_temp.as_a();
+select is(pg_temp.ftag(54, pg_temp.fr('null'::jsonb, 'unsure')) || '|' || pg_temp.jobs(54), 'done|full:manual:done:-',
+          'unsure on a book with a series: no follow-up');
+select is(pg_temp.ftag(55, pg_temp.fr('null'::jsonb, 'unsure')) || '|' || pg_temp.jobs(55), 'done|full:manual:done:-',
+          'unsure on a hand-set book: no follow-up');
+select is(pg_temp.ftag(56, pg_temp.fr('null'::jsonb, 'unsure')) || '|' || pg_temp.jobs(56) || '|' || pg_temp.chk(56),
+          'done|full:manual:done:-|checked', 'unsure on a checked book: no follow-up');
+select library.request_tagging(pg_temp.hh(), array[pg_temp.book(57)], 'manual', null);
+select pg_temp.cl(57);
+reset role;
+update library.books set synopsis = 'A rewritten synopsis 57' where id = pg_temp.book(57);
+set local role authenticated;
+select pg_temp.as_a();
+select is(pg_temp.fin(57, pg_temp.fr('null'::jsonb, 'unsure')) || '|' || pg_temp.jobs(57),
+          'done|full:manual:done:-,full:changed:queued:-',
+          'unsure with the synopsis changed mid-job: the requeued full job wins, no series job');
+
+---------------------------------------------------------------------------
+-- No loop (Review Focus 5).
+---------------------------------------------------------------------------
+select is(pg_temp.cl(50) || '|' || (pg_temp.crow(50) ->> 'kind'), 'claimed:1|series', 'A claims book 50''s follow-up');
+select is(pg_temp.fin(50, pg_temp.sr('null'::jsonb, 'unsure')) || '|' || pg_temp.chk(50) || '|' || pg_temp.jobs(50),
+          'done|checked|full:manual:done:-,series:unsure:done:-',
+          'the follow-up finishing unsure is done and checked, and queues nothing');
+select is(pg_temp.ftag(50, pg_temp.fr('null'::jsonb, 'unsure')) || '|' || pg_temp.jobs(50),
+          'done|full:manual:done:-,series:unsure:done:-,full:manual:done:-',
+          'a manual retag finishing unsure again queues no second series job');
+select pg_temp.ftag(59, pg_temp.fr('null'::jsonb, 'unsure'));
+reset role;
+update library.book_cards set series_checked_at = now() where book_id = pg_temp.book(59);
+select pg_temp.save('spent59', pg_temp.spent(pg_temp.hh())::text);
+set local role authenticated;
+select pg_temp.as_a();
+select is(pg_temp.cl(59) || '|' || pg_temp.jcost(59) || '|' || (pg_temp.spent(pg_temp.hh()) - pg_temp.val('spent59')::bigint),
+          'done:0|done:0|0', 'a queued follow-up for a book checked meanwhile is claimed done at cost 0');
+
+---------------------------------------------------------------------------
+-- True cost for series jobs, the 10x guard (D10).
+---------------------------------------------------------------------------
+reset role;
+select pg_temp.card(n) from unnest(array[60, 61, 63, 64]) n;
+select pg_temp.qjob(n, 'series', 'series') from unnest(array[60, 61, 63, 64]) n;
+set local role authenticated;
+select pg_temp.as_a();
+
+select pg_temp.save('spent60', pg_temp.spent(pg_temp.hh())::text);
+select pg_temp.cl(60);
+select is(pg_temp.fin(60, pg_temp.sr('null'::jsonb, 'none'), library.series_reserve_micro() + 5000) || '|'
+          || pg_temp.jcost(60) || '|' || (pg_temp.spent(pg_temp.hh()) - pg_temp.val('spent60')::bigint),
+          'done|done:' || library.series_reserve_micro() + 5000 || '|' || library.series_reserve_micro() + 5000,
+          'a series finish above its reserve charges the true cost');
+
+select pg_temp.save('spent61', pg_temp.spent(pg_temp.hh())::text);
+select pg_temp.cl(61);
+select is(pg_temp.fin(61, pg_temp.sr('null'::jsonb, 'none'), 20 * library.series_reserve_micro()) || '|'
+          || pg_temp.jcost(61) || '|' || (pg_temp.spent(pg_temp.hh()) - pg_temp.val('spent61')::bigint),
+          'done|done:' || 10 * library.series_reserve_micro() || '|' || 10 * library.series_reserve_micro(),
+          'a series cost of 20x the reserve charges 10x');
+
+select pg_temp.save('spent62', pg_temp.spent(pg_temp.hh())::text);
+select is(pg_temp.ftag(62, pg_temp.fr('null'::jsonb, 'none'), library.tag_reserve_micro() + 5000) || '|'
+          || pg_temp.jcost(62) || '|' || (pg_temp.spent(pg_temp.hh()) - pg_temp.val('spent62')::bigint),
+          'done|done:' || library.tag_reserve_micro() || '|' || library.tag_reserve_micro(),
+          'a full finish above its reserve is still clamped');
+
+select pg_temp.save('spent63', pg_temp.spent(pg_temp.hh())::text);
+select pg_temp.cl(63);
+select is(pg_temp.rel(63, 'tag_refused', null, library.series_reserve_micro() + 7000) || '|'
+          || pg_temp.jcost(63) || '|' || (pg_temp.spent(pg_temp.hh()) - pg_temp.val('spent63')::bigint),
+          'failed|failed:' || library.series_reserve_micro() + 7000 || '|' || library.series_reserve_micro() + 7000,
+          'a series release with tag_refused above the reserve charges the true cost');
+
+select pg_temp.save('spent64', pg_temp.spent(pg_temp.hh())::text);
+select pg_temp.cl(64);
+select is(pg_temp.rel(64, null, now() + interval '1 hour', 3 * library.series_reserve_micro()) || '|'
+          || pg_temp.jcost(64) || '|' || (pg_temp.spent(pg_temp.hh()) - pg_temp.val('spent64')::bigint),
+          'queued|queued:' || library.series_reserve_micro() || '|' || library.series_reserve_micro(),
+          'a billed-unknown series retry keeps at most the job''s own reserve');
+
+---------------------------------------------------------------------------
+-- Over the cap: H2's budget is 2,000,000 (it tagged last month).
+---------------------------------------------------------------------------
+reset role;
+insert into library.ai_usage (household_id, feature, month, spent_micro, calls)
+values (pg_temp.hh2(), 'tagging', (pg_temp.m() - interval '1 month')::date, 1000, 1);
+select pg_temp.card(83);
+select pg_temp.card(84);
+select pg_temp.qjob(83, 'series', 'series');
+set local role authenticated;
+select pg_temp.as_c();
+select pg_temp.cl(83);
+reset role;
+update library.ai_usage set spent_micro = 2000000 - 1000
+ where household_id = pg_temp.hh2() and feature = 'tagging' and month = pg_temp.m();
+select pg_temp.qjob(84, 'series', 'series');
+set local role authenticated;
+select pg_temp.as_c();
+select is(pg_temp.fin(83, pg_temp.sr('null'::jsonb, 'none'), library.series_reserve_micro() + 4000) || '|'
+          || pg_temp.spent(pg_temp.hh2()),
+          'done|2003000', 'a series finish overrunning by 4,000 leaves spent above the budget');
+select is(pg_temp.cl(84), 'budget:0', 'and the next claim answers budget');
+
+---------------------------------------------------------------------------
+-- The budget read (D10).
+---------------------------------------------------------------------------
+select pg_temp.as_a();
+select is((select b.reserve_micro from library.ai_budget(pg_temp.hh(), 'tagging') b),
+          greatest(library.tag_reserve_micro(), library.series_reserve_micro()),
+          'ai_budget tagging reserve_micro is the larger of the two reserves');
+select is((select b.reserve_micro from library.ai_budget(pg_temp.hh(), 'ask') b), 0, 'ai_budget ask reserve_micro is 0');
+
+---------------------------------------------------------------------------
+-- The re-check (D11). Only cards marked here count; every other marker is
+-- cleared first.
+---------------------------------------------------------------------------
+reset role;
+update library.book_cards set series_checked_at = null;
+update library.books set authors = '{Tj Holt}', synopsis = rpad('A long made-up synopsis.', 150, ' z')
+ where id = pg_temp.book(65);
+update library.books set synopsis = rpad('A short synopsis.', 99, ' z') where id = pg_temp.book(66);
+update library.books set synopsis = rpad('A short synopsis.', 100, ' z') where id = pg_temp.book(67);
+update library.books set series_name = 'Ember Loom' where id = pg_temp.book(68);
+update library.books set user_edited_fields = '{seriesVolume}' where id = pg_temp.book(69);
+update library.books set authors = '{Ines Dravenholt-Ashe}', synopsis = rpad('A long made-up synopsis.', 150, ' z')
+ where id = pg_temp.book(75);
+update library.tag_jobs set status = 'done'
+ where status in ('queued', 'processing') and book_id in (select pg_temp.book(n) from generate_series(65, 75) n);
+select pg_temp.card(n, true) from unnest(array[65, 66, 67, 68, 69, 70, 71, 72, 73, 75]) n;
+insert into library.series_suggestions (household_id, kind, name_key, name)
+values (pg_temp.hh(), 'new', 'wrenfold saga', 'Wrenfold Saga');
+insert into library.series_suggestion_books (suggestion_id, book_id, household_id, volume, why, status, decided_at)
+values (pg_temp.ssid('new', 'wrenfold saga'), pg_temp.book(70), pg_temp.hh(), 1, 'w70', 'pending', null),
+       (pg_temp.ssid('existing', 'thornmere cycle'), pg_temp.book(71), pg_temp.hh(), 1, 'w71', 'pending', null),
+       (pg_temp.ssid('existing', 'lantern vale cycle'), pg_temp.book(72), pg_temp.hh(), 1, 'w72', 'dismissed', now()),
+       (pg_temp.ssid('new', 'saltglass archives'), pg_temp.book(73), pg_temp.hh(), 1, 'w73', 'pending', null);
+
+select is(library._series_recheck_reset(), 4, '_series_recheck_reset returns the number of markers cleared');
+select is((select string_agg(n || ':' || pg_temp.chk(n), ',' order by n)
+             from unnest(array[65, 66, 67, 68, 69, 70, 71, 72, 73, 75]) n),
+          '65:unchecked,66:unchecked,67:checked,68:checked,69:checked,70:checked,71:checked,72:unchecked,73:unchecked,75:checked',
+          're-check: a same-author book in a series (Tj Holt / T. J. Holt) and a 99-character synopsis clear; '
+          || '100 characters, a series, hand-set and a pending book on a listed suggestion keep; a dismissed book '
+          || 'or a pending one on an approved name clears; a same-author series only in H2 keeps');
+select is(library._series_recheck_reset(), 0, 'a second re-check clears nothing');
+select is((select count(*)::int from library.tag_jobs j
+            where j.status = 'queued' and j.book_id in (select pg_temp.book(n) from generate_series(65, 75) n)), 0,
+          'the re-check queues nothing');
+
+set local role authenticated;
+select pg_temp.as_a();
+select throws_ok($$ select library._series_recheck_reset() $$, '42501', null, 'A: executing _series_recheck_reset is denied');
+select throws_ok($$ select library._same_author_books(pg_temp.hh(), pg_temp.book(31)) $$, '42501', null,
+                 'A: executing _same_author_books is denied');
+select throws_ok($$ select library._ai_settle_actual(pg_temp.hh(), 'tagging', pg_temp.m(), 0, 0) $$, '42501', null,
+                 'A: executing _ai_settle_actual is denied');
+
+---------------------------------------------------------------------------
+-- Constants: the Deno values (tagger.ts), kept in step by Tasks 5 and 6.
+---------------------------------------------------------------------------
+reset role;
+select is(library.tag_reserve_micro(), 94000, 'tag_reserve_micro is 94000 (tagger.ts TAG_RESERVE_MICRO)');
+select is(library.series_reserve_micro(), 150000, 'series_reserve_micro is 150000 (tagger.ts SERIES_RESERVE_MICRO)');
 
 select * from finish();
 rollback;
