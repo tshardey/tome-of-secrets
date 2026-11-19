@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(65);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -124,12 +124,12 @@ update library.books set authors = '{Tj Holt}' where id = pg_temp.book(2);
 update library.books set authors = '{Emile Varro}', series_name = 'Ember Loom', series_volume = 1
  where id = pg_temp.book(3);
 update library.books set authors = '{Petra Wynnecombe,Émile Varro}' where id = pg_temp.book(4);
-update library.books set authors = '{A. Reed}' where id in (pg_temp.book(5), pg_temp.book(9), pg_temp.book(14),
+update library.books set authors = '{A. Reed}' where id in (pg_temp.book(5), pg_temp.book(9), pg_temp.book(14), pg_temp.book(23), pg_temp.book(24),
                                                            pg_temp.book(15));
 update library.books set authors = '{M. Holt}', series_name = 'Saltglass Archive', series_volume = 1
  where id = pg_temp.book(6);
 update library.books set authors = '{M. Holt}' where id in (pg_temp.book(8), pg_temp.book(12));
-update library.books set authors = '{Petra Wynnecombe}' where id = pg_temp.book(13);
+update library.books set authors = '{Petra Wynnecombe}' where id in (pg_temp.book(13), pg_temp.book(25));
 update library.books set authors = '{—}', series_name = 'Thornmere Cycle' where id = pg_temp.book(20);
 update library.books set authors = '{—}' where id = pg_temp.book(21);
 -- Another household's book by A. Reed in Lantern Vale Cycle: never evidence for H.
@@ -166,6 +166,8 @@ select throws_ok($$ select library._authors_match_series(pg_temp.hh(), pg_temp.b
                  '42501', null, 'A: executing _authors_match_series is denied');
 select throws_ok($$ select library._suggest_existing(pg_temp.hh(), pg_temp.book(2), 'Ember Loom', 1, 'w') $$,
                  '42501', null, 'A: executing _suggest_existing is denied');
+select throws_ok($$ select library._fill_existing(pg_temp.hh(), pg_temp.book(2), 'Ember Loom', 1) $$,
+                 '42501', null, 'A: executing _fill_existing is denied');
 
 ---------------------------------------------------------------------------
 -- Author match fills (Review Focus 1).
@@ -289,11 +291,40 @@ select throws_ok($$ select library.dismiss_series_suggestion(pg_temp.ssid('exist
                  '42501', null, 'C: dismissing H''s existing row is denied');
 
 ---------------------------------------------------------------------------
+-- A per-book dismissal wins over a later author match, on both paths; a
+-- direct fill closes the book's pending row.
+---------------------------------------------------------------------------
+select pg_temp.as_a();
+select is(pg_temp.tag(5, pg_temp.s('Lantern Vale Cycle', 3, 'w5c')) || '|' || pg_temp.ser(5) || '|'
+          || pg_temp.sugg('existing', 'lantern vale cycle'),
+          'done|-:-|pending|Lantern Vale Cycle|-|5:3.00:w5:dismissed,14:4.00:w14:approved,15:5.00:w15:approved',
+          'book 5, dismissed, now author-matches A. Reed''s book 14 but stays blank and dismissed');
+
+-- A. Reed's book 23 is put in Saltglass Archive by hand; Petra's book 25 too.
+reset role;
+update library.books set series_name = 'Saltglass Archive' where id in (pg_temp.book(23), pg_temp.book(25));
+set local role authenticated;
+select pg_temp.as_a();
+select is(pg_temp.tag(9, pg_temp.s('Saltglass Archive', 7, 'w9c')) || '|' || pg_temp.ser(9),
+          'done|-:-', 'book 9, dismissed, stays blank when it author-matches through step 3');
+select is(pg_temp.tag(9, pg_temp.s('Saltglass Archives', 7, 'w9d')) || '|' || pg_temp.ser(9) || '|'
+          || pg_temp.sugg('existing', 'saltglass archive'),
+          'done|-:-|pending|Saltglass Archive|-|9:3.00:w9:dismissed,13:6.00:w13:pending',
+          'and through the approved alias');
+select is(pg_temp.tag(24, pg_temp.s('Saltglass Archives', 8)) || '|' || pg_temp.ser(24), 'done|Saltglass Archive:8.00',
+          'another A. Reed book still fills directly');
+select is(pg_temp.tag(13, pg_temp.s('Saltglass Archive', 6)) || '|' || pg_temp.ser(13) || '|'
+          || pg_temp.sugg('existing', 'saltglass archive') || '|'
+          || pg_temp.decided_ok(pg_temp.ssid('existing', 'saltglass archive')),
+          'done|Saltglass Archive:6.00|pending|Saltglass Archive|-|9:3.00:w9:dismissed,13:6.00:w13:approved|true',
+          'Petra''s pending book 13, now author-matching book 25, fills and its row is approved with decided_at');
+
+---------------------------------------------------------------------------
 -- RLS and grants.
 ---------------------------------------------------------------------------
 -- H: new rows Saltglass Archives (7, 17), Wrenfold Tale (10); existing rows
 -- Lantern Vale Cycle (5, 14, 15), Thornmere Cycle (21), Saltglass Archive
--- (9, 13), Wrenfold Tales (11).
+-- (9, 13; 13 approved by its direct fill), Wrenfold Tales (11).
 select pg_temp.as_a();
 select is((select string_agg(s.kind || ':' || s.status, ',' order by s.kind, s.name_key)
              from library.series_suggestions s),
@@ -302,7 +333,7 @@ select is((select string_agg(s.kind || ':' || s.status, ',' order by s.kind, s.n
 select pg_temp.as_b();
 select is((select string_agg(sb.status, ',' order by sb.status) || ':' || count(*) filter (where sb.decided_at is not null)
              from library.series_suggestion_books sb),
-          'approved,approved,approved,approved,dismissed,dismissed,pending,pending,pending,pending:6',
+          'approved,approved,approved,approved,approved,dismissed,dismissed,pending,pending,pending:7',
           'B sees the books'' status and decided_at');
 select pg_temp.as_c();
 select is((select count(*)::int from library.series_suggestions) || ':'

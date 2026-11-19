@@ -34,6 +34,10 @@
 --     refreshes its volume and why while it is still pending. A dismissed
 --     book stays dismissed. Dismissal is per book, so it never stops a later
 --     same-author book filling the series, or another book being suggested.
+--     Both author-match fills go through _fill_existing: a book dismissed on
+--     the existing row for that series is never filled, even when it later
+--     author-matches (say, after a same-author book was approved into it); a
+--     book filled there has its pending row on that existing row approved.
 -- D5  approve_series_suggestion fills only pending books (still blank, not
 --     hand-set), marks each filled book approved, and for an existing row
 --     marks every other pending book approved too (they leave the list); the
@@ -150,6 +154,42 @@ begin
 end;
 $$;
 
+-- The author-match fill (D4 steps 3 and 4-approved). The caller has locked
+-- the book. A per-book dismissal wins: when this book was dismissed on the
+-- existing row for p_target it is not filled and the answer is dismissed.
+-- Otherwise the series is applied, and a pending row this book has there is
+-- marked approved so the list isn't stale. Takes the suggestion FOR SHARE
+-- after the book lock, the same order as _suggest_existing.
+create or replace function library._fill_existing(p_household uuid, p_book uuid, p_target text, p_volume numeric)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_sid    uuid;
+  v_status text;
+begin
+  select s.id into v_sid
+    from library.series_suggestions s
+   where s.household_id = p_household and s.kind = 'existing' and s.name_key = lower(p_target)
+     for share;
+  if v_sid is not null then
+    select sb.status into v_status
+      from library.series_suggestion_books sb
+     where sb.suggestion_id = v_sid and sb.book_id = p_book;
+    if v_status = 'dismissed' then
+      return 'dismissed';
+    end if;
+    update library.series_suggestion_books sb
+       set status = 'approved', decided_at = now()
+     where sb.suggestion_id = v_sid and sb.book_id = p_book and sb.status = 'pending';
+  end if;
+  update library.books b set series_name = p_target, series_volume = p_volume where b.id = p_book;
+  return 'applied';
+end;
+$$;
+
 -- D7 (Plan 10) with D4's steps 3-4: applies one series result to a book. The
 -- caller has locked the book (finish_tag_job). Returns ignored | kept |
 -- applied | suggested | dismissed.
@@ -204,8 +244,7 @@ begin
   v_target := library._series_spelling(p_household, v_key);
   if v_target is not null then
     if library._authors_match_series(p_household, p_book, v_key) then
-      update library.books b set series_name = v_target, series_volume = v_volume where b.id = p_book;
-      return 'applied';
+      return library._fill_existing(p_household, p_book, v_target, v_volume);
     end if;
     return library._suggest_existing(p_household, p_book, v_target, v_volume, v_why);
   end if;
@@ -226,8 +265,7 @@ begin
   elsif v_status = 'approved' then
     v_target := coalesce(library._series_spelling(p_household, lower(v_as)), v_as);
     if library._authors_match_series(p_household, p_book, lower(v_target)) then
-      update library.books b set series_name = v_target, series_volume = v_volume where b.id = p_book;
-      return 'applied';
+      return library._fill_existing(p_household, p_book, v_target, v_volume);
     end if;
     return library._suggest_existing(p_household, p_book, v_target, v_volume, v_why);
   end if;
@@ -386,6 +424,7 @@ $$;
 revoke execute on function library._author_key(text)                                 from public, anon, authenticated;
 revoke execute on function library._authors_match_series(uuid, uuid, text)          from public, anon, authenticated;
 revoke execute on function library._suggest_existing(uuid, uuid, text, numeric, text) from public, anon, authenticated;
+revoke execute on function library._fill_existing(uuid, uuid, text, numeric)         from public, anon, authenticated;
 revoke execute on function library._apply_series(uuid, uuid, jsonb)                  from public, anon, authenticated;
 revoke execute on function library.approve_series_suggestion(uuid, text, jsonb)      from public, anon;
 revoke execute on function library.dismiss_series_suggestion(uuid)                   from public, anon;
