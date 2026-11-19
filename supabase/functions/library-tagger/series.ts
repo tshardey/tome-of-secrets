@@ -69,15 +69,6 @@ export const SAME_AUTHOR_TITLE = 120;
 const SAME_AUTHOR_SERIES = 200;
 export const SERIES_DESCRIPTION_CHARS = 1500;
 export const OPEN_LIBRARY_SERIES_CAP = 3;
-/** Tokens allowed for the same-author block and the Open Library line (D6). */
-export const SAME_AUTHOR_ALLOWANCE = 1700;
-export const OPEN_LIBRARY_ALLOWANCE = 200;
-/**
- * Tokens allowed for the series book text at 1 token per character: title 200,
- * authors 180, summary 800, cover 300 (D5), description 1,500, the same-author
- * block 1,700 and the Open Library line 200 (D6).
- */
-export const SERIES_TEXT_ALLOWANCE = 1500 + SERIES_DESCRIPTION_CHARS + SAME_AUTHOR_ALLOWANCE + OPEN_LIBRARY_ALLOWANCE;
 
 export const SeriesSchema = z.object({
   name: z.string(),
@@ -186,13 +177,19 @@ const flat = (s: string) => s.replace(/\s+/g, " ").trim();
 
 const SAME_AUTHOR_HEADER = 'Household books by the same author (title, then series and number, or "no series"):';
 
+/** " #n" for a finite volume in [0, 10000) with at most 2 decimals; otherwise nothing, so a line stays bounded. */
+function volumeText(v: number | null): string {
+  if (v === null || !Number.isFinite(v) || v < 0 || v >= 10000) return "";
+  return ` #${round2(v)}`;
+}
+
 /** D6: one escaped line per book, at most SAME_AUTHOR_CAP; null when there are none. */
 export function sameAuthorText(books: SameAuthorBook[]): string | null {
   const lines = books.slice(0, SAME_AUTHOR_CAP).map((b) => {
     const title = field(flat(b.title), SAME_AUTHOR_TITLE);
     const name = b.seriesName ? flat(b.seriesName) : "";
     if (name === "") return `${title} | no series`;
-    const volume = b.seriesVolume === null ? "" : ` #${b.seriesVolume}`;
+    const volume = volumeText(b.seriesVolume);
     return `${title} | ${field(name, SAME_AUTHOR_SERIES)}${volume}`;
   });
   return lines.length ? [SAME_AUTHOR_HEADER, ...lines].join("\n") : null;
@@ -204,6 +201,28 @@ export function openLibraryText(series: string[]): string | null {
     .map((n) => escapeData(clip(n, NAME_MAX)));
   return names.length ? `Open Library lists: <openlibrary>${names.join("; ")}</openlibrary>` : null;
 }
+
+/**
+ * Tokens allowed for the same-author block and the Open Library line, at 1
+ * token per character (the book-text rate): the real formatters' output at
+ * their caps, so the allowance cannot drift from them.
+ */
+export const SAME_AUTHOR_ALLOWANCE = sameAuthorText(
+  Array.from({ length: SAME_AUTHOR_CAP }, () => ({
+    title: "t".repeat(SAME_AUTHOR_TITLE),
+    seriesName: "s".repeat(SAME_AUTHOR_SERIES),
+    seriesVolume: 9999.99,
+  })),
+)!.length;
+export const OPEN_LIBRARY_ALLOWANCE = openLibraryText(
+  Array.from({ length: OPEN_LIBRARY_SERIES_CAP }, () => "o".repeat(NAME_MAX)),
+)!.length;
+/**
+ * Tokens allowed for the series book text at 1 token per character: title 200,
+ * authors 180, summary 800, cover 300 (D5), description 1,500, and the
+ * same-author block and Open Library line at their caps (D6).
+ */
+export const SERIES_TEXT_ALLOWANCE = 1500 + SERIES_DESCRIPTION_CHARS + SAME_AUTHOR_ALLOWANCE + OPEN_LIBRARY_ALLOWANCE;
 
 function seriesBookText(input: SeriesInput): string {
   const authors = input.authors

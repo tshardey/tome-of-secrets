@@ -38,7 +38,7 @@ const TIMEOUT_MS = 120_000;
  *   ceil( plain x in + (vocab + series) x 1.25 x in + MAX_TOKENS x out )
  * where worstCaseTagTokens() gives
  *   plain = ceil(system prompt chars / 3) + 4,800 (one image)
- *           + 7,900 (book text, card, same-author books and Open Library line) + 1,000 (framing and the
+ *           + the allowances (book text, card, same-author books and Open Library line) + 1,000 (framing and the
  *           structured-output instructions), at the input rate;
  *   vocab = ceil(vocabulary block chars / 3) at its caps (120 ToS ids and
  *           578 library ids, 40 characters each), at the 1.25x cache-write
@@ -62,7 +62,7 @@ export const SERIES_MAX_TOKENS = 1024;
  * The most one series check can cost, in micro-dollars (Plan 10 D5):
  *   ceil( plain x in + block x 1.25 x in + SERIES_MAX_TOKENS x out )
  * where worstCaseSeriesTokens() gives
- *   plain = ceil(SERIES_SYSTEM_PROMPT chars / 3) + SERIES_TEXT_ALLOWANCE (4,900)
+ *   plain = ceil(SERIES_SYSTEM_PROMPT chars / 3) + SERIES_TEXT_ALLOWANCE
  *           + REQUEST_OVERHEAD_TOKENS (1,000), at the input rate;
  *   block = ceil(household series block chars / 3) at its cap, at the 1.25x
  *           cache-write rate, since that block carries cache_control.

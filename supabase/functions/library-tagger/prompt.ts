@@ -227,7 +227,7 @@ const ID_MAX = 40;
 /**
  * The most input tokens one tagging call can use (D6, with the ToS id line):
  *   plain: ceil(system prompt chars / 3) + 4,800 (one image)
- *          + TEXT_TOKEN_ALLOWANCE (7,900) + REQUEST_OVERHEAD_TOKENS (1,000)
+ *          + TEXT_TOKEN_ALLOWANCE + REQUEST_OVERHEAD_TOKENS (1,000)
  *   vocab: ceil(vocabulary chars / 3), the vocabulary block as buildVocabText
  *          formats it at its caps: 120 ToS ids and 578 library ids, each of
  *          40 characters.

@@ -12,7 +12,7 @@ import {
   TEXT_TOKEN_ALLOWANCE,
   worstCaseTagTokens,
 } from "./prompt.ts";
-import { householdSeriesText, SERIES_BLOCK_CHARS, SERIES_RULES, type SeriesStatus } from "./series.ts";
+import { householdSeriesText, OPEN_LIBRARY_ALLOWANCE, SAME_AUTHOR_ALLOWANCE, SERIES_BLOCK_CHARS, SERIES_RULES, type SeriesStatus } from "./series.ts";
 
 const IMAGE = { mediaType: "image/jpeg", bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]) };
 
@@ -196,7 +196,7 @@ Deno.test("worstCaseTagTokens: D6 input at the caps, with 120 ToS ids, vocabular
   assert.equal(vocab[0].id.length, 40);
   assert.equal(tosTags[0].length, 40);
   const text = blocks({ ...INPUT, tosTags, vocab, image: null })[0].text!;
-  assert.equal(TEXT_TOKEN_ALLOWANCE, 6000 + 1700 + 200);
+  assert.equal(TEXT_TOKEN_ALLOWANCE, 6000 + SAME_AUTHOR_ALLOWANCE + OPEN_LIBRARY_ALLOWANCE);
   assert.equal(REQUEST_OVERHEAD_TOKENS, 1000);
   const names = Array.from({ length: 300 }, (_, i) => String(i).padStart(3, "0").padEnd(40, "x"));
   const seriesChars = householdSeriesText(names)!.length;
@@ -333,6 +333,6 @@ Deno.test("worstCaseTagTokens: plain counts the same-author and Open Library all
   const w = worstCaseTagTokens();
   assert.equal(
     w.plain,
-    Math.ceil(TAG_SYSTEM_PROMPT.length / 3) + 4800 + (6000 + 1700 + 200) + REQUEST_OVERHEAD_TOKENS,
+    Math.ceil(TAG_SYSTEM_PROMPT.length / 3) + 4800 + (6000 + SAME_AUTHOR_ALLOWANCE + OPEN_LIBRARY_ALLOWANCE) + REQUEST_OVERHEAD_TOKENS,
   );
 });

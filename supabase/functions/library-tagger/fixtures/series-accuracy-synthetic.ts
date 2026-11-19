@@ -8,6 +8,8 @@
 // lookup would return. `expected` is the answer a good run gives: found with a
 // name and volume, or none/unsure with no name.
 
+import type { SeriesStatus } from "../series.ts";
+
 export type SeriesAccuracyKind =
   | "author-two-ways"
   | "cross-author"
@@ -27,7 +29,7 @@ export interface SeriesAccuracyBook {
   openLibrary: string[];
   isbn: string | null;
   kind: SeriesAccuracyKind;
-  expected: { status: "found" | "none" | "unsure"; name: string | null; volume: number | null };
+  expected: { status: SeriesStatus; name: string | null; volume: number | null };
 }
 
 export const SERIES_ACCURACY_BOOKS: SeriesAccuracyBook[] = [

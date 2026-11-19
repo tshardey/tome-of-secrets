@@ -12,6 +12,8 @@ import {
   SERIES_DESCRIPTION_CHARS,
   SERIES_SEARCH_PROMPT,
   OPEN_LIBRARY_SERIES_CAP,
+  OPEN_LIBRARY_ALLOWANCE,
+  SAME_AUTHOR_ALLOWANCE,
   householdSeriesText,
   sanitizeSeries,
   SERIES_BLOCK_CHARS,
@@ -144,7 +146,7 @@ Deno.test("SERIES_SYSTEM_PROMPT carries the rules", () => {
 });
 
 Deno.test("worstCaseSeriesTokens: plain and block at the caps", () => {
-  assert.equal(SERIES_TEXT_ALLOWANCE, 1500 + 1500 + 1700 + 200);
+  assert.equal(SERIES_TEXT_ALLOWANCE, 1500 + SERIES_DESCRIPTION_CHARS + SAME_AUTHOR_ALLOWANCE + OPEN_LIBRARY_ALLOWANCE);
   const names = Array.from({ length: SERIES_NAMES_CAP }, (_, i) => String(i).padStart(3, "0").padEnd(40, "x"));
   const w = worstCaseSeriesTokens();
   assert.equal(
@@ -256,4 +258,25 @@ Deno.test("cleanStatus: found needs a series, none and unsure drop one", () => {
   assert.deepEqual(cleanStatus("unsure", s), { status: "unsure", series: null });
   assert.deepEqual(cleanStatus("none", s), { status: "none", series: null });
   assert.deepEqual(cleanStatus("unsure", null), { status: "unsure", series: null });
+});
+
+Deno.test("allowances cover the formatters at their worst case", () => {
+  const worstBook = (seriesVolume: number | null) => ({ title: "</".repeat(500), seriesName: "<".repeat(500), seriesVolume });
+  for (const v of [9999.99, 9999.999, 1e21, 123456.789, -5, NaN, Infinity, 0.1 + 0.2, null]) {
+    const text = sameAuthorText(Array.from({ length: 40 }, () => worstBook(v)))!;
+    assert.ok(text.length <= SAME_AUTHOR_ALLOWANCE, String(v));
+  }
+  const ol = openLibraryText(Array.from({ length: 10 }, () => "<".repeat(900)))!;
+  assert.ok(ol.length <= OPEN_LIBRARY_ALLOWANCE);
+  // The allowance is the real formatters at their caps, not a typed literal.
+  assert.ok(SAME_AUTHOR_ALLOWANCE > 15 * (120 + 200));
+  assert.ok(OPEN_LIBRARY_ALLOWANCE > 3 * 200);
+});
+
+Deno.test("sameAuthorText: a volume is bounded to a finite number with at most 2 decimals", () => {
+  const line = (v: number | null) => sameAuthorText([{ title: "T", seriesName: "S", seriesVolume: v }])!.split("\n")[1];
+  assert.equal(line(2), "T | S #2");
+  assert.equal(line(2.555), "T | S #2.56");
+  assert.equal(line(2.5), "T | S #2.5");
+  for (const v of [null, NaN, Infinity, -1, 10000, 1e21]) assert.equal(line(v), "T | S", String(v));
 });
