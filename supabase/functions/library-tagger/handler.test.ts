@@ -73,6 +73,7 @@ const RESULT: TagResult = {
   cover_description: "A blue field.",
   suggestions: [],
   series: null,
+  series_status: "none",
 };
 
 function fakeTag(result: TagCall | (() => never), series: SeriesCall | (() => never) = { kind: "billing" }) {
@@ -466,13 +467,13 @@ Deno.test("a full claim's series names reach the tagger (and so the household bl
 Deno.test("a full ok finishes with the series cleaned; a placeholder name becomes null", async () => {
   const named = await run(claimed(), {
     kind: "ok",
-    result: { ...RESULT, series: { name: "  Lantern Vale ", volume: 1, why: "The title numbers it." } },
+    result: { ...RESULT, series_status: "found", series: { name: "  Lantern Vale ", volume: 1, why: "The title numbers it." } },
     usage: USAGE,
   });
   assert.deepEqual((named.calls.finish[0][2] as FinishResult).series, { name: "Lantern Vale", volume: 1, why: "The title numbers it." });
   const standalone = await run(claimed(), {
     kind: "ok",
-    result: { ...RESULT, series: { name: "Standalone", volume: null, why: "x" } },
+    result: { ...RESULT, series_status: "found", series: { name: "Standalone", volume: null, why: "x" } },
     usage: USAGE,
   });
   const result = standalone.calls.finish[0][2] as FinishResult;
@@ -559,7 +560,15 @@ Deno.test("a series claim calls findSeries only, fetches nothing, and finishes w
   assert.deepEqual(body, { outcome: "done" });
   assert.equal(inputs.length, 0);
   assert.equal(urls.length, 0); // no ToS list, no cover
-  assert.deepEqual(seriesInputs, [{ title: "Lantern Vale #1", authors: ["Member A"], card: CARD, seriesNames: SERIES_NAMES }]);
+  assert.deepEqual(seriesInputs, [{
+    title: "Lantern Vale #1",
+    authors: ["Member A"],
+    description: claimed().book!.description,
+    card: CARD,
+    seriesNames: SERIES_NAMES,
+    sameAuthor: [],
+    openLibrary: [],
+  }]);
   const [, , result, usage, cost, model] = calls.finish[0] as [string, string, FinishResult, Record<string, number>, number, string];
   assert.deepEqual(result, {
     tos: [],

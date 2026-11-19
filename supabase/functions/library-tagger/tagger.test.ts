@@ -24,6 +24,8 @@ const INPUT: TagInput = {
   description: "A courier crosses a dry sea.",
   card: null,
   seriesNames: [],
+  sameAuthor: [],
+  openLibrary: [],
   tosTags: ["fantasy", "mystery"],
   vocab: [{ id: "found-family", category: "trope" }, { id: "cover-blue", category: "cover-colour" }],
   image: { mediaType: "image/png", bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) },
@@ -36,6 +38,7 @@ const RESULT: TagResult = {
   cover_description: "A blue field.",
   suggestions: [],
   series: null,
+  series_status: "none",
 };
 
 function message(over: Record<string, unknown> = {}) {
@@ -214,7 +217,7 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
 Deno.test("TAG_RESERVE_MICRO is ceilingMicro(MODEL) rounded up to 1,000", () => {
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
   assert.equal(TAG_RESERVE_MICRO, Math.ceil(ceilingMicro(MODEL) / 1000) * 1000);
-  assert.equal(TAG_RESERVE_MICRO, 82_000);
+  assert.equal(TAG_RESERVE_MICRO, 86_000);
 });
 
 Deno.test("fakeTagger: fantasy, cover-blue only with an image, fixed summary, usage 0", async () => {
@@ -250,10 +253,13 @@ Deno.test("chooseTagger: fake only when asked for and local", () => {
 const SERIES_INPUT: SeriesInput = {
   title: "Lantern Vale #3",
   authors: ["Ines Dravenholt"],
+  description: "The third book of Lantern Vale.",
   card: { summary: "A keeper lights the last lamp.", coverDescription: "A lamp on a hill." },
   seriesNames: ["Lantern Vale", "Thornmere Cycle"],
+  sameAuthor: [],
+  openLibrary: [],
 };
-const SERIES_OUT = { series: { name: "Lantern Vale", volume: 3, why: "The title numbers it." } };
+const SERIES_OUT = { series: { name: "Lantern Vale", volume: 3, why: "The title numbers it." }, series_status: "found" };
 
 Deno.test("findSeries: model, SERIES_MAX_TOKENS, thinking, schema, exact prompt, household block cached", async () => {
   const { fetchImpl, calls } = stub(200, message({ content: [{ type: "text", text: JSON.stringify(SERIES_OUT) }] }));
@@ -282,7 +288,7 @@ Deno.test("findSeries: model, SERIES_MAX_TOKENS, thinking, schema, exact prompt,
 });
 
 Deno.test("findSeries: a null series is ok", async () => {
-  const { fetchImpl } = stub(200, message({ content: [{ type: "text", text: JSON.stringify({ series: null }) }] }));
+  const { fetchImpl } = stub(200, message({ content: [{ type: "text", text: JSON.stringify({ series: null, series_status: "unsure" }) }] }));
   const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
   assert.equal(r.kind, "ok");
   if (r.kind === "ok") assert.equal(r.series, null);
@@ -327,15 +333,11 @@ Deno.test("seriesCeilingMicro: plain at 1x, the household block at 1.25x, SERIES
   assert.equal(seriesCeilingMicro(), seriesCeilingMicro(MODEL));
 });
 
-Deno.test("SERIES_RESERVE_MICRO and TAG_RESERVE_MICRO sit within 1,000 above their ceilings", () => {
+Deno.test("SERIES_RESERVE_MICRO covers its ceiling and is the provisional 150,000 (D10)", () => {
   assert.ok(seriesCeilingMicro() <= SERIES_RESERVE_MICRO);
-  assert.ok(SERIES_RESERVE_MICRO - seriesCeilingMicro() < 1000);
-  assert.equal(SERIES_RESERVE_MICRO, Math.ceil(seriesCeilingMicro(MODEL) / 1000) * 1000);
-  // Pinned: library.series_reserve_micro() returns the same literal.
-  assert.equal(SERIES_RESERVE_MICRO, 27_000);
+  // Pinned: library.series_reserve_micro() returns the same literal (Task 4).
+  assert.equal(SERIES_RESERVE_MICRO, 150_000);
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
-  assert.ok(TAG_RESERVE_MICRO - ceilingMicro() < 1000);
-  assert.ok(SERIES_RESERVE_MICRO < TAG_RESERVE_MICRO);
 });
 
 Deno.test("fakeTagger: tag and findSeries read the series from the title, usage 0", async () => {

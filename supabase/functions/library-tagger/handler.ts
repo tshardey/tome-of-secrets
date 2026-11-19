@@ -170,8 +170,12 @@ async function handleSeries(jobId: string, token: string, claim: Claim, book: Cl
   const call = await deps.tagger.findSeries({
     title: book.title,
     authors: book.authors,
+    description: book.description,
     card: claim.card,
     seriesNames: claim.seriesNames,
+    // Task 5 wires the same-author books and the Open Library lookup.
+    sameAuthor: [],
+    openLibrary: [],
   });
   if (call.kind !== "ok") return await releaseFailure(deps.db, jobId, token, claim, call, deps.now());
   const result: FinishResult = {
@@ -237,6 +241,9 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       card: claim.card,
       // buildTagContent sends the household block for a full job only.
       seriesNames: claim.seriesNames,
+      // Task 5 wires the same-author books and the Open Library lookup.
+      sameAuthor: [],
+      openLibrary: [],
       tosTags,
       vocab,
       image,

@@ -38,7 +38,7 @@ const TIMEOUT_MS = 120_000;
  *   ceil( plain x in + (vocab + series) x 1.25 x in + MAX_TOKENS x out )
  * where worstCaseTagTokens() gives
  *   plain = ceil(system prompt chars / 3) + 4,800 (one image)
- *           + 6,000 (book text and card) + 1,000 (framing and the
+ *           + 7,900 (book text, card, same-author books and Open Library line) + 1,000 (framing and the
  *           structured-output instructions), at the input rate;
  *   vocab = ceil(vocabulary block chars / 3) at its caps (120 ToS ids and
  *           578 library ids, 40 characters each), at the 1.25x cache-write
@@ -53,7 +53,7 @@ export function ceilingMicro(model: AiModel = MODEL): number {
 }
 
 /** Must equal library.tag_reserve_micro(): ceilingMicro(MODEL) rounded up to 1,000. */
-export const TAG_RESERVE_MICRO = 82_000;
+export const TAG_RESERVE_MICRO = Math.ceil(ceilingMicro(MODEL) / 1000) * 1000;
 
 /** A series check is text only and its answer is a few dozen tokens (Plan 10 D5). */
 export const SERIES_MAX_TOKENS = 1024;
@@ -62,7 +62,7 @@ export const SERIES_MAX_TOKENS = 1024;
  * The most one series check can cost, in micro-dollars (Plan 10 D5):
  *   ceil( plain x in + block x 1.25 x in + SERIES_MAX_TOKENS x out )
  * where worstCaseSeriesTokens() gives
- *   plain = ceil(SERIES_SYSTEM_PROMPT chars / 3) + SERIES_TEXT_ALLOWANCE (1,500)
+ *   plain = ceil(SERIES_SYSTEM_PROMPT chars / 3) + SERIES_TEXT_ALLOWANCE (4,900)
  *           + REQUEST_OVERHEAD_TOKENS (1,000), at the input rate;
  *   block = ceil(household series block chars / 3) at its cap, at the 1.25x
  *           cache-write rate, since that block carries cache_control.
@@ -72,8 +72,12 @@ export function seriesCeilingMicro(model: AiModel = MODEL): number {
   return costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.block, cacheReadTokens: 0, outputTokens: SERIES_MAX_TOKENS });
 }
 
-/** Must equal library.series_reserve_micro(): seriesCeilingMicro(MODEL) rounded up to 1,000. */
-export const SERIES_RESERVE_MICRO = 27_000;
+/**
+ * Must equal library.series_reserve_micro(). Provisional (Plan 11 D10) until
+ * the searching run is measured: max(seriesCeilingMicro rounded up to 1,000,
+ * 2.5 x the measured worst series-job cost with two searches).
+ */
+export const SERIES_RESERVE_MICRO = 150_000;
 
 export type TagCall =
   | { kind: "ok"; result: TagResult; usage: Usage }
@@ -212,6 +216,7 @@ export function fakeTagger(): Tagger {
           cover_description: image ? "A plain blue cover." : null,
           suggestions: [],
           series: fakeRaw(input.title),
+          series_status: fakeRaw(input.title) ? "found" : "none",
         },
         usage: { ...ZERO },
       });
