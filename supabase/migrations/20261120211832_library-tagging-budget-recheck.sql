@@ -5,7 +5,8 @@
 --    month, $2.00 after) is gone. Ask stays $2.00. ai_budget_micro and
 --    ai_global_budget_micro keep their signatures, volatility, search_path,
 --    security mode and grants; ai_budget_micro's p_household and p_month are
---    now unused but kept for its callers.
+--    now unused but kept for its callers. With covers at $5.00 the caps
+--    total $14.00 a month, under the $15.00 Claude workspace cap.
 -- 2. library._series_recheck_all_blank() clears the "checked once" marker
 --    on every blank book: no series, not hand-set, and not on an open
 --    suggestion (the same exclusion as _series_recheck_reset). It queues
