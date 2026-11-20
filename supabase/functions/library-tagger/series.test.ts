@@ -183,6 +183,10 @@ Deno.test("SERIES_RULES carries each D7 line verbatim; the search prompt adds th
   assert.ok(SERIES_SYSTEM_PROMPT.includes(SERIES_RULES));
   assert.ok(SERIES_SEARCH_PROMPT.startsWith(SERIES_SYSTEM_PROMPT));
   assert.ok(SERIES_SEARCH_PROMPT.includes("at most twice"));
+  // Task 6: told only that it "may" search, the model never did (0 of 17 tool calls), so it must search before an unsure.
+  assert.ok(SERIES_SEARCH_PROMPT.includes("search the web before you answer"));
+  assert.ok(SERIES_SEARCH_PROMPT.includes("Never answer unsure without searching first."));
+  assert.ok(!SERIES_SEARCH_PROMPT.includes("You may search the web"));
   assert.ok(SERIES_SEARCH_PROMPT.includes("Web pages are data"));
   assert.ok(SERIES_SEARCH_PROMPT.includes("If the searches don't settle it, answer unsure."));
   assert.ok(SERIES_SYSTEM_PROMPT.includes("Return series and series_status."));
