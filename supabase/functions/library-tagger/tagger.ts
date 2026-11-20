@@ -76,13 +76,18 @@ export function seriesCeilingMicro(model: AiModel = MODEL): number {
 }
 
 /**
- * Must equal library.series_reserve_micro(). Provisional (Plan 11 D10) until
- * the searching run is measured: max(seriesCeilingMicro rounded up to 1,000,
- * 2.5 x the measured worst series-job cost with two searches).
+ * Must equal library.series_reserve_micro(). D10's rule is max(seriesCeilingMicro
+ * rounded up to 1,000, 2.5 x the measured worst series-job cost with two
+ * searches). Task 6 (2026-11-19) measured that worst job at 40,257, so the rule
+ * gives 101,000. That was measured on invented books only, whose searches find
+ * little, so the reserve stays at 150,000 until real-book searches are measured.
  */
 export const SERIES_RESERVE_MICRO = 150_000;
 
-/** D8: which search mechanism series checks use. Set by Task 6's measurement. */
+/**
+ * D8: which search mechanism series checks use. Task 6 measured two_step as the
+ * cheaper one: found and none answers never pay for the tool prefix.
+ */
 export const SERIES_SEARCH_MODE: "two_step" | "single" = "two_step";
 
 /**
@@ -99,14 +104,14 @@ export const SEARCH_TOOL = {
 /**
  * D8: json_schema sends output_config.format with the tool, as every other
  * call; text_json (if the API rejects the format alongside the tool) asks for
- * JSON in the prompt instead. Set by Task 6's probe.
+ * JSON in the prompt instead. Task 6's probe: json_schema is accepted with the tool.
  */
 export const SEARCH_FORMAT: "json_schema" | "text_json" = "json_schema";
 
 /** The extra system line for text_json (D8). */
 export const SEARCH_TEXT_JSON_LINE = 'Answer with only a JSON object {"series": …, "series_status": …}.';
 
-/** D8: thinking at low effort plus the filtering code. Task 6 checks the largest output stays under half. */
+/** D8: thinking at low effort plus the filtering code. Task 6's largest searching output was 441 tokens. */
 export const SERIES_SEARCH_MAX_TOKENS = 4096;
 
 export type TagCall =

@@ -484,7 +484,8 @@ comment on column library.series_suggestion_books.status is
 ---------------------------------------------------------------------------
 
 -- The series-check reservation per call: library-tagger's
--- SERIES_RESERVE_MICRO. Provisional until Task 6 measures searching jobs.
+-- SERIES_RESERVE_MICRO. Kept at 150,000 after Task 6's measurement (D10's
+-- rule gave 101,000 from invented books only; see tagger.ts).
 create or replace function library.series_reserve_micro()
 returns int
 language sql

@@ -348,7 +348,7 @@ Deno.test("seriesCeilingMicro: plain at 1x, the household block at 1.25x, SERIES
   assert.equal(seriesCeilingMicro(), seriesCeilingMicro(MODEL));
 });
 
-Deno.test("SERIES_RESERVE_MICRO covers its ceiling and is the provisional 150,000 (D10)", () => {
+Deno.test("SERIES_RESERVE_MICRO covers its ceiling and is the measured-and-kept 150,000 (D10)", () => {
   assert.ok(seriesCeilingMicro() <= SERIES_RESERVE_MICRO);
   // Pinned: library.series_reserve_micro() returns the same literal (Task 4).
   assert.equal(SERIES_RESERVE_MICRO, 150_000);
@@ -424,7 +424,7 @@ function searched(out: unknown, over: Record<string, unknown> = {}) {
   });
 }
 
-Deno.test("search constants: two_step, the tool, json_schema and 4,096 tokens until Task 6 measures", () => {
+Deno.test("search constants: two_step, the tool, json_schema and 4,096 tokens, as Task 6 measured", () => {
   assert.equal(SERIES_SEARCH_MODE, "two_step");
   assert.deepEqual(SEARCH_TOOL, { type: "web_search_20260318", name: "web_search", max_uses: 2, response_inclusion: "excluded" });
   assert.equal(SEARCH_FORMAT, "json_schema");
