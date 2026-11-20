@@ -562,13 +562,13 @@ Deno.test("a refused search call -> tag_refused with the summed usage", async ()
   assert.deepEqual(r, { kind: "fail", code: "tag_refused", usage: SUMMED });
 });
 
-Deno.test("a failed second call is never retried: unsure with the first call's usage and the failure named", async () => {
-  const cases: [number, string, string][] = [
-    [429, "rate_limit_error", "retry"],
-    [500, "api_error", "retry"],
-    [400, "invalid_request_error", "rejected"],
-    [402, "billing_error", "billing"],
-    [401, "authentication_error", "misconfigured"],
+Deno.test("an unbilled second-call failure is returned with the first call's usage, so the job is released", async () => {
+  const cases: [number, string, unknown][] = [
+    [429, "rate_limit_error", { kind: "retry", retryAfterSeconds: null, billedUnknown: false }],
+    [500, "api_error", { kind: "retry", retryAfterSeconds: null, billedUnknown: false }],
+    [400, "invalid_request_error", { kind: "rejected" }],
+    [402, "billing_error", { kind: "billing" }],
+    [401, "authentication_error", { kind: "misconfigured" }],
   ];
   for (const [status, type, failure] of cases) {
     const calls: unknown[] = [];
@@ -583,14 +583,10 @@ Deno.test("a failed second call is never retried: unsure with the first call's u
       );
     }) as typeof fetch;
     const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
-    assert.equal(calls.length, 2, String(status));
-    assert.deepEqual(
-      r,
-      { kind: "ok", status: "unsure", series: null, usage: FIRST, searched: true, searchFailure: failure },
-      String(status),
-    );
+    assert.equal(calls.length, 2, String(status)); // the search call is not retried in place
+    assert.deepEqual(r, { ...(failure as object), usage: FIRST }, String(status));
   }
-  // A connection error on the search call may have been billed: named billed_unknown.
+  // A connection error on the search call may have been billed: it finishes unsure, named billed_unknown.
   let n = 0;
   const flaky = ((_i: RequestInfo | URL) => {
     n++;

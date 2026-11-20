@@ -912,12 +912,48 @@ Deno.test("a billed-unknown search finishes unsure at no less than SERIES_RESERV
     assert.equal(cost, Math.max(costMicro(MODEL, USAGE), SERIES_RESERVE_MICRO));
     assert.equal(calls.release.length, 0);
 
-    const unbilled = await run(seriesClaim({ hasSameAuthorColumn: true }), { kind: "billing" }, {
-      series: { kind: "ok", status: "unsure", series: null, usage: USAGE, searched: true, searchFailure: "rejected" },
-    });
-    assert.equal(unbilled.calls.finish[0][4], costMicro(MODEL, USAGE));
   } finally {
     console.error = original;
   }
-  assert.deepEqual(logged, [["library-tagger search failed", "billed_unknown"], ["library-tagger search failed", "rejected"]]);
+  assert.deepEqual(logged, [["library-tagger search failed", "billed_unknown"]]);
+});
+
+Deno.test("an unbilled search-call failure releases at the first call's cost: no finish, so the book keeps its search", async () => {
+  const first: Usage = { inputTokens: 3000, outputTokens: 200, cacheCreationTokens: 0, cacheReadTokens: 1000 };
+  const spent = costMicro(MODEL, first);
+  assert.ok(spent > 0 && spent < SERIES_RESERVE_MICRO);
+  const claim = () => seriesClaim({ hasSameAuthorColumn: true, attempts: 1 });
+
+  // 429 / 5xx: requeued with backoff within the attempts, at the first call's cost.
+  const retry = await run(claim(), { kind: "billing" }, {
+    series: { kind: "retry", retryAfterSeconds: 7, billedUnknown: false, usage: first },
+  });
+  assert.deepEqual(retry.body, { outcome: "retry_later" });
+  assert.equal(retry.calls.finish.length, 0);
+  const [, , error, retryAt, usage, cost] = retry.calls.release[0];
+  assert.equal(error, null);
+  assert.ok(retryAt instanceof Date);
+  assert.equal((usage as Record<string, number>).computedCostMicro, spent);
+  assert.equal(cost, spent);
+
+  // 400: fails visibly as tag_rejected, at the first call's cost.
+  const rejected = await run(claim(), { kind: "billing" }, { series: { kind: "rejected", usage: first } });
+  assert.deepEqual(rejected.body, { outcome: "rejected" });
+  assert.equal(rejected.calls.finish.length, 0);
+  assert.equal(rejected.calls.release[0][2], "tag_rejected");
+  assert.equal(rejected.calls.release[0][5], spent);
+
+  // billing / misconfigured: released as before (SQL gives the attempt back at 0), usage kept.
+  for (const kind of ["billing", "misconfigured"] as const) {
+    const r = await run(claim(), { kind: "billing" }, { series: { kind, usage: first } });
+    assert.deepEqual(r.body, { outcome: kind });
+    assert.equal(r.calls.finish.length, 0);
+    assert.equal(r.calls.release[0][2], kind);
+    assert.equal((r.calls.release[0][4] as Record<string, number>).computedCostMicro, spent);
+  }
+
+  // Without a first call (single mode, or a plain failure), the release is as it always was.
+  const plain = await run(claim(), { kind: "billing" }, { series: { kind: "retry", retryAfterSeconds: 7, billedUnknown: false } });
+  assert.equal(plain.calls.release[0][4], null);
+  assert.equal(plain.calls.release[0][5], 0);
 });

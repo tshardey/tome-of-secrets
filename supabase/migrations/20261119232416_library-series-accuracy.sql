@@ -58,7 +58,9 @@
 -- search_path; client-callable ones check library.is_member; internal _
 -- functions have no client grant.
 --
--- Idempotent: safe to re-run.
+-- Re-runnable: the schema changes and functions are idempotent. The last
+-- statement, select library._series_recheck_reset(), is not: every re-apply
+-- clears the markers it selects again, so Find series offers those books again.
 
 ---------------------------------------------------------------------------
 -- Schema (D3)

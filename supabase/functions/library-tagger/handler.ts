@@ -171,6 +171,11 @@ async function releaseFailure(
   call: Exclude<TagCall | SeriesCall, { kind: "ok" }>,
   now: Date,
 ): Promise<Response> {
+  // An unbilled failure after a billed two_step first call carries that
+  // call's usage, so the release records it (SQL clamps it to the reserve).
+  const earlier = "usage" in call && call.usage ? call.usage : null;
+  const usage = earlier ? storedUsage(earlier) : null;
+  const spent = earlier ? costMicro(MODEL, earlier) : 0;
   switch (call.kind) {
     case "retry": {
       const status = await db.release(
@@ -178,17 +183,18 @@ async function releaseFailure(
         token,
         null,
         backoffAt(now, claim.attempts, call.retryAfterSeconds),
-        null,
-        call.billedUnknown ? reserveFor(claim.kind) : 0,
+        usage,
+        call.billedUnknown ? Math.max(spent, reserveFor(claim.kind)) : spent,
       );
       return outcome(afterRetry(status));
     }
     case "misconfigured":
     case "billing":
-      await db.release(jobId, token, call.kind, null, null, 0);
+      // release_tag_job settles these at 0 and gives the attempt back.
+      await db.release(jobId, token, call.kind, null, usage, spent);
       return outcome(call.kind);
     case "rejected":
-      await db.release(jobId, token, "tag_rejected", null, null, 0);
+      await db.release(jobId, token, "tag_rejected", null, usage, spent);
       return outcome("rejected");
     case "fail":
       await db.release(jobId, token, call.code, null, storedUsage(call.usage), costMicro(MODEL, call.usage));

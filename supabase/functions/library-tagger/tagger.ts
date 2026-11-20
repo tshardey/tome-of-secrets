@@ -123,17 +123,18 @@ export type TagCall =
 export type RawSeries = { name: string; volume: number | null; why: string } | null;
 
 /**
- * Why a search call ended without an answer it could use, when the reason was
- * an API failure rather than the reply: the failure's kind, or billed_unknown
- * when it may have been billed (a connection error or timeout). The call is
- * not retried; the job finishes unsure.
+ * Why a search call ended without an answer it could use: billed_unknown when
+ * it may have been billed (a connection error or timeout). The call is not
+ * retried; the job finishes unsure at no less than its reserve. Unbilled
+ * failures are returned as AiFailures instead, so the job is released.
  */
-export type SearchFailure = "retry" | "billed_unknown" | "misconfigured" | "billing" | "rejected";
+export type SearchFailure = "billed_unknown";
 
 export type SeriesCall =
   | { kind: "ok"; status: SeriesStatus; series: RawSeries; usage: Usage; searched: boolean; searchFailure?: SearchFailure }
   | { kind: "fail"; code: "tag_refused" | "tag_unreadable"; usage: Usage }
-  | AiFailure;
+  /** usage: a billed two_step first call before an unbilled search-call failure. */
+  | (AiFailure & { usage?: Usage });
 
 export interface Tagger {
   tag(input: TagInput): Promise<TagCall>;
@@ -192,10 +193,6 @@ function answerText(blocks: Block[]): string {
     if (isToolResult(b)) start = i + 1;
   });
   return blocks.slice(start).flatMap((b) => b.type === "text" && typeof b.text === "string" ? [b.text] : []).join("");
-}
-
-function searchFailureOf(f: AiFailure): SearchFailure {
-  return f.kind === "retry" ? (f.billedUnknown ? "billed_unknown" : "retry") : f.kind;
 }
 
 export function anthropicTagger(
@@ -298,13 +295,15 @@ export function anthropicTagger(
       } as unknown as Anthropic.MessageCreateParamsNonStreaming);
     } catch (err) {
       const failure = classifyAiError(err);
-      // As the check's only call, a failure that cannot have been billed ran
-      // nothing, so the job is released and claimed again as for any call.
-      // One that may have been billed, or one after a billed first call,
-      // finishes unsure instead, so the search is never retried.
+      // A failure that cannot have been billed ran no search, so the job is
+      // released as for any call: retried within its attempts, or failed
+      // visibly (tag_rejected). The check keeps its one search. After a
+      // two_step first call, the failure carries that call's usage, so the
+      // release records what it cost. Only a failure that may have been
+      // billed finishes unsure, so a search that may have run is never retried.
       const unbilled = failure.kind !== "retry" || !failure.billedUnknown;
-      if (before === null && unbilled) return failure;
-      return unsure(before ?? { ...ZERO }, searchFailureOf(failure));
+      if (unbilled) return before === null ? failure : { ...failure, usage: before };
+      return unsure(before ?? { ...ZERO }, "billed_unknown");
     }
 
     const usage = addUsage(before ?? ZERO, usageOf(message.usage));
