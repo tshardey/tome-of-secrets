@@ -2,7 +2,7 @@
 -- suggestions and Ask call records (Plan 7 D5-D7, D10). Proves that books
 -- queue themselves, that a run skips what it should and never opens a second
 -- job for a book, that a call is billed only through a reservation taken
--- before it and refunded to the month it came from, that the first-month and
+-- before it and refunded to the month it came from, that the household and
 -- project-wide budgets hold, that the tagger never re-adds a tag removed by
 -- hand or removes a hand-added cover tag, that a cover changed mid-job is
 -- retagged, and that non-members and anon see and change nothing.
@@ -171,7 +171,7 @@ select ok((select bool_and(relrowsecurity) from pg_class
 
 select is(library.tag_reserve_micro(), 94000, 'tag_reserve_micro is 94000 (tagger.ts TAG_RESERVE_MICRO)');
 select is(library.ask_max_reserve_micro(), 600000, 'ask_max_reserve_micro is 600000');
-select is(library.ai_global_budget_micro('tagging'), 5000000::bigint, 'global tagging budget is 5000000');
+select is(library.ai_global_budget_micro('tagging'), 7000000::bigint, 'global tagging budget is 7000000');
 select is(library.ai_global_budget_micro('ask'), 2000000::bigint, 'global ask budget is 2000000');
 
 select ok(exists (select 1 from pg_indexes where schemaname = 'library' and tablename = 'tag_jobs'
@@ -267,36 +267,36 @@ select is(library.finish_tag_job(pg_temp.jid(8), pg_temp.val('tok8a')::uuid, pg_
 select is(pg_temp.ttags(8), '', 'the stale finish wrote no tags');
 
 ---------------------------------------------------------------------------
--- Budgets: the first month and the ceilings.
+-- Budgets: the household month and the ceilings.
 ---------------------------------------------------------------------------
 reset role;
 delete from library.ai_usage;
 delete from library.ai_usage_total;
 
-select is(library.ai_budget_micro(pg_temp.hh(), 'tagging', pg_temp.m()), 5000000::bigint,
-          'no tagging usage yet: this month''s tagging budget is 5000000');
+select is(library.ai_budget_micro(pg_temp.hh(), 'tagging', pg_temp.m()), 7000000::bigint,
+          'no tagging usage yet: this month''s tagging budget is 7000000');
 insert into library.ai_usage (household_id, feature, month, spent_micro, calls)
 values (pg_temp.hh(), 'tagging', pg_temp.lm(), 2000000, 30);
-select is(library.ai_budget_micro(pg_temp.hh(), 'tagging', pg_temp.m()), 2000000::bigint,
-          'with a usage row last month, this month''s tagging budget is 2000000');
+select is(library.ai_budget_micro(pg_temp.hh(), 'tagging', pg_temp.m()), 7000000::bigint,
+          'with a usage row last month, this month''s tagging budget is still 7000000');
 select is(library.ai_budget_micro(pg_temp.hh2(), 'ask', pg_temp.m()), 2000000::bigint,
           'the Ask budget is always 2000000');
 
 insert into library.ai_usage (household_id, feature, month, spent_micro, calls)
-values (pg_temp.hh(), 'tagging', pg_temp.m(), 2000000 - library.tag_reserve_micro() + 1, 1);
+values (pg_temp.hh(), 'tagging', pg_temp.m(), 7000000 - library.tag_reserve_micro() + 1, 1);
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 select is(pg_temp.claim(9) || '|' || pg_temp.spent(pg_temp.hh(), 'tagging', pg_temp.m()) || '|'
           || pg_temp.tspent('tagging', pg_temp.m()) || '|' || pg_temp.jst(pg_temp.jid(9)),
-          'budget:0|' || 2000000 - library.tag_reserve_micro() + 1 || '|0|queued:0:',
+          'budget:0|' || 7000000 - library.tag_reserve_micro() + 1 || '|0|queued:0:',
           'at budget - reserve + 1 the claim gives budget and nothing changes');
 
 select is((select b.month || ':' || b.spent_micro || ':' || b.budget_micro || ':' || b.reserve_micro || ':'
                   || b.global_spent_micro || ':' || b.global_budget_micro
              from library.ai_budget(pg_temp.hh(), 'tagging') b),
-          pg_temp.m() || ':' || 2000000 - library.tag_reserve_micro() + 1 || ':2000000:'
-            || greatest(library.tag_reserve_micro(), library.series_reserve_micro()) || ':0:5000000',
+          pg_temp.m() || ':' || 7000000 - library.tag_reserve_micro() + 1 || ':7000000:'
+            || greatest(library.tag_reserve_micro(), library.series_reserve_micro()) || ':0:7000000',
           'ai_budget reads the tagging month; reserve_micro is the larger reserve (Plan 11 D10)');
 select is((select b.reserve_micro || ':' || b.budget_micro from library.ai_budget(pg_temp.hh(), 'ask') b),
           '0:2000000', 'ai_budget for Ask has no per-call reserve');
@@ -307,7 +307,7 @@ set local role authenticated;
 select is(pg_temp.claim(9), 'claimed:1', 'last month''s full row doesn''t block this month');
 
 reset role;
-update library.ai_usage_total set spent_micro = 5000000 - library.tag_reserve_micro() + 1 where feature = 'tagging' and month = pg_temp.m();
+update library.ai_usage_total set spent_micro = 7000000 - library.tag_reserve_micro() + 1 where feature = 'tagging' and month = pg_temp.m();
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
 select is(pg_temp.claim(41) || '|' || pg_temp.spent(pg_temp.hh2(), 'tagging', pg_temp.m()),
