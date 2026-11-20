@@ -3,14 +3,18 @@
 // allowlist, make one tagging call, clean the result, and record it. Every
 // write goes through the library.*_tag_job RPCs, which check membership
 // themselves (Plan 7 D7, D8, D10). A series job (Plan 10 D5) skips the ToS
-// list and the cover and makes one text-only series call instead.
+// list and the cover and makes a series check instead, which may search the
+// web when it is unsure (Plan 11 D8). Full and series jobs first look the
+// book's ISBNs up on Open Library and send the household's other books by the
+// same author (Plan 11 D6).
 //
 // Logs carry error codes only: never titles, authors, series, descriptions,
-// tags or URLs.
+// tags, ISBNs or URLs.
 import { backoffAt, costMicro, type Usage } from "../_shared/library-ai.ts";
 import { fetchImages, hostAllowed } from "../library-covers/images.ts";
 import { dedupeVocab, sanitizeTagResult, type TagInput, TOS_TAG_CAP, VOCAB_CAP } from "./prompt.ts";
-import { type CleanSeries, sanitizeSeries } from "./series.ts";
+import { openLibrarySeries } from "./openlibrary.ts";
+import { type CleanSeries, cleanStatus, type SameAuthorBook, sanitizeSeries, type SeriesStatus } from "./series.ts";
 import { MODEL, SERIES_RESERVE_MICRO, type SeriesCall, TAG_RESERVE_MICRO, type TagCall, type Tagger } from "./tagger.ts";
 import { allowedTosTags, loadTosTagList } from "./tos-tags.ts";
 
@@ -23,6 +27,8 @@ export interface ClaimBook {
   seriesVolume: number | null;
   description: string | null;
   coverUrl: string | null;
+  /** Up to 2 ISBN-13s then up to 2 ISBN-10s (Plan 11 D6); [] before that migration. */
+  isbns: string[];
 }
 
 export interface Claim {
@@ -36,12 +42,22 @@ export interface Claim {
   removed: { tos: string[]; library: string[] };
   /** The household's series names (full and series claims); [] when the column is missing. */
   seriesNames: string[];
+  /** The household's other books by the same author (full and series claims, D6). */
+  sameAuthor: SameAuthorBook[];
+  /**
+   * Whether the claim row carried same_author at all, i.e. the database has
+   * the Plan 11 migration (D1). Without it this handler never searches and
+   * sends no seriesStatus, so an older finish_tag_job behaves as Plan 10.
+   */
+  hasSameAuthorColumn: boolean;
 }
 
 /**
  * The p_result of finish_tag_job. series is always sent by this version, null
  * or not: its presence is what marks the book checked (Plan 10 D3). A series
  * job sends no tags, card text or suggestions, and a null summary.
+ * seriesStatus (Plan 11 D9) is sent only when the claim row had same_author;
+ * an older database never sees the key.
  */
 export interface FinishResult {
   tos: string[];
@@ -51,6 +67,7 @@ export interface FinishResult {
   coverSeen: boolean;
   suggestions: { id: string; label: string; category: string; why: string }[];
   series: CleanSeries | null;
+  seriesStatus?: SeriesStatus | null;
 }
 
 export type ReleaseError =
@@ -124,6 +141,20 @@ async function loadCover(url: string | null, fetchImpl: typeof fetch): Promise<T
   }
 }
 
+/** seriesStatus only for a database that reads it (D1). */
+const withStatus = (claim: Claim, result: FinishResult, status: SeriesStatus | null): FinishResult =>
+  claim.hasSameAuthorColumn ? { ...result, seriesStatus: status } : result;
+
+/** Open Library's series strings for the book; never throws, [] on any failure (Review Focus 3). */
+async function lookUpOpenLibrary(book: ClaimBook, fetchImpl: typeof fetch): Promise<string[]> {
+  if (book.isbns.length === 0) return [];
+  try {
+    return await openLibrarySeries(book.isbns, fetchImpl);
+  } catch {
+    return [];
+  }
+}
+
 /** What claim_tag_job reserved for this kind (D8): a billed-unknown release keeps all of it. */
 const reserveFor = (kind: Claim["kind"]) => kind === "series" ? SERIES_RESERVE_MICRO : TAG_RESERVE_MICRO;
 
@@ -165,29 +196,42 @@ async function releaseFailure(
   }
 }
 
-/** A series check (Plan 10 D5): text only, so no ToS list and no cover download. */
+/**
+ * A series check (Plan 10 D5): text only, so no ToS list and no cover
+ * download. It may search only when the database sent same_author (D1, D8).
+ * The job settles at its true cost, which SQL caps at 10x the reservation (D10).
+ */
 async function handleSeries(jobId: string, token: string, claim: Claim, book: ClaimBook, deps: Deps): Promise<Response> {
+  const openLibrary = await lookUpOpenLibrary(book, deps.fetchImpl);
   const call = await deps.tagger.findSeries({
     title: book.title,
     authors: book.authors,
     description: book.description,
     card: claim.card,
     seriesNames: claim.seriesNames,
-    // Task 5 wires the same-author books and the Open Library lookup.
-    sameAuthor: [],
-    openLibrary: [],
+    sameAuthor: claim.sameAuthor,
+    openLibrary,
+    allowSearch: claim.hasSameAuthorColumn,
   });
   if (call.kind !== "ok") return await releaseFailure(deps.db, jobId, token, claim, call, deps.now());
-  const result: FinishResult = {
+  let cost = costMicro(MODEL, call.usage);
+  if (call.searchFailure) {
+    console.error("library-tagger search failed", call.searchFailure);
+    // The search call may have been billed and its usage is unknown: record
+    // at least the whole reservation, as a billed-unknown release does.
+    if (call.searchFailure === "billed_unknown") cost = Math.max(cost, SERIES_RESERVE_MICRO);
+  }
+  const checked = cleanStatus(call.status, sanitizeSeries(call.series));
+  const result = withStatus(claim, {
     tos: [],
     library: [],
     summary: null,
     coverDescription: null,
     coverSeen: false,
     suggestions: [],
-    series: sanitizeSeries(call.series),
-  };
-  const status = await deps.db.finish(jobId, token, result, storedUsage(call.usage), costMicro(MODEL, call.usage), MODEL);
+    series: checked.series,
+  }, checked.status);
+  const status = await deps.db.finish(jobId, token, result, storedUsage(call.usage), cost, MODEL);
   // stale: the lease expired and another run owns the job now.
   return outcome(status === "stale" ? "busy" : status);
 }
@@ -230,6 +274,8 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const tosTags = full ? allowedTosTags(tosList).slice(0, TOS_TAG_CAP) : [];
     const vocab = dedupeVocab(claim.vocab).slice(0, VOCAB_CAP);
     const image = full ? await loadCover(claim.book.coverUrl, fetchImpl) : null;
+    // A new_tags job sends the card, not the book text, so no lookup for it.
+    const openLibrary = full ? await lookUpOpenLibrary(claim.book, fetchImpl) : [];
 
     const input: TagInput = {
       kind,
@@ -241,9 +287,8 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       card: claim.card,
       // buildTagContent sends the household block for a full job only.
       seriesNames: claim.seriesNames,
-      // Task 5 wires the same-author books and the Open Library lookup.
-      sameAuthor: [],
-      openLibrary: [],
+      sameAuthor: claim.sameAuthor,
+      openLibrary,
       tosTags,
       vocab,
       image,
@@ -258,7 +303,9 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
           await db.release(jobId, token, "tag_unreadable", null, storedUsage(call.usage), costMicro(MODEL, call.usage));
           return outcome("failed");
         }
-        const result: FinishResult = {
+        // A full job never searches; an unsure answer is sent as such and SQL
+        // queues the searched series check (D9).
+        const result = withStatus(claim, {
           tos: clean.tosTags,
           library: clean.libraryTags,
           summary: clean.summary,
@@ -266,7 +313,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
           coverSeen: image !== null,
           suggestions: clean.suggestions,
           series: clean.series,
-        };
+        }, clean.seriesStatus);
         const status = await db.finish(jobId, token, result, storedUsage(call.usage), costMicro(MODEL, call.usage), MODEL);
         // stale: the lease expired and another run owns the job now.
         return outcome(status === "stale" ? "busy" : status);
@@ -310,6 +357,19 @@ const strOrNull = (v: unknown): string | null => typeof v === "string" ? v : nul
 const obj = (v: unknown): Record<string, unknown> | null =>
   typeof v === "object" && v !== null && !Array.isArray(v) ? v as Record<string, unknown> : null;
 
+/** A finite number, else null (jsonb can carry anything). */
+const finiteOrNull = (v: unknown): number | null => typeof v === "number" && Number.isFinite(v) ? v : null;
+
+/** same_author rows (D6), defensively: a row without a non-blank string title is skipped. */
+function toSameAuthor(v: unknown): SameAuthorBook[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((x) => {
+    const r = obj(x);
+    if (!r || typeof r.title !== "string" || r.title.trim() === "") return [];
+    return [{ title: r.title, seriesName: strOrNull(r.seriesName), seriesVolume: finiteOrNull(r.seriesVolume) }];
+  });
+}
+
 function toBook(v: unknown): ClaimBook | null {
   const b = obj(v);
   if (!b) return null;
@@ -321,6 +381,7 @@ function toBook(v: unknown): ClaimBook | null {
     seriesVolume: volume === null || Number.isNaN(volume) ? null : volume,
     description: strOrNull(b.description),
     coverUrl: strOrNull(b.coverUrl),
+    isbns: strings(b.isbns),
   };
 }
 
@@ -361,6 +422,9 @@ export function rpcDb(supabase: SupabaseLike): TaggerDb {
         removed: { tos: strings(removed?.tos), library: strings(removed?.library) },
         // Missing before the Plan 10 migration: then no household block is sent.
         seriesNames: strings(row.series_names),
+        sameAuthor: toSameAuthor(row.same_author),
+        // Missing before the Plan 11 migration (D1): then no search and no seriesStatus.
+        hasSameAuthorColumn: "same_author" in row,
       };
     },
     async finish(id, claim, result, usage, cost, model) {

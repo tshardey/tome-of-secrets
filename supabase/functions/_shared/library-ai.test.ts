@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import Anthropic from "@anthropic-ai/sdk";
-import { backoffAt, classifyAiError, clip, costMicro, escapeData, fakeAllowed, PRICES, thinkingFor } from "./library-ai.ts";
+import { backoffAt, classifyAiError, clip, costMicro, escapeData, fakeAllowed, PRICES, thinkingFor, WEB_SEARCH_MICRO } from "./library-ai.ts";
 
 const h = new Headers();
 
@@ -23,6 +23,15 @@ Deno.test("costMicro: sonnet, haiku, cache read and write", () => {
   );
   // rounds up
   assert.equal(costMicro("claude-haiku-5-5", { ...u, inputTokens: 1, outputTokens: 0 }), 1);
+});
+
+Deno.test("costMicro: web searches add WEB_SEARCH_MICRO each (Plan 11 D10); without the field it is unchanged", () => {
+  assert.equal(WEB_SEARCH_MICRO, 10_000);
+  const u = { inputTokens: 3000, outputTokens: 400, cacheCreationTokens: 0, cacheReadTokens: 0 };
+  assert.equal(costMicro("claude-sonnet-5-5", u), 10000);
+  assert.equal(costMicro("claude-sonnet-5-5", { ...u, webSearchRequests: 2 }), 30000);
+  assert.equal(costMicro("claude-sonnet-5-5", { ...u, webSearchRequests: 0 }), 10000);
+  assert.equal(costMicro("claude-haiku-5-5", { ...u, webSearchRequests: 1 }), 10500);
 });
 
 Deno.test("classifyAiError: Plan 5 D7 order, by class and status", () => {
