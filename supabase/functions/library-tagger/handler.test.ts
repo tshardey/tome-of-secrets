@@ -3,7 +3,7 @@ import { costMicro, type Usage } from "../_shared/library-ai.ts";
 import { type Claim, type FinishResult, handle, rpcDb, type SupabaseLike, type TaggerDb } from "./handler.ts";
 import type { TagInput, TagResult } from "./prompt.ts";
 import { buildTagContent, TOS_TAG_CAP } from "./prompt.ts";
-import type { SeriesInput } from "./series.ts";
+import { buildSeriesContent, type SeriesInput } from "./series.ts";
 import { MODEL, type SeriesCall, SERIES_RESERVE_MICRO, TAG_RESERVE_MICRO, type TagCall, type Tagger } from "./tagger.ts";
 
 const JOB = "0b6f4f6e-6a3c-4c1e-9d55-2f1f0f3a9b10";
@@ -38,11 +38,15 @@ function claimed(over: Partial<Claim> = {}): Claim {
       seriesVolume: null,
       description: "A courier crosses a dry sea.",
       coverUrl: COVER,
+      isbns: [],
     },
     card: null,
     vocab: [{ id: "found-family", category: "trope" }, { id: "cover-blue", category: "cover-colour" }],
     removed: { tos: [], library: [] },
     seriesNames: [],
+    // A pre-Plan-11 claim row unless a test says otherwise (D1).
+    sameAuthor: [],
+    hasSameAuthorColumn: false,
     ...over,
   };
 }
@@ -73,11 +77,12 @@ const RESULT: TagResult = {
   cover_description: "A blue field.",
   suggestions: [],
   series: null,
+  series_status: "none",
 };
 
 function fakeTag(result: TagCall | (() => never), series: SeriesCall | (() => never) = { kind: "billing" }) {
   const inputs: TagInput[] = [];
-  const seriesInputs: SeriesInput[] = [];
+  const seriesInputs: (SeriesInput & { allowSearch: boolean })[] = [];
   const tagger: Tagger = {
     tag(input) {
       inputs.push(input);
@@ -374,11 +379,13 @@ Deno.test("rpcDb maps the claim row and passes the finish and release arguments"
     claimToken: TOKEN,
     attempts: 2,
     kind: "full",
-    book: { title: "Glass Orchard", authors: ["Member B"], seriesName: "Orchards", seriesVolume: 2.5, description: null, coverUrl: null },
+    book: { title: "Glass Orchard", authors: ["Member B"], seriesName: "Orchards", seriesVolume: 2.5, description: null, coverUrl: null, isbns: [] },
     card: null,
     vocab: [{ id: "quest", category: "trope" }],
     removed: { tos: ["romance"], library: [] },
     seriesNames: [],
+    sameAuthor: [],
+    hasSameAuthorColumn: false,
   });
   const result: FinishResult = {
     tos: [],
@@ -466,13 +473,13 @@ Deno.test("a full claim's series names reach the tagger (and so the household bl
 Deno.test("a full ok finishes with the series cleaned; a placeholder name becomes null", async () => {
   const named = await run(claimed(), {
     kind: "ok",
-    result: { ...RESULT, series: { name: "  Lantern Vale ", volume: 1, why: "The title numbers it." } },
+    result: { ...RESULT, series_status: "found", series: { name: "  Lantern Vale ", volume: 1, why: "The title numbers it." } },
     usage: USAGE,
   });
   assert.deepEqual((named.calls.finish[0][2] as FinishResult).series, { name: "Lantern Vale", volume: 1, why: "The title numbers it." });
   const standalone = await run(claimed(), {
     kind: "ok",
-    result: { ...RESULT, series: { name: "Standalone", volume: null, why: "x" } },
+    result: { ...RESULT, series_status: "found", series: { name: "Standalone", volume: null, why: "x" } },
     usage: USAGE,
   });
   const result = standalone.calls.finish[0][2] as FinishResult;
@@ -554,12 +561,21 @@ Deno.test("a series claim calls findSeries only, fetches nothing, and finishes w
     () => {
       throw new Error("tag must not be called");
     },
-    { series: { kind: "ok", series, usage: USAGE } },
+    { series: { kind: "ok", status: "found", series, usage: USAGE, searched: false } },
   );
   assert.deepEqual(body, { outcome: "done" });
   assert.equal(inputs.length, 0);
   assert.equal(urls.length, 0); // no ToS list, no cover
-  assert.deepEqual(seriesInputs, [{ title: "Lantern Vale #1", authors: ["Member A"], card: CARD, seriesNames: SERIES_NAMES }]);
+  assert.deepEqual(seriesInputs, [{
+    title: "Lantern Vale #1",
+    authors: ["Member A"],
+    description: claimed().book!.description,
+    card: CARD,
+    seriesNames: SERIES_NAMES,
+    sameAuthor: [],
+    openLibrary: [],
+    allowSearch: false,
+  }]);
   const [, , result, usage, cost, model] = calls.finish[0] as [string, string, FinishResult, Record<string, number>, number, string];
   assert.deepEqual(result, {
     tos: [],
@@ -577,7 +593,7 @@ Deno.test("a series claim calls findSeries only, fetches nothing, and finishes w
 
 Deno.test("a series ok with a placeholder still finishes with series null (the book is marked checked)", async () => {
   const { calls } = await run(seriesClaim(), { kind: "billing" }, {
-    series: { kind: "ok", series: { name: "unknown", volume: null, why: "" }, usage: USAGE },
+    series: { kind: "ok", status: "found", series: { name: "unknown", volume: null, why: "" }, usage: USAGE, searched: false },
   });
   const result = calls.finish[0][2] as FinishResult;
   assert.ok("series" in result);
@@ -624,4 +640,320 @@ Deno.test("a throw after a series claim releases at SERIES_RESERVE_MICRO and ret
   assert.equal(calls.release.length, 1);
   assert.equal(calls.release[0][2], null);
   assert.equal(calls.release[0][5], SERIES_RESERVE_MICRO);
+});
+
+// ---------------------------------------------------------------------------
+// Plan 11: same-author books, Open Library, the series status and search (D1, D6, D8, D9, D10)
+// ---------------------------------------------------------------------------
+
+// Invented ISBNs with a deliberately wrong check digit.
+const ISBN_A = "9781234567890";
+const ISBN_B = "9781234567807";
+const SAME_AUTHOR = [
+  { title: "Lantern Vale Cycle #1", seriesName: "Lantern Vale Cycle", seriesVolume: 1 },
+  { title: "Saltglass", seriesName: null, seriesVolume: null },
+];
+const OL_SERIES = ["Lantern Vale Cycle"];
+
+/** fakeFetch plus Open Library: `ol` decides each openlibrary.org answer. */
+function olFetch(ol: (url: string, init?: RequestInit) => Promise<Response>) {
+  const base = fakeFetch();
+  const fetchImpl = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith("https://openlibrary.org/")) {
+      base.urls.push(url);
+      return ol(url, init);
+    }
+    return base.fetchImpl(input, init);
+  }) as typeof fetch;
+  return { fetchImpl, urls: base.urls };
+}
+const olOk = () => olFetch(() => Promise.resolve(Response.json({ series: OL_SERIES })));
+
+const withEvidence = (over: Partial<Claim> = {}) =>
+  claimed({
+    sameAuthor: SAME_AUTHOR,
+    hasSameAuthorColumn: true,
+    book: { ...claimed().book!, isbns: [ISBN_A, ISBN_B] },
+    ...over,
+  });
+
+Deno.test("a full claim sends the same-author block and the Open Library line, and finishes with seriesStatus", async () => {
+  const f = olOk();
+  const { body, inputs, calls, urls } = await run(withEvidence(), {
+    kind: "ok",
+    result: { ...RESULT, series: { name: "Lantern Vale Cycle", volume: 2, why: "Same author, numbered." }, series_status: "found" },
+    usage: USAGE,
+  }, { fetch: f });
+  assert.deepEqual(body, { outcome: "done" });
+  assert.deepEqual(urls.filter((u) => u.startsWith("https://openlibrary.org/")), [`https://openlibrary.org/isbn/${ISBN_A}.json`]);
+  assert.deepEqual(inputs[0].sameAuthor, SAME_AUTHOR);
+  assert.deepEqual(inputs[0].openLibrary, OL_SERIES);
+  const text = (buildTagContent(inputs[0]) as { text?: string }[]).map((b) => b.text ?? "").join("\n");
+  assert.ok(text.includes("Household books by the same author"));
+  assert.ok(text.includes("Lantern Vale Cycle #1 | Lantern Vale Cycle #1"));
+  assert.ok(text.includes("Open Library lists: <openlibrary>Lantern Vale Cycle</openlibrary>"));
+  const result = calls.finish[0][2] as FinishResult;
+  assert.equal(result.seriesStatus, "found");
+  assert.deepEqual(result.series, { name: "Lantern Vale Cycle", volume: 2, why: "Same author, numbered." });
+});
+
+Deno.test("an unsure full result finishes with series null and seriesStatus unsure", async () => {
+  const { calls } = await run(withEvidence(), {
+    kind: "ok",
+    result: { ...RESULT, series: { name: "Lantern Vale Cycle", volume: 2, why: "Maybe." }, series_status: "unsure" },
+    usage: USAGE,
+  }, { fetch: olOk() });
+  const result = calls.finish[0][2] as FinishResult;
+  assert.equal(result.series, null);
+  assert.equal(result.seriesStatus, "unsure");
+});
+
+Deno.test("a full job never searches: tag() is the only call, and findSeries is not made", async () => {
+  const { seriesInputs, inputs } = await run(withEvidence(), {
+    kind: "ok",
+    result: { ...RESULT, series_status: "unsure" },
+    usage: USAGE,
+  }, { fetch: olOk() });
+  assert.equal(inputs.length, 1);
+  assert.equal(seriesInputs.length, 0);
+});
+
+Deno.test("a series claim with the same_author column searches when unsure, finishing at the summed, uncapped cost", async () => {
+  // Over the reservation on purpose: a series job records its true cost (D10).
+  const big: Usage = { inputTokens: 60_000, outputTokens: 2_000, cacheCreationTokens: 0, cacheReadTokens: 4_000, webSearchRequests: 2 };
+  assert.ok(costMicro(MODEL, big) > SERIES_RESERVE_MICRO);
+  const series = { name: "Lantern Vale Cycle", volume: 2, why: "The publisher's page numbers it." };
+  const { body, seriesInputs, calls, urls } = await run(
+    seriesClaim({ sameAuthor: SAME_AUTHOR, hasSameAuthorColumn: true, book: { ...seriesClaim().book!, isbns: [ISBN_A] } }),
+    { kind: "billing" },
+    { fetch: olOk(), series: { kind: "ok", status: "found", series, usage: big, searched: true } },
+  );
+  assert.deepEqual(body, { outcome: "done" });
+  assert.deepEqual(urls, [`https://openlibrary.org/isbn/${ISBN_A}.json`]); // no ToS list, no cover
+  assert.equal(seriesInputs[0].allowSearch, true);
+  assert.deepEqual(seriesInputs[0].sameAuthor, SAME_AUTHOR);
+  assert.deepEqual(seriesInputs[0].openLibrary, OL_SERIES);
+  const [, , result, usage, cost] = calls.finish[0] as [string, string, FinishResult, Record<string, number>, number];
+  assert.deepEqual(result.series, series);
+  assert.equal(result.seriesStatus, "found");
+  assert.equal(cost, costMicro(MODEL, big));
+  assert.equal(cost, costMicro(MODEL, { ...big, webSearchRequests: 0 }) + 20_000);
+  assert.equal(usage.webSearchRequests, 2);
+  assert.equal(usage.computedCostMicro, cost);
+});
+
+Deno.test("a series result is cleaned: found with a placeholder reads none; unsure drops the series", async () => {
+  const placeholder = await run(seriesClaim({ hasSameAuthorColumn: true }), { kind: "billing" }, {
+    series: { kind: "ok", status: "found", series: { name: "unknown", volume: null, why: "" }, usage: USAGE, searched: false },
+  });
+  const r1 = placeholder.calls.finish[0][2] as FinishResult;
+  assert.equal(r1.series, null);
+  assert.equal(r1.seriesStatus, "none");
+  const unsure = await run(seriesClaim({ hasSameAuthorColumn: true }), { kind: "billing" }, {
+    series: { kind: "ok", status: "unsure", series: { name: "Ember Loom", volume: 1, why: "A guess." }, usage: USAGE, searched: true },
+  });
+  const r2 = unsure.calls.finish[0][2] as FinishResult;
+  assert.ok("series" in r2);
+  assert.equal(r2.series, null);
+  assert.equal(r2.seriesStatus, "unsure");
+});
+
+Deno.test("D1: a claim row without same_author never searches and sends no seriesStatus", async () => {
+  const row = (kind: string) => ({
+    outcome: "claimed",
+    claim_token: TOKEN,
+    attempts: 1,
+    kind,
+    book: { title: "Lantern Vale Cycle #2", authors: ["Tj Holt"], seriesName: null, seriesVolume: null, description: "d", coverUrl: null },
+    card: CARD,
+    vocab: [{ id: "found-family", category: "trope" }],
+    removed: { tos: [], library: [] },
+    series_names: SERIES_NAMES,
+  });
+  for (const kind of ["series", "full"]) {
+    const finishes: Record<string, unknown>[] = [];
+    const supabase: SupabaseLike = {
+      schema: () => ({
+        rpc(fn, args) {
+          if (fn === "claim_tag_job") return Promise.resolve({ data: [row(kind)], error: null });
+          finishes.push(args.p_result as Record<string, unknown>);
+          return Promise.resolve({ data: "done", error: null });
+        },
+      }),
+    };
+    const { tagger, seriesInputs } = fakeTag(
+      { kind: "ok", result: { ...RESULT, series_status: "unsure" }, usage: USAGE },
+      { kind: "ok", status: "unsure", series: null, usage: USAGE, searched: false },
+    );
+    const res = await handle(post({ jobId: JOB }), {
+      db: rpcDb(supabase),
+      tagger,
+      fetchImpl: fakeFetch().fetchImpl,
+      tosTagsUrl: tosUrl(),
+      now: () => NOW,
+    });
+    assert.deepEqual(await res.json(), { outcome: "done" }, kind);
+    if (kind === "series") assert.equal(seriesInputs[0].allowSearch, false);
+    assert.equal(finishes.length, 1, kind);
+    assert.ok(!("seriesStatus" in finishes[0]), kind);
+    assert.ok("series" in finishes[0], kind);
+  }
+});
+
+Deno.test("rpcDb: same_author and isbns are read defensively; the column's presence is recorded", async () => {
+  const db = (extra: Record<string, unknown>, isbns?: unknown) =>
+    rpcDb({
+      schema: () => ({
+        rpc: () =>
+          Promise.resolve({
+            data: [{
+              outcome: "claimed",
+              claim_token: TOKEN,
+              attempts: 1,
+              kind: "series",
+              book: {
+                title: "Lantern Vale Cycle #2",
+                authors: ["Tj Holt"],
+                seriesName: null,
+                seriesVolume: null,
+                description: null,
+                coverUrl: null,
+                ...(isbns === undefined ? {} : { isbns }),
+              },
+              card: null,
+              vocab: [],
+              removed: { tos: [], library: [] },
+              ...extra,
+            }],
+            error: null,
+          }),
+      }),
+    });
+  const claim = await db({
+    same_author: [
+      { title: "Lantern Vale Cycle #1", seriesName: "Lantern Vale Cycle", seriesVolume: 1 },
+      { title: 7, seriesName: "Ember Loom", seriesVolume: 1 },
+      { title: "  ", seriesName: null, seriesVolume: null },
+      { title: "Wrenfold", seriesName: 3, seriesVolume: "2" },
+      { title: "Thornmere", seriesName: "Thornmere Cycle", seriesVolume: Number.NaN },
+      "not a row",
+      null,
+    ],
+  }, [ISBN_A, 5, ISBN_B]).claim(JOB);
+  assert.equal(claim.hasSameAuthorColumn, true);
+  assert.deepEqual(claim.sameAuthor, [
+    { title: "Lantern Vale Cycle #1", seriesName: "Lantern Vale Cycle", seriesVolume: 1 },
+    { title: "Wrenfold", seriesName: null, seriesVolume: null },
+    { title: "Thornmere", seriesName: "Thornmere Cycle", seriesVolume: null },
+  ]);
+  assert.deepEqual(claim.book?.isbns, [ISBN_A, ISBN_B]);
+
+  const nulled = await db({ same_author: null }).claim(JOB);
+  assert.equal(nulled.hasSameAuthorColumn, true);
+  assert.deepEqual(nulled.sameAuthor, []);
+  const old = await db({}).claim(JOB);
+  assert.equal(old.hasSameAuthorColumn, false);
+  assert.deepEqual(old.sameAuthor, []);
+  assert.deepEqual(old.book?.isbns, []);
+});
+
+Deno.test("Review Focus 3: Open Library throwing, timing out or returning HTML -> the job finishes with no Open Library line", async () => {
+  const failures: [string, ReturnType<typeof olFetch>][] = [
+    ["throws", olFetch(() => Promise.reject(new TypeError("network down")))],
+    ["html", olFetch(() => Promise.resolve(new Response("<html>busy</html>", { status: 200, headers: { "content-type": "text/html" } })))],
+    ["404", olFetch(() => Promise.resolve(new Response("no", { status: 404 })))],
+    [
+      "timeout",
+      olFetch((_u, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("timed out", "TimeoutError")));
+        })
+      ),
+    ],
+  ];
+  for (const [name, f] of failures) {
+    for (const kind of ["full", "series"] as const) {
+      const claim = kind === "full" ? withEvidence() : seriesClaim({ hasSameAuthorColumn: true, book: { ...seriesClaim().book!, isbns: [ISBN_A] } });
+      const { body, inputs, seriesInputs, calls } = await run(claim, { kind: "ok", result: RESULT, usage: USAGE }, {
+        fetch: f,
+        series: { kind: "ok", status: "none", series: null, usage: USAGE, searched: false },
+      });
+      const label = `${name} ${kind}`;
+      assert.deepEqual(body, { outcome: "done" }, label);
+      assert.equal(calls.finish.length, 1, label);
+      const sent = kind === "full" ? inputs[0] : seriesInputs[0];
+      assert.deepEqual(sent.openLibrary, [], label);
+      const content = kind === "full" ? buildTagContent(inputs[0]) : buildSeriesContent(seriesInputs[0]);
+      assert.ok(!(content as { text?: string }[]).some((b) => b.text?.includes("Open Library lists")), label);
+    }
+  }
+});
+
+Deno.test("new_tags makes no Open Library lookup", async () => {
+  const f = olOk();
+  const claim = withEvidence({ kind: "new_tags", card: { summary: "A short card.", coverDescription: null } });
+  const { body, urls } = await run(claim, { kind: "ok", result: RESULT, usage: USAGE }, { fetch: f });
+  assert.deepEqual(body, { outcome: "done" });
+  assert.ok(!urls.some((u) => u.startsWith("https://openlibrary.org/")));
+});
+
+Deno.test("a billed-unknown search finishes unsure at no less than SERIES_RESERVE_MICRO, logging the code only", async () => {
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => void logged.push(args);
+  try {
+    const { body, calls } = await run(seriesClaim({ hasSameAuthorColumn: true }), { kind: "billing" }, {
+      series: { kind: "ok", status: "unsure", series: null, usage: USAGE, searched: true, searchFailure: "billed_unknown" },
+    });
+    assert.deepEqual(body, { outcome: "done" });
+    const [, , result, , cost] = calls.finish[0] as [string, string, FinishResult, unknown, number];
+    assert.equal(result.seriesStatus, "unsure");
+    assert.equal(cost, Math.max(costMicro(MODEL, USAGE), SERIES_RESERVE_MICRO));
+    assert.equal(calls.release.length, 0);
+
+  } finally {
+    console.error = original;
+  }
+  assert.deepEqual(logged, [["library-tagger search failed", "billed_unknown"]]);
+});
+
+Deno.test("an unbilled search-call failure releases at the first call's cost: no finish, so the book keeps its search", async () => {
+  const first: Usage = { inputTokens: 3000, outputTokens: 200, cacheCreationTokens: 0, cacheReadTokens: 1000 };
+  const spent = costMicro(MODEL, first);
+  assert.ok(spent > 0 && spent < SERIES_RESERVE_MICRO);
+  const claim = () => seriesClaim({ hasSameAuthorColumn: true, attempts: 1 });
+
+  // 429 / 5xx: requeued with backoff within the attempts, at the first call's cost.
+  const retry = await run(claim(), { kind: "billing" }, {
+    series: { kind: "retry", retryAfterSeconds: 7, billedUnknown: false, usage: first },
+  });
+  assert.deepEqual(retry.body, { outcome: "retry_later" });
+  assert.equal(retry.calls.finish.length, 0);
+  const [, , error, retryAt, usage, cost] = retry.calls.release[0];
+  assert.equal(error, null);
+  assert.ok(retryAt instanceof Date);
+  assert.equal((usage as Record<string, number>).computedCostMicro, spent);
+  assert.equal(cost, spent);
+
+  // 400: fails visibly as tag_rejected, at the first call's cost.
+  const rejected = await run(claim(), { kind: "billing" }, { series: { kind: "rejected", usage: first } });
+  assert.deepEqual(rejected.body, { outcome: "rejected" });
+  assert.equal(rejected.calls.finish.length, 0);
+  assert.equal(rejected.calls.release[0][2], "tag_rejected");
+  assert.equal(rejected.calls.release[0][5], spent);
+
+  // billing / misconfigured: released as before (SQL gives the attempt back at 0), usage kept.
+  for (const kind of ["billing", "misconfigured"] as const) {
+    const r = await run(claim(), { kind: "billing" }, { series: { kind, usage: first } });
+    assert.deepEqual(r.body, { outcome: kind });
+    assert.equal(r.calls.finish.length, 0);
+    assert.equal(r.calls.release[0][2], kind);
+    assert.equal((r.calls.release[0][4] as Record<string, number>).computedCostMicro, spent);
+  }
+
+  // Without a first call (single mode, or a plain failure), the release is as it always was.
+  const plain = await run(claim(), { kind: "billing" }, { series: { kind: "retry", retryAfterSeconds: 7, billedUnknown: false } });
+  assert.equal(plain.calls.release[0][4], null);
+  assert.equal(plain.calls.release[0][5], 0);
 });

@@ -101,7 +101,7 @@ select ok(exists (
                    jsonb_array_elements(c.vocab) v
              where c.kind = 'full' and v ->> 'id' = 'cover-sword' and v ->> 'category' = 'cover-motif'),
           'a full job''s claim vocabulary includes cover-sword');
-select is(library.tag_reserve_micro(), 82000, 'tag_reserve_micro is 82000 (tagger.ts TAG_RESERVE_MICRO)');
+select is(library.tag_reserve_micro(), 94000, 'tag_reserve_micro is 94000 (tagger.ts TAG_RESERVE_MICRO)');
 
 select * from finish();
 rollback;

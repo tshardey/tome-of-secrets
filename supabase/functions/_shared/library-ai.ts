@@ -14,17 +14,23 @@ export const PRICES: Record<AiModel, { input: number; output: number }> = {
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
 };
 
+/** A web search costs $10 per 1,000, so 10,000 micro-dollars each (Plan 11 D10). */
+export const WEB_SEARCH_MICRO = 10_000;
+
 export interface Usage {
   inputTokens: number;
   outputTokens: number;
   cacheCreationTokens: number;
   cacheReadTokens: number;
+  /** Billed web searches (usage.server_tool_use.web_search_requests); absent means none. */
+  webSearchRequests?: number;
 }
 
 /**
- * ceil(in x p + cacheCreation x 1.25p + cacheRead x 0.1p + out x po), in
- * micro-dollars, unclamped. Cache writes cost 1.25x the input price and cache
- * reads 0.1x.
+ * ceil(in x p + cacheCreation x 1.25p + cacheRead x 0.1p + out x po)
+ * + webSearchRequests x WEB_SEARCH_MICRO, in micro-dollars, unclamped. Cache
+ * writes cost 1.25x the input price and cache reads 0.1x. Search-result tokens
+ * arrive in the token fields.
  */
 export function costMicro(model: AiModel, u: Usage): number {
   const p = PRICES[model];
@@ -33,7 +39,7 @@ export function costMicro(model: AiModel, u: Usage): number {
       u.cacheCreationTokens * 1.25 * p.input +
       u.cacheReadTokens * 0.1 * p.input +
       u.outputTokens * p.output,
-  );
+  ) + (u.webSearchRequests ?? 0) * WEB_SEARCH_MICRO;
 }
 
 export type AiFailure =

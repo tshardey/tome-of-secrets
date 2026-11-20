@@ -8,12 +8,24 @@ import {
   fakeTagger,
   MAX_TOKENS,
   MODEL,
+  SEARCH_FORMAT,
+  SEARCH_TEXT_JSON_LINE,
+  SEARCH_TOOL,
   SERIES_MAX_TOKENS,
   SERIES_RESERVE_MICRO,
+  SERIES_SEARCH_MAX_TOKENS,
+  SERIES_SEARCH_MODE,
   seriesCeilingMicro,
   TAG_RESERVE_MICRO,
+  usageOf,
 } from "./tagger.ts";
-import { buildSeriesContent, type SeriesInput, SERIES_SYSTEM_PROMPT, worstCaseSeriesTokens } from "./series.ts";
+import {
+  buildSeriesContent,
+  SERIES_SEARCH_PROMPT,
+  SERIES_SYSTEM_PROMPT,
+  type SeriesInput,
+  worstCaseSeriesTokens,
+} from "./series.ts";
 
 const INPUT: TagInput = {
   kind: "full",
@@ -24,6 +36,8 @@ const INPUT: TagInput = {
   description: "A courier crosses a dry sea.",
   card: null,
   seriesNames: [],
+  sameAuthor: [],
+  openLibrary: [],
   tosTags: ["fantasy", "mystery"],
   vocab: [{ id: "found-family", category: "trope" }, { id: "cover-blue", category: "cover-colour" }],
   image: { mediaType: "image/png", bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) },
@@ -36,6 +50,7 @@ const RESULT: TagResult = {
   cover_description: "A blue field.",
   suggestions: [],
   series: null,
+  series_status: "none",
 };
 
 function message(over: Record<string, unknown> = {}) {
@@ -214,7 +229,7 @@ Deno.test("ceilingMicro: plain input at 1x, the vocabulary at the 1.25x cache-wr
 Deno.test("TAG_RESERVE_MICRO is ceilingMicro(MODEL) rounded up to 1,000", () => {
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
   assert.equal(TAG_RESERVE_MICRO, Math.ceil(ceilingMicro(MODEL) / 1000) * 1000);
-  assert.equal(TAG_RESERVE_MICRO, 82_000);
+  assert.equal(TAG_RESERVE_MICRO, 94_000);
 });
 
 Deno.test("fakeTagger: fantasy, cover-blue only with an image, fixed summary, usage 0", async () => {
@@ -247,13 +262,17 @@ Deno.test("chooseTagger: fake only when asked for and local", () => {
 // Plan 10: findSeries, the series ceiling and the fake's series
 // ---------------------------------------------------------------------------
 
-const SERIES_INPUT: SeriesInput = {
+const SERIES_INPUT: SeriesInput & { allowSearch: boolean } = {
   title: "Lantern Vale #3",
   authors: ["Ines Dravenholt"],
+  description: "The third book of Lantern Vale.",
   card: { summary: "A keeper lights the last lamp.", coverDescription: "A lamp on a hill." },
   seriesNames: ["Lantern Vale", "Thornmere Cycle"],
+  sameAuthor: [],
+  openLibrary: [],
+  allowSearch: false,
 };
-const SERIES_OUT = { series: { name: "Lantern Vale", volume: 3, why: "The title numbers it." } };
+const SERIES_OUT = { series: { name: "Lantern Vale", volume: 3, why: "The title numbers it." }, series_status: "found" };
 
 Deno.test("findSeries: model, SERIES_MAX_TOKENS, thinking, schema, exact prompt, household block cached", async () => {
   const { fetchImpl, calls } = stub(200, message({ content: [{ type: "text", text: JSON.stringify(SERIES_OUT) }] }));
@@ -276,13 +295,15 @@ Deno.test("findSeries: model, SERIES_MAX_TOKENS, thinking, schema, exact prompt,
   assert.ok(!content.some((b) => b.type === "image"));
   assert.deepEqual(r, {
     kind: "ok",
+    status: "found",
     series: SERIES_OUT.series,
     usage: { inputTokens: 900, outputTokens: 300, cacheCreationTokens: 1200, cacheReadTokens: 0 },
+    searched: false,
   });
 });
 
 Deno.test("findSeries: a null series is ok", async () => {
-  const { fetchImpl } = stub(200, message({ content: [{ type: "text", text: JSON.stringify({ series: null }) }] }));
+  const { fetchImpl } = stub(200, message({ content: [{ type: "text", text: JSON.stringify({ series: null, series_status: "unsure" }) }] }));
   const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
   assert.equal(r.kind, "ok");
   if (r.kind === "ok") assert.equal(r.series, null);
@@ -327,15 +348,11 @@ Deno.test("seriesCeilingMicro: plain at 1x, the household block at 1.25x, SERIES
   assert.equal(seriesCeilingMicro(), seriesCeilingMicro(MODEL));
 });
 
-Deno.test("SERIES_RESERVE_MICRO and TAG_RESERVE_MICRO sit within 1,000 above their ceilings", () => {
+Deno.test("SERIES_RESERVE_MICRO covers its ceiling and is the measured-and-kept 150,000 (D10)", () => {
   assert.ok(seriesCeilingMicro() <= SERIES_RESERVE_MICRO);
-  assert.ok(SERIES_RESERVE_MICRO - seriesCeilingMicro() < 1000);
-  assert.equal(SERIES_RESERVE_MICRO, Math.ceil(seriesCeilingMicro(MODEL) / 1000) * 1000);
-  // Pinned: library.series_reserve_micro() returns the same literal.
-  assert.equal(SERIES_RESERVE_MICRO, 27_000);
+  // Pinned: library.series_reserve_micro() returns the same literal (Task 4).
+  assert.equal(SERIES_RESERVE_MICRO, 150_000);
   assert.ok(ceilingMicro() <= TAG_RESERVE_MICRO);
-  assert.ok(TAG_RESERVE_MICRO - ceilingMicro() < 1000);
-  assert.ok(SERIES_RESERVE_MICRO < TAG_RESERVE_MICRO);
 });
 
 Deno.test("fakeTagger: tag and findSeries read the series from the title, usage 0", async () => {
@@ -347,9 +364,278 @@ Deno.test("fakeTagger: tag and findSeries read the series from the title, usage 
   const found = await fakeTagger().findSeries(SERIES_INPUT);
   assert.deepEqual(found, {
     kind: "ok",
+    status: "found",
     series: { name: "Lantern Vale", volume: 3, why: "Fake series from the title." },
     usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
+    searched: false,
   });
-  const none = await fakeTagger().findSeries({ ...SERIES_INPUT, title: "Saltglass" });
-  if (none.kind === "ok") assert.equal(none.series, null);
+  // The fake never searches, even when allowed: found from the title, else none.
+  const none = await fakeTagger().findSeries({ ...SERIES_INPUT, title: "Saltglass", allowSearch: true });
+  assert.equal(none.kind, "ok");
+  if (none.kind === "ok") {
+    assert.equal(none.series, null);
+    assert.equal(none.status, "none");
+    assert.equal(none.searched, false);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Plan 11: series checks that search only when unsure (D8), search fees (D10)
+// ---------------------------------------------------------------------------
+
+/** Answers each request with the next body in turn (the last one repeats); records every request body. */
+function seq(...bodies: unknown[]) {
+  const calls: Record<string, unknown>[] = [];
+  const fetchImpl = ((_input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push(JSON.parse(String(init?.body ?? "{}")));
+    const body = bodies[Math.min(calls.length - 1, bodies.length - 1)];
+    return Promise.resolve(
+      new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json", "request-id": "req_test" } }),
+    );
+  }) as typeof fetch;
+  return { fetchImpl, calls };
+}
+
+const answer = (out: unknown, over: Record<string, unknown> = {}) =>
+  message({ content: [{ type: "text", text: JSON.stringify(out) }], ...over });
+const UNSURE = { series: null, series_status: "unsure" };
+const FOUND = SERIES_OUT;
+const SEARCH_USAGE = {
+  input_tokens: 4000,
+  output_tokens: 700,
+  cache_creation_input_tokens: 0,
+  cache_read_input_tokens: 1200,
+  server_tool_use: { web_search_requests: 2 },
+};
+const FIRST = { inputTokens: 900, outputTokens: 300, cacheCreationTokens: 1200, cacheReadTokens: 0 };
+const SUMMED = { inputTokens: 4900, outputTokens: 1000, cacheCreationTokens: 1200, cacheReadTokens: 1200, webSearchRequests: 2 };
+
+/** A search reply: a query, its result, then the answer text. */
+function searched(out: unknown, over: Record<string, unknown> = {}) {
+  return message({
+    content: [
+      { type: "text", text: "Checking." },
+      { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: "Lantern Vale Ines Dravenholt" } },
+      { type: "web_search_tool_result", tool_use_id: "srvtoolu_1", content: [] },
+      { type: "text", text: typeof out === "string" ? out : JSON.stringify(out) },
+    ],
+    usage: SEARCH_USAGE,
+    ...over,
+  });
+}
+
+Deno.test("search constants: two_step, the tool, json_schema and 4,096 tokens, as Task 6 measured", () => {
+  assert.equal(SERIES_SEARCH_MODE, "two_step");
+  assert.deepEqual(SEARCH_TOOL, { type: "web_search_20260318", name: "web_search", max_uses: 2, response_inclusion: "excluded" });
+  assert.equal(SEARCH_FORMAT, "json_schema");
+  assert.equal(SERIES_SEARCH_MAX_TOKENS, 4096);
+});
+
+Deno.test("usageOf reads server_tool_use.web_search_requests; absent, the field is left out", () => {
+  assert.deepEqual(usageOf(SEARCH_USAGE as never), {
+    inputTokens: 4000,
+    outputTokens: 700,
+    cacheCreationTokens: 0,
+    cacheReadTokens: 1200,
+    webSearchRequests: 2,
+  });
+  assert.equal("webSearchRequests" in usageOf(message().usage as never), false);
+});
+
+Deno.test("two_step: found on the first call makes one request, with no tools", async () => {
+  const { fetchImpl, calls } = seq(answer(FOUND));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(calls.length, 1);
+  assert.ok(!("tools" in calls[0]));
+  assert.equal(calls[0].system, SERIES_SYSTEM_PROMPT);
+  assert.deepEqual(r, { kind: "ok", status: "found", series: FOUND.series, usage: FIRST, searched: false });
+});
+
+Deno.test("two_step: none on the first call makes one request", async () => {
+  const { fetchImpl, calls } = seq(answer({ series: null, series_status: "none" }));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(calls.length, 1);
+  assert.equal(r.kind === "ok" && r.status, "none");
+});
+
+Deno.test("two_step: unsure with allowSearch makes a second request with the tool; the usage is the sum", async () => {
+  const { fetchImpl, calls } = seq(answer(UNSURE), searched(FOUND));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(calls.length, 2);
+  const second = calls[1];
+  assert.deepEqual(second.tools, [SEARCH_TOOL]);
+  assert.equal(second.system, SERIES_SEARCH_PROMPT);
+  assert.equal(second.max_tokens, SERIES_SEARCH_MAX_TOKENS);
+  assert.equal(second.model, MODEL);
+  assert.deepEqual(second.thinking, thinkingFor(MODEL, "low").thinking);
+  assert.ok(!("tool_choice" in second));
+  const oc = second.output_config as { effort: string; format: { type: string } };
+  assert.equal(oc.effort, "low");
+  assert.equal(oc.format.type, "json_schema");
+  assert.deepEqual(second.messages, calls[0].messages);
+  assert.deepEqual(r, { kind: "ok", status: "found", series: FOUND.series, usage: SUMMED, searched: true });
+  if (r.kind === "ok") assert.equal(costMicro(MODEL, r.usage), costMicro(MODEL, { ...SUMMED, webSearchRequests: 0 }) + 20_000);
+});
+
+Deno.test("two_step: unsure without allowSearch makes no second request", async () => {
+  const { fetchImpl, calls } = seq(answer(UNSURE), searched(FOUND));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: false });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(r, { kind: "ok", status: "unsure", series: null, usage: FIRST, searched: false });
+});
+
+Deno.test("two_step: a first-call failure returns as before, with no search", async () => {
+  const { fetchImpl, calls } = seq(message({ stop_reason: "refusal", content: [{ type: "text", text: "no" }] }));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(calls.length, 1);
+  assert.equal(r.kind === "fail" && r.code, "tag_refused");
+});
+
+Deno.test("single: one request with the tool when allowSearch; without it, the plain call", async () => {
+  const on = seq(searched(FOUND));
+  const r = await anthropicTagger("k", { fetchImpl: on.fetchImpl, searchMode: "single" }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(on.calls.length, 1);
+  assert.deepEqual(on.calls[0].tools, [SEARCH_TOOL]);
+  assert.equal(on.calls[0].system, SERIES_SEARCH_PROMPT);
+  assert.equal(on.calls[0].max_tokens, SERIES_SEARCH_MAX_TOKENS);
+  assert.deepEqual(r, {
+    kind: "ok",
+    status: "found",
+    series: FOUND.series,
+    usage: { inputTokens: 4000, outputTokens: 700, cacheCreationTokens: 0, cacheReadTokens: 1200, webSearchRequests: 2 },
+    searched: true,
+  });
+
+  const off = seq(answer(UNSURE));
+  const r2 = await anthropicTagger("k", { fetchImpl: off.fetchImpl, searchMode: "single" }).findSeries({ ...SERIES_INPUT, allowSearch: false });
+  assert.equal(off.calls.length, 1);
+  assert.ok(!("tools" in off.calls[0]));
+  assert.equal(off.calls[0].system, SERIES_SYSTEM_PROMPT);
+  assert.equal(off.calls[0].max_tokens, SERIES_MAX_TOKENS);
+  assert.deepEqual(r2, { kind: "ok", status: "unsure", series: null, usage: FIRST, searched: false });
+});
+
+Deno.test("Review Focus 2: pause_turn, max_tokens, a tool error or an unparseable reply -> unsure, usage kept, one search request", async () => {
+  const toolError = message({
+    content: [
+      { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: "q" } },
+      {
+        type: "web_search_tool_result",
+        tool_use_id: "srvtoolu_1",
+        content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" },
+      },
+      { type: "text", text: JSON.stringify(FOUND) },
+    ],
+    usage: SEARCH_USAGE,
+  });
+  const replies = [
+    ["pause_turn", searched(FOUND, { stop_reason: "pause_turn" })],
+    ["max_tokens", searched(FOUND, { stop_reason: "max_tokens" })],
+    ["tool error", toolError],
+    ["unparseable", searched("{not json")],
+    ["schema miss", searched({ series: "Lantern Vale", series_status: "found" })],
+    ["no text", message({ content: [], usage: SEARCH_USAGE })],
+  ] as const;
+  for (const mode of ["two_step", "single"] as const) {
+    for (const [name, reply] of replies) {
+      const bodies = mode === "two_step" ? [answer(UNSURE), reply] : [reply];
+      const { fetchImpl, calls } = seq(...bodies);
+      const r = await anthropicTagger("k", { fetchImpl, searchMode: mode }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+      const label = `${mode} ${name}`;
+      assert.equal(calls.length, bodies.length, label); // never resumed, never retried
+      assert.equal(calls.filter((c) => "tools" in c).length, 1, label);
+      assert.equal(r.kind, "ok", label);
+      if (r.kind === "ok") {
+        assert.equal(r.status, "unsure", label);
+        assert.equal(r.series, null, label);
+        assert.equal(r.searched, true, label);
+        assert.deepEqual(r.usage, mode === "two_step" ? SUMMED : usageOf(SEARCH_USAGE as never), label);
+      }
+    }
+  }
+});
+
+Deno.test("a refused search call -> tag_refused with the summed usage", async () => {
+  const { fetchImpl, calls } = seq(answer(UNSURE), searched("no", { stop_reason: "refusal" }));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(r, { kind: "fail", code: "tag_refused", usage: SUMMED });
+});
+
+Deno.test("an unbilled second-call failure is returned with the first call's usage, so the job is released", async () => {
+  const cases: [number, string, unknown][] = [
+    [429, "rate_limit_error", { kind: "retry", retryAfterSeconds: null, billedUnknown: false }],
+    [500, "api_error", { kind: "retry", retryAfterSeconds: null, billedUnknown: false }],
+    [400, "invalid_request_error", { kind: "rejected" }],
+    [402, "billing_error", { kind: "billing" }],
+    [401, "authentication_error", { kind: "misconfigured" }],
+  ];
+  for (const [status, type, failure] of cases) {
+    const calls: unknown[] = [];
+    const fetchImpl = ((_i: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(init?.body);
+      const first = calls.length === 1;
+      return Promise.resolve(
+        new Response(JSON.stringify(first ? answer(UNSURE) : apiError(type)), {
+          status: first ? 200 : status,
+          headers: { "content-type": "application/json", "request-id": "req_test" },
+        }),
+      );
+    }) as typeof fetch;
+    const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+    assert.equal(calls.length, 2, String(status)); // the search call is not retried in place
+    assert.deepEqual(r, { ...(failure as object), usage: FIRST }, String(status));
+  }
+  // A connection error on the search call may have been billed: it finishes unsure, named billed_unknown.
+  let n = 0;
+  const flaky = ((_i: RequestInfo | URL) => {
+    n++;
+    if (n === 1) {
+      return Promise.resolve(new Response(JSON.stringify(answer(UNSURE)), { status: 200, headers: { "content-type": "application/json" } }));
+    }
+    return Promise.reject(new TypeError("connection reset"));
+  }) as typeof fetch;
+  const r = await anthropicTagger("k", { fetchImpl: flaky }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(n, 2);
+  assert.deepEqual(r, { kind: "ok", status: "unsure", series: null, usage: FIRST, searched: true, searchFailure: "billed_unknown" });
+});
+
+Deno.test("single: a billed-unknown search call is unsure, not a retry; an unbilled failure returns as before", async () => {
+  const flaky = (() => Promise.reject(new TypeError("connection reset"))) as typeof fetch;
+  const r = await anthropicTagger("k", { fetchImpl: flaky, searchMode: "single" }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.deepEqual(r, {
+    kind: "ok",
+    status: "unsure",
+    series: null,
+    usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
+    searched: true,
+    searchFailure: "billed_unknown",
+  });
+  const { fetchImpl } = stub(429, apiError("rate_limit_error"), { "retry-after": "7" });
+  const r2 = await anthropicTagger("k", { fetchImpl, searchMode: "single" }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.deepEqual(r2, { kind: "retry", retryAfterSeconds: 7, billedUnknown: false });
+});
+
+Deno.test("text_json: no output_config.format, the prompt asks for JSON, text after the last tool result is parsed", async () => {
+  const reply = message({
+    content: [
+      { type: "text", text: 'I will look this up. {"ignored": true}' },
+      { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: "q" } },
+      { type: "web_search_tool_result", tool_use_id: "srvtoolu_1", content: [] },
+      { type: "text", text: '{"series": {"name": "Lantern Vale", "volume": 3, ' },
+      { type: "text", text: '"why": "The title numbers it."}, "series_status": "found"}' },
+    ],
+    usage: SEARCH_USAGE,
+  });
+  const { fetchImpl, calls } = seq(answer(UNSURE), reply);
+  const r = await anthropicTagger("k", { fetchImpl, searchFormat: "text_json" }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(calls.length, 2);
+  // The first, tool-less call keeps json_schema.
+  assert.equal((calls[0].output_config as { format?: { type: string } }).format?.type, "json_schema");
+  const oc = calls[1].output_config as Record<string, unknown>;
+  assert.ok(!("format" in oc));
+  assert.equal(oc.effort, "low");
+  assert.equal(calls[1].system, `${SERIES_SEARCH_PROMPT}\n${SEARCH_TEXT_JSON_LINE}`);
+  assert.ok(SEARCH_TEXT_JSON_LINE.startsWith("Answer with only a JSON object"));
+  assert.deepEqual(r, { kind: "ok", status: "found", series: FOUND.series, usage: SUMMED, searched: true });
 });
