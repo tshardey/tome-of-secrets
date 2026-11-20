@@ -7,13 +7,14 @@
 -- still pending, blank and not hand-set. Part 2 (D6, D9-D11): the claim's
 -- same-author books and ISBNs; an unsure full job queues one series check
 -- that can't loop; series jobs record their true cost under a 10x guard;
--- ai_budget holds the larger reserve; and the one-time re-check clears only
--- the markers D11 selects.
+-- ai_budget holds the larger reserve; the one-time re-check clears only
+-- the markers D11 selects; and the all-blank re-check clears every blank,
+-- unheld book's marker.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(106);
+select plan(111);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -633,7 +634,7 @@ select is(pg_temp.rel(64, null, now() + interval '1 hour', 3 * library.series_re
           'a billed-unknown series retry keeps at most the job''s own reserve');
 
 ---------------------------------------------------------------------------
--- Over the cap: H2's budget is 2,000,000 (it tagged last month).
+-- Over the cap: H2's tagging budget is 7,000,000.
 ---------------------------------------------------------------------------
 reset role;
 insert into library.ai_usage (household_id, feature, month, spent_micro, calls)
@@ -645,14 +646,14 @@ set local role authenticated;
 select pg_temp.as_c();
 select pg_temp.cl(83);
 reset role;
-update library.ai_usage set spent_micro = 2000000 - 1000
+update library.ai_usage set spent_micro = 7000000 - 1000
  where household_id = pg_temp.hh2() and feature = 'tagging' and month = pg_temp.m();
 select pg_temp.qjob(84, 'series', 'series');
 set local role authenticated;
 select pg_temp.as_c();
 select is(pg_temp.fin(83, pg_temp.sr('null'::jsonb, 'none'), library.series_reserve_micro() + 4000) || '|'
           || pg_temp.spent(pg_temp.hh2()),
-          'done|2003000', 'a series finish overrunning by 4,000 leaves spent above the budget');
+          'done|7003000', 'a series finish overrunning by 4,000 leaves spent above the budget');
 select is(pg_temp.cl(84), 'budget:0', 'and the next claim answers budget');
 
 ---------------------------------------------------------------------------
@@ -708,6 +709,30 @@ select throws_ok($$ select library._same_author_books(pg_temp.hh(), pg_temp.book
                  'A: executing _same_author_books is denied');
 select throws_ok($$ select library._ai_settle_actual(pg_temp.hh(), 'tagging', pg_temp.m(), 0, 0) $$, '42501', null,
                  'A: executing _ai_settle_actual is denied');
+
+---------------------------------------------------------------------------
+-- The re-check of every blank book (2026-11-20). The D11 cards, all marked
+-- again: only a series, a hand-set field or an open suggestion keeps one.
+---------------------------------------------------------------------------
+reset role;
+update library.book_cards set series_checked_at = null;
+select pg_temp.card(n, true) from unnest(array[65, 66, 67, 68, 69, 70, 71, 72, 73, 75]) n;
+
+select is(library._series_recheck_all_blank(), 6, '_series_recheck_all_blank returns the number of markers cleared');
+select is((select string_agg(n || ':' || pg_temp.chk(n), ',' order by n)
+             from unnest(array[65, 66, 67, 68, 69, 70, 71, 72, 73, 75]) n),
+          '65:unchecked,66:unchecked,67:unchecked,68:checked,69:checked,70:checked,71:checked,72:unchecked,73:unchecked,75:unchecked',
+          'all-blank re-check: every blank book clears, whatever its synopsis or authors; a series, hand-set and '
+          || 'a pending book on a listed suggestion keep; a dismissed book or a pending one on an approved name clears');
+select is(library._series_recheck_all_blank(), 0, 'a second all-blank re-check clears nothing');
+select is((select count(*)::int from library.tag_jobs j
+            where j.status = 'queued' and j.book_id in (select pg_temp.book(n) from generate_series(65, 75) n)), 0,
+          'the all-blank re-check queues nothing');
+
+set local role authenticated;
+select pg_temp.as_a();
+select throws_ok($$ select library._series_recheck_all_blank() $$, '42501', null,
+                 'A: executing _series_recheck_all_blank is denied');
 
 ---------------------------------------------------------------------------
 -- Constants: the Deno values (tagger.ts), kept in step by Tasks 5 and 6.
