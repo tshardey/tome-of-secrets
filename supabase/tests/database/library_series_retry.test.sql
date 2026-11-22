@@ -1,14 +1,15 @@
 -- pgTAP: series retry (2026-11-22). Proves that a series request queues a
--- book whose newest job is a failed series job, that a newest failed full
--- job still skips it, that only the newest job counts, that the other series
--- rules (checked, a series set, hand-set) still skip a failed-series book,
--- and that run and new_tags requests still skip a failed-series book while
--- the same book without the failure queues.
+-- book whose newest job is a failed series job, that a newest failed full or
+-- new_tags job still skips it, that only the newest job counts, that the
+-- other series rules (checked, a series set, seriesName or seriesVolume
+-- hand-set) still skip a failed-series book, that run and new_tags requests
+-- still skip a failed-series book while the same book without the failure
+-- queues, and that manual still takes a failed book.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(10);
+select plan(11);
 
 insert into auth.users (id, email, aud, role)
 values ('11111111-1111-1111-1111-111111111111', 'a@library.test', 'authenticated', 'authenticated');
@@ -45,7 +46,7 @@ create function pg_temp.as_a() returns void language sql as
 $$ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true) $$;
 
 ---------------------------------------------------------------------------
--- Household H (A). Books 1-11. Every book's first job is done.
+-- Household H (A). Books 1-13. Every book's first job is done.
 ---------------------------------------------------------------------------
 set local role authenticated;
 select pg_temp.as_a();
@@ -55,7 +56,7 @@ reset role;
 set local request.jwt.claims = '{}';
 insert into library.books (id, household_id, title, authors, synopsis)
 select pg_temp.book(n), pg_temp.hh(), 'Invented Title ' || n, '{Ines Dravenholt}', 'A made-up synopsis ' || n
-  from generate_series(1, 11) n;
+  from generate_series(1, 13) n;
 update library.tag_jobs set status = 'done';
 
 -- A household tag one version above the vocabulary, so a card at version 1
@@ -66,7 +67,7 @@ values (pg_temp.hh(), 'cover-retry-lantern', 'Lantern (mine)', 'cover-motif', li
 -- Cards for every book but 9 and 10 (the run books), unchecked.
 insert into library.book_cards (book_id, household_id, summary, cover_description, model, vocab_version)
 select pg_temp.book(n), pg_temp.hh(), 'A card summary ' || n || '.', 'A grey cover.', 'claude-sonnet-5-5', 1
-  from generate_series(1, 11) n where n not in (9, 10);
+  from generate_series(1, 13) n where n not in (9, 10);
 
 --  1  newest job a failed series job
 --  2  newest job a failed full job
@@ -77,6 +78,8 @@ select pg_temp.book(n), pg_temp.hh(), 'A card summary ' || n || '.', 'A grey cov
 --  7  failed series, seriesVolume hand-set
 --  8  failed series (new_tags)        11  no failure (new_tags control)
 --  9  failed series, no card (run)    10  no failure, no card (run control)
+-- 12  newest job a failed new_tags job
+-- 13  failed series, seriesName hand-set
 select pg_temp.job(1, 'series', 'failed');
 select pg_temp.job(2, 'full', 'failed');
 select pg_temp.job(3, 'series', 'failed');
@@ -87,6 +90,9 @@ select pg_temp.job(n, 'series', 'failed') from generate_series(5, 9) n;
 update library.book_cards set series_checked_at = now() where book_id = pg_temp.book(5);
 update library.books set series_name = 'Ember Loom' where id = pg_temp.book(6);
 update library.books set user_edited_fields = '{seriesVolume}' where id = pg_temp.book(7);
+select pg_temp.job(12, 'new_tags', 'failed');
+select pg_temp.job(13, 'series', 'failed');
+update library.books set user_edited_fields = '{seriesName}' where id = pg_temp.book(13);
 
 set local role authenticated;
 select pg_temp.as_a();
@@ -110,9 +116,11 @@ select is((select j.kind || ':' || j.reason || ':' || j.status || ':' || j.run_i
           'the retry is a queued series job with the run id');
 select is(pg_temp.req(array[2], 'series'), '{skipped}',
           'series: a book whose newest job is a failed full job is skipped');
+select is(pg_temp.req(array[12], 'series'), '{skipped}',
+          'series: a book whose newest job is a failed new_tags job is skipped');
 select is(pg_temp.req(array[3, 4], 'series'), '{skipped,queued}',
           'series: only the newest job counts (failed full after series skips; failed series after full queues)');
-select is(pg_temp.req(array[5, 6, 7], 'series'), '{skipped,skipped,skipped}',
+select is(pg_temp.req(array[5, 6, 7, 13], 'series'), '{skipped,skipped,skipped,skipped}',
           'series: a failed-series book that is checked, has a series or is hand-set is still skipped');
 select is(pg_temp.req(array[1], 'series'), '{already_open}',
           'series: the retried book now has an open job');
