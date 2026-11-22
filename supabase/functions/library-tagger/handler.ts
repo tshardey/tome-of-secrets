@@ -15,7 +15,15 @@ import { fetchImages, hostAllowed } from "../library-covers/images.ts";
 import { dedupeVocab, sanitizeTagResult, type TagInput, TOS_TAG_CAP, VOCAB_CAP } from "./prompt.ts";
 import { openLibrarySeries } from "./openlibrary.ts";
 import { type CleanSeries, cleanStatus, type SameAuthorBook, sanitizeSeries, type SeriesStatus } from "./series.ts";
-import { MODEL, SERIES_RESERVE_MICRO, type SeriesCall, TAG_RESERVE_MICRO, type TagCall, type Tagger } from "./tagger.ts";
+import {
+  MODEL,
+  SERIES_RESERVE_MICRO,
+  type SeriesCall,
+  TAG_RESERVE_MICRO,
+  type TagCall,
+  type Tagger,
+  type Unreadable,
+} from "./tagger.ts";
 import { allowedTosTags, loadTosTagList } from "./tos-tags.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -104,8 +112,20 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
 
 const outcome = (value: string) => json({ outcome: value });
 
-/** The stored usage always carries the unclamped computed cost. */
-const storedUsage = (u: Usage) => ({ ...u, computedCostMicro: costMicro(MODEL, u) });
+/**
+ * The stored usage always carries the unclamped computed cost, and why a reply
+ * could not be read when one couldn't (it holds no book text, 2026-11-22).
+ */
+const storedUsage = (u: Usage, unreadable?: Unreadable) => ({
+  ...u,
+  computedCostMicro: costMicro(MODEL, u),
+  ...(unreadable ? { unreadable } : {}),
+});
+
+/** One line per unreadable reply: the descriptor only, never book text. */
+function logUnreadable(unreadable: Unreadable | undefined): void {
+  if (unreadable) console.error("library-tagger unreadable", JSON.stringify(unreadable));
+}
 
 /** A release that requeues with retry_at reads retry_later; failed (the last attempt) reads failed. */
 const afterRetry = (status: string) => status === "failed" ? "failed" : status === "stale" ? "busy" : "retry_later";
@@ -173,8 +193,10 @@ async function releaseFailure(
 ): Promise<Response> {
   // An unbilled failure after a billed two_step first call carries that
   // call's usage, so the release records it (SQL clamps it to the reserve).
+  const unreadable = "unreadable" in call ? call.unreadable : undefined;
+  logUnreadable(unreadable);
   const earlier = "usage" in call && call.usage ? call.usage : null;
-  const usage = earlier ? storedUsage(earlier) : null;
+  const usage = earlier ? storedUsage(earlier, unreadable) : null;
   const spent = earlier ? costMicro(MODEL, earlier) : 0;
   switch (call.kind) {
     case "retry": {
@@ -197,7 +219,7 @@ async function releaseFailure(
       await db.release(jobId, token, "tag_rejected", null, usage, spent);
       return outcome("rejected");
     case "fail":
-      await db.release(jobId, token, call.code, null, storedUsage(call.usage), costMicro(MODEL, call.usage));
+      await db.release(jobId, token, call.code, null, storedUsage(call.usage, unreadable), costMicro(MODEL, call.usage));
       return outcome("failed");
   }
 }
@@ -220,6 +242,8 @@ async function handleSeries(jobId: string, token: string, claim: Claim, book: Cl
     allowSearch: claim.hasSameAuthorColumn,
   });
   if (call.kind !== "ok") return await releaseFailure(deps.db, jobId, token, claim, call, deps.now());
+  // An unreadable first reply that earned the search call: the job finishes, and the reason is kept.
+  logUnreadable(call.unreadable);
   let cost = costMicro(MODEL, call.usage);
   if (call.searchFailure) {
     console.error("library-tagger search failed", call.searchFailure);
@@ -237,7 +261,7 @@ async function handleSeries(jobId: string, token: string, claim: Claim, book: Cl
     suggestions: [],
     series: checked.series,
   }, checked.status);
-  const status = await deps.db.finish(jobId, token, result, storedUsage(call.usage), cost, MODEL);
+  const status = await deps.db.finish(jobId, token, result, storedUsage(call.usage, call.unreadable), cost, MODEL);
   // stale: the lease expired and another run owns the job now.
   return outcome(status === "stale" ? "busy" : status);
 }

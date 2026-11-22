@@ -6,6 +6,7 @@
 // by SDK class, status and error type, never by message. Nothing here logs.
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { z } from "zod";
 import {
   type AiFailure,
   type AiModel,
@@ -114,9 +115,24 @@ export const SEARCH_TEXT_JSON_LINE = 'Answer with only a JSON object {"series": 
 /** D8: thinking at low effort plus the filtering code. Task 6's largest searching output was 441 tokens. */
 export const SERIES_SEARCH_MAX_TOKENS = 4096;
 
+/**
+ * Why a reply could not be read, with no book text in it (2026-11-22): the
+ * reason, the reply's block types, the length of its text, its stop_reason,
+ * and for a schema miss the paths and codes of zod's issues, never the values.
+ */
+export interface Unreadable {
+  reason: "max_tokens" | "no_text" | "not_json" | "schema";
+  blocks: string[];
+  textChars: number;
+  stopReason: string | null;
+  issues?: { path: string; code: string }[];
+}
+
+type Failed = { kind: "fail"; code: "tag_refused" | "tag_unreadable"; usage: Usage; unreadable?: Unreadable };
+
 export type TagCall =
   | { kind: "ok"; result: TagResult; usage: Usage }
-  | { kind: "fail"; code: "tag_refused" | "tag_unreadable"; usage: Usage }
+  | Failed
   | AiFailure;
 
 /** The series as the model returns it, before sanitizeSeries. */
@@ -130,11 +146,20 @@ export type RawSeries = { name: string; volume: number | null; why: string } | n
  */
 export type SearchFailure = "billed_unknown";
 
+/** unreadable, on any of these: the two_step first reply that could not be read, so the search call was made. */
 export type SeriesCall =
-  | { kind: "ok"; status: SeriesStatus; series: RawSeries; usage: Usage; searched: boolean; searchFailure?: SearchFailure }
-  | { kind: "fail"; code: "tag_refused" | "tag_unreadable"; usage: Usage }
+  | {
+    kind: "ok";
+    status: SeriesStatus;
+    series: RawSeries;
+    usage: Usage;
+    searched: boolean;
+    searchFailure?: SearchFailure;
+    unreadable?: Unreadable;
+  }
+  | Failed
   /** usage: a billed two_step first call before an unbilled search-call failure. */
-  | (AiFailure & { usage?: Usage });
+  | (AiFailure & { usage?: Usage; unreadable?: Unreadable });
 
 export interface Tagger {
   tag(input: TagInput): Promise<TagCall>;
@@ -142,13 +167,62 @@ export interface Tagger {
   findSeries(input: SeriesInput & { allowSearch: boolean }): Promise<SeriesCall>;
 }
 
-const FORMAT = zodOutputFormat(TagResultSchema);
-const SERIES_FORMAT = zodOutputFormat(SeriesResultSchema);
+type Json = Record<string, unknown>;
+const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * The SDK's transformJSONSchema (1.3.0) keeps only `format` on a string and
+ * moves every other keyword into the description, `enum` included, though
+ * structured outputs support enum. So series_status went to the API as any
+ * string (2026-11-22). This puts each enum of zod's own JSON schema back on the
+ * matching node and takes the "{enum: [...]}" the SDK wrote off its description.
+ * A z.literal's `const` is moved the same way and is not restored: no schema
+ * here uses one.
+ */
+function restoreEnums(out: unknown, raw: unknown): void {
+  if (!isObject(out) || !isObject(raw)) return;
+  if (Array.isArray(raw.enum) && !("enum" in out)) {
+    out.enum = raw.enum;
+    const moved = `{enum: ${JSON.stringify(raw.enum)}}`;
+    if (out.description === moved) delete out.description;
+    else if (typeof raw.description === "string" && out.description === `${raw.description}\n\n${moved}`) {
+      out.description = raw.description;
+    }
+  }
+  for (const key of ["properties", "$defs"]) {
+    const o = out[key], r = raw[key];
+    if (isObject(o) && isObject(r)) for (const k of Object.keys(r)) restoreEnums(o[k], r[k]);
+  }
+  // The SDK sends a oneOf as anyOf.
+  const variants = out.anyOf ?? out.allOf;
+  const rawVariants = raw.anyOf ?? raw.oneOf ?? raw.allOf;
+  if (Array.isArray(variants) && Array.isArray(rawVariants)) variants.forEach((v, i) => restoreEnums(v, rawVariants[i]));
+  restoreEnums(out.items, raw.items);
+}
+
+/** A reply format: the JSON schema sent as output_config.format, and the zod schema the reply is checked against. */
+export interface OutputFormat<T> {
+  schema: Json;
+  zod: z.ZodType<T>;
+}
+
+/** zodOutputFormat's schema with its enums restored (see restoreEnums). */
+export function outputFormat<T>(schema: z.ZodType<T>): OutputFormat<T> {
+  const sent = zodOutputFormat(schema).schema as Json;
+  restoreEnums(sent, z.toJSONSchema(schema, { reused: "ref" }));
+  return { schema: sent, zod: schema };
+}
+
+export const TAG_FORMAT = outputFormat(TagResultSchema);
+export const SERIES_FORMAT = outputFormat(SeriesResultSchema);
 
 type Parsed<T> =
   | { kind: "ok"; value: T; usage: Usage }
-  | { kind: "fail"; code: "tag_refused" | "tag_unreadable"; usage: Usage }
+  | Failed
   | AiFailure;
+
+/** At most this many block types and zod issues go into an Unreadable. */
+const UNREADABLE_CAP = 10;
 
 /** The four token counts, plus webSearchRequests when any search was billed (D10). */
 export function usageOf(u: Anthropic.Usage): Usage {
@@ -226,7 +300,7 @@ export function anthropicTagger(
   async function call<T>(
     system: string,
     maxTokens: number,
-    format: { schema: Record<string, unknown>; parse(text: string): unknown },
+    format: OutputFormat<T>,
     content: unknown[],
   ): Promise<Parsed<T>> {
     let message: Anthropic.Message;
@@ -248,19 +322,39 @@ export function anthropicTagger(
 
     const usage = usageOf(message.usage);
     if (message.stop_reason === "refusal") return { kind: "fail", code: "tag_refused", usage };
-    if (message.stop_reason === "max_tokens") return { kind: "fail", code: "tag_unreadable", usage };
 
-    const text = message.content.find((b): b is Anthropic.TextBlock => b.type === "text")?.text;
-    let parsed: T | null = null;
-    if (text !== undefined) {
-      try {
-        parsed = format.parse(text) as T;
-      } catch {
-        parsed = null;
-      }
+    // Every text block, joined, so an answer split across blocks still reads.
+    const blocks = message.content as unknown as Block[];
+    const text = answerText(blocks);
+    const unreadable = (reason: Unreadable["reason"], issues?: Unreadable["issues"]): Parsed<T> => ({
+      kind: "fail",
+      code: "tag_unreadable",
+      usage,
+      unreadable: {
+        reason,
+        blocks: blocks.slice(0, UNREADABLE_CAP).map((b) => String(b.type).slice(0, 40)),
+        textChars: text.length,
+        stopReason: message.stop_reason ?? null,
+        ...(issues ? { issues } : {}),
+      },
+    });
+    if (message.stop_reason === "max_tokens") return unreadable("max_tokens");
+    if (!blocks.some((b) => b.type === "text" && typeof b.text === "string")) return unreadable("no_text");
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return unreadable("not_json");
     }
-    if (!parsed) return { kind: "fail", code: "tag_unreadable", usage };
-    return { kind: "ok", value: parsed, usage };
+    const r = format.zod.safeParse(json);
+    if (!r.success) {
+      // Paths name schema keys or array indexes only (true while no schema
+      // uses z.record, whose keys the model writes); codes are zod's. No values.
+      const issues = r.error.issues.slice(0, UNREADABLE_CAP)
+        .map((i) => ({ path: i.path.map(String).join(".").slice(0, 80), code: i.code }));
+      return unreadable("schema", issues);
+    }
+    return { kind: "ok", value: r.data, usage };
   }
 
   /**
@@ -324,18 +418,22 @@ export function anthropicTagger(
 
   return {
     async tag(input) {
-      const r = await call<TagResult>(TAG_SYSTEM_PROMPT, MAX_TOKENS, FORMAT, buildTagContent(input));
+      const r = await call(TAG_SYSTEM_PROMPT, MAX_TOKENS, TAG_FORMAT, buildTagContent(input));
       return r.kind === "ok" ? { kind: "ok", result: r.value, usage: r.usage } : r;
     },
     async findSeries(input) {
       const content = buildSeriesContent(input);
       if (input.allowSearch && searchMode === "single") return await searchCall(content, null);
-      const r = await call<{ series: RawSeries; series_status: SeriesStatus }>(
-        SERIES_SYSTEM_PROMPT,
-        SERIES_MAX_TOKENS,
-        SERIES_FORMAT,
-        content,
-      );
+      const r = await call(SERIES_SYSTEM_PROMPT, SERIES_MAX_TOKENS, SERIES_FORMAT, content);
+      // two_step: a first reply that can't be read is taken as unsure, so it
+      // earns the search call when allowed (2026-11-22). Failing the job would
+      // leave the book blank until a later Find series queued it again, at the
+      // same cost. What was wrong is kept, even when the search call is then
+      // refused (error tag_refused, usage.unreadable about the first reply).
+      if (r.kind === "fail" && r.code === "tag_unreadable" && input.allowSearch) {
+        const searched = await searchCall(content, r.usage);
+        return r.unreadable ? { ...searched, unreadable: r.unreadable } : searched;
+      }
       if (r.kind !== "ok") return r;
       // two_step: only an unsure answer, and only when allowed, earns the search call.
       if (input.allowSearch && r.value.series_status === "unsure") return await searchCall(content, r.usage);

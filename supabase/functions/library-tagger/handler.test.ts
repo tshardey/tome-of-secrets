@@ -4,7 +4,15 @@ import { type Claim, type FinishResult, handle, rpcDb, type SupabaseLike, type T
 import type { TagInput, TagResult } from "./prompt.ts";
 import { buildTagContent, TOS_TAG_CAP } from "./prompt.ts";
 import { buildSeriesContent, type SeriesInput } from "./series.ts";
-import { MODEL, type SeriesCall, SERIES_RESERVE_MICRO, TAG_RESERVE_MICRO, type TagCall, type Tagger } from "./tagger.ts";
+import {
+  MODEL,
+  type SeriesCall,
+  SERIES_RESERVE_MICRO,
+  TAG_RESERVE_MICRO,
+  type TagCall,
+  type Tagger,
+  type Unreadable,
+} from "./tagger.ts";
 
 const JOB = "0b6f4f6e-6a3c-4c1e-9d55-2f1f0f3a9b10";
 const TOKEN = "7d1f3a52-8e0b-4b6e-a7c4-5a1e9c2d4f01";
@@ -956,4 +964,61 @@ Deno.test("an unbilled search-call failure releases at the first call's cost: no
   const plain = await run(claim(), { kind: "billing" }, { series: { kind: "retry", retryAfterSeconds: 7, billedUnknown: false } });
   assert.equal(plain.calls.release[0][4], null);
   assert.equal(plain.calls.release[0][5], 0);
+});
+
+// 2026-11-22: why a reply could not be read is stored with the usage and logged, with no book text.
+const WHY_UNREADABLE: Unreadable = {
+  reason: "schema",
+  blocks: ["thinking", "text"],
+  textChars: 47,
+  stopReason: "end_turn",
+  issues: [{ path: "series_status", code: "invalid_value" }],
+};
+
+async function logging<T>(fn: () => Promise<T>): Promise<{ value: T; logged: unknown[][] }> {
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => void logged.push(args);
+  try {
+    return { value: await fn(), logged };
+  } finally {
+    console.error = original;
+  }
+}
+
+Deno.test("unreadable: a tag or series release stores the reason with the usage and logs one line", async () => {
+  const fail = { kind: "fail", code: "tag_unreadable", usage: USAGE, unreadable: WHY_UNREADABLE } as const;
+  for (const r of [() => run(claimed(), fail), () => run(seriesClaim(), { kind: "billing" }, { series: fail })]) {
+    const { value, logged } = await logging(r);
+    assert.deepEqual(value.body, { outcome: "failed" });
+    const usage = value.calls.release[0][4] as Record<string, unknown>;
+    assert.deepEqual(usage, { ...USAGE, computedCostMicro: costMicro(MODEL, USAGE), unreadable: WHY_UNREADABLE });
+    assert.deepEqual(logged, [["library-tagger unreadable", JSON.stringify(WHY_UNREADABLE)]]);
+    assert.ok(!JSON.stringify(logged).includes("Lantern"));
+  }
+  // Without a reason (an empty summary, or an older reply), the usage is as before and nothing is logged.
+  const { value, logged } = await logging(() => run(claimed(), { kind: "fail", code: "tag_unreadable", usage: USAGE }));
+  assert.equal("unreadable" in (value.calls.release[0][4] as Record<string, unknown>), false);
+  assert.equal(logged.length, 0);
+});
+
+Deno.test("unreadable: a series check that searched after an unreadable first reply finishes and keeps the reason", async () => {
+  const { value, logged } = await logging(() =>
+    run(seriesClaim({ hasSameAuthorColumn: true }), { kind: "billing" }, {
+      series: { kind: "ok", status: "unsure", series: null, usage: USAGE, searched: true, unreadable: WHY_UNREADABLE },
+    })
+  );
+  assert.deepEqual(value.body, { outcome: "done" });
+  const usage = value.calls.finish[0][3] as Record<string, unknown>;
+  assert.deepEqual(usage.unreadable, WHY_UNREADABLE);
+  assert.equal(usage.computedCostMicro, costMicro(MODEL, USAGE));
+  assert.deepEqual(logged, [["library-tagger unreadable", JSON.stringify(WHY_UNREADABLE)]]);
+  // An unbilled search failure after it releases with the first call's usage and the reason.
+  const retry = await logging(() =>
+    run(seriesClaim({ hasSameAuthorColumn: true }), { kind: "billing" }, {
+      series: { kind: "retry", retryAfterSeconds: null, billedUnknown: false, usage: USAGE, unreadable: WHY_UNREADABLE },
+    })
+  );
+  assert.deepEqual((retry.value.calls.release[0][4] as Record<string, unknown>).unreadable, WHY_UNREADABLE);
+  assert.equal(retry.logged.length, 1);
 });
