@@ -14,15 +14,22 @@ import {
   SERIES_MAX_TOKENS,
   SERIES_RESERVE_MICRO,
   SERIES_SEARCH_MAX_TOKENS,
+  SERIES_FORMAT,
   SERIES_SEARCH_MODE,
   seriesCeilingMicro,
+  outputFormat,
+  TAG_FORMAT,
   TAG_RESERVE_MICRO,
+  type Unreadable,
   usageOf,
 } from "./tagger.ts";
+import { z } from "zod";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import {
   buildSeriesContent,
   SERIES_SEARCH_PROMPT,
   SERIES_SYSTEM_PROMPT,
+  SeriesResultSchema,
   type SeriesInput,
   worstCaseSeriesTokens,
 } from "./series.ts";
@@ -638,4 +645,213 @@ Deno.test("text_json: no output_config.format, the prompt asks for JSON, text af
   assert.equal(calls[1].system, `${SERIES_SEARCH_PROMPT}\n${SEARCH_TEXT_JSON_LINE}`);
   assert.ok(SEARCH_TEXT_JSON_LINE.startsWith("Answer with only a JSON object"));
   assert.deepEqual(r, { kind: "ok", status: "found", series: FOUND.series, usage: SUMMED, searched: true });
+});
+
+// ---------------------------------------------------------------------------
+// 2026-11-22: why series checks failed as tag_unreadable
+// ---------------------------------------------------------------------------
+
+const STATUS_SCHEMA = { type: "string", enum: ["found", "none", "unsure"] };
+
+Deno.test("enums: series_status is sent with its enum, not as any string, on every call that sends a format", async () => {
+  // The SDK's own schema moves the enum into the description (the cause).
+  const sdk = zodOutputFormat(SeriesResultSchema).schema as { properties: Record<string, Record<string, unknown>> };
+  assert.equal(sdk.properties.series_status.enum, undefined);
+  assert.deepEqual(SERIES_FORMAT.schema, {
+    type: "object",
+    properties: {
+      series: {
+        anyOf: [
+          {
+            type: "object",
+            properties: { name: { type: "string" }, volume: { type: ["number", "null"] }, why: { type: "string" } },
+            additionalProperties: false,
+            required: ["name", "volume", "why"],
+          },
+          { type: "null" },
+        ],
+      },
+      series_status: STATUS_SCHEMA,
+    },
+    additionalProperties: false,
+    required: ["series", "series_status"],
+    description: '{$schema: "https://json-schema.org/draft/2020-12/schema"}',
+  });
+  const props = TAG_FORMAT.schema.properties as Record<string, unknown>;
+  assert.deepEqual(props.series_status, STATUS_SCHEMA);
+
+  const statusOf = (body: Record<string, unknown>) =>
+    (body.output_config as { format: { schema: { properties: Record<string, unknown> } } }).format.schema.properties
+      .series_status;
+  const tag = stub(200, message());
+  await anthropicTagger("k", { fetchImpl: tag.fetchImpl }).tag(INPUT);
+  assert.deepEqual(statusOf(tag.calls[0].body), STATUS_SCHEMA);
+  const { fetchImpl, calls } = seq(answer(UNSURE), searched(FOUND));
+  await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.deepEqual(statusOf(calls[0]), STATUS_SCHEMA);
+  assert.deepEqual(statusOf(calls[1]), STATUS_SCHEMA);
+});
+
+Deno.test("enums: outputFormat restores nested enums, keeps a description of its own, and changes nothing else", () => {
+  const schema = z.object({
+    list: z.array(z.object({ pick: z.enum(["a", "b"]).describe("Choose one.") })),
+    maybe: z.enum(["x", "y"]).nullable(),
+    name: z.string(),
+  });
+  const f = outputFormat(schema);
+  const s = f.schema as { properties: Record<string, Record<string, unknown>> };
+  const item = (s.properties.list.items as { properties: Record<string, unknown> }).properties.pick;
+  assert.deepEqual(item, { type: "string", enum: ["a", "b"], description: "Choose one." });
+  assert.deepEqual((s.properties.maybe.anyOf as unknown[])[0], { type: "string", enum: ["x", "y"] });
+  assert.deepEqual(s.properties.name, { type: "string" });
+  // Without enums, the schema is exactly the SDK's.
+  const plain = z.object({ a: z.string(), b: z.array(z.number()) });
+  assert.deepEqual(outputFormat(plain).schema, zodOutputFormat(plain).schema);
+  assert.equal(f.zod, schema);
+});
+
+/** The descriptor an unreadable call returned, or a failed assertion. */
+function unreadableOf(r: { kind: string; code?: string; unreadable?: Unreadable }): Unreadable {
+  assert.equal(r.kind, "fail");
+  assert.equal(r.code, "tag_unreadable");
+  assert.ok(r.unreadable);
+  return r.unreadable;
+}
+
+const THINKING = { type: "thinking", thinking: "", signature: "sig" };
+const seriesReply = (text: string, over: Record<string, unknown> = {}) =>
+  message({ content: [THINKING, { type: "text", text }], usage: { ...message().usage, output_tokens: 24 }, ...over });
+const STANDALONE = JSON.stringify({ series: null, series_status: "standalone" });
+const NO_WHY = JSON.stringify({ series: { name: "Lantern Vale", volume: "3" }, series_status: "found" });
+
+Deno.test("unreadable: max_tokens, no text, not JSON and a schema miss each say why, with no book text", async () => {
+  const cases: [unknown, Unreadable][] = [
+    [
+      message({ stop_reason: "max_tokens", content: [THINKING] }),
+      { reason: "max_tokens", blocks: ["thinking"], textChars: 0, stopReason: "max_tokens" },
+    ],
+    [message({ content: [THINKING] }), { reason: "no_text", blocks: ["thinking"], textChars: 0, stopReason: "end_turn" }],
+    [message({ content: [] }), { reason: "no_text", blocks: [], textChars: 0, stopReason: "end_turn" }],
+    [seriesReply("Lantern Vale, book 3"), { reason: "not_json", blocks: ["thinking", "text"], textChars: 20, stopReason: "end_turn" }],
+    [
+      seriesReply(STANDALONE),
+      {
+        reason: "schema",
+        blocks: ["thinking", "text"],
+        textChars: STANDALONE.length,
+        stopReason: "end_turn",
+        issues: [{ path: "series_status", code: "invalid_value" }],
+      },
+    ],
+    [
+      seriesReply(NO_WHY),
+      {
+        reason: "schema",
+        blocks: ["thinking", "text"],
+        textChars: NO_WHY.length,
+        stopReason: "end_turn",
+        issues: [{ path: "series.volume", code: "invalid_type" }, { path: "series.why", code: "invalid_type" }],
+      },
+    ],
+  ];
+  for (const [reply, want] of cases) {
+    const { fetchImpl } = stub(200, reply);
+    const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+    const got = unreadableOf(r as never);
+    assert.deepEqual(got, want);
+    for (const word of ["Lantern", "standalone", "book 3"]) assert.ok(!JSON.stringify(got).includes(word), word);
+    if (r.kind === "fail") assert.equal(r.usage.inputTokens, 900);
+  }
+  // tag() says why too.
+  const { fetchImpl } = stub(200, message({ content: [{ type: "text", text: JSON.stringify({ tos_tags: "fantasy" }) }] }));
+  const t = await anthropicTagger("k", { fetchImpl }).tag(INPUT);
+  assert.equal(unreadableOf(t as never).reason, "schema");
+});
+
+Deno.test("unreadable: at most 10 block types are kept", async () => {
+  const { fetchImpl } = stub(200, message({ stop_reason: "max_tokens", content: Array.from({ length: 12 }, () => THINKING) }));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+  assert.equal(unreadableOf(r as never).blocks.length, 10);
+});
+
+Deno.test("a thinking block and an answer split across two text blocks still read", async () => {
+  const reply = message({
+    content: [
+      THINKING,
+      { type: "text", text: '{"series": {"name": "Lantern Vale", "volume": 3, ' },
+      { type: "text", text: '"why": "The title numbers it."}, "series_status": "found"}' },
+    ],
+  });
+  const { fetchImpl } = stub(200, reply);
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+  assert.equal(r.kind, "ok");
+  if (r.kind === "ok") assert.deepEqual(r.series, FOUND.series);
+});
+
+Deno.test("cross-field oddities parse and are left to cleanStatus, not failed", async () => {
+  for (const out of [{ series: null, series_status: "found" }, { series: FOUND.series, series_status: "none" }]) {
+    const { fetchImpl } = stub(200, answer(out));
+    const r = await anthropicTagger("k", { fetchImpl }).findSeries(SERIES_INPUT);
+    assert.equal(r.kind, "ok");
+  }
+});
+
+Deno.test("two_step: an unreadable first reply earns the search call when allowed, and keeps why", async () => {
+  const bad = [
+    seriesReply(STANDALONE),
+    seriesReply("not json"),
+    message({ stop_reason: "max_tokens", content: [THINKING] }),
+    message({ content: [THINKING] }),
+  ];
+  for (const first of bad) {
+    const { fetchImpl, calls } = seq(first, searched(FOUND));
+    const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[1].tools, [SEARCH_TOOL]);
+    assert.equal(r.kind, "ok");
+    if (r.kind === "ok") {
+      assert.equal(r.status, "found");
+      assert.equal(r.searched, true);
+      assert.ok(r.unreadable);
+      const firstUsage = usageOf(first.usage as never);
+      assert.equal(r.usage.inputTokens, firstUsage.inputTokens + 4000);
+      assert.equal(r.usage.outputTokens, firstUsage.outputTokens + 700);
+      assert.equal(r.usage.webSearchRequests, 2);
+    }
+  }
+  // An unparseable search answer is unsure, as before, and still says why the first failed.
+  const { fetchImpl } = seq(seriesReply("not json"), searched("nope"));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(r.kind === "ok" && r.status, "unsure");
+  assert.equal(r.kind === "ok" && r.unreadable?.reason, "not_json");
+});
+
+Deno.test("two_step: an unreadable first reply without allowSearch fails as before; a refusal never searches", async () => {
+  const { fetchImpl, calls } = seq(seriesReply("not json"), searched(FOUND));
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: false });
+  assert.equal(calls.length, 1);
+  assert.equal(unreadableOf(r as never).reason, "not_json");
+  const refused = seq(message({ stop_reason: "refusal", content: [{ type: "text", text: "no" }] }), searched(FOUND));
+  const r2 = await anthropicTagger("k", { fetchImpl: refused.fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(refused.calls.length, 1);
+  assert.equal(r2.kind === "fail" && r2.code, "tag_refused");
+});
+
+Deno.test("two_step: an unbilled search failure after an unreadable first reply carries its usage and why", async () => {
+  let n = 0;
+  const fetchImpl = (() => {
+    n++;
+    const body = n === 1 ? seriesReply("not json") : apiError("overloaded_error");
+    return Promise.resolve(
+      new Response(JSON.stringify(body), { status: n === 1 ? 200 : 529, headers: { "content-type": "application/json" } }),
+    );
+  }) as typeof fetch;
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(n, 2);
+  assert.equal(r.kind, "retry");
+  if (r.kind === "retry") {
+    assert.equal(r.billedUnknown, false);
+    assert.equal(r.usage?.outputTokens, 24);
+    assert.equal(r.unreadable?.reason, "not_json");
+  }
 });
