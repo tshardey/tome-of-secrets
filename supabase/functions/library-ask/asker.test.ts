@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { classifyAiError, PRICES, thinkingFor } from "../_shared/library-ai.ts";
-import { ASK_SYSTEM_PROMPT, type AskBook, type AskResult, buildAskList, READ_DESCRIPTIONS_TOOL } from "./prompt.ts";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { ASK_SYSTEM_PROMPT, type AskBook, type AskResult, AskResultSchema, buildAskList, READ_DESCRIPTIONS_TOOL } from "./prompt.ts";
 import { anthropicAsker, askReserveMicro, chooseAsker, fakeAsker, MAX_TOKENS, MODEL } from "./asker.ts";
 
 const book = (ref: number): AskBook => ({
@@ -75,6 +76,14 @@ function seq(...replies: { status?: number; body: unknown; headers?: Record<stri
 const apiError = (type: string) => ({ type: "error", error: { type, message: "stubbed" } });
 const noRead = () => Promise.reject(new Error("must not read"));
 type Block = Record<string, unknown> & { type: string };
+
+Deno.test("enums: the ask schema has no enum and is sent exactly as the SDK builds it", async () => {
+  const { fetchImpl, calls } = seq({ body: message() });
+  await anthropicAsker("k", { fetchImpl }).ask(BOOKS, "A tale", noRead);
+  const schema = (calls[0].body.output_config as { format: { schema: Record<string, unknown> } }).format.schema;
+  assert.deepEqual(schema, zodOutputFormat(AskResultSchema).schema);
+  assert.ok(!JSON.stringify(schema).includes("enum"));
+});
 
 Deno.test("round 1: system, cached list, escaped prompt last, strict tool, D1 settings, schema", async () => {
   const { fetchImpl, calls } = seq({ body: message() });

@@ -4,7 +4,7 @@
 // Failures are classified by SDK class, status and error type, never by
 // message. Nothing here logs.
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { outputFormat } from "../_shared/output-format.ts";
 import {
   type AiFailure,
   type AiModel,
@@ -60,7 +60,7 @@ export interface Asker {
   ): Promise<AskCall>;
 }
 
-const FORMAT = zodOutputFormat(AskResultSchema);
+const FORMAT = outputFormat(AskResultSchema);
 const ZERO: Usage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
 
 function usageOf(u: Anthropic.Usage): Usage {

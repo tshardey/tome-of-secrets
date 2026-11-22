@@ -2,7 +2,7 @@
 // a structured extraction. No tools, no thinking parameter, no SDK retries:
 // every retry is a new claim, counted before the call (D2).
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { outputFormat } from "../_shared/output-format.ts";
 import { z } from "zod";
 
 export const MODEL = "claude-haiku-5-5";
@@ -39,7 +39,7 @@ export interface VisionClient {
   read(images: Uint8Array[]): Promise<VisionResult>;
 }
 
-const FORMAT = zodOutputFormat(ExtractionSchema);
+const FORMAT = outputFormat(ExtractionSchema);
 
 function toBase64(bytes: Uint8Array): string {
   let binary = "";

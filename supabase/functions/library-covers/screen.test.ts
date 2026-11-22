@@ -117,6 +117,18 @@ Deno.test("the request has the model, limits, effort, schema, disabled thinking 
   assert.ok(!("temperature" in body) && !("tools" in body));
 });
 
+Deno.test("enums: the verdict is sent with its enum, and no description holds an enum's text", async () => {
+  const { fetchImpl, calls } = stub(200, message());
+  await anthropicScreener("test-key", fetchImpl).screen(INPUT);
+  const schema = (calls[0].body.output_config as { format: { schema: Record<string, unknown> } }).format.schema;
+  const verdicts = (schema.properties as Record<string, { items: { properties: Record<string, unknown> } }>).verdicts;
+  assert.deepEqual(verdicts.items.properties.verdict, {
+    type: "string",
+    enum: ["ok", "not_english", "placeholder", "other_book", "unusable"],
+  });
+  assert.ok(!JSON.stringify(schema).includes("{enum"));
+});
+
 Deno.test("each image is followed by its candidate text, then the final block", async () => {
   const { fetchImpl, calls } = stub(200, message());
   await anthropicScreener("test-key", fetchImpl).screen(INPUT);
