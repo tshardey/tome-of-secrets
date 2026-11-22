@@ -176,6 +176,8 @@ const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null 
  * structured outputs support enum. So series_status went to the API as any
  * string (2026-11-22). This puts each enum of zod's own JSON schema back on the
  * matching node and takes the "{enum: [...]}" the SDK wrote off its description.
+ * A z.literal's `const` is moved the same way and is not restored: no schema
+ * here uses one.
  */
 function restoreEnums(out: unknown, raw: unknown): void {
   if (!isObject(out) || !isObject(raw)) return;
@@ -346,7 +348,8 @@ export function anthropicTagger(
     }
     const r = format.zod.safeParse(json);
     if (!r.success) {
-      // Paths name schema keys or array indexes only; codes are zod's. No values.
+      // Paths name schema keys or array indexes only (true while no schema
+      // uses z.record, whose keys the model writes); codes are zod's. No values.
       const issues = r.error.issues.slice(0, UNREADABLE_CAP)
         .map((i) => ({ path: i.path.map(String).join(".").slice(0, 80), code: i.code }));
       return unreadable("schema", issues);
@@ -424,7 +427,9 @@ export function anthropicTagger(
       const r = await call(SERIES_SYSTEM_PROMPT, SERIES_MAX_TOKENS, SERIES_FORMAT, content);
       // two_step: a first reply that can't be read is taken as unsure, so it
       // earns the search call when allowed (2026-11-22). Failing the job would
-      // only send it round again at the same cost. What was wrong is kept.
+      // leave the book blank until a later Find series queued it again, at the
+      // same cost. What was wrong is kept, even when the search call is then
+      // refused (error tag_refused, usage.unreadable about the first reply).
       if (r.kind === "fail" && r.code === "tag_unreadable" && input.allowSearch) {
         const searched = await searchCall(content, r.usage);
         return r.unreadable ? { ...searched, unreadable: r.unreadable } : searched;

@@ -708,6 +708,13 @@ Deno.test("enums: outputFormat restores nested enums, keeps a description of its
   const plain = z.object({ a: z.string(), b: z.array(z.number()) });
   assert.deepEqual(outputFormat(plain).schema, zodOutputFormat(plain).schema);
   assert.equal(f.zod, schema);
+  // An enum used twice is hoisted into $defs; it is restored there.
+  const shared = z.enum(["a", "b"]);
+  const reused = outputFormat(z.object({ one: shared, two: shared })).schema as { $defs?: Record<string, unknown> };
+  assert.ok(reused.$defs);
+  assert.deepEqual(Object.values(reused.$defs), [{ type: "string", enum: ["a", "b"] }]);
+  // Nothing of an enum is left in a description anywhere.
+  for (const s of [TAG_FORMAT.schema, SERIES_FORMAT.schema, reused]) assert.ok(!JSON.stringify(s).includes("{enum"));
 });
 
 /** The descriptor an unreadable call returned, or a failed assertion. */
@@ -835,6 +842,34 @@ Deno.test("two_step: an unreadable first reply without allowSearch fails as befo
   const r2 = await anthropicTagger("k", { fetchImpl: refused.fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
   assert.equal(refused.calls.length, 1);
   assert.equal(r2.kind === "fail" && r2.code, "tag_refused");
+  // A refused search call after an unreadable first reply: tag_refused, and the first reply's reason is kept.
+  const later = seq(seriesReply("not json"), message({ stop_reason: "refusal", content: [{ type: "text", text: "no" }] }));
+  const r3 = await anthropicTagger("k", { fetchImpl: later.fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(later.calls.length, 2);
+  assert.equal(r3.kind === "fail" && r3.code, "tag_refused");
+  assert.equal(r3.kind === "fail" && r3.unreadable?.reason, "not_json");
+});
+
+Deno.test("two_step: a billed-unknown search failure after an unreadable first reply is unsure and keeps why", async () => {
+  let n = 0;
+  const fetchImpl = (() => {
+    n++;
+    if (n === 1) {
+      return Promise.resolve(
+        new Response(JSON.stringify(seriesReply("not json")), { status: 200, headers: { "content-type": "application/json" } }),
+      );
+    }
+    return Promise.reject(new TypeError("connection reset"));
+  }) as typeof fetch;
+  const r = await anthropicTagger("k", { fetchImpl }).findSeries({ ...SERIES_INPUT, allowSearch: true });
+  assert.equal(n, 2);
+  assert.equal(r.kind, "ok");
+  if (r.kind === "ok") {
+    assert.equal(r.status, "unsure");
+    assert.equal(r.searchFailure, "billed_unknown");
+    assert.equal(r.usage.outputTokens, 24);
+    assert.equal(r.unreadable?.reason, "not_json");
+  }
 });
 
 Deno.test("two_step: an unbilled search failure after an unreadable first reply carries its usage and why", async () => {
