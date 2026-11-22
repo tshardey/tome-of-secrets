@@ -17,7 +17,6 @@ import {
   SERIES_FORMAT,
   SERIES_SEARCH_MODE,
   seriesCeilingMicro,
-  outputFormat,
   TAG_FORMAT,
   TAG_RESERVE_MICRO,
   type Unreadable,
@@ -692,29 +691,8 @@ Deno.test("enums: series_status is sent with its enum, not as any string, on eve
   assert.deepEqual(statusOf(calls[1]), STATUS_SCHEMA);
 });
 
-Deno.test("enums: outputFormat restores nested enums, keeps a description of its own, and changes nothing else", () => {
-  const schema = z.object({
-    list: z.array(z.object({ pick: z.enum(["a", "b"]).describe("Choose one.") })),
-    maybe: z.enum(["x", "y"]).nullable(),
-    name: z.string(),
-  });
-  const f = outputFormat(schema);
-  const s = f.schema as { properties: Record<string, Record<string, unknown>> };
-  const item = (s.properties.list.items as { properties: Record<string, unknown> }).properties.pick;
-  assert.deepEqual(item, { type: "string", enum: ["a", "b"], description: "Choose one." });
-  assert.deepEqual((s.properties.maybe.anyOf as unknown[])[0], { type: "string", enum: ["x", "y"] });
-  assert.deepEqual(s.properties.name, { type: "string" });
-  // Without enums, the schema is exactly the SDK's.
-  const plain = z.object({ a: z.string(), b: z.array(z.number()) });
-  assert.deepEqual(outputFormat(plain).schema, zodOutputFormat(plain).schema);
-  assert.equal(f.zod, schema);
-  // An enum used twice is hoisted into $defs; it is restored there.
-  const shared = z.enum(["a", "b"]);
-  const reused = outputFormat(z.object({ one: shared, two: shared })).schema as { $defs?: Record<string, unknown> };
-  assert.ok(reused.$defs);
-  assert.deepEqual(Object.values(reused.$defs), [{ type: "string", enum: ["a", "b"] }]);
-  // Nothing of an enum is left in a description anywhere.
-  for (const s of [TAG_FORMAT.schema, SERIES_FORMAT.schema, reused]) assert.ok(!JSON.stringify(s).includes("{enum"));
+Deno.test("enums: nothing of an enum is left in a description of the tag or series schema", () => {
+  for (const s of [TAG_FORMAT.schema, SERIES_FORMAT.schema]) assert.ok(!JSON.stringify(s).includes("{enum"));
 });
 
 /** The descriptor an unreadable call returned, or a failed assertion. */

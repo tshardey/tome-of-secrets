@@ -86,6 +86,16 @@ Deno.test("the request has the model, limits, effort, schema, prompt and images 
   assert.equal(content.length, 3);
 });
 
+Deno.test("enums: confidence is sent with its enum, and no description holds an enum's text", async () => {
+  const { fetchImpl, calls } = stub(200, message());
+  await anthropicVision("test-key", fetchImpl).read([COVER]);
+  const schema = (calls[0].body.output_config as { format: { schema: Record<string, unknown> } }).format.schema;
+  const props = schema.properties as Record<string, unknown>;
+  assert.deepEqual(props.confidence, { type: "string", enum: ["high", "medium", "low"] });
+  assert.deepEqual(props.title, { type: ["string", "null"] });
+  assert.ok(!JSON.stringify(schema).includes("{enum"));
+});
+
 Deno.test("one image gets only the cover sentence", async () => {
   const { fetchImpl, calls } = stub(200, message());
   await anthropicVision("test-key", fetchImpl).read([COVER]);

@@ -3,7 +3,7 @@
 // message. No tools and no SDK retries: every retry is a new claim, reserved
 // and counted before the call (D3).
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { outputFormat } from "../_shared/output-format.ts";
 import { z } from "zod";
 import type { FetchedImage } from "./images.ts";
 import { MAX_IMAGES } from "./images.ts";
@@ -215,7 +215,7 @@ export function classifyScreenError(err: unknown): ScreenResult {
 // Screeners
 // ---------------------------------------------------------------------------
 
-const FORMAT = zodOutputFormat(ScreeningSchema);
+const FORMAT = outputFormat(ScreeningSchema);
 
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
