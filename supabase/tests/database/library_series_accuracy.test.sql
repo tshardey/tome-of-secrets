@@ -490,11 +490,11 @@ select is(pg_temp.titles(library._same_author_books(pg_temp.hh(), pg_temp.book(3
           (select string_agg('Invented Title ' || n, ',' order by n) from generate_series(32, 46) n),
           '_same_author_books: the 15 newest other books by the author (either spelling), not itself, not H2''s');
 select is(library._same_author_books(pg_temp.hh(), pg_temp.book(31)) -> 0,
-          '{"title": "Invented Title 32", "seriesName": null, "seriesVolume": null}'::jsonb,
-          '_same_author_books: a book without a series has null seriesName and seriesVolume');
+          '{"title": "Invented Title 32", "seriesName": null, "seriesVolume": null, "handSet": false}'::jsonb,
+          '_same_author_books: a book without a series has null seriesName and seriesVolume (handSet false)');
 select is(library._same_author_books(pg_temp.hh(), pg_temp.book(74)),
-          '[{"title": "Invented Title 3", "seriesName": "Ember Loom", "seriesVolume": 1},
-            {"title": "Invented Title 4", "seriesName": "Ember Loom", "seriesVolume": 2}]'::jsonb,
+          '[{"title": "Invented Title 3", "seriesName": "Ember Loom", "seriesVolume": 1, "handSet": false},
+            {"title": "Invented Title 4", "seriesName": "Ember Loom", "seriesVolume": 2, "handSet": false}]'::jsonb,
           '_same_author_books: Émile Varro matches Emile Varro and a co-written book, with their series');
 select is(library._same_author_books(pg_temp.hh(), pg_temp.book(48))::text || '|'
           || library._same_author_books(pg_temp.hh(), pg_temp.book(21))::text, '[]|[]',
