@@ -1071,10 +1071,11 @@ $$;
 --   not_authorized (42501)  the flag is missing or the caller isn't a member;
 --   invalid_name (22023)    edited: the trimmed name is over 200 characters;
 --   invalid_volume (22023)  edited: round(v, 2) outside [0, 10000);
---   not_pending             the flag is decided or stale;
---   stale                   the book's series no longer matches the flag (the
---                           trigger normally retires it first): the flag
---                           becomes stale and the book is unchanged;
+--   not_pending             the flag is already decided (applied, kept, edited);
+--   stale                   the flag is already stale (the trigger retired it,
+--                           nothing more is written), or the book's series no
+--                           longer matches the flag: the flag becomes stale
+--                           and the book is unchanged;
 --   p_decision              done. The flag is decided first, then the book:
 --                           its series as decided, with seriesName and
 --                           seriesVolume added to user_edited_fields (no
@@ -1117,6 +1118,10 @@ begin
   select b.* into v_book from library.books b where b.id = v_book_id for no key update;
   select f.* into v_flag from library.series_audit_flags f where f.id = p_flag for update;
 
+  -- A flag the trigger already retired answers stale (its marker is cleared).
+  if v_flag.status = 'stale' then
+    return 'stale';
+  end if;
   if v_flag.status <> 'pending' then
     return 'not_pending';
   end if;

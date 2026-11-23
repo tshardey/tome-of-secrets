@@ -615,8 +615,11 @@ reset role;
 update library.books set series_volume = 8 where id = pg_temp.book(58);
 set local role authenticated;
 select pg_temp.as_a();
-select is(pg_temp.fdec(58) || '|' || library.apply_series_audit(pg_temp.fid(58)) || '|' || pg_temp.bk(58),
-          'stale:-:true|not_pending|Thornmere Cycle|8.00|{}', 'a flag the trigger made stale: not_pending');
+select is(pg_temp.fdec(58) || '|' || library.apply_series_audit(pg_temp.fid(58)) || ','
+          || library.keep_series_audit(pg_temp.fid(58)) || ','
+          || library.edit_series_audit(pg_temp.fid(58), 'Wrenfold Tales', 1) || '|' || pg_temp.bk(58),
+          'stale:-:true|stale,stale,stale|Thornmere Cycle|8.00|{}',
+          'a flag the trigger made stale: every decision answers stale, the book unchanged');
 
 select pg_temp.as_c();
 select throws_ok($$select library.apply_series_audit(pg_temp.fid(44))$$, '42501', 'not_authorized',
