@@ -6,7 +6,9 @@
 // list and the cover and makes a series check instead, which may search the
 // web when it is unsure (Plan 11 D8). Full and series jobs first look the
 // book's ISBNs up on Open Library and send the household's other books by the
-// same author (Plan 11 D6).
+// same author (Plan 11 D6). An audit job (Plan 12 D4, D10) answers claim_tag_job
+// with outcome audit; it is then claimed by claim_audit_job and checks the
+// series the book already has, writing only the audit answer, never tags.
 //
 // Logs carry error codes only: never titles, authors, series, descriptions,
 // tags, ISBNs or URLs.
@@ -15,9 +17,12 @@ import { fetchImages, hostAllowed } from "../library-covers/images.ts";
 import { dedupeVocab, sanitizeTagResult, type TagInput, TOS_TAG_CAP, VOCAB_CAP } from "./prompt.ts";
 import { openLibrarySeries } from "./openlibrary.ts";
 import { type CleanSeries, cleanStatus, type SameAuthorBook, sanitizeSeries, type SeriesStatus } from "./series.ts";
+import { type CleanAudit, cleanAudit } from "./audit.ts";
 import {
+  type AuditCall,
   MODEL,
   SERIES_RESERVE_MICRO,
+  type SearchFailure,
   type SeriesCall,
   TAG_RESERVE_MICRO,
   type TagCall,
@@ -43,15 +48,18 @@ export interface Claim {
   outcome: string;
   claimToken: string | null;
   attempts: number;
-  kind: "full" | "new_tags" | "series";
+  kind: "full" | "new_tags" | "series" | "audit";
   book: ClaimBook | null;
   card: { summary: string; coverDescription: string | null } | null;
   vocab: { id: string; category: string }[];
   removed: { tos: string[]; library: string[] };
   /** The household's series names (full and series claims); [] when the column is missing. */
   seriesNames: string[];
-  /** The household's other books by the same author (full and series claims, D6). */
-  sameAuthor: SameAuthorBook[];
+  /**
+   * The household's other books by the same author (full, series and audit
+   * claims, D6). rpcDb always sets handSet (Plan 12 D4; false when the row has none).
+   */
+  sameAuthor: (SameAuthorBook & { handSet?: boolean })[];
   /**
    * Whether the claim row carried same_author at all, i.e. the database has
    * the Plan 11 migration (D1). Without it this handler never searches and
@@ -61,11 +69,12 @@ export interface Claim {
 }
 
 /**
- * The p_result of finish_tag_job. series is always sent by this version, null
- * or not: its presence is what marks the book checked (Plan 10 D3). A series
- * job sends no tags, card text or suggestions, and a null summary.
- * seriesStatus (Plan 11 D9) is sent only when the claim row had same_author;
- * an older database never sees the key.
+ * The p_result of finish_tag_job. series is always sent by this version for a
+ * full, new_tags or series job, null or not: its presence is what marks the
+ * book checked (Plan 10 D3). A series job sends no tags, card text or
+ * suggestions, and a null summary. seriesStatus (Plan 11 D9) is sent only when
+ * the claim row had same_author; an older database never sees the key. An
+ * audit job (Plan 12 D5) sends audit and no series key at all.
  */
 export interface FinishResult {
   tos: string[];
@@ -74,8 +83,9 @@ export interface FinishResult {
   coverDescription: string | null;
   coverSeen: boolean;
   suggestions: { id: string; label: string; category: string; why: string }[];
-  series: CleanSeries | null;
+  series?: CleanSeries | null;
   seriesStatus?: SeriesStatus | null;
+  audit?: CleanAudit;
 }
 
 export type ReleaseError =
@@ -88,6 +98,8 @@ export type ReleaseError =
 
 export interface TaggerDb {
   claim(id: string): Promise<Claim>;
+  /** claim_audit_job (Plan 12 D4), called only after claim answers outcome audit. */
+  claimAudit(id: string): Promise<Claim>;
   finish(id: string, claim: string, result: FinishResult, usage: object, cost: number, model: string): Promise<string>;
   release(
     id: string,
@@ -175,8 +187,8 @@ async function lookUpOpenLibrary(book: ClaimBook, fetchImpl: typeof fetch): Prom
   }
 }
 
-/** What claim_tag_job reserved for this kind (D8): a billed-unknown release keeps all of it. */
-const reserveFor = (kind: Claim["kind"]) => kind === "series" ? SERIES_RESERVE_MICRO : TAG_RESERVE_MICRO;
+/** What the claim reserved for this kind (D8; audits Plan 12 D10): a billed-unknown release keeps all of it. */
+const reserveFor = (kind: Claim["kind"]) => kind === "series" || kind === "audit" ? SERIES_RESERVE_MICRO : TAG_RESERVE_MICRO;
 
 /**
  * Releases a failed call as tagging always has: a retry backs off and keeps
@@ -188,7 +200,7 @@ async function releaseFailure(
   jobId: string,
   token: string,
   claim: Claim,
-  call: Exclude<TagCall | SeriesCall, { kind: "ok" }>,
+  call: Exclude<TagCall | SeriesCall | AuditCall, { kind: "ok" }>,
   now: Date,
 ): Promise<Response> {
   // An unbilled failure after a billed two_step first call carries that
@@ -242,15 +254,7 @@ async function handleSeries(jobId: string, token: string, claim: Claim, book: Cl
     allowSearch: claim.hasSameAuthorColumn,
   });
   if (call.kind !== "ok") return await releaseFailure(deps.db, jobId, token, claim, call, deps.now());
-  // An unreadable first reply that earned the search call: the job finishes, and the reason is kept.
-  logUnreadable(call.unreadable);
-  let cost = costMicro(MODEL, call.usage);
-  if (call.searchFailure) {
-    console.error("library-tagger search failed", call.searchFailure);
-    // The search call may have been billed and its usage is unknown: record
-    // at least the whole reservation, as a billed-unknown release does.
-    if (call.searchFailure === "billed_unknown") cost = Math.max(cost, SERIES_RESERVE_MICRO);
-  }
+  const cost = searchedCost(claim, call);
   const checked = cleanStatus(call.status, sanitizeSeries(call.series));
   const result = withStatus(claim, {
     tos: [],
@@ -266,6 +270,57 @@ async function handleSeries(jobId: string, token: string, claim: Claim, book: Cl
   return outcome(status === "stale" ? "busy" : status);
 }
 
+/** The part of a search result both finishes treat alike: log why, and cost a billed-unknown search at the reserve. */
+function searchedCost(claim: Claim, call: { usage: Usage; searchFailure?: SearchFailure; unreadable?: Unreadable }): number {
+  // An unreadable first reply that earned the search call: the job finishes, and the reason is kept.
+  logUnreadable(call.unreadable);
+  let cost = costMicro(MODEL, call.usage);
+  if (call.searchFailure) {
+    console.error("library-tagger search failed", call.searchFailure);
+    // The search call may have been billed and its usage is unknown: record
+    // at least the whole reservation, as a billed-unknown release does.
+    if (call.searchFailure === "billed_unknown") cost = Math.max(cost, reserveFor(claim.kind));
+  }
+  return cost;
+}
+
+/**
+ * A series audit (Plan 12 D10): text only, so no ToS list and no cover. It
+ * always may search. The finish carries the cleaned answer and no series key,
+ * so the book's series is never written here: SQL turns the answer into a
+ * flag (D7). The job settles at its true cost, as a series job.
+ */
+async function handleAudit(jobId: string, token: string, claim: Claim, book: ClaimBook, recorded: string, deps: Deps): Promise<Response> {
+  const openLibrary = await lookUpOpenLibrary(book, deps.fetchImpl);
+  const call = await deps.tagger.auditSeries({
+    title: book.title,
+    authors: book.authors,
+    description: book.description,
+    card: claim.card,
+    seriesNames: claim.seriesNames,
+    openLibrary,
+    recorded: { name: recorded, volume: book.seriesVolume },
+    neighbours: claim.sameAuthor.map((b) => ({ title: b.title, seriesName: b.seriesName, seriesVolume: b.seriesVolume, handSet: b.handSet === true })),
+    allowSearch: true,
+  });
+  if (call.kind !== "ok") return await releaseFailure(deps.db, jobId, token, claim, call, deps.now());
+  const cost = searchedCost(claim, call);
+  // No answer (a search call that ended without one) reads as unsure.
+  const audit = cleanAudit(call.result ?? { verdict: "unsure", name: null, volume: null, why: "" });
+  const result: FinishResult = {
+    tos: [],
+    library: [],
+    summary: null,
+    coverDescription: null,
+    coverSeen: false,
+    suggestions: [],
+    audit,
+  };
+  const status = await deps.db.finish(jobId, token, result, storedUsage(call.usage, call.unreadable), cost, MODEL);
+  // stale: the lease expired and another run owns the job now.
+  return outcome(status === "stale" ? "busy" : status);
+}
+
 export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405, { allow: "POST" });
   const jobId = await readJobId(req);
@@ -275,9 +330,17 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   let claim: Claim | null = null;
   try {
     claim = await db.claim(jobId);
+    // An audit job (D4): claim_tag_job reserved nothing; claim_audit_job claims and reserves it.
+    if (claim.outcome === "audit") claim = await db.claimAudit(jobId);
     if (claim.outcome !== "claimed") return outcome(claim.outcome);
     const token = claim.claimToken;
     if (!token || !claim.book) throw Object.assign(new Error("claim_incomplete"), { code: "claim_incomplete" });
+    if (claim.kind === "audit") {
+      // claim_audit_job re-checks that the book has a series before it reserves.
+      const recorded = claim.book.seriesName;
+      if (recorded === null) throw Object.assign(new Error("claim_incomplete"), { code: "claim_incomplete" });
+      return await handleAudit(jobId, token, claim, claim.book, recorded, deps);
+    }
     if (claim.kind === "series") return await handleSeries(jobId, token, claim, claim.book, deps);
 
     // The ToS list unreachable: transient, before any Claude call, cost 0, and
@@ -390,14 +453,24 @@ const obj = (v: unknown): Record<string, unknown> | null =>
 /** A finite number, else null (jsonb can carry anything). */
 const finiteOrNull = (v: unknown): number | null => typeof v === "number" && Number.isFinite(v) ? v : null;
 
-/** same_author rows (D6), defensively: a row without a non-blank string title is skipped. */
-function toSameAuthor(v: unknown): SameAuthorBook[] {
+/**
+ * same_author rows (D6), defensively: a row without a non-blank string title is
+ * skipped. handSet (Plan 12 D4) is true only when the row says exactly true.
+ */
+function toSameAuthor(v: unknown): Claim["sameAuthor"] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((x) => {
     const r = obj(x);
     if (!r || typeof r.title !== "string" || r.title.trim() === "") return [];
-    return [{ title: r.title, seriesName: strOrNull(r.seriesName), seriesVolume: finiteOrNull(r.seriesVolume) }];
+    return [{ title: r.title, seriesName: strOrNull(r.seriesName), seriesVolume: finiteOrNull(r.seriesVolume), handSet: r.handSet === true }];
   });
+}
+
+/** The first row of a set-returning RPC; an empty answer is an error. */
+function firstRow(rows: unknown): Record<string, unknown> {
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  if (!obj(row)) throw Object.assign(new Error("claim_empty"), { code: "claim_empty" });
+  return row as Record<string, unknown>;
 }
 
 function toBook(v: unknown): ClaimBook | null {
@@ -437,15 +510,14 @@ export function rpcDb(supabase: SupabaseLike): TaggerDb {
   };
   return {
     async claim(id) {
-      const rows = (await rpc("claim_tag_job", { p_job: id })) as Record<string, unknown>[] | null;
-      const row = Array.isArray(rows) ? rows[0] : rows;
-      if (!row) throw Object.assign(new Error("claim_empty"), { code: "claim_empty" });
+      const row = firstRow(await rpc("claim_tag_job", { p_job: id }));
       const removed = obj(row.removed);
       return {
         outcome: String(row.outcome),
         claimToken: strOrNull(row.claim_token),
         attempts: Number(row.attempts ?? 0),
-        kind: row.kind === "new_tags" || row.kind === "series" ? row.kind : "full",
+        // An audit kind is never read as full, so it can never reach tag() (Review Focus 5).
+        kind: row.kind === "new_tags" || row.kind === "series" || row.kind === "audit" ? row.kind : "full",
         book: toBook(row.book),
         card: toCard(row.card),
         vocab: toVocab(row.vocab),
@@ -455,6 +527,23 @@ export function rpcDb(supabase: SupabaseLike): TaggerDb {
         sameAuthor: toSameAuthor(row.same_author),
         // Missing before the Plan 11 migration (D1): then no search and no seriesStatus.
         hasSameAuthorColumn: "same_author" in row,
+      };
+    },
+    // claim_audit_job's row (Plan 12 D4) mapped as claim's, with no vocabulary or removed tags.
+    async claimAudit(id) {
+      const row = firstRow(await rpc("claim_audit_job", { p_job: id }));
+      return {
+        outcome: String(row.outcome),
+        claimToken: strOrNull(row.claim_token),
+        attempts: Number(row.attempts ?? 0),
+        kind: "audit",
+        book: toBook(row.book),
+        card: toCard(row.card),
+        vocab: [],
+        removed: { tos: [], library: [] },
+        seriesNames: strings(row.series_names),
+        sameAuthor: toSameAuthor(row.same_author),
+        hasSameAuthorColumn: true,
       };
     },
     async finish(id, claim, result, usage, cost, model) {
