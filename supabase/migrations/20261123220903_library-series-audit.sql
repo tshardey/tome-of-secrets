@@ -1123,6 +1123,8 @@ begin
   if v_book.series_name is distinct from v_flag.current_name
      or v_book.series_volume is distinct from v_flag.current_volume then
     update library.series_audit_flags f set status = 'stale', decided_at = now() where f.id = p_flag;
+    -- A changed series is audited afresh (D2), even with the trigger bypassed.
+    update library.book_cards c set series_audited_at = null where c.book_id = v_book_id;
     return 'stale';
   end if;
 

@@ -13,7 +13,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(104);
+select plan(108);
 
 insert into auth.users (id, email, aud, role)
 values
@@ -221,6 +221,10 @@ select is((select to_jsonb(r) from library.claim_tag_job(pg_temp.job_of(1)) r),
 select is(pg_temp.jstate(pg_temp.job_of(1)), 'queued:0:0:0:false',
           'the audit job is still queued, no attempt, nothing reserved');
 select is(pg_temp.usage(pg_temp.hh()), pg_temp.val('usage0'), 'ai_usage is unchanged');
+select is((select string_agg(r.outcome, ',') from generate_series(1, 3) g, library.claim_tag_job(pg_temp.job_of(1)) r)
+          || '|' || pg_temp.jstate(pg_temp.job_of(1)),
+          'audit,audit,audit|queued:0:0:0:false', 'claim_tag_job on every attempt: audit, attempts and reserve never move');
+select is(pg_temp.usage(pg_temp.hh()), pg_temp.val('usage0'), 'ai_usage is unchanged after repeated old claims');
 
 ---------------------------------------------------------------------------
 -- Audit claim (D4).
@@ -604,6 +608,8 @@ select is(library.keep_series_audit(pg_temp.fid(56)) || '|' || pg_temp.fdec(56) 
 select is(library.edit_series_audit(pg_temp.fid(57), 'Wrenfold Tales', 1) || '|' || pg_temp.fdec(57) || '|'
           || pg_temp.bk(57),
           'stale|stale:-:true|Thornmere Cycle|7.00|{}', 'edit on a flag whose series changed: stale');
+select is(pg_temp.audited(45)::text || pg_temp.audited(56)::text || pg_temp.audited(57)::text, 'falsefalsefalse',
+          'a stale decision clears the audited marker, so the changed series is audited afresh');
 
 reset role;
 update library.books set series_volume = 8 where id = pg_temp.book(58);
@@ -703,6 +709,9 @@ select ok(has_function_privilege('authenticated', 'library.apply_series_audit(uu
           and not has_function_privilege('anon', 'library.undo_series_dismissal(uuid)', 'execute')
           and not has_function_privilege('anon', 'library.undo_series_book_dismissal(uuid, uuid)', 'execute'),
           'the decision and undo RPCs are granted to authenticated only');
+select ok(not has_function_privilege('authenticated', 'library._apply_series_audit(uuid, uuid, uuid, jsonb, jsonb)', 'execute')
+          and not has_function_privilege('authenticated', 'library._decide_series_audit(uuid, text, text, numeric)', 'execute'),
+          'the internal audit helpers are not executable by authenticated');
 
 select * from finish();
 rollback;
