@@ -3,6 +3,7 @@ import { costMicro, PRICES, thinkingFor } from "../_shared/library-ai.ts";
 import { buildTagContent, TAG_SYSTEM_PROMPT, type TagInput, type TagResult, worstCaseTagTokens } from "./prompt.ts";
 import {
   anthropicTagger,
+  auditCeilingMicro,
   ceilingMicro,
   chooseTagger,
   fakeTagger,
@@ -22,7 +23,6 @@ import {
   type Unreadable,
   usageOf,
 } from "./tagger.ts";
-import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import {
   buildSeriesContent,
@@ -32,6 +32,14 @@ import {
   type SeriesInput,
   worstCaseSeriesTokens,
 } from "./series.ts";
+import {
+  AUDIT_FORMAT,
+  AUDIT_SEARCH_PROMPT,
+  AUDIT_SYSTEM_PROMPT,
+  type AuditInput,
+  buildAuditContent,
+  worstCaseAuditTokens,
+} from "./audit.ts";
 
 const INPUT: TagInput = {
   kind: "full",
@@ -867,4 +875,193 @@ Deno.test("two_step: an unbilled search failure after an unreadable first reply 
     assert.equal(r.usage?.outputTokens, 24);
     assert.equal(r.unreadable?.reason, "not_json");
   }
+});
+
+// ---------------------------------------------------------------------------
+// Plan 12: the series audit (D10, D11)
+// ---------------------------------------------------------------------------
+
+const AUDIT_INPUT: AuditInput & { allowSearch: boolean } = {
+  title: "Ember Loom #4",
+  authors: ["Petra Wynnecombe"],
+  description: "The fourth book of Ember Loom.",
+  card: { summary: "A weaver mends the last loom.", coverDescription: "A loom by a fire." },
+  seriesNames: ["Ember Loom", "Wrenfold Tales"],
+  openLibrary: [],
+  recorded: { name: "Ember Loom", volume: 2 },
+  neighbours: [{ title: "Ember Loom #1", seriesName: "Ember Loom", seriesVolume: 1, handSet: false }],
+  allowSearch: true,
+};
+const AGREE = { verdict: "agree", name: null, volume: null, why: "The title matches." };
+const AUDIT_UNSURE = { verdict: "unsure", name: null, volume: null, why: "Cannot tell." };
+const WRONG_NUMBER = { verdict: "wrong_number", name: null, volume: 4, why: "The title numbers it 4." };
+
+Deno.test("auditSeries: agree makes one request, no tools, the audit prompt and schema with the verdict enum", async () => {
+  const { fetchImpl, calls } = seq(answer(AGREE));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 1);
+  const body = calls[0];
+  assert.ok(!("tools" in body));
+  assert.equal(body.model, MODEL);
+  assert.equal(body.system, AUDIT_SYSTEM_PROMPT);
+  assert.equal(body.max_tokens, SERIES_MAX_TOKENS);
+  assert.deepEqual(body.thinking, thinkingFor(MODEL, "low").thinking);
+  const oc = body.output_config as { effort: string; format: { type: string; schema: Record<string, unknown> } };
+  assert.equal(oc.format.type, "json_schema");
+  assert.deepEqual(oc.format.schema, AUDIT_FORMAT.schema);
+  const props = oc.format.schema.properties as Record<string, { enum?: string[] }>;
+  assert.deepEqual(props.verdict.enum, ["agree", "wrong_series", "wrong_number", "unsure"]);
+  assert.deepEqual(body.messages, [{ role: "user", content: JSON.parse(JSON.stringify(buildAuditContent(AUDIT_INPUT))) }]);
+  assert.deepEqual(r, { kind: "ok", verdict: "agree", result: AGREE, usage: FIRST, searched: false });
+});
+
+Deno.test("auditSeries: a confident wrong_number on the first call does not search", async () => {
+  const { fetchImpl, calls } = seq(answer(WRONG_NUMBER));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(r, { kind: "ok", verdict: "wrong_number", result: WRONG_NUMBER, usage: FIRST, searched: false });
+});
+
+Deno.test("auditSeries: unsure earns one search call with the tool, the audit search prompt and 4,096 tokens; usage summed", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_UNSURE), searched(WRONG_NUMBER));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  const second = calls[1];
+  assert.deepEqual(second.tools, [SEARCH_TOOL]);
+  assert.equal(second.system, AUDIT_SEARCH_PROMPT);
+  assert.equal(second.max_tokens, SERIES_SEARCH_MAX_TOKENS);
+  assert.deepEqual(second.messages, calls[0].messages);
+  const oc = second.output_config as { format: { type: string; schema: unknown } };
+  assert.equal(oc.format.type, "json_schema");
+  assert.deepEqual(oc.format.schema, AUDIT_FORMAT.schema);
+  assert.deepEqual(r, { kind: "ok", verdict: "wrong_number", result: WRONG_NUMBER, usage: SUMMED, searched: true });
+});
+
+Deno.test("auditSeries: unsure, then search, then still unsure -> ok unsure, searched, exactly two requests", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_UNSURE), searched(AUDIT_UNSURE), answer(AGREE));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(r, { kind: "ok", verdict: "unsure", result: AUDIT_UNSURE, usage: SUMMED, searched: true });
+});
+
+Deno.test("auditSeries: SERIES_SEARCH_MODE single and text_json are ignored; an audit is always two_step with json_schema", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_UNSURE), searched(AGREE));
+  await anthropicTagger("k", { fetchImpl, searchMode: "single", searchFormat: "text_json" }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.ok(!("tools" in calls[0]));
+  assert.equal(calls[1].system, AUDIT_SEARCH_PROMPT);
+  assert.equal((calls[1].output_config as { format?: { type: string } }).format?.type, "json_schema");
+});
+
+Deno.test("auditSeries: an unreadable first reply earns the search call and keeps why", async () => {
+  const { fetchImpl, calls } = seq(seriesReply("not json"), searched(AGREE));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].tools, [SEARCH_TOOL]);
+  assert.equal(r.kind, "ok");
+  if (r.kind === "ok") {
+    assert.equal(r.verdict, "agree");
+    assert.equal(r.searched, true);
+    assert.equal(r.unreadable?.reason, "not_json");
+    assert.equal(r.usage.outputTokens, 24 + 700);
+  }
+  // Without allowSearch it fails as tag_unreadable, with no search.
+  const off = seq(seriesReply("not json"), searched(AGREE));
+  const r2 = await anthropicTagger("k", { fetchImpl: off.fetchImpl }).auditSeries({ ...AUDIT_INPUT, allowSearch: false });
+  assert.equal(off.calls.length, 1);
+  assert.equal(unreadableOf(r2 as never).reason, "not_json");
+});
+
+Deno.test("auditSeries: a search reply that pauses, hits max_tokens or does not parse -> unsure, usage kept, one search request", async () => {
+  const replies = [
+    ["pause_turn", searched(AGREE, { stop_reason: "pause_turn" })],
+    ["max_tokens", searched(AGREE, { stop_reason: "max_tokens" })],
+    ["unparseable", searched("{not json")],
+    ["schema miss", searched({ verdict: "maybe", name: null, volume: null, why: "" })],
+  ] as const;
+  for (const [name, reply] of replies) {
+    const { fetchImpl, calls } = seq(answer(AUDIT_UNSURE), reply, answer(AGREE));
+    const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+    assert.equal(calls.length, 2, name); // never resumed, never retried
+    assert.equal(calls.filter((c) => "tools" in c).length, 1, name);
+    assert.deepEqual(r, { kind: "ok", verdict: "unsure", result: null, usage: SUMMED, searched: true }, name);
+  }
+});
+
+Deno.test("auditSeries: a refusal -> tag_refused, on the first call or the search call", async () => {
+  const first = seq(message({ stop_reason: "refusal", content: [{ type: "text", text: "no" }] }), searched(AGREE));
+  const r1 = await anthropicTagger("k", { fetchImpl: first.fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(first.calls.length, 1);
+  assert.deepEqual(r1, { kind: "fail", code: "tag_refused", usage: FIRST });
+  const later = seq(answer(AUDIT_UNSURE), searched("no", { stop_reason: "refusal" }));
+  const r2 = await anthropicTagger("k", { fetchImpl: later.fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(later.calls.length, 2);
+  assert.deepEqual(r2, { kind: "fail", code: "tag_refused", usage: SUMMED });
+});
+
+Deno.test("auditSeries: a billed-unknown search failure -> unsure with searchFailure; an unbilled one carries the first usage", async () => {
+  let n = 0;
+  const flaky = (() => {
+    n++;
+    if (n === 1) {
+      return Promise.resolve(new Response(JSON.stringify(answer(AUDIT_UNSURE)), { status: 200, headers: { "content-type": "application/json" } }));
+    }
+    return Promise.reject(new TypeError("connection reset"));
+  }) as typeof fetch;
+  const r = await anthropicTagger("k", { fetchImpl: flaky }).auditSeries(AUDIT_INPUT);
+  assert.equal(n, 2);
+  assert.deepEqual(r, { kind: "ok", verdict: "unsure", result: null, usage: FIRST, searched: true, searchFailure: "billed_unknown" });
+
+  let m = 0;
+  const limited = (() => {
+    m++;
+    const body = m === 1 ? answer(AUDIT_UNSURE) : apiError("rate_limit_error");
+    return Promise.resolve(new Response(JSON.stringify(body), { status: m === 1 ? 200 : 429, headers: { "content-type": "application/json" } }));
+  }) as typeof fetch;
+  const r2 = await anthropicTagger("k", { fetchImpl: limited }).auditSeries(AUDIT_INPUT);
+  assert.equal(m, 2);
+  assert.deepEqual(r2, { kind: "retry", retryAfterSeconds: null, billedUnknown: false, usage: FIRST });
+});
+
+Deno.test("auditSeries: no key -> misconfigured, no fetch", async () => {
+  const { fetchImpl, calls } = stub(200, message());
+  assert.deepEqual(await anthropicTagger(undefined, { fetchImpl }).auditSeries(AUDIT_INPUT), { kind: "misconfigured" });
+  assert.equal(calls.length, 0);
+});
+
+Deno.test("auditCeilingMicro: seriesCeilingMicro's formula over the audit prompt and allowance, within SERIES_RESERVE_MICRO", () => {
+  const w = worstCaseAuditTokens();
+  for (const model of ["claude-sonnet-5-5", "claude-haiku-5-5"] as const) {
+    const p = PRICES[model];
+    const want = Math.ceil(w.plain * p.input + w.block * 1.25 * p.input + SERIES_MAX_TOKENS * p.output);
+    assert.equal(auditCeilingMicro(model), want, model);
+  }
+  assert.equal(auditCeilingMicro(), auditCeilingMicro(MODEL));
+  assert.ok(auditCeilingMicro() > seriesCeilingMicro());
+  assert.ok(auditCeilingMicro() <= SERIES_RESERVE_MICRO);
+});
+
+Deno.test("fakeTagger.auditSeries (D11): wrong_number with the title's #n when it differs, else agree; usage 0", async () => {
+  const tagger = fakeTagger();
+  const ZERO_USAGE = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+  const wrong = await tagger.auditSeries(AUDIT_INPUT);
+  assert.deepEqual(wrong, {
+    kind: "ok",
+    verdict: "wrong_number",
+    result: { verdict: "wrong_number", name: null, volume: 4, why: "Fake number from the title." },
+    usage: ZERO_USAGE,
+    searched: false,
+  });
+  for (const over of [{ recorded: { name: "Ember Loom", volume: 4 } }, { title: "Ember Loom" }, { title: "Saltglass" }]) {
+    const r = await tagger.auditSeries({ ...AUDIT_INPUT, ...over });
+    assert.equal(r.kind, "ok");
+    if (r.kind === "ok") {
+      assert.equal(r.verdict, "agree", JSON.stringify(over));
+      assert.equal(r.searched, false);
+      assert.deepEqual(r.usage, ZERO_USAGE);
+    }
+  }
+  // A blank recorded number with a numbered title is a missing number.
+  const missing = await tagger.auditSeries({ ...AUDIT_INPUT, recorded: { name: "Ember Loom", volume: null } });
+  assert.equal(missing.kind === "ok" && missing.verdict, "wrong_number");
 });

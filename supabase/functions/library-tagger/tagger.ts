@@ -1,10 +1,12 @@
-// Tags one book with one Claude call (Plan 7 D1, D6, D9, D10), or checks its
-// series (Plan 10 D5), searching the web only when the answer would otherwise
-// be unsure and the caller allows it (Plan 11 D8). No SDK retries: every retry
-// is a new claim, reserved and counted before the call, and a call that
-// carried the search tool is never resumed or retried. Failures are classified
-// by SDK class, status and error type, never by message. Nothing here logs.
+// Tags one book with one Claude call (Plan 7 D1, D6, D9, D10), checks its
+// series (Plan 10 D5), or audits the series it has (Plan 12 D10), searching the
+// web only when the answer would otherwise be unsure and the caller allows it
+// (Plan 11 D8). No SDK retries: every retry is a new claim, reserved and
+// counted before the call, and a call that carried the search tool is never
+// resumed or retried. Failures are classified by SDK class, status and error
+// type, never by message. Nothing here logs.
 import Anthropic from "@anthropic-ai/sdk";
+import type { z } from "zod";
 import {
   type AiFailure,
   type AiModel,
@@ -16,6 +18,16 @@ import {
 } from "../_shared/library-ai.ts";
 import { type OutputFormat, outputFormat } from "../_shared/output-format.ts";
 import { buildTagContent, TAG_SYSTEM_PROMPT, type TagInput, type TagResult, TagResultSchema, worstCaseTagTokens } from "./prompt.ts";
+import {
+  AUDIT_FORMAT,
+  AUDIT_SEARCH_PROMPT,
+  AUDIT_SYSTEM_PROMPT,
+  type AuditInput,
+  type AuditResult,
+  type AuditVerdict,
+  buildAuditContent,
+  worstCaseAuditTokens,
+} from "./audit.ts";
 import {
   buildSeriesContent,
   fakeSeries,
@@ -72,6 +84,17 @@ export const SERIES_MAX_TOKENS = 1024;
  */
 export function seriesCeilingMicro(model: AiModel = MODEL): number {
   const w = worstCaseSeriesTokens();
+  return costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.block, cacheReadTokens: 0, outputTokens: SERIES_MAX_TOKENS });
+}
+
+/**
+ * The most one audit's tool-less call can cost (Plan 12 D10): seriesCeilingMicro's
+ * formula over worstCaseAuditTokens(), i.e. AUDIT_SYSTEM_PROMPT and
+ * AUDIT_TEXT_ALLOWANCE (the series allowance plus the recorded line and the
+ * neighbour labels). An audit job reserves SERIES_RESERVE_MICRO, which covers it.
+ */
+export function auditCeilingMicro(model: AiModel = MODEL): number {
+  const w = worstCaseAuditTokens();
   return costMicro(model, { inputTokens: w.plain, cacheCreationTokens: w.block, cacheReadTokens: 0, outputTokens: SERIES_MAX_TOKENS });
 }
 
@@ -160,19 +183,56 @@ export type SeriesCall =
   /** usage: a billed two_step first call before an unbilled search-call failure. */
   | (AiFailure & { usage?: Usage; unreadable?: Unreadable });
 
+/**
+ * Plan 12 D10: SeriesCall with the verdict and the raw answer (before
+ * cleanAudit) in place of status and series. result is null when a search call
+ * ended without an answer it could use (read as unsure).
+ */
+export type AuditCall =
+  | {
+    kind: "ok";
+    verdict: AuditVerdict;
+    result: AuditResult | null;
+    usage: Usage;
+    searched: boolean;
+    searchFailure?: SearchFailure;
+    unreadable?: Unreadable;
+  }
+  | Failed
+  | (AiFailure & { usage?: Usage; unreadable?: Unreadable });
+
 export interface Tagger {
   tag(input: TagInput): Promise<TagCall>;
   /** D8: allowSearch is true only for series claims on a database that sends same_author (D1). */
   findSeries(input: SeriesInput & { allowSearch: boolean }): Promise<SeriesCall>;
+  /** Plan 12 D10: always two_step; allowSearch is always true for an audit claim. */
+  auditSeries(input: AuditInput & { allowSearch: boolean }): Promise<AuditCall>;
 }
 
 export const TAG_FORMAT = outputFormat(TagResultSchema);
 export const SERIES_FORMAT = outputFormat(SeriesResultSchema);
+type SeriesResult = z.infer<typeof SeriesResultSchema>;
 
 type Parsed<T> =
   | { kind: "ok"; value: T; usage: Usage }
   | Failed
   | AiFailure;
+
+/**
+ * What a search call gave: value null means unsure (it ended without an answer
+ * it could use), with searchFailure when it may have been billed.
+ */
+type Searched<T> =
+  | { kind: "ok"; value: T | null; usage: Usage; searchFailure?: SearchFailure }
+  | Failed
+  | (AiFailure & { usage?: Usage });
+
+/** The prompt and format of one kind of search call; textJsonLine only for a kind that supports text_json. */
+interface SearchSpec<T> {
+  system: string;
+  format: OutputFormat<T>;
+  textJsonLine?: string;
+}
 
 /** At most this many block types and zod issues go into an Unreadable. */
 const UNREADABLE_CAP = 10;
@@ -236,6 +296,7 @@ export function anthropicTagger(
     return {
       tag: () => Promise.resolve({ kind: "misconfigured" }),
       findSeries: () => Promise.resolve({ kind: "misconfigured" }),
+      auditSeries: () => Promise.resolve({ kind: "misconfigured" }),
     };
   }
   const model = opts.model ?? MODEL;
@@ -313,30 +374,30 @@ export function anthropicTagger(
   /**
    * One call with the search tool (D8), made once: never resumed after
    * pause_turn and never retried. pause_turn, max_tokens, a search error
-   * object or an answer that does not parse all read as unsure with the usage
-   * kept; a refusal is tag_refused. `before` is the usage of the tool-less
-   * first call (two_step), or null when this is the check's only call (single).
+   * object or an answer that does not parse all read as unsure (value null)
+   * with the usage kept; a refusal is tag_refused. `before` is the usage of the
+   * tool-less first call (two_step), or null when this is the check's only call
+   * (single). Series checks and audits share it (Plan 12 D10): `spec` gives the
+   * system prompt and the answer format.
    */
-  async function searchCall(content: unknown[], before: Usage | null): Promise<SeriesCall> {
-    const unsure = (usage: Usage, searchFailure?: SearchFailure): SeriesCall => ({
+  async function searchCall<T>(content: unknown[], before: Usage | null, spec: SearchSpec<T>): Promise<Searched<T>> {
+    const unsure = (usage: Usage, searchFailure?: SearchFailure): Searched<T> => ({
       kind: "ok",
-      status: "unsure",
-      series: null,
+      value: null,
       usage,
-      searched: true,
       ...(searchFailure ? { searchFailure } : {}),
     });
-    const textJson = searchFormat === "text_json";
+    const textJson = searchFormat === "text_json" && spec.textJsonLine !== undefined;
     let message: Anthropic.Message;
     try {
       message = await client.messages.create({
         model,
         max_tokens: SERIES_SEARCH_MAX_TOKENS,
-        system: textJson ? `${SERIES_SEARCH_PROMPT}\n${SEARCH_TEXT_JSON_LINE}` : SERIES_SEARCH_PROMPT,
+        system: textJson ? `${spec.system}\n${spec.textJsonLine}` : spec.system,
         thinking,
         output_config: textJson
           ? { ...output_config }
-          : { ...output_config, format: { type: "json_schema", schema: SERIES_FORMAT.schema } },
+          : { ...output_config, format: { type: "json_schema", schema: spec.format.schema } },
         tools: [SEARCH_TOOL],
         messages: [{ role: "user", content: content as Anthropic.ContentBlockParam[] }],
       } as unknown as Anthropic.MessageCreateParamsNonStreaming);
@@ -364,9 +425,37 @@ export function anthropicTagger(
     } catch {
       return unsure(usage);
     }
-    const r = SeriesResultSchema.safeParse(parsed);
+    const r = spec.format.zod.safeParse(parsed);
     if (!r.success) return unsure(usage);
-    return { kind: "ok", status: r.data.series_status, series: r.data.series, usage, searched: true };
+    return { kind: "ok", value: r.data, usage };
+  }
+
+  const seriesSpec: SearchSpec<SeriesResult> = {
+    system: SERIES_SEARCH_PROMPT,
+    format: SERIES_FORMAT,
+    textJsonLine: SEARCH_TEXT_JSON_LINE,
+  };
+  // No text_json line: an audit's search call always sends json_schema (D10).
+  const auditSpec: SearchSpec<AuditResult> = { system: AUDIT_SEARCH_PROMPT, format: AUDIT_FORMAT };
+
+  /** A series search call's result as a SeriesCall: no answer reads as unsure. */
+  async function seriesSearch(content: unknown[], before: Usage | null): Promise<SeriesCall> {
+    const s = await searchCall(content, before, seriesSpec);
+    if (s.kind !== "ok") return s;
+    const { value, usage, searchFailure } = s;
+    return value
+      ? { kind: "ok", status: value.series_status, series: value.series, usage, searched: true }
+      : { kind: "ok", status: "unsure", series: null, usage, searched: true, ...(searchFailure ? { searchFailure } : {}) };
+  }
+
+  /** An audit search call's result as an AuditCall: no answer reads as unsure, with result null. */
+  async function auditSearch(content: unknown[], before: Usage): Promise<AuditCall> {
+    const s = await searchCall(content, before, auditSpec);
+    if (s.kind !== "ok") return s;
+    const { value, usage, searchFailure } = s;
+    return value
+      ? { kind: "ok", verdict: value.verdict, result: value, usage, searched: true }
+      : { kind: "ok", verdict: "unsure", result: null, usage, searched: true, ...(searchFailure ? { searchFailure } : {}) };
   }
 
   return {
@@ -376,7 +465,7 @@ export function anthropicTagger(
     },
     async findSeries(input) {
       const content = buildSeriesContent(input);
-      if (input.allowSearch && searchMode === "single") return await searchCall(content, null);
+      if (input.allowSearch && searchMode === "single") return await seriesSearch(content, null);
       const r = await call(SERIES_SYSTEM_PROMPT, SERIES_MAX_TOKENS, SERIES_FORMAT, content);
       // two_step: a first reply that can't be read is taken as unsure, so it
       // earns the search call when allowed (2026-11-22). Failing the job would
@@ -384,13 +473,26 @@ export function anthropicTagger(
       // same cost. What was wrong is kept, even when the search call is then
       // refused (error tag_refused, usage.unreadable about the first reply).
       if (r.kind === "fail" && r.code === "tag_unreadable" && input.allowSearch) {
-        const searched = await searchCall(content, r.usage);
+        const searched = await seriesSearch(content, r.usage);
         return r.unreadable ? { ...searched, unreadable: r.unreadable } : searched;
       }
       if (r.kind !== "ok") return r;
       // two_step: only an unsure answer, and only when allowed, earns the search call.
-      if (input.allowSearch && r.value.series_status === "unsure") return await searchCall(content, r.usage);
+      if (input.allowSearch && r.value.series_status === "unsure") return await seriesSearch(content, r.usage);
       return { kind: "ok", status: r.value.series_status, series: r.value.series, usage: r.usage, searched: false };
+    },
+    // findSeries' two_step for the audit (D10); SERIES_SEARCH_MODE is ignored.
+    async auditSeries(input) {
+      const content = buildAuditContent(input);
+      const r = await call(AUDIT_SYSTEM_PROMPT, SERIES_MAX_TOKENS, AUDIT_FORMAT, content);
+      // An unreadable first reply is taken as unsure, as for a series check, and keeps why.
+      if (r.kind === "fail" && r.code === "tag_unreadable" && input.allowSearch) {
+        const searched = await auditSearch(content, r.usage);
+        return r.unreadable ? { ...searched, unreadable: r.unreadable } : searched;
+      }
+      if (r.kind !== "ok") return r;
+      if (input.allowSearch && r.value.verdict === "unsure") return await auditSearch(content, r.usage);
+      return { kind: "ok", verdict: r.value.verdict, result: r.value, usage: r.usage, searched: false };
     },
   };
 }
@@ -401,9 +503,17 @@ function fakeRaw(title: string): RawSeries {
   return s ? { name: s.name, volume: s.volume, why: s.why ?? "" } : null;
 }
 
-/** Local runs only: never calls the API. Both methods read the series from the title (Plan 10 D6). */
+/** Local runs only: never calls the API. Every method reads the series from the title (Plan 10 D6, Plan 12 D11). */
 export function fakeTagger(): Tagger {
   return {
+    // Never searches: wrong_number with the title's #n when it differs from the recorded number, else agree.
+    auditSeries(input) {
+      const s = fakeSeries(input.title);
+      const result: AuditResult = s && s.volume !== null && s.volume !== input.recorded.volume
+        ? { verdict: "wrong_number", name: null, volume: s.volume, why: "Fake number from the title." }
+        : { verdict: "agree", name: null, volume: null, why: "Fake audit agrees." };
+      return Promise.resolve({ kind: "ok", verdict: result.verdict, result, usage: { ...ZERO }, searched: false });
+    },
     // Never searches: found when the title reads as a series, else none.
     findSeries(input) {
       const series = fakeRaw(input.title);

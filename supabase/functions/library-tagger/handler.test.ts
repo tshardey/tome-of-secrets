@@ -4,7 +4,9 @@ import { type Claim, type FinishResult, handle, rpcDb, type SupabaseLike, type T
 import type { TagInput, TagResult } from "./prompt.ts";
 import { buildTagContent, TOS_TAG_CAP } from "./prompt.ts";
 import { buildSeriesContent, type SeriesInput } from "./series.ts";
+import { type AuditInput, buildAuditContent } from "./audit.ts";
 import {
+  type AuditCall,
   MODEL,
   type SeriesCall,
   SERIES_RESERVE_MICRO,
@@ -59,12 +61,18 @@ function claimed(over: Partial<Claim> = {}): Claim {
   };
 }
 
-function fakeDb(claim: Claim | (() => never), opts: { finish?: string; release?: string } = {}) {
-  const calls = { claim: [] as string[], finish: [] as unknown[][], release: [] as unknown[][] };
+function fakeDb(claim: Claim | (() => never), opts: { finish?: string; release?: string; audit?: Claim | (() => never) } = {}) {
+  const calls = { claim: [] as string[], claimAudit: [] as string[], finish: [] as unknown[][], release: [] as unknown[][] };
   const db: TaggerDb = {
     claim(id) {
       calls.claim.push(id);
       return Promise.resolve(typeof claim === "function" ? claim() : claim);
+    },
+    claimAudit(id) {
+      calls.claimAudit.push(id);
+      const audit = opts.audit;
+      if (!audit) throw new Error("claimAudit must not be called");
+      return Promise.resolve(typeof audit === "function" ? audit() : audit);
     },
     finish(...args) {
       calls.finish.push(args);
@@ -88,10 +96,19 @@ const RESULT: TagResult = {
   series_status: "none",
 };
 
-function fakeTag(result: TagCall | (() => never), series: SeriesCall | (() => never) = { kind: "billing" }) {
+function fakeTag(
+  result: TagCall | (() => never),
+  series: SeriesCall | (() => never) = { kind: "billing" },
+  audit: AuditCall | (() => never) = { kind: "billing" },
+) {
   const inputs: TagInput[] = [];
   const seriesInputs: (SeriesInput & { allowSearch: boolean })[] = [];
+  const auditInputs: (AuditInput & { allowSearch: boolean })[] = [];
   const tagger: Tagger = {
+    auditSeries(input) {
+      auditInputs.push(input);
+      return Promise.resolve(typeof audit === "function" ? audit() : audit);
+    },
     tag(input) {
       inputs.push(input);
       return Promise.resolve(typeof result === "function" ? result() : result);
@@ -101,7 +118,7 @@ function fakeTag(result: TagCall | (() => never), series: SeriesCall | (() => ne
       return Promise.resolve(typeof series === "function" ? series() : series);
     },
   };
-  return { tagger, inputs, seriesInputs };
+  return { tagger, inputs, seriesInputs, auditInputs };
 }
 
 /** Serves the ToS list at any tos.example URL and a JPEG on the cover host; records every URL. */
@@ -134,9 +151,11 @@ async function run(claim: Claim | (() => never), result: TagCall | (() => never)
   finish?: string;
   release?: string;
   series?: SeriesCall | (() => never);
+  audit?: AuditCall | (() => never);
+  auditClaim?: Claim | (() => never);
 } = {}) {
-  const { db, calls } = fakeDb(claim, opts);
-  const { tagger, inputs, seriesInputs } = fakeTag(result, opts.series);
+  const { db, calls } = fakeDb(claim, { ...opts, audit: opts.auditClaim });
+  const { tagger, inputs, seriesInputs, auditInputs } = fakeTag(result, opts.series, opts.audit);
   const f = opts.fetch ?? fakeFetch();
   const res = await handle(post({ jobId: JOB }), {
     db,
@@ -145,7 +164,7 @@ async function run(claim: Claim | (() => never), result: TagCall | (() => never)
     tosTagsUrl: tosUrl(),
     now: () => NOW,
   });
-  return { res, body: await res.json(), calls, inputs, seriesInputs, urls: f.urls };
+  return { res, body: await res.json(), calls, inputs, seriesInputs, auditInputs, urls: f.urls };
 }
 
 Deno.test("non-claimed outcomes return at once: no fetch, no tag call", async () => {
@@ -851,9 +870,9 @@ Deno.test("rpcDb: same_author and isbns are read defensively; the column's prese
   }, [ISBN_A, 5, ISBN_B]).claim(JOB);
   assert.equal(claim.hasSameAuthorColumn, true);
   assert.deepEqual(claim.sameAuthor, [
-    { title: "Lantern Vale Cycle #1", seriesName: "Lantern Vale Cycle", seriesVolume: 1 },
-    { title: "Wrenfold", seriesName: null, seriesVolume: null },
-    { title: "Thornmere", seriesName: "Thornmere Cycle", seriesVolume: null },
+    { title: "Lantern Vale Cycle #1", seriesName: "Lantern Vale Cycle", seriesVolume: 1, handSet: false },
+    { title: "Wrenfold", seriesName: null, seriesVolume: null, handSet: false },
+    { title: "Thornmere", seriesName: "Thornmere Cycle", seriesVolume: null, handSet: false },
   ]);
   assert.deepEqual(claim.book?.isbns, [ISBN_A, ISBN_B]);
 
@@ -1021,4 +1040,356 @@ Deno.test("unreadable: a series check that searched after an unreadable first re
   );
   assert.deepEqual((retry.value.calls.release[0][4] as Record<string, unknown>).unreadable, WHY_UNREADABLE);
   assert.equal(retry.logged.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Plan 12: the series audit (D4, D5, D10)
+// ---------------------------------------------------------------------------
+
+const AUDIT_NAMES = ["Ember Loom", "Thornmere Cycle", "Saltglass Archive"];
+const AUDIT_BOOK = {
+  title: "Ember Loom #4",
+  authors: ["Petra Wynnecombe"],
+  seriesName: "Ember Loom",
+  seriesVolume: 2,
+  description: "The fourth book of Ember Loom.",
+  coverUrl: COVER,
+  isbns: [],
+};
+const NEIGHBOURS = [
+  { title: "Ember Loom #1", seriesName: "Ember Loom", seriesVolume: 1, handSet: true },
+  { title: "Wrenfold", seriesName: null, seriesVolume: null, handSet: false },
+];
+/** claim_tag_job's answer for an audit job (D4): outcome audit, everything else null. */
+const auditGate = () => claimed({ outcome: "audit", claimToken: null, attempts: 0, book: null, vocab: [] });
+const auditClaim = (over: Partial<Claim> = {}) =>
+  claimed({
+    kind: "audit",
+    book: AUDIT_BOOK,
+    card: CARD,
+    vocab: [],
+    seriesNames: AUDIT_NAMES,
+    sameAuthor: NEIGHBOURS,
+    hasSameAuthorColumn: true,
+    ...over,
+  });
+const AUDIT_BASE = { tos: [], library: [], summary: null, coverDescription: null, coverSeen: false, suggestions: [] };
+const never = (what: string) => () => {
+  throw new Error(`${what} must not be called`);
+};
+const auditOk = (
+  result: { verdict: "agree" | "wrong_series" | "wrong_number" | "unsure"; name: string | null; volume: number | null; why: string },
+  over: Partial<Extract<AuditCall, { kind: "ok" }>> = {},
+): AuditCall => ({ kind: "ok", verdict: result.verdict, result, usage: USAGE, searched: false, ...over });
+
+function runAudit(call: AuditCall | (() => never), opts: Parameters<typeof run>[2] = {}) {
+  return run(auditGate(), never("tag"), { series: never("findSeries"), auditClaim: auditClaim(), audit: call, ...opts });
+}
+
+Deno.test("audit agree: claimAudit once, then auditSeries; the finish has audit, no series key, at the true uncapped cost", async () => {
+  const big: Usage = { inputTokens: 60_000, outputTokens: 2_000, cacheCreationTokens: 0, cacheReadTokens: 4_000, webSearchRequests: 2 };
+  assert.ok(costMicro(MODEL, big) > SERIES_RESERVE_MICRO);
+  const { body, calls, inputs, seriesInputs, auditInputs, urls } = await runAudit(
+    auditOk({ verdict: "agree", name: null, volume: null, why: "  The title matches.  " }, { usage: big, searched: true }),
+  );
+  assert.deepEqual(body, { outcome: "done" });
+  assert.deepEqual(calls.claim, [JOB]);
+  assert.deepEqual(calls.claimAudit, [JOB]);
+  assert.equal(inputs.length + seriesInputs.length, 0);
+  assert.equal(urls.length, 0); // no ToS list, no cover, no ISBNs
+  assert.deepEqual(auditInputs, [{
+    title: "Ember Loom #4",
+    authors: ["Petra Wynnecombe"],
+    description: AUDIT_BOOK.description,
+    card: CARD,
+    seriesNames: AUDIT_NAMES,
+    openLibrary: [],
+    recorded: { name: "Ember Loom", volume: 2 },
+    neighbours: NEIGHBOURS,
+    allowSearch: true,
+  }]);
+  const [id, token, result, usage, cost, model] = calls.finish[0] as [string, string, FinishResult, Record<string, number>, number, string];
+  assert.equal(id, JOB);
+  assert.equal(token, TOKEN);
+  assert.deepEqual(result, { ...AUDIT_BASE, audit: { verdict: "agree", name: null, volume: null, why: "The title matches." } });
+  assert.ok(!("series" in result) && !("seriesStatus" in result));
+  assert.equal(cost, costMicro(MODEL, big));
+  assert.equal(usage.computedCostMicro, cost);
+  assert.equal(usage.webSearchRequests, 2);
+  assert.equal(model, MODEL);
+});
+
+Deno.test("audit verdicts: each finish payload carries the answer as cleanAudit leaves it", async () => {
+  const cases: [string, Parameters<typeof auditOk>[0], Claim, unknown][] = [
+    [
+      "spelling only: sent as cleaned, the server guard decides",
+      { verdict: "wrong_series", name: "  the thornmere cycle ", volume: 3, why: "Spelt differently." },
+      auditClaim({ book: { ...AUDIT_BOOK, seriesName: "Thornmere Cycle", seriesVolume: 3 } }),
+      { verdict: "wrong_series", name: "the thornmere cycle", volume: 3, why: "Spelt differently." },
+    ],
+    [
+      "wrong series",
+      { verdict: "wrong_series", name: "Saltglass Archive", volume: 2, why: "The publisher lists it there." },
+      auditClaim(),
+      { verdict: "wrong_series", name: "Saltglass Archive", volume: 2, why: "The publisher lists it there." },
+    ],
+    [
+      "standalone",
+      { verdict: "wrong_series", name: null, volume: 3, why: "A standalone." },
+      auditClaim(),
+      { verdict: "wrong_series", name: null, volume: null, why: "A standalone." },
+    ],
+    [
+      "wrong number",
+      { verdict: "wrong_number", name: "Ember Loom", volume: 4, why: "The title numbers it." },
+      auditClaim(),
+      { verdict: "wrong_number", name: null, volume: 4, why: "The title numbers it." },
+    ],
+    [
+      "missing number named",
+      { verdict: "wrong_number", name: null, volume: 4, why: "The title numbers it." },
+      auditClaim({ book: { ...AUDIT_BOOK, seriesVolume: null } }),
+      { verdict: "wrong_number", name: null, volume: 4, why: "The title numbers it." },
+    ],
+    [
+      "missing number not named",
+      { verdict: "wrong_number", name: null, volume: null, why: "" },
+      auditClaim({ book: { ...AUDIT_BOOK, seriesVolume: null } }),
+      { verdict: "agree", name: null, volume: null, why: null },
+    ],
+    [
+      "unsure after search",
+      { verdict: "unsure", name: "Ember Loom", volume: 9, why: "Still cannot tell." },
+      auditClaim(),
+      { verdict: "unsure", name: null, volume: null, why: "Still cannot tell." },
+    ],
+  ];
+  for (const [label, answer, claim, want] of cases) {
+    const searched = answer.verdict === "unsure";
+    const { body, calls, auditInputs } = await runAudit(auditOk(answer, { searched }), { auditClaim: claim });
+    assert.deepEqual(body, { outcome: "done" }, label);
+    assert.deepEqual(auditInputs[0].recorded, { name: claim.book!.seriesName, volume: claim.book!.seriesVolume }, label);
+    const result = calls.finish[0][2] as FinishResult;
+    assert.deepEqual(result, { ...AUDIT_BASE, audit: want }, label);
+    assert.equal(calls.finish[0][4], costMicro(MODEL, USAGE), label);
+  }
+});
+
+Deno.test("audit: claimAudit outcomes other than claimed are returned as is, with no tagger call and no write", async () => {
+  for (const outcome of ["done", "budget", "busy", "retry_later", "failed", "not_audit"]) {
+    const { body, calls, auditInputs, urls } = await runAudit(never("auditSeries"), {
+      auditClaim: auditClaim({ outcome, claimToken: null, book: null }),
+    });
+    assert.deepEqual(body, { outcome }, outcome);
+    assert.equal(calls.claimAudit.length, 1, outcome);
+    assert.equal(auditInputs.length, 0, outcome);
+    assert.equal(urls.length, 0, outcome);
+    assert.equal(calls.finish.length + calls.release.length, 0, outcome);
+  }
+});
+
+Deno.test("audit: a full, new_tags or series claim never calls claimAudit or auditSeries", async () => {
+  const full = await run(claimed(), { kind: "ok", result: RESULT, usage: USAGE }, { audit: never("auditSeries") });
+  assert.deepEqual(full.body, { outcome: "done" });
+  assert.equal(full.calls.claimAudit.length, 0);
+  const series = await run(seriesClaim(), never("tag"), {
+    audit: never("auditSeries"),
+    series: { kind: "ok", status: "none", series: null, usage: USAGE, searched: false },
+  });
+  assert.deepEqual(series.body, { outcome: "done" });
+  assert.equal(series.calls.claimAudit.length, 0);
+  assert.equal(series.auditInputs.length, 0);
+});
+
+Deno.test("audit failures release as series checks do; billed unknown keeps SERIES_RESERVE_MICRO", async () => {
+  const unknown = await runAudit({ kind: "retry", retryAfterSeconds: null, billedUnknown: true });
+  assert.deepEqual(unknown.body, { outcome: "retry_later" });
+  assert.equal(unknown.calls.finish.length, 0);
+  assert.equal(unknown.calls.release[0][1], TOKEN);
+  assert.equal(unknown.calls.release[0][2], null);
+  assert.equal(unknown.calls.release[0][5], SERIES_RESERVE_MICRO);
+  for (const code of ["tag_refused", "tag_unreadable"] as const) {
+    const { body, calls } = await runAudit({ kind: "fail", code, usage: USAGE });
+    assert.deepEqual(body, { outcome: "failed" });
+    assert.equal(calls.finish.length, 0);
+    assert.equal(calls.release[0][2], code);
+    assert.equal(calls.release[0][5], costMicro(MODEL, USAGE));
+  }
+  for (const kind of ["billing", "misconfigured"] as const) {
+    const { body, calls } = await runAudit({ kind });
+    assert.deepEqual(body, { outcome: kind });
+    assert.deepEqual(calls.release[0].slice(2), [kind, null, null, 0]);
+  }
+  // A billed-unknown search finishes unsure at no less than the reserve.
+  const searchLost = await runAudit({ kind: "ok", verdict: "unsure", result: null, usage: USAGE, searched: true, searchFailure: "billed_unknown" });
+  assert.deepEqual(searchLost.body, { outcome: "done" });
+  assert.deepEqual((searchLost.calls.finish[0][2] as FinishResult).audit, { verdict: "unsure", name: null, volume: null, why: null });
+  assert.equal(searchLost.calls.finish[0][4], Math.max(costMicro(MODEL, USAGE), SERIES_RESERVE_MICRO));
+  // A throw after the audit claim releases the audit claim at its reserve.
+  const thrown = await runAudit(never("auditSeries"));
+  assert.equal(thrown.res.status, 500);
+  assert.equal(thrown.calls.release[0][1], TOKEN);
+  assert.equal(thrown.calls.release[0][5], SERIES_RESERVE_MICRO);
+});
+
+Deno.test("audit: Open Library failing still finishes, with no Open Library line; working, its line is sent", async () => {
+  const claim = () => auditClaim({ book: { ...AUDIT_BOOK, isbns: [ISBN_A] } });
+  const call = auditOk({ verdict: "agree", name: null, volume: null, why: "Fine." });
+  const down = await runAudit(call, { auditClaim: claim(), fetch: olFetch(() => Promise.reject(new TypeError("network down"))) });
+  assert.deepEqual(down.body, { outcome: "done" });
+  assert.deepEqual(down.auditInputs[0].openLibrary, []);
+  assert.equal(down.calls.finish.length, 1);
+  const up = await runAudit(call, { auditClaim: claim(), fetch: olOk() });
+  assert.deepEqual(up.auditInputs[0].openLibrary, OL_SERIES);
+  assert.deepEqual(up.urls, [`https://openlibrary.org/isbn/${ISBN_A}.json`]);
+});
+
+Deno.test("audit logs hold codes only: no title, author, series or ISBN", async () => {
+  const claim = () => auditClaim({ book: { ...AUDIT_BOOK, isbns: [ISBN_A] } });
+  const { logged } = await logging(async () => {
+    await runAudit({ kind: "ok", verdict: "unsure", result: null, usage: USAGE, searched: true, searchFailure: "billed_unknown" }, {
+      auditClaim: claim(),
+      fetch: olFetch(() => Promise.reject(new TypeError("Ember Loom down"))),
+    });
+    await runAudit({ kind: "fail", code: "tag_unreadable", usage: USAGE, unreadable: WHY_UNREADABLE }, { auditClaim: claim() });
+    await runAudit(() => {
+      throw Object.assign(new Error("Ember Loom #4 by Petra Wynnecombe leaked"), { code: "boom" });
+    }, { auditClaim: claim() });
+  });
+  assert.ok(logged.length >= 3);
+  const text = JSON.stringify(logged);
+  for (const word of ["Ember", "Petra", "Wynnecombe", "Wrenfold", "Thornmere", "Saltglass", ISBN_A, "openlibrary"]) {
+    assert.ok(!text.includes(word), word);
+  }
+});
+
+Deno.test("rpcDb: claim outcome audit routes to claim_audit_job, mapped with kind audit; missing handSet reads false (the cluster)", async () => {
+  const sent: { fn: string; args: Record<string, unknown> }[] = [];
+  const cluster = [
+    { title: "Ember Loom #1", seriesName: "Ember Loom", seriesVolume: 1 },
+    { title: "Ember Loom #2", seriesName: "Ember Loom", seriesVolume: 2 },
+    { title: "Ember Loom #3", seriesName: "Ember Loom", seriesVolume: 3, handSet: "yes" },
+  ];
+  const supabase: SupabaseLike = {
+    schema: () => ({
+      rpc(fn, args) {
+        sent.push({ fn, args });
+        if (fn === "claim_tag_job") {
+          return Promise.resolve({
+            data: [{ outcome: "audit", claim_token: null, attempts: null, kind: null, book: null, card: null, vocab: null, removed: null }],
+            error: null,
+          });
+        }
+        if (fn === "claim_audit_job") {
+          return Promise.resolve({
+            data: [{
+              outcome: "claimed",
+              claim_token: TOKEN,
+              attempts: 1,
+              book: { ...AUDIT_BOOK, isbns: [] },
+              card: CARD,
+              series_names: AUDIT_NAMES,
+              same_author: cluster,
+            }],
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: "done", error: null });
+      },
+    }),
+  };
+  const db = rpcDb(supabase);
+  const claim = await db.claimAudit(JOB);
+  assert.deepEqual(claim, {
+    outcome: "claimed",
+    claimToken: TOKEN,
+    attempts: 1,
+    kind: "audit",
+    book: AUDIT_BOOK,
+    card: CARD,
+    vocab: [],
+    removed: { tos: [], library: [] },
+    seriesNames: AUDIT_NAMES,
+    sameAuthor: cluster.map((b) => ({ title: b.title, seriesName: b.seriesName, seriesVolume: b.seriesVolume, handSet: false })),
+    hasSameAuthorColumn: true,
+  });
+  assert.deepEqual(sent[0], { fn: "claim_audit_job", args: { p_job: JOB } });
+
+  sent.length = 0;
+  const { tagger, auditInputs } = fakeTag(never("tag"), never("findSeries"), auditOk({ verdict: "wrong_series", name: null, volume: null, why: "Standalone." }));
+  const res = await handle(post({ jobId: JOB }), { db, tagger, fetchImpl: fakeFetch().fetchImpl, tosTagsUrl: tosUrl(), now: () => NOW });
+  assert.deepEqual(await res.json(), { outcome: "done" });
+  assert.deepEqual(sent.map((s) => s.fn), ["claim_tag_job", "claim_audit_job", "finish_tag_job"]);
+  assert.ok(auditInputs[0].neighbours.every((n) => n.handSet === false));
+  const text = (buildAuditContent(auditInputs[0]) as { text?: string }[]).map((b) => b.text ?? "").join("\n");
+  assert.equal(text.split("(not checked by hand)").length - 1, 3);
+  assert.ok(!text.includes("(set by hand)"));
+  const finish = sent[2].args;
+  assert.deepEqual(finish.p_result, { ...AUDIT_BASE, audit: { verdict: "wrong_series", name: null, volume: null, why: "Standalone." } });
+
+  // handSet true is kept.
+  const hand = rpcDb({
+    schema: () => ({
+      rpc: () =>
+        Promise.resolve({
+          data: [{ outcome: "claimed", claim_token: TOKEN, attempts: 1, book: AUDIT_BOOK, card: null, series_names: [], same_author: [{ ...cluster[0], handSet: true }] }],
+          error: null,
+        }),
+    }),
+  });
+  assert.equal((await hand.claimAudit(JOB)).sameAuthor[0].handSet, true);
+
+  // Defence in depth: a claimed claim_tag_job row of kind audit reads as audit, never full, so tag() is never called.
+  const odd = rpcDb({
+    schema: () => ({
+      rpc: (fn) =>
+        Promise.resolve({
+          data: fn === "claim_tag_job"
+            ? [{ outcome: "claimed", claim_token: TOKEN, attempts: 1, kind: "audit", book: AUDIT_BOOK, card: CARD, vocab: [], removed: null }]
+            : "done",
+          error: null,
+        }),
+    }),
+  });
+  const oddTag = fakeTag(never("tag"), never("findSeries"), auditOk({ verdict: "agree", name: null, volume: null, why: "Fine." }));
+  const oddRes = await handle(post({ jobId: JOB }), { db: odd, tagger: oddTag.tagger, fetchImpl: fakeFetch().fetchImpl, tosTagsUrl: tosUrl(), now: () => NOW });
+  assert.deepEqual(await oddRes.json(), { outcome: "done" });
+  assert.equal(oddTag.inputs.length, 0);
+  assert.equal(oddTag.auditInputs.length, 1);
+});
+
+Deno.test("a series claim whose same_author rows carry no handSet still works, and its content is unchanged", async () => {
+  const rows = [
+    { title: "Lantern Vale Cycle #1", seriesName: "Lantern Vale Cycle", seriesVolume: 1 },
+    { title: "Saltglass", seriesName: null, seriesVolume: null },
+  ];
+  const supabase: SupabaseLike = {
+    schema: () => ({
+      rpc(fn) {
+        if (fn === "claim_tag_job") {
+          return Promise.resolve({
+            data: [{
+              outcome: "claimed",
+              claim_token: TOKEN,
+              attempts: 1,
+              kind: "series",
+              book: { title: "Lantern Vale Cycle #2", authors: ["M. Holt"], seriesName: null, seriesVolume: null, description: "d", coverUrl: null },
+              card: CARD,
+              vocab: [],
+              removed: { tos: [], library: [] },
+              series_names: SERIES_NAMES,
+              same_author: rows,
+            }],
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: "done", error: null });
+      },
+    }),
+  };
+  const { tagger, seriesInputs } = fakeTag(never("tag"), { kind: "ok", status: "none", series: null, usage: USAGE, searched: false }, never("auditSeries"));
+  const res = await handle(post({ jobId: JOB }), { db: rpcDb(supabase), tagger, fetchImpl: fakeFetch().fetchImpl, tosTagsUrl: tosUrl(), now: () => NOW });
+  assert.deepEqual(await res.json(), { outcome: "done" });
+  assert.equal(seriesInputs[0].allowSearch, true);
+  assert.deepEqual(buildSeriesContent(seriesInputs[0]), buildSeriesContent({ ...seriesInputs[0], sameAuthor: rows }));
 });

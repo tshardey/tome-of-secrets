@@ -21,6 +21,14 @@ export const SERIES_RULES = [
   "- series_status is found when you give a series, none when you are confident the book is a standalone, and unsure when you can't tell from what you have. When unsure, give null for series.",
 ].join("\n");
 
+/**
+ * The audit's copy of the rules (Plan 12 D6): SERIES_RULES without its header
+ * and its series_status line. Derived, never copied, so the two sets can't drift.
+ */
+export const SERIES_RULES_FOR_AUDIT = SERIES_RULES.split("\n")
+  .filter((line) => line !== "Series rules:" && !line.includes("series_status"))
+  .join("\n");
+
 export const SERIES_SYSTEM_PROMPT = [
   "You find the series of one book in a household library. You are given its title, authors, its description, a short summary and a cover line written earlier, the household's other books by the same author, sometimes Open Library's series data, and the household's existing series names. You may also use what you already know about this book.",
   "",
@@ -66,7 +74,7 @@ export const SERIES_NAMES_CAP = 300;
 export const SERIES_BLOCK_CHARS = 12000;
 export const SAME_AUTHOR_CAP = 15;
 export const SAME_AUTHOR_TITLE = 120;
-const SAME_AUTHOR_SERIES = 200;
+export const SAME_AUTHOR_SERIES = 200;
 export const SERIES_DESCRIPTION_CHARS = 1500;
 export const OPEN_LIBRARY_SERIES_CAP = 3;
 
@@ -85,12 +93,12 @@ export interface CleanSeries {
   why: string | null;
 }
 
-const NAME_MAX = 200;
-const WHY_MAX = 200;
-const PLACEHOLDERS = new Set(["none", "n/a", "na", "null", "standalone", "stand-alone", "no series", "unknown"]);
+export const NAME_MAX = 200;
+export const WHY_MAX = 200;
+export const PLACEHOLDERS = new Set(["none", "n/a", "na", "null", "standalone", "stand-alone", "no series", "unknown"]);
 
 /** Rounds to 2 decimals the way a decimal does (2.555 gives 2.56), not as the binary float reads. */
-function round2(v: number): number {
+export function round2(v: number): number {
   const viaExponent = Math.round(Number(`${v}e2`)) / 100;
   return Number.isNaN(viaExponent) ? Math.round(v * 100) / 100 : viaExponent;
 }
@@ -155,7 +163,7 @@ export function householdSeriesBlock(names: string[]): unknown[] {
 
 /** Characters (UTF-16 code units) of the book text sent at most, per field. */
 const SERIES_LIMITS = { title: 200, authors: 3, author: 60, summary: 800, cover: 300 };
-const field = (s: string, n: number) => escapeData(clip(s, n));
+export const field = (s: string, n: number) => escapeData(clip(s, n));
 
 export interface SameAuthorBook {
   title: string;
@@ -173,12 +181,12 @@ export interface SeriesInput {
   openLibrary: string[];
 }
 
-const flat = (s: string) => s.replace(/\s+/g, " ").trim();
+export const flat = (s: string) => s.replace(/\s+/g, " ").trim();
 
 const SAME_AUTHOR_HEADER = 'Household books by the same author (title, then series and number, or "no series"):';
 
 /** " #n" for a finite volume in [0, 10000) with at most 2 decimals; otherwise nothing, so a line stays bounded. */
-function volumeText(v: number | null): string {
+export function volumeText(v: number | null): string {
   if (v === null || !Number.isFinite(v) || v < 0 || v >= 10000) return "";
   return ` #${round2(v)}`;
 }
@@ -224,7 +232,8 @@ export const OPEN_LIBRARY_ALLOWANCE = openLibraryText(
  */
 export const SERIES_TEXT_ALLOWANCE = 1500 + SERIES_DESCRIPTION_CHARS + SAME_AUTHOR_ALLOWANCE + OPEN_LIBRARY_ALLOWANCE;
 
-function seriesBookText(input: SeriesInput): string {
+/** Title, Authors, Description, Summary and Cover lines; shared with the audit's book text. */
+export function seriesFieldLines(input: Pick<SeriesInput, "title" | "authors" | "description" | "card">): string[] {
   const authors = input.authors
     .filter((a) => a.trim() !== "")
     .slice(0, SERIES_LIMITS.authors)
@@ -242,6 +251,11 @@ function seriesBookText(input: SeriesInput): string {
       lines.push(`Cover: <cover>${field(input.card.coverDescription, SERIES_LIMITS.cover)}</cover>`);
     }
   }
+  return lines;
+}
+
+function seriesBookText(input: SeriesInput): string {
+  const lines = seriesFieldLines(input);
   const sameAuthor = sameAuthorText(input.sameAuthor);
   if (sameAuthor) lines.push(sameAuthor);
   const openLibrary = openLibraryText(input.openLibrary);
