@@ -12,6 +12,9 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
         (name, ctx) => ctx?.formData?.keeperBackground === 'groveTender' && name === 'The Soaking in Nature'
     ),
     calculateBuffTotal: jest.fn((daysUsed, dailyValue) => daysUsed * dailyValue),
+    // Real rule shared with RewardCalculator, so these tests pin display to what pays.
+    atmosphericBuffCountsForReward: jest.requireActual('../../assets/js/services/AtmosphericBuffService.js')
+        .atmosphericBuffCountsForReward,
     getAssociatedBuffs: jest.fn((sanctum) => {
         if (sanctum === 'sanctum1') return ['Buff1'];
         return [];
@@ -125,7 +128,36 @@ describe('AtmosphericBuffViewModel', () => {
             expect(buff1.total).toBe(3); // 3 days * 1 daily value
             
             const buff2 = viewModels.find(vm => vm.name === 'Buff2');
-            expect(buff2.total).toBe(2); // 2 days * 1 daily value
+            expect(buff2.total).toBe(0); // inactive: End of Month pays nothing (#170)
+        });
+
+        test('inactive buff with days shows a 0 total but keeps the entered days (#170)', () => {
+            const viewModels = createAtmosphericBuffViewModel(mockState, '', '');
+            const buff2 = viewModels.find(vm => vm.name === 'Buff2');
+            expect(buff2.isActive).toBe(false);
+            expect(buff2.daysUsed).toBe(2);
+            expect(buff2.isCounted).toBe(false);
+            expect(buff2.total).toBe(0);
+
+            const buff1 = viewModels.find(vm => vm.name === 'Buff1');
+            expect(buff1.isCounted).toBe(true);
+        });
+
+        test('toggling Active on an inactive buff with days changes its total (#170)', () => {
+            const before = createAtmosphericBuffViewModel(mockState, '', '');
+            expect(before.find(vm => vm.name === 'Buff2').total).toBe(0);
+
+            mockState.atmosphericBuffs.Buff2.isActive = true;
+            const after = createAtmosphericBuffViewModel(mockState, '', '');
+            expect(after.find(vm => vm.name === 'Buff2').total).toBe(2);
+        });
+
+        test("Grove Tender's forced buff counts even when its stored isActive is false (#170)", () => {
+            const state = { atmosphericBuffs: { 'The Soaking in Nature': { daysUsed: 3, isActive: false } } };
+            const viewModels = createAtmosphericBuffViewModel(state, '', 'groveTender');
+            const groveBuff = viewModels.find(vm => vm.name === 'The Soaking in Nature');
+            expect(groveBuff.isCounted).toBe(true);
+            expect(groveBuff.total).toBe(3);
         });
 
         test('should preserve buff state from character state', () => {
@@ -163,19 +195,17 @@ describe('AtmosphericBuffViewModel', () => {
             expect(buff1.total).toBe(6); // 3 days × ($1 + $1 Cat)
             const buff2 = viewModels.find(vm => vm.name === 'Buff2');
             expect(buff2.isActive).toBe(false);
-            expect(buff2.total).toBe(2); // not active, no Cat bonus
+            expect(buff2.total).toBe(0); // not active: neither base nor Cat bonus pays
         });
 
-        test('rows expose the Cat per-day bonus for live total edits (active buff rows only)', () => {
+        test('trackable item rows always count, whatever their stored isActive (#170)', () => {
             const state = {
-                ...mockState,
-                atmosphericBuffs: { ...mockState.atmosphericBuffs, 'Garden Gnome': { daysUsed: 1 } },
-                equippedItems: [{ name: 'Tome-Bound Cat' }, { name: 'Garden Gnome' }]
+                atmosphericBuffs: { 'Garden Gnome': { daysUsed: 3, isActive: false } },
+                equippedItems: [{ name: 'Garden Gnome' }]
             };
-            const viewModels = createAtmosphericBuffViewModel(state, '', '');
-            expect(viewModels.find(vm => vm.name === 'Buff1').dailyBonus).toBe(1);
-            expect(viewModels.find(vm => vm.name === 'Buff2').dailyBonus).toBe(0); // inactive
-            expect(viewModels.find(vm => vm.name === 'Garden Gnome').dailyBonus).toBe(0); // setting item
+            const gnomeRow = createAtmosphericBuffViewModel(state, '', '').find(vm => vm.name === 'Garden Gnome');
+            expect(gnomeRow.isCounted).toBe(true);
+            expect(gnomeRow.total).toBe(6); // 3 days × $2
         });
 
         test('should add trackable item row with days/total when Garden Gnome equipped', () => {

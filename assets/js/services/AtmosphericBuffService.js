@@ -53,6 +53,21 @@ export function calculateBuffTotal(daysUsed, dailyValue) {
 }
 
 /**
+ * Single rule for whether an atmospheric row's days pay at End of Month.
+ * RewardCalculator.calculateAtmosphericBuffRewards() uses it to pay, and the atmospheric buff
+ * view model uses it to display, so the table never shows a total that is not paid.
+ * @param {Object} row
+ * @param {number} row.daysUsed
+ * @param {boolean} [row.isActive] - Player's Active checkbox
+ * @param {boolean} [row.isForced] - Locked on by an effect (e.g. Grove Tender)
+ * @param {boolean} [row.isTrackableItem] - Equipped/displayed atmospheric item (always active)
+ * @returns {boolean}
+ */
+export function atmosphericBuffCountsForReward({ daysUsed, isActive = false, isForced = false, isTrackableItem = false }) {
+    return daysUsed > 0 && (isTrackableItem || isActive === true || isForced);
+}
+
+/**
  * Get the flat per-day atmospheric bonus from equipped/displayed items (e.g. Tome-Bound Cat +$1/day).
  * Reads atmosphericBonusPerDay when the item is equipped, passiveAtmosphericBonusPerDay when adopted
  * (passive slot). Equipped takes precedence if the same item could appear in both.

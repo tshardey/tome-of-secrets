@@ -14,6 +14,7 @@ import { TriggerPayload } from './TriggerPayload.js';
 import { TRIGGERS, MODIFIER_TYPES, RESOURCES } from './effectSchema.js';
 import { isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
 import { isUseCountBuffSpent } from '../utils/useCountBuffs.js';
+import { atmosphericBuffCountsForReward } from './AtmosphericBuffService.js';
 
 /**
  * Represents a reward package with XP, dollars (the real-money Fund), blueprints, and items.
@@ -659,9 +660,12 @@ export class RewardCalculator {
             const buff = atmosphericBuffs[buffName];
             const trackableValue = trackableItemValues[buffName];
             const isTrackableItem = typeof trackableValue === 'number';
-            const countsForReward =
-                buff.daysUsed > 0 &&
-                (isTrackableItem || buff.isActive === true || forcedActive.has(buffName));
+            const countsForReward = atmosphericBuffCountsForReward({
+                daysUsed: buff.daysUsed,
+                isActive: buff.isActive,
+                isForced: forcedActive.has(buffName),
+                isTrackableItem
+            });
             if (!countsForReward) continue;
 
             let dailyValue;

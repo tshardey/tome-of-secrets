@@ -1765,6 +1765,83 @@ describe('Character Sheet', () => {
       // (10 days x $1 base) + (5 days x $1 from item) + Tome-Bound Cat +$1 per atmospheric buff day (10) = $25
       expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + 2500);
     });
+
+    describe('Monthly Total matches what End of Month pays (#170)', () => {
+      const findRow = (name) => Array.from(document.querySelectorAll('#atmospheric-buffs-body tr'))
+        .find((row) => row.cells[0].textContent.startsWith(name));
+      const totalOf = (name) => findRow(name).cells[4].textContent;
+      const setDays = (name, days) => {
+        const input = findRow(name).querySelector('.buff-days-input');
+        input.value = String(days);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      const clickActive = (name) => findRow(name).querySelector('.buff-active-check').click();
+      const displayedBuffTotal = () => Array.from(document.querySelectorAll('#atmospheric-buffs-body tr'))
+        .map((row) => Number(row.cells[4].textContent))
+        .filter((n) => Number.isFinite(n))
+        .reduce((sum, n) => sum + n, 0);
+
+      it('shows 0 for an inactive buff with days, keeping the entered days', () => {
+        setDays('The Candlight Study', 3);
+
+        const row = findRow('The Candlight Study');
+        expect(row.querySelector('.buff-active-check').checked).toBe(false);
+        expect(row.querySelector('.buff-days-input').value).toBe('3');
+        expect(totalOf('The Candlight Study')).toBe('0');
+        expect(row.cells[4].title).toMatch(/Not counted/);
+      });
+
+      it('updates the total live when Active is toggled on and off, and when days change', () => {
+        setDays('The Candlight Study', 3);
+        clickActive('The Candlight Study');
+        expect(totalOf('The Candlight Study')).toBe('3');
+        expect(findRow('The Candlight Study').cells[4].title).toBe('');
+
+        clickActive('The Candlight Study');
+        expect(totalOf('The Candlight Study')).toBe('0');
+
+        setDays('The Candlight Study', 5); // editing days on an inactive row
+        expect(totalOf('The Candlight Study')).toBe('0');
+        expect(findRow('The Candlight Study').querySelector('.buff-days-input').value).toBe('5');
+      });
+
+      it('pays exactly the displayed totals, including Tome-Bound Cat and a trackable item', () => {
+        const { characterState } = require('../assets/js/character-sheet/state.js');
+        characterState.equippedItems = [{ name: 'Garden Gnome' }, { name: 'Tome-Bound Cat' }];
+        characterState.atmosphericBuffs = { 'Garden Gnome': { daysUsed: 4, isActive: false } };
+        document.getElementById('librarySanctum').dispatchEvent(new Event('change'));
+
+        setDays('The Candlight Study', 3); // inactive: not paid
+        setDays("The Herbalist's Nook", 2);
+        clickActive("The Herbalist's Nook"); // active: 2 × ($1 + $1 Cat)
+
+        expect(totalOf('The Candlight Study')).toBe('0');
+        expect(totalOf("The Herbalist's Nook")).toBe('4');
+        expect(totalOf('Garden Gnome')).toBe('4'); // trackable item: always counts, no Cat bonus
+
+        const displayed = displayedBuffTotal();
+        expect(displayed).toBe(8);
+
+        const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
+        document.querySelector('.end-of-month-button').click();
+        expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + displayed * 100);
+      });
+
+      it("counts Grove Tender's forced buff even though the player never ticked Active", () => {
+        const backgroundSelect = document.getElementById('keeperBackground');
+        backgroundSelect.value = 'groveTender';
+        backgroundSelect.dispatchEvent(new Event('change'));
+
+        setDays('The Soaking in Nature', 2);
+        const displayed = Number(totalOf('The Soaking in Nature'));
+        expect(displayed).toBeGreaterThan(0);
+
+        const { characterState } = require('../assets/js/character-sheet/state.js');
+        const initialFundCents = characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] || 0;
+        document.querySelector('.end-of-month-button').click();
+        expect(characterState[STORAGE_KEYS.FUND_BALANCE_CENTS]).toBe(initialFundCents + displayed * 100);
+      });
+    });
   });
 
   describe('Monthly Tracker', () => {

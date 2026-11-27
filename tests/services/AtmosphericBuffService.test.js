@@ -80,7 +80,8 @@ import {
     getBuffState,
     shouldExcludeFromQuestBonuses,
     getTrackableAtmosphericItemValues,
-    getAtmosphericDailyBonus
+    getAtmosphericDailyBonus,
+    atmosphericBuffCountsForReward
 } from '../../assets/js/services/AtmosphericBuffService.js';
 import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';
 
@@ -366,5 +367,18 @@ describe('AtmosphericBuffService', () => {
             expect(values).toEqual({});
         });
     });
-});
 
+    describe('atmosphericBuffCountsForReward', () => {
+        test.each([
+            [{ daysUsed: 3, isActive: true }, true],
+            [{ daysUsed: 3, isActive: false }, false],
+            [{ daysUsed: 3 }, false],
+            [{ daysUsed: 0, isActive: true }, false],
+            [{ daysUsed: 3, isActive: false, isForced: true }, true],
+            [{ daysUsed: 3, isActive: false, isTrackableItem: true }, true],
+            [{ daysUsed: 0, isTrackableItem: true }, false]
+        ])('%o counts: %s', (row, expected) => {
+            expect(atmosphericBuffCountsForReward(row)).toBe(expected);
+        });
+    });
+});
