@@ -1,6 +1,6 @@
 -- Library series audit (Plan 12, 2026-11-23).
 --
--- Audit series checks a series the tagger filled in or Tierra approved. It
+-- Audit series checks a series the tagger filled in or the owner approved. It
 -- never changes a book: a doubtful series becomes a flag that waits for a
 -- member's decision. Part 1 (this section): the job kind, the marker, the
 -- trigger, the flags table, requests and claims. Part 2 (below):
@@ -638,7 +638,7 @@ begin
     return 'changed';
   end if;
 
-  -- 3. Hand-set mid-job: Tierra's series stands.
+  -- 3. Hand-set mid-job: the owner's series stands.
   if v_book.user_edited_fields && '{seriesName,seriesVolume}'::text[] then
     update library.book_cards c set series_audited_at = now() where c.book_id = p_book;
     return 'hand_set';
@@ -1141,7 +1141,7 @@ begin
       v_name   := null;
       v_volume := null;
     else
-      -- No author check: applying another author's series is Tierra's call.
+      -- No author check: applying another author's series is the owner's call.
       v_name   := coalesce(library._series_spelling(v_household, lower(v_flag.proposed_name)), v_flag.proposed_name);
       v_volume := v_flag.proposed_volume;
     end if;

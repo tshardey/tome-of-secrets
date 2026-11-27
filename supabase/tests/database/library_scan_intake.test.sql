@@ -108,7 +108,7 @@ select 'bhh', library.create_household('B Home', 'B')::text;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 
 insert into test_vals (k, v)
-select 'hh', library.create_household('Home', 'Tierra')::text;
+select 'hh', library.create_household('Home', 'Member A')::text;
 
 select is(
   pg_temp.scan(1, '9780000000002', ' Invented Box ', false),

@@ -92,7 +92,7 @@ values ('dddddddd-0000-0000-0000-000000000001',
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 
 insert into test_vals (k, v)
-select 'hh', library.create_household('Home', 'Tierra')::text;
+select 'hh', library.create_household('Home', 'Member A')::text;
 
 select lives_ok(
   $$ select pg_temp.add(1, 'photo-1', true) $$,
