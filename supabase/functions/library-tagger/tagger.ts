@@ -1,7 +1,7 @@
 // Tags one book with one Claude call (Plan 7 D1, D6, D9, D10), checks its
 // series (Plan 10 D5), or audits the series it has (Plan 12 D10), searching the
-// web only when the answer would otherwise be unsure and the caller allows it
-// (Plan 11 D8). No SDK retries: every retry is a new claim, reserved and
+// web only when the answer would otherwise be unsure (or, for an audit, a
+// standalone) and the caller allows it (Plan 11 D8). No SDK retries: every retry is a new claim, reserved and
 // counted before the call, and a call that carried the search tool is never
 // resumed or retried. Failures are classified by SDK class, status and error
 // type, never by message. Nothing here logs.
@@ -26,6 +26,7 @@ import {
   type AuditResult,
   type AuditVerdict,
   buildAuditContent,
+  isStandalone,
   worstCaseAuditTokens,
 } from "./audit.ts";
 import {
@@ -491,7 +492,11 @@ export function anthropicTagger(
         return r.unreadable ? { ...searched, unreadable: r.unreadable } : searched;
       }
       if (r.kind !== "ok") return r;
-      if (input.allowSearch && r.value.verdict === "unsure") return await auditSearch(content, r.usage);
+      // Only unsure or a standalone earns the search call (2026-11-27). After
+      // the search a standalone stands, and unsure flags nothing, as before.
+      if (input.allowSearch && (r.value.verdict === "unsure" || isStandalone(r.value))) {
+        return await auditSearch(content, r.usage);
+      }
       return { kind: "ok", verdict: r.value.verdict, result: r.value, usage: r.usage, searched: false };
     },
   };

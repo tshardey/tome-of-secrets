@@ -8,6 +8,7 @@ import {
   auditNeighbourText,
   buildAuditContent,
   cleanAudit,
+  isStandalone,
   recordedText,
   worstCaseAuditTokens,
   type AuditInput,
@@ -29,6 +30,7 @@ const D6_LINES = [
   "- verdict is unsure when you can't tell from what you have. Give null for name and volume.",
   '- The same series spelled differently, such as another capitalisation, other punctuation or a missing "The", is agree. Never correct the household\'s spelling.',
   '- Household books marked "(not checked by hand)" were filled in earlier by this tool and may be wrong in the same way as this book. They are never evidence that the recorded series is right. Only books marked "(set by hand)", the description, Open Library\'s line and what you know of the book count.',
+  "- Knowing of no sequel is not evidence that the book is a standalone: a recent book may begin a series you don't know about. Call it a standalone (wrong_series with null for name and volume) only when the publisher, the book's description or a search result says so.",
 ];
 
 Deno.test("AUDIT_FORMAT sends the four verdicts as an enum and leaves none in a description", () => {
@@ -191,6 +193,29 @@ Deno.test("cleanAudit: wrong_series keeps a name and number, and a placeholder m
   );
   assert.equal(cleanAudit({ verdict: "wrong_series", name: "", volume: null, why: "w" }).name, null);
   assert.equal(cleanAudit({ verdict: "wrong_series", name: "x".repeat(201), volume: null, why: "w" }).name, null);
+});
+
+Deno.test("isStandalone: wrong_series whose name cleanAudit drops, nothing else", () => {
+  for (const name of [null, "", "  ", "standalone", "x".repeat(201)]) {
+    assert.equal(isStandalone({ verdict: "wrong_series", name, volume: null, why: "w" }), true, String(name));
+  }
+  assert.equal(isStandalone({ verdict: "wrong_series", name: "Saltglass Archive", volume: 1, why: "w" }), false);
+  for (const verdict of ["agree", "wrong_number", "unsure"] as const) {
+    assert.equal(isStandalone({ verdict, name: null, volume: null, why: "w" }), false, verdict);
+  }
+});
+
+Deno.test("the standalone rule is in the audit rules, so in both audit prompts and not in the shared series rules", () => {
+  const rule = D6_LINES[D6_LINES.length - 1];
+  assert.ok(rule.startsWith("- Knowing of no sequel is not evidence that the book is a standalone"));
+  assert.ok(rule.includes("a recent book may begin a series you don't know about"));
+  assert.ok(rule.includes("only when the publisher, the book's description or a search result says so"));
+  assert.ok(AUDIT_RULES.endsWith(rule));
+  assert.ok(AUDIT_SYSTEM_PROMPT.includes(rule));
+  assert.ok(AUDIT_SEARCH_PROMPT.includes(rule));
+  assert.ok(!SERIES_RULES.includes("standalone: a recent book"));
+  // The rule sits before the shared series rules and the injection fence.
+  assert.ok(AUDIT_SYSTEM_PROMPT.indexOf(rule) < AUDIT_SYSTEM_PROMPT.indexOf(SERIES_RULES_FOR_AUDIT));
 });
 
 Deno.test("cleanAudit: volume range, why clip and blank why", () => {
