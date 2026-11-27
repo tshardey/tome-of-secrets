@@ -32,3 +32,6 @@ _config.supabase.yml
 /tests/playwright-report/
 /tests/blob-report/
 
+# Playwright MCP browser-session output (screenshots, snapshots, logs)
+/.playwright-mcp/
+
