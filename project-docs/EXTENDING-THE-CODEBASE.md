@@ -23,7 +23,6 @@ Subjective mechanics (player decides if it applies) may correctly stay on legacy
 - **DRY:** One source of truth in JSON; derive legacy shapes in `data.js` when needed; reuse services and helpers instead of copying logic.
 - **Testing:** **Pragmatic, not strict TDD** — add tests for pipelines, pure functions, migrations, and regressions; do not require test-first for every UI change. Keep `dataContracts` and integration tests honest when you touch `effects` or catalog shape.
 - **Frontend:** Follow controller → StateAdapter → service → view model → pure renderer layering. Match existing **Dark Academia** styling (`assets/css/`, existing sheet patterns).
-- **Beads:** Create and claim issues before implementation; mark **done** only after tests and subagent review (code). Coding agents **`git add`** only to stage work; the maintainer **commits and pushes**. See [`.beads/README.md`](../.beads/README.md) and [`AGENTS.md`](../AGENTS.md).
 
 ## Table of Contents
 
@@ -160,7 +159,7 @@ page load** — silently, with no console warning. Quests round-trip through
 `validateCharacterState()` on every `loadState()`, and the validated result is saved back.
 
 This has bitten five times: `sideQuestId` (schema v15), `branchKey` / `branchName` /
-`branchCountry` (v17), and `receipt`. Fields still being dropped today are tracked in Beads.
+`branchCountry` (v17), and `receipt`. `isBefriend` and `tags` were still being dropped as of 2026-11.
 
 **If you add a field to a quest, you must add it to `validateQuest()` in the same change.**
 The symptom is nasty precisely because it does not show up in unit tests: the feature works
