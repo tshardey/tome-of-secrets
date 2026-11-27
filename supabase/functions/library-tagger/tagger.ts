@@ -1,9 +1,9 @@
 // Tags one book with one Claude call (Plan 7 D1, D6, D9, D10), checks its
 // series (Plan 10 D5), or audits the series it has (Plan 12 D10), searching the
 // web only when the answer would otherwise be unsure (or, for an audit, a
-// standalone) and the caller allows it (Plan 11 D8). No SDK retries: every retry is a new claim, reserved and
-// counted before the call, and a call that carried the search tool is never
-// resumed or retried. Failures are classified by SDK class, status and error
+// standalone) and the caller allows it (Plan 11 D8). No SDK retries: every
+// retry is a new claim, reserved and counted before the call, and a call that
+// carried the search tool is never resumed or retried. Failures are classified by SDK class, status and error
 // type, never by message. Nothing here logs.
 import Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
