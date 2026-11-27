@@ -51,7 +51,10 @@ export function switchToTab(tabId) {
         
         // Save the active tab to localStorage
         localStorage.setItem('activeCharacterTab', tabId);
-        
+
+        // Drawers are modal to one tab; DrawerManager closes them on this (#169).
+        window.dispatchEvent(new CustomEvent('tos:tabChanged', { detail: { tabId } }));
+
         // Scroll to top of the panel
         targetPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }

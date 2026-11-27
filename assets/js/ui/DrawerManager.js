@@ -1,8 +1,8 @@
 /**
  * DrawerManager — Reusable drawer/overlay open-close infrastructure.
  *
- * Manages backdrop, scroll lock, close-button, backdrop-click, and Escape-key
- * behavior for any number of named drawer panels.  Domain-specific rendering
+ * Manages backdrop, scroll lock, close-button, backdrop-click, Escape-key and
+ * tab-change (tos:tabChanged) close behavior for any number of named drawer panels.  Domain-specific rendering
  * is handled by callers via onBeforeOpen / onAfterClose lifecycle hooks.
  *
  * Config shape per drawer:
@@ -27,6 +27,11 @@ export class DrawerManager {
             }
         };
         document.addEventListener('keydown', this._onEscape);
+
+        // A tab switch that bypasses the backdrop (keyboard, or code calling switchToTab) would
+        // leave the drawer and its full-page backdrop over the new tab, eating its next click (#169).
+        this._onTabChanged = () => this.closeAll();
+        window.addEventListener('tos:tabChanged', this._onTabChanged);
 
         // Wire close-button and backdrop-click for each drawer
         this._backdropHandlers = {};
@@ -90,6 +95,7 @@ export class DrawerManager {
 
     destroy() {
         document.removeEventListener('keydown', this._onEscape);
+        window.removeEventListener('tos:tabChanged', this._onTabChanged);
 
         Object.keys(this._config).forEach((id) => {
             const els = this._elements[id];

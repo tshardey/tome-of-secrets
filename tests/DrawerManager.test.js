@@ -3,6 +3,7 @@
  */
 
 import { DrawerManager } from '../assets/js/ui/DrawerManager.js';
+import { switchToTab } from '../assets/js/tabs.js';
 
 function createDrawerDOM(id) {
     const backdrop = document.createElement('div');
@@ -382,6 +383,72 @@ describe('DrawerManager', () => {
 
             document.getElementById('close-lazy').click();
             expect(manager.isOpen('lazy')).toBe(false);
+        });
+    });
+
+    // Regression for #169: switching tabs (keyboard or programmatic) left the drawer and its
+    // full-page backdrop over the new tab, so the first click there only dismissed the drawer.
+    describe('tab change', () => {
+        function createTabsDOM() {
+            const nav = document.createElement('nav');
+            nav.innerHTML = `
+                <button data-tab-target="quests" class="active">Quests</button>
+                <button data-tab-target="library">Library</button>`;
+            document.body.appendChild(nav);
+            ['quests', 'library'].forEach((id) => {
+                const panel = document.createElement('div');
+                panel.dataset.tabPanel = id;
+                if (id === 'quests') panel.classList.add('active');
+                panel.scrollIntoView = () => {};
+                document.body.appendChild(panel);
+            });
+        }
+
+        it('closes the open drawer when the active tab changes', () => {
+            createTabsDOM();
+            const { backdrop, drawer } = createDrawerDOM('test');
+            const onAfterClose = jest.fn();
+            manager = new DrawerManager({
+                test: { backdrop: 'test-backdrop', drawer: 'test-drawer', onAfterClose }
+            });
+            manager.open('test');
+
+            switchToTab('library');
+
+            expect(manager.isOpen('test')).toBe(false);
+            expect(drawer.style.display).toBe('none');
+            expect(backdrop.classList.contains('active')).toBe(false);
+            expect(document.body.style.overflow).toBe('');
+            expect(onAfterClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('does nothing on tab change when no drawer is open', () => {
+            createTabsDOM();
+            createDrawerDOM('test');
+            const onAfterClose = jest.fn();
+            manager = new DrawerManager({
+                test: { backdrop: 'test-backdrop', drawer: 'test-drawer', onAfterClose }
+            });
+
+            switchToTab('library');
+
+            expect(onAfterClose).not.toHaveBeenCalled();
+        });
+
+        it('stops listening for tab changes after destroy', () => {
+            createTabsDOM();
+            createDrawerDOM('test');
+            const onAfterClose = jest.fn();
+            manager = new DrawerManager({
+                test: { backdrop: 'test-backdrop', drawer: 'test-drawer', onAfterClose }
+            });
+            manager.open('test');
+            manager.destroy();
+            manager = null;
+
+            switchToTab('library');
+
+            expect(onAfterClose).not.toHaveBeenCalled();
         });
     });
 });
