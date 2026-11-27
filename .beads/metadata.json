@@ -1,7 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "embedded",
-  "dolt_database": "tome_of_secrets",
-  "project_id": "bdeaea95-31aa-4599-9821-8ed91dc4b755"
-}

@@ -70,37 +70,6 @@ The repository is organized as a standard Jekyll project.
 *   `supabase/`: Supabase CLI project directory. Contains `config.toml` and `migrations/` with timestamped SQL migration files managed via `supabase migration new` and applied with `supabase db push`.
 *   `Gemfile`: Specifies the Ruby gem dependencies for Jekyll.
 
-## Task Tracking and Planning
-
-Use **[Beads](https://github.com/gastownhall/beads)** (`bd`) for task tracking and planning. Beads is a dependency-aware graph issue tracker for coding agents; this repo stores state under `.beads/` using a **Dolt** backend (embedded mode by default).
-
-**Do not bypass `bd` for issue state.** Agents must create, update, close, and query work **only through the `bd` CLI** (or documented `bd` flows). **Do not** edit `.beads/issues.jsonl` by hand, **do not** open `.beads/beads.db` or other DB files with `sqlite3`, and **do not** mutate `.beads/embeddeddolt/` or other storage files directly. Those paths are managed by Beads; bypassing them corrupts or desynchronizes the tracker. For rare debugging, use `bd sql '<query>'` if you must run SQL, not raw tools against the files on disk. If the tracker misbehaves, follow [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md).
-
-**Concurrency:** Embedded Dolt is effectively **single-writer**. Avoid multiple terminals or parallel agents issuing `bd` writes at the same time; serialize Beads updates or you risk hangs and locks. If you need concurrent writers long-term, plan a Beads **server** mode setup (see upstream docs).
-
-**Session start — verify Beads is healthy before any `bd` write.** A dev-container rebuild can upgrade the `bd` CLI underneath an older `.beads/` database, leaving the stored schema behind the binary. In that state reads fail with `column "..." could not be found in any table in scope` and **all writes are blocked**. Always run a read command before touching issue state:
-
-```bash
-bd list          # or: bd ready
-```
-
-If it errors, or warns about **pending schema migrations** (`v<old> -> v<new>`), stop and follow [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md). Do **not** run `bd init`, do **not** hand-edit `.beads/issues.jsonl`, and do **not** force any push to work around it — each of those forks the tracker instead of repairing it.
-
-**Required workflow:**
-
-1.  **Before starting work:** Create tasks in Beads *before* you begin implementation. Do not start coding (or content changes) until the work is represented as one or more tasks. Use `bd create "Title" -p <priority>` for each discrete piece of work and `bd dep add <child> <parent>` to link dependencies. For multi-step requests, break the work into tasks first, then pick from `bd ready` to see what is unblocked.
-2.  **Claim work:** Move an issue to **in progress** when you start it (`bd update <id> --status in_progress`) so other agents or sessions do not duplicate effort.
-3.  **Granularity:** If a task is broad or will take **more than a few minutes**, split it into smaller Beads issues with clear scopes. **Rule of thumb:** if meaningful work exceeds ~3 minutes and is not already tracked, add or refine a Bead before diving in.
-4.  **When finished (definition of done):** Mark a task **done** only after **automated tests have passed** (including `validate-data` when data changed) **and** a **subagent pre-commit review has passed** for code changes. Close finished work with `bd close <id> --reason "..."` (use `bd close --help` for flags such as `--force` when dependency gates block a legitimately complete issue). Keep Beads aligned with reality.
-5.  **Ongoing:** Use `bd ready` to choose next steps; update task state as you go so context persists across sessions.
-
-**Setup and reference:**
-
-*   **Initialization:** This repo **already uses Beads — never run `bd init` here.** `bd init` creates a *new* Dolt history with no common ancestor with the remote, forking the tracker so `bd dolt push` fails with `no common ancestor`; recovering from that fork risks losing issues that exist only on one side. This has already happened once (see [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md)). To set up a fresh clone, or to repair a missing/broken database, run **`bd bootstrap`** — it clones the existing history from the remote and preserves the shared ancestry. (Install the `bd` CLI once per environment; do not clone the Beads repo into this project.)
-*   **Common commands:** `bd ready` — unblocked work; `bd list` / `bd show <id>` — inspect; `bd create`, `bd update`, `bd dep add`, `bd close` — mutate; `bd export --no-memories -o .beads/issues.jsonl` — refresh the git-tracked export after changes (see below).
-*   **Git-tracked export:** The maintainer commits [`.beads/issues.jsonl`](.beads/issues.jsonl). After you change issue state, run `bd export --no-memories -o .beads/issues.jsonl` so that file matches the database, then stage it with `git add`. Older docs may mention `bd sync`; current `bd` uses **`bd export`** for this JSONL snapshot.
-*   **Docs:** [Beads upstream](https://github.com/gastownhall/beads), [`.beads/README.md`](.beads/README.md), and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md) for recovery and troubleshooting.
-
 ## Agent Capabilities and Tasks
 
 You can perform the following tasks. Always use the Docker Compose development environment (`docker compose ...`) for running servers or tests.
@@ -210,12 +179,11 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 
 ## Important Directives
 
-1.  **Task tracking (Beads):** Create and claim tasks *before* starting work; keep them granular; mark them **done** only after tests pass and subagent review passes (for code). Use **`bd` only** for issue CRUD (see Task Tracking section — no manual `.beads` storage edits). See [`.beads/README.md`](.beads/README.md) and [`project-docs/BEADS-RECOVERY.md`](project-docs/BEADS-RECOVERY.md).
-2.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
-3.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed inside the Docker Compose environment (`docker compose up jekyll`, `docker compose run --rm dev ...`) to ensure all dependencies are available.
-4.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
-5.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
-6.  **Git: feature branches only, never `main`:** Agents may **`git add`**, **`git commit`**, **`git push`**, and **open pull requests** — but only on a **feature branch**. Agents must **never** commit to, push to, or merge into **`main`**; the maintainer merges. If the session starts on `main`, create a branch before the first commit. When issue state changed, run **`bd export --no-memories -o .beads/issues.jsonl`** so the export matches the database, then stage it with the rest of the work.
+1.  **Data Consistency**: JSON under `assets/data/` is the source of truth. After editing JSON, run `node scripts/generate-data.js`. Hydrated pages (`rewards.md`, `sanctum.md`, `keeper.md`) and the Character Sheet read from the generated exports. Avoid duplicating content in Markdown and JavaScript.
+2.  **Development Environment**: All commands for running the server (`jekyll`) or tests (`npm`) MUST be executed inside the Docker Compose environment (`docker compose up jekyll`, `docker compose run --rm dev ...`) to ensure all dependencies are available.
+3.  **File Paths**: Use relative paths for links and assets within the project files to ensure they work correctly with Jekyll's `baseurl` configuration (e.g., `{{ site.baseurl }}/assets/css/style.css`).
+4.  **Cleanliness**: Do not commit build artifacts or dependencies (`_site`, `node_modules`, `.jekyll-cache`, etc.). The `.gitignore` file should handle this, but be vigilant.
+5.  **Git: feature branches only, never `main`:** Agents may **`git add`**, **`git commit`**, **`git push`**, and **open pull requests** — but only on a **feature branch**. Agents must **never** commit to, push to, or merge into **`main`**; the maintainer merges. If the session starts on `main`, create a branch before the first commit.
 
 ## Landing the Plane (Session Completion)
 
@@ -223,22 +191,20 @@ This applies any pending migrations that haven't yet run on the remote Supabase 
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **Note remaining work** - List anything that needs follow-up in the handoff and PR description
 2. **Run quality gates** (if code changed) - Tests, linters, builds; complete **subagent pre-commit review** for code diffs
-3. **Update issue status** - Close finished work, update in-progress items
-4. **Commit and push the feature branch**:
+3. **Commit and push the feature branch**:
    ```bash
    git rev-parse --abbrev-ref HEAD                  # confirm you are NOT on main
-   bd export --no-memories -o .beads/issues.jsonl   # when Beads issue state changed; refreshes git-tracked export
-   git add <paths>     # stage every file that is part of this deliverable (include .beads/issues.jsonl if updated)
+   git add <paths>     # stage every file that is part of this deliverable
    git status          # show staged vs unstaged; call out anything intentionally not added
-   git commit -m "<type>(<bead-id>): <summary>"
+   git commit -m "<type>(<scope>): <summary>"
    git push -u origin <feature-branch>
    ```
    Open a PR against `main` when the work is ready for review, and **leave it unmerged**. Never commit or push to `main` directly. The handoff should list the branch, the commits, and the PR link.
-5. **Clean up** - Clear stashes if you created them; do not prune remotes unless asked
-6. **Verify** - Staged set matches intent; no stray generated artifacts in the index unless the task requires them
-7. **Hand off** - Summarize changes, remaining risks, and follow-ups for the next session
+4. **Clean up** - Clear stashes if you created them; do not prune remotes unless asked
+5. **Verify** - Staged set matches intent; no stray generated artifacts in the index unless the task requires them
+6. **Hand off** - Summarize changes, remaining risks, and follow-ups for the next session
 
 **CRITICAL RULES:**
 - **Never commit to, push to, or merge into `main`.** Committing, pushing and opening PRs is allowed on **feature branches** only. Check the current branch before your first commit.

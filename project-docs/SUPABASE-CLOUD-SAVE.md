@@ -113,7 +113,7 @@ This migration:
 - Creates projection tables: `tos_save_summary`, `tos_inventory`, `tos_quests`
 - Installs a dispatcher trigger on `tos_saves` that will populate projections on each save
 
-All statements are idempotent (safe to re-run). Projection functions start as no-op stubs; downstream beads replace them with real logic.
+All statements are idempotent (safe to re-run). Projection functions start as no-op stubs; later migrations replace them with real logic.
 
 **New tables:**
 
