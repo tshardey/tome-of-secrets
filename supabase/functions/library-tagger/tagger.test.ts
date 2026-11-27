@@ -944,6 +944,69 @@ Deno.test("auditSeries: unsure, then search, then still unsure -> ok unsure, sea
   assert.deepEqual(r, { kind: "ok", verdict: "unsure", result: AUDIT_UNSURE, usage: SUMMED, searched: true });
 });
 
+// 2026-11-27: a tool-less standalone earns the search call, as unsure does.
+const AUDIT_STANDALONE = { verdict: "wrong_series", name: null, volume: null, why: "No sequel is known." };
+const MOVED = { verdict: "wrong_series", name: "Saltglass Archive", volume: 1, why: "It opens Saltglass Archive." };
+
+Deno.test("auditSeries: a first-call standalone earns the search call; a confirmed standalone is proposed, usage summed", async () => {
+  const confirmed = { ...AUDIT_STANDALONE, why: "The publisher calls it a standalone." };
+  const { fetchImpl, calls } = seq(answer(AUDIT_STANDALONE), searched(confirmed), answer(AGREE));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.ok(!("tools" in calls[0]));
+  assert.deepEqual(calls[1].tools, [SEARCH_TOOL]);
+  assert.equal(calls[1].system, AUDIT_SEARCH_PROMPT);
+  assert.equal(calls[1].max_tokens, SERIES_SEARCH_MAX_TOKENS);
+  assert.deepEqual(calls[1].messages, calls[0].messages);
+  assert.deepEqual(r, { kind: "ok", verdict: "wrong_series", result: confirmed, usage: SUMMED, searched: true });
+});
+
+Deno.test("auditSeries: a first-call standalone, then a search naming a series -> that series is proposed", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_STANDALONE), searched(MOVED));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(r, { kind: "ok", verdict: "wrong_series", result: MOVED, usage: SUMMED, searched: true });
+});
+
+Deno.test("auditSeries: a first-call standalone, then a search answering unsure -> unsure, so no flag", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_STANDALONE), searched(AUDIT_UNSURE), answer(AGREE));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(r, { kind: "ok", verdict: "unsure", result: AUDIT_UNSURE, usage: SUMMED, searched: true });
+});
+
+Deno.test("auditSeries: a standalone spelled as a blank or placeholder name also earns the search call", async () => {
+  for (const name of ["", "  ", "none", "standalone"]) {
+    const { fetchImpl, calls } = seq(answer({ ...AUDIT_STANDALONE, name }), searched(AGREE));
+    const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+    assert.equal(calls.length, 2, name);
+    assert.equal(r.kind === "ok" && r.searched, true, name);
+  }
+});
+
+Deno.test("auditSeries: a first-call wrong_series naming a series, agree and wrong_number never search", async () => {
+  for (const first of [MOVED, AGREE, WRONG_NUMBER]) {
+    const { fetchImpl, calls } = seq(answer(first), searched(AGREE));
+    const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+    assert.equal(calls.length, 1, first.verdict);
+    assert.deepEqual(r, { kind: "ok", verdict: first.verdict, result: first, usage: FIRST, searched: false }, first.verdict);
+  }
+});
+
+Deno.test("auditSeries: without allowSearch a first-call standalone stands, with no search", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_STANDALONE), searched(AGREE));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries({ ...AUDIT_INPUT, allowSearch: false });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(r, { kind: "ok", verdict: "wrong_series", result: AUDIT_STANDALONE, usage: FIRST, searched: false });
+});
+
+Deno.test("auditSeries: a refusal on the search after a first-call standalone -> tag_refused with both calls' usage", async () => {
+  const { fetchImpl, calls } = seq(answer(AUDIT_STANDALONE), searched("no", { stop_reason: "refusal" }));
+  const r = await anthropicTagger("k", { fetchImpl }).auditSeries(AUDIT_INPUT);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(r, { kind: "fail", code: "tag_refused", usage: SUMMED });
+});
+
 Deno.test("auditSeries: SERIES_SEARCH_MODE single and text_json are ignored; an audit is always two_step with json_schema", async () => {
   const { fetchImpl, calls } = seq(answer(AUDIT_UNSURE), searched(AGREE));
   await anthropicTagger("k", { fetchImpl, searchMode: "single", searchFormat: "text_json" }).auditSeries(AUDIT_INPUT);

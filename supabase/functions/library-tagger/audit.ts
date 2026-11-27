@@ -33,6 +33,7 @@ export const AUDIT_RULES = [
   "- verdict is unsure when you can't tell from what you have. Give null for name and volume.",
   '- The same series spelled differently, such as another capitalisation, other punctuation or a missing "The", is agree. Never correct the household\'s spelling.',
   '- Household books marked "(not checked by hand)" were filled in earlier by this tool and may be wrong in the same way as this book. They are never evidence that the recorded series is right. Only books marked "(set by hand)", the description, Open Library\'s line and what you know of the book count.',
+  "- Knowing of no sequel is not evidence that the book is a standalone: a recent book may begin a series you don't know about. Call it a standalone (wrong_series with null for name and volume) only when the publisher, the book's description or a search result says so.",
 ].join("\n");
 
 export const AUDIT_SYSTEM_PROMPT = [
@@ -144,6 +145,17 @@ export function cleanAudit(raw: AuditResult): CleanAudit {
     default:
       return { verdict: raw.verdict, name: null, volume: null, why };
   }
+}
+
+/**
+ * A standalone answer: wrong_series whose name cleanAudit drops (null, blank,
+ * too long or a placeholder). A tool-less first call's standalone earns the
+ * search call like unsure (2026-11-27): sure of no sequel, the model was wrong
+ * on 4 of 5 in the first production run, each the first book of a new series.
+ */
+export function isStandalone(raw: AuditResult): boolean {
+  const clean = cleanAudit(raw);
+  return clean.verdict === "wrong_series" && clean.name === null;
 }
 
 /** The recorded line at its cap (D10): "Recorded series: <recorded>" + 200 + " #9999.99" + "</recorded>", rounded up. */
