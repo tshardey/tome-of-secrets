@@ -10,6 +10,8 @@ import {
     renderTemporaryBuffRow,
     renderAbilityCard
 } from '../assets/js/character-sheet/renderComponents.js';
+import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
+import { applyBlueprintRewardToQuest } from '../assets/js/services/QuestRewardService.js';
 
 describe('Render Components', () => {
     beforeEach(() => {
@@ -541,6 +543,57 @@ describe('Render Components', () => {
                 expect(img).toBeTruthy();
                 expect(img.getAttribute('src')).toBe('assets/images/side-quests/the-arcane-grimoire.png');
                 expect(img.getAttribute('alt')).toBe('The Arcane Grimoire');
+            });
+        });
+
+        describe('Extra Credit blueprint reward (#168)', () => {
+            const blueprintValue = (card) => {
+                const el = card.querySelector('.blueprints-reward .reward-value');
+                // Strip the trailing reward indicator ('*' / '✓') the card may append
+                return el ? el.textContent.match(/^\+\d+/)?.[0] ?? null : null;
+            };
+
+            // Shape stored by OtherQuestDeckController when an Extra Credit card is added:
+            // RewardCalculator base rewards only, which carry dollars and no blueprints.
+            const activeExtraCredit = () => ({
+                type: '⭐ Extra Credit',
+                prompt: '',
+                book: '',
+                month: 'November',
+                year: '2026',
+                rewards: { xp: 0, dollars: GAME_CONFIG.rewards.questBase.dollars, blueprints: 0, items: [] },
+                buffs: []
+            });
+
+            test('active Extra Credit card shows the configured blueprint reward', () => {
+                const card = renderQuestCard(activeExtraCredit(), 0, 'active');
+                expect(blueprintValue(card)).toBe(`+${GAME_CONFIG.restoration.extraCreditBlueprintReward}`);
+            });
+
+            test('saved Extra Credit quest with no blueprints field still shows them', () => {
+                const quest = activeExtraCredit();
+                delete quest.rewards.blueprints;
+                const card = renderQuestCard(quest, 0, 'active');
+                expect(blueprintValue(card)).toBe(`+${GAME_CONFIG.restoration.extraCreditBlueprintReward}`);
+            });
+
+            test('card preview matches what completion pays, without double-counting', () => {
+                const preview = blueprintValue(renderQuestCard(activeExtraCredit(), 0, 'active'));
+
+                const completed = activeExtraCredit();
+                completed.receipt = { base: { blueprints: 0 }, final: { blueprints: 0 } };
+                const paid = applyBlueprintRewardToQuest(completed);
+                expect(paid).toBe(GAME_CONFIG.restoration.extraCreditBlueprintReward);
+                expect(completed.receipt.final.blueprints).toBe(paid);
+
+                const completedCard = renderQuestCard(completed, 0, 'completed');
+                expect(blueprintValue(completedCard)).toBe(`+${paid}`);
+                expect(preview).toBe(`+${paid}`);
+            });
+
+            test.each(['completed', 'discarded'])('%s quest records are shown as recorded, not backfilled', (listType) => {
+                const card = renderQuestCard(activeExtraCredit(), 0, listType);
+                expect(blueprintValue(card)).toBeNull();
             });
         });
 

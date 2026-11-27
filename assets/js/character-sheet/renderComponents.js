@@ -9,6 +9,7 @@ import { escapeHtml, decodeHtmlEntities } from '../utils/sanitize.js';
 import { createElement } from '../utils/domHelpers.js';
 import * as data from './data.js';
 import { formatReceiptTooltip, calculateActiveQuestReceipt } from '../services/QuestService.js';
+import { calculateBlueprintReward } from '../services/QuestRewardService.js';
 import { createQuestRowViewModel } from '../viewModels/questViewModel.js';
 import { getEncounterImageFilename } from '../utils/encounterImageMap.js';
 import { getDungeonRoomCardImage } from '../utils/dungeonRoomCardImage.js';
@@ -547,17 +548,15 @@ function getEncounterAction(quest) {
 export function renderQuestCard(quest, index, listType = 'active') {
     const card = createElement('div', { class: 'quest-card' });
     let rewards = quest.rewards ? { ...quest.rewards } : {};
-    // Genre quests: ensure blueprints show on card (stored at add-time, or look up from genre data for legacy quests)
-    if (quest.type === '♥ Organize the Stacks' && (rewards.blueprints == null || rewards.blueprints === 0)) {
-        const genreQuests = data.genreQuests || {};
-        for (const key of Object.keys(genreQuests)) {
-            const g = genreQuests[key];
-            if (g && quest.prompt === `${g.genre}: ${g.description}`) {
-                const bp = g.blueprintReward ?? 0;
-                if (bp > 0) rewards = { ...rewards, blueprints: bp };
-                break;
-            }
-        }
+    // Quest types whose blueprints are paid at completion from the catalog (genre quests,
+    // extra credit) don't always carry them in stored rewards: extra credit is stored with
+    // RewardCalculator's dollars-only base, and legacy saves predate add-time blueprints.
+    // Preview the same amount completion will pay, for active quests only. Completed quests
+    // already hold what was paid (applyBlueprintRewardToQuest folds the base in), and
+    // discarded quests never pay, so both are shown as recorded.
+    if (listType === 'active' && !(Number(rewards.blueprints) > 0)) {
+        const catalogBlueprints = calculateBlueprintReward(quest);
+        if (catalogBlueprints > 0) rewards = { ...rewards, blueprints: catalogBlueprints };
     }
     
     // Format buffs to remove prefixes for display
