@@ -448,29 +448,22 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
             daysInput.value = buffVM.daysUsed;
             daysInput.min = 0;
             daysInput.dataset.buffName = buffKey;
-            daysInput.dataset.dailyValue = typeof buffVM.dailyValue === 'number' ? buffVM.dailyValue : 1;
-            daysInput.dataset.dailyBonus = String(buffVM.dailyBonus || 0);
-            daysInput.dataset.totalKey = buffKey;
             daysCell.appendChild(daysInput);
         }
         row.appendChild(daysCell);
 
-        // Total cell (trackable and regular buffs need id for updateBuffTotal; modifier shows text)
+        // Total cell: the view model's total is what End of Month pays. Days/Active edits update
+        // state, and the ATMOSPHERIC_BUFFS_CHANGED re-render refreshes this cell.
         const totalCell = document.createElement('td');
         if (!isModifierRow) {
             totalCell.id = `total-${buffKey.replace(/\s+/g, '')}`;
         }
         totalCell.textContent = buffVM.total;
+        if (!isModifierRow && !buffVM.isCounted && buffVM.daysUsed > 0) {
+            totalCell.title = 'Not counted: check Active to include these days at End of Month';
+        }
         row.appendChild(totalCell);
     });
-}
-
-export function updateBuffTotal(inputElement) {
-    const buffName = inputElement.dataset.totalKey || inputElement.dataset.buffName;
-    const daysUsed = parseIntOr(inputElement.value, 0);
-    const dailyValue = parseIntOr(inputElement.dataset.dailyValue, 0);
-    const dailyBonus = parseIntOr(inputElement.dataset.dailyBonus, 0);
-    document.getElementById(`total-${buffName.replace(/\s+/g, '')}`).textContent = daysUsed * (dailyValue + dailyBonus);
 }
 
 export function renderActiveAssignments() {

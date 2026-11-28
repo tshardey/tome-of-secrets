@@ -11,6 +11,7 @@ import {
     calculateDailyValue,
     isForcedAtmosphericBuff,
     calculateBuffTotal,
+    atmosphericBuffCountsForReward,
     getAssociatedBuffs,
     getBuffState,
     getAtmosphericDailyBonus,
@@ -80,11 +81,20 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             isActive = true; // Always active for Grove Tender
         }
 
-        // Calculate total; an item's flat per-day bonus (e.g. Tome-Bound Cat +$1/day) is added to
-        // each paying atmospheric buff day (not trackable setting-item days), matching RewardCalculator.calculateAtmosphericBuffRewards().
-        let total = calculateBuffTotal(buffState.daysUsed, dailyValue);
-        if (bonusPerDay > 0 && isActive && total > 0) {
-            total += calculateBuffTotal(buffState.daysUsed, bonusPerDay);
+        // Total shows only what End of Month pays (same rule as RewardCalculator.calculateAtmosphericBuffRewards()):
+        // an inactive row keeps its entered days but totals 0. An item's flat per-day bonus
+        // (e.g. Tome-Bound Cat +$1/day) is added to each paying atmospheric buff day.
+        const isCounted = atmosphericBuffCountsForReward({
+            daysUsed: buffState.daysUsed,
+            isActive: buffState.isActive,
+            isForced: isGroveBuff
+        });
+        let total = 0;
+        if (isCounted) {
+            total = calculateBuffTotal(buffState.daysUsed, dailyValue);
+            if (bonusPerDay > 0 && total > 0) {
+                total += calculateBuffTotal(buffState.daysUsed, bonusPerDay);
+            }
         }
 
         // Determine if row should be highlighted
@@ -101,8 +111,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             isGroveBuff,
             isAssociated,
             isDisabled: isGroveBuff, // Grove buff checkbox is disabled
-            // Item per-day bonus (Tome-Bound Cat) the live total adds when days are edited
-            dailyBonus: isActive ? bonusPerDay : 0
+            isCounted
         });
     }
 
@@ -116,7 +125,8 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
             const dailyValue = trackableItemValues[name] ?? 0;
             // No Cat per-day bonus here: it pays on atmospheric buff days only.
-            const total = calculateBuffTotal(daysUsed, dailyValue);
+            const isCounted = atmosphericBuffCountsForReward({ daysUsed, isTrackableItem: true });
+            const total = isCounted ? calculateBuffTotal(daysUsed, dailyValue) : 0;
             buffViewModels.push({
                 key: name,
                 name,
@@ -129,7 +139,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
                 isAssociated: false,
                 isDisabled: true, // Checkbox disabled; can't turn off while item is equipped/displayed
                 isTrackableItem: true,
-                dailyBonus: 0,
+                isCounted,
                 bonus
             });
         } else {
