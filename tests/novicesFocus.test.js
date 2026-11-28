@@ -63,9 +63,15 @@ describe('getBookPageCount', () => {
         expect(quest.pageCountEffective).toBe(333);
         expect(quest.pageCountRaw).toBe(333);
 
-        const untouched = { bookId: 'b2' };
-        BaseQuestHandler.enrichQuestWithBookPageCount(untouched, () => ({ pageCount: 0 }));
-        expect(untouched.pageCountEffective).toBeUndefined();
+    });
+
+    test('enrichQuestWithBookPageCount treats a 0-page book as no page count', () => {
+        // main wrote 0 through, which a pageCount { max: 299 } condition (Page Sprite) could match.
+        const quest = { bookId: 'b2' };
+        BaseQuestHandler.enrichQuestWithBookPageCount(quest, () => ({ pageCount: 0 }));
+        expect(quest.pageCountEffective).toBeUndefined();
+        expect(quest.pageCountRaw).toBeUndefined();
+        expect(quest.pageCountEffective ?? quest.pageCountRaw ?? null).toBeNull();
     });
 });
 

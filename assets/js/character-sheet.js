@@ -17,7 +17,7 @@ import { setSaveJSON } from './character-sheet/persistence.js';
 import { parseIntOr } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { initializeStateDependentUI } from './character-sheet/stateInitUI.js';
-import { resolveLibraryBookCompletion } from './character-sheet/bookCompletion.js';
+import { resolveLibraryBookCompletion, MAX_REWARDED_BOOKS_PER_MONTH } from './character-sheet/bookCompletion.js';
 import { defaultQuestMonthYearIfEmpty } from './character-sheet/calendarPeriod.js';
 import { createQuestDraftedHook } from './character-sheet/questDraftHook.js';
 import { populateDropdowns } from './character-sheet/dropdownInit.js';
@@ -154,7 +154,7 @@ export async function initializeCharacterSheet() {
                     booksCompletedInput.value = current + 1;
                     updateCurrency(reward);
                     const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
-                    if (shelfColors.length < 10) {
+                    if (shelfColors.length < MAX_REWARDED_BOOKS_PER_MONTH) {
                         const newColors = [...shelfColors, ui.getRandomShelfColor()];
                         setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, newColors);
                         characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = newColors;

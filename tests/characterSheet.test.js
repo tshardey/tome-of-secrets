@@ -2650,4 +2650,90 @@ describe('Character Sheet', () => {
       });
     });
   });
+
+  describe('Library mark-complete pays book XP with Novice\'s Focus (#187)', () => {
+    const intOf = (id) => parseInt(document.getElementById(id).value, 10) || 0;
+
+    /** Add a book through the Library Add Book form (LibraryController -> stateAdapter.addBook). */
+    function addLibraryBook(title, pageCount) {
+      document.querySelector('input[name="library-add-type"][value="ebook"]').checked = true;
+      document.getElementById('library-book-title').value = title;
+      document.getElementById('library-add-page-count').value = String(pageCount);
+      const addBtn = document.getElementById('library-add-book-btn');
+      addBtn.disabled = false;
+      addBtn.click();
+      const book = Object.values(characterState[STORAGE_KEYS.BOOKS]).find((b) => b.title === title);
+      expect(book).toBeDefined();
+      return book;
+    }
+
+    /** Click the book's rendered mark-complete button. */
+    function clickMarkComplete(bookId) {
+      const btn = document.querySelector(`.library-mark-complete-btn[data-book-id="${bookId}"]`);
+      expect(btn).not.toBeNull();
+      btn.click();
+    }
+
+    /** A mark-complete button for the book, as a stale or double click would deliver it. */
+    function clickStaleMarkComplete(bookId) {
+      const stale = document.createElement('button');
+      stale.type = 'button';
+      stale.className = 'library-mark-complete-btn';
+      stale.dataset.bookId = bookId;
+      document.getElementById('character-sheet').appendChild(stale);
+      stale.click();
+      stale.remove();
+    }
+
+    beforeEach(() => {
+      document.getElementById('level').value = '6';
+      document.getElementById('books-completed-month').value = '0';
+    });
+
+    it('level 6 + 300-page book pays 15 + 5 XP once, and never again for the same book', () => {
+      const book = addLibraryBook('A Long Novel', 300);
+      const xp0 = intOf('xp-current');
+
+      clickMarkComplete(book.id);
+      expect(intOf('xp-current')).toBe(xp0 + 20);
+      expect(intOf('books-completed-month')).toBe(1);
+      expect(document.querySelector(`.library-mark-complete-btn[data-book-id="${book.id}"]`)).toBeNull();
+
+      // Clicked again (stale button): the book is already completed.
+      clickStaleMarkComplete(book.id);
+      expect(intOf('xp-current')).toBe(xp0 + 20);
+      expect(intOf('books-completed-month')).toBe(1);
+
+      // Unmarked and re-marked: already counted this month.
+      characterState[STORAGE_KEYS.BOOKS][book.id].status = 'reading';
+      clickStaleMarkComplete(book.id);
+      expect(characterState[STORAGE_KEYS.BOOKS][book.id].status).toBe('completed');
+      expect(intOf('xp-current')).toBe(xp0 + 20);
+      expect(intOf('books-completed-month')).toBe(1);
+    });
+
+    it('level 6 + 299-page book pays the base 15 XP only', () => {
+      const book = addLibraryBook('Just Short', 299);
+      const xp0 = intOf('xp-current');
+      clickMarkComplete(book.id);
+      expect(intOf('xp-current')).toBe(xp0 + 15);
+    });
+
+    it('level 5 + 300-page book pays the base 15 XP only', () => {
+      document.getElementById('level').value = '5';
+      const book = addLibraryBook('Long But Early', 300);
+      const xp0 = intOf('xp-current');
+      clickMarkComplete(book.id);
+      expect(intOf('xp-current')).toBe(xp0 + 15);
+    });
+
+    it('past the monthly 10-book cap a new 300-page book pays no XP', () => {
+      document.getElementById('books-completed-month').value = '10';
+      const book = addLibraryBook('The Eleventh Book', 300);
+      const xp0 = intOf('xp-current');
+      clickMarkComplete(book.id);
+      expect(intOf('xp-current')).toBe(xp0);
+      expect(intOf('books-completed-month')).toBe(10);
+    });
+  });
 });

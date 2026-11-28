@@ -1,6 +1,9 @@
 import { RewardCalculator } from '../services/RewardCalculator.js';
 
-/** Book completion XP (and Novice's Focus with it) is paid for this many books a month. */
+/**
+ * Book completion XP (and Novice's Focus with it) is paid for this many books a month.
+ * The monthly bookshelf holds the same number of books (one shelf book per paid book).
+ */
 export const MAX_REWARDED_BOOKS_PER_MONTH = 10;
 
 /**
