@@ -15,6 +15,7 @@ import { TRIGGERS, MODIFIER_TYPES, RESOURCES } from './effectSchema.js';
 import { isSecondaryQuestOnBook } from '../utils/questLinkRules.js';
 import { isUseCountBuffSpent } from '../utils/useCountBuffs.js';
 import { atmosphericBuffCountsForReward } from './AtmosphericBuffService.js';
+import { getBookPageCount } from '../utils/bookPageCount.js';
 
 /**
  * Represents a reward package with XP, dollars (the real-money Fund), blueprints, and items.
@@ -593,6 +594,47 @@ export class RewardCalculator {
         );
 
         return finalReward.syncReceiptFinal();
+    }
+
+    /**
+     * Novice's Focus (level permanent bonus): extra XP for a completed book of at least
+     * GAME_CONFIG.endOfMonth.novicesFocus.minPages pages, once the character reaches its minLevel.
+     * @param {Object|null} book - Library book (page count read by getBookPageCount)
+     * @param {number|string} level - Character's level when the book is completed
+     * @returns {{ source: string, xp: number, pageCount: number }|null} null when it does not apply
+     */
+    static getNovicesFocusBonus(book, level) {
+        const { name, minLevel, minPages, bonusXP } = GAME_CONFIG.endOfMonth.novicesFocus;
+        const currentLevel = parseInt(level, 10);
+        if (!Number.isFinite(currentLevel) || currentLevel < minLevel || !(bonusXP > 0)) return null;
+        const pageCount = getBookPageCount(book);
+        if (pageCount == null || pageCount < minPages) return null;
+        return { source: `${name} (Level ${minLevel})`, xp: bonusXP, pageCount };
+    }
+
+    /**
+     * XP for one book marked complete in the Library: the base book completion XP plus any
+     * Novice's Focus bonus, each with its own receipt row. The caller applies the once-per-book
+     * rule and the monthly book cap (see character-sheet/bookCompletion.js).
+     * @param {Object} book - Library book being completed
+     * @param {{ level?: number|string }} [options] - Character's current level (form field, not in state)
+     * @returns {Reward} Reward with XP only
+     */
+    static calculateCompletedBookRewards(book, { level } = {}) {
+        const reward = this.calculateBookCompletionRewards(1);
+        const bonus = this.getNovicesFocusBonus(book, level);
+        if (bonus) {
+            reward.xp += bonus.xp;
+            reward.receipt.modifiers.push({
+                source: bonus.source,
+                type: 'permanent-bonus',
+                value: bonus.xp,
+                description: `${bonus.pageCount}-page book (${GAME_CONFIG.endOfMonth.novicesFocus.minPages}+ pages): +${bonus.xp} XP`,
+                currency: 'xp'
+            });
+            reward.receipt.final.xp = reward.xp;
+        }
+        return reward;
     }
 
     /**

@@ -13,6 +13,7 @@ import { getLinkedQuestIds, isSecondaryQuestInBatch } from '../utils/questLinkRu
 import { spendUseCountBuffs } from '../utils/useCountBuffs.js';
 import { getTemporaryBuffData } from '../character-sheet/data.js';
 import { STORAGE_KEYS } from '../character-sheet/storageKeys.js';
+import { getBookPageCount } from '../utils/bookPageCount.js';
 
 export class BaseQuestHandler {
     /**
@@ -162,15 +163,10 @@ export class BaseQuestHandler {
      */
     static enrichQuestWithBookPageCount(quest, getBook) {
         if (!quest || !getBook || typeof getBook !== 'function' || !quest.bookId) return;
-        const book = getBook(quest.bookId);
-        if (!book) return;
-        const pc = typeof book.pageCount === 'number' && !isNaN(book.pageCount)
-            ? book.pageCount
-            : (typeof book.pageCountRaw === 'number' && !isNaN(book.pageCountRaw) ? book.pageCountRaw : null);
-        if (pc != null) {
-            const value = Math.max(0, Math.floor(pc));
-            quest.pageCountEffective = value;
-            quest.pageCountRaw = value;
+        const pageCount = getBookPageCount(getBook(quest.bookId));
+        if (pageCount != null) {
+            quest.pageCountEffective = pageCount;
+            quest.pageCountRaw = pageCount;
         }
     }
 
