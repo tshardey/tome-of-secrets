@@ -267,10 +267,10 @@ export function renderItemCard(item, index, options = {}) {
     // Item image
     if (item.img) {
         const img = createElement('img', { 
-            src: escapeHtml(toCdnImageUrlIfConfigured(item.img)), 
+            src: toCdnImageUrlIfConfigured(item.img),
             loading: 'lazy',
             decoding: 'async',
-            alt: escapeHtml(item.name || '') 
+            alt: item.name || ''
         });
         card.appendChild(img);
     }
@@ -772,7 +772,7 @@ export function renderQuestCard(quest, index, listType = 'active') {
             src: cardImage,
             loading: 'lazy',
             decoding: 'async',
-            alt: escapeHtml(cardImageAlt || 'Quest card'),
+            alt: cardImageAlt || 'Quest card',
             class: 'quest-card-dungeon-image'
         });
         imageSection.appendChild(img);

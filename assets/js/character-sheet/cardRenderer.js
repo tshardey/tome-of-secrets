@@ -79,7 +79,7 @@ export function renderRoomCard(roomCardData) {
         const cardImg = createElement('img', {
             class: 'card-image',
             src: roomCardData.cardImage,
-            alt: escapeHtml(roomCardData.name || 'Room card')
+            alt: roomCardData.name || 'Room card'
         });
         card.appendChild(cardImg);
     }
@@ -127,7 +127,7 @@ export function renderEncounterCard(encounterCardData, options = {}) {
         const cardImg = createElement('img', {
             class: 'card-image',
             src: encounterCardData.cardImage,
-            alt: escapeHtml(encounterCardData.name || 'Encounter card')
+            alt: encounterCardData.name || 'Encounter card'
         });
         card.appendChild(cardImg);
     }
@@ -221,7 +221,7 @@ export function renderAtmosphericBuffCard(buffCardData) {
         const cardImg = createElement('img', {
             class: 'card-image',
             src: buffCardData.cardImage,
-            alt: escapeHtml(buffCardData.name || 'Atmospheric buff card')
+            alt: buffCardData.name || 'Atmospheric buff card'
         });
         card.appendChild(cardImg);
     }
@@ -261,7 +261,7 @@ export function renderGenreQuestCard(questCardData) {
         const cardImg = createElement('img', {
             class: 'card-image',
             src: questCardData.cardImage,
-            alt: escapeHtml(questCardData.genre || 'Genre quest card')
+            alt: questCardData.genre || 'Genre quest card'
         });
         card.appendChild(cardImg);
     }
@@ -333,7 +333,7 @@ export function renderSideQuestCard(questCardData) {
         const cardImg = createElement('img', {
             class: 'card-image',
             src: questCardData.cardImage,
-            alt: escapeHtml(questCardData.name || 'Side quest card')
+            alt: questCardData.name || 'Side quest card'
         });
         card.appendChild(cardImg);
     }
@@ -462,7 +462,7 @@ export function renderRestorationProjectCard(cardData) {
         const cardImg = createElement('img', {
             class: 'card-image',
             src: cardData.cardImage,
-            alt: escapeHtml(cardData.name || 'Restoration project')
+            alt: cardData.name || 'Restoration project'
         });
         card.appendChild(cardImg);
     }
@@ -499,7 +499,7 @@ export function renderRestorationWingCardback(wingData) {
         const img = createElement('img', {
             class: 'cardback-image',
             src: wingData.cardbackImage,
-            alt: escapeHtml(wingData.name || 'Wing')
+            alt: wingData.name || 'Wing'
         });
         el.appendChild(img);
     }
@@ -532,7 +532,7 @@ export function renderDungeonArchiveCard(quest, index, cardImage, title, cardTyp
         const cardImg = createElement('img', {
             class: 'archive-card-image',
             src: cardImage,
-            alt: escapeHtml(title || 'Dungeon card')
+            alt: title || 'Dungeon card'
         });
         card.appendChild(cardImg);
     }
@@ -584,7 +584,7 @@ export function renderQuestArchiveCard(quest, index, cardImage, title) {
         const cardImg = createElement('img', {
             class: 'archive-card-image',
             src: cardImage,
-            alt: escapeHtml(title || 'Quest card')
+            alt: title || 'Quest card'
         });
         card.appendChild(cardImg);
     }
@@ -650,7 +650,7 @@ export function renderTomeArchiveCard(quest, index, frontImageUrl, cardTitle) {
         const img = createElement('img', {
             class: 'tome-card-cover',
             src: frontImageUrl,
-            alt: escapeHtml((quest.book || cardTitle) || 'Book cover')
+            alt: (quest.book || cardTitle) || 'Book cover'
         });
         front.appendChild(img);
     } else {
