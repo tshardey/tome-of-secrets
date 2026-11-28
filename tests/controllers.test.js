@@ -160,6 +160,19 @@ describe('Controllers', () => {
             expect(dependencies.ui.renderPermanentBonuses).toHaveBeenCalled();
         });
 
+        it('should re-render the atmospheric buffs table when the level changes (Focused Atmosphere, #173)', () => {
+            const controller = new CharacterController(stateAdapter, form, dependencies);
+            controller.initialize();
+            dependencies.ui.renderAtmosphericBuffs.mockClear();
+
+            const levelInput = document.getElementById('level');
+            levelInput.value = '7';
+            levelInput.dispatchEvent(new Event('change'));
+
+            expect(dependencies.ui.renderAtmosphericBuffs)
+                .toHaveBeenCalledWith(document.getElementById('librarySanctum'));
+        });
+
         describe('level-up payouts', () => {
             beforeEach(() => {
                 characterState[STORAGE_KEYS.FUND_BALANCE_CENTS] = 0;

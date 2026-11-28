@@ -626,9 +626,11 @@ export class RewardCalculator {
      * @param {Object} atmosphericBuffs - Object mapping buff names to { daysUsed, isActive }
      * @param {Array<string>} associatedBuffs - Array of buff names associated with selected sanctum
      * @param {Array<string>} [forcedActiveBuffNames] - Buffs always treated as active for EOM reward (e.g. Grove Tender pipeline)
-     * @param {{ dailyBonus?: number, dailyBonusSource?: string|null, trackableItemValues?: Object<string, number> }} [options]
-     *   dailyBonus: flat dollars added for every paying atmospheric buff day, e.g. Tome-Bound Cat.
-     *   Trackable setting-item days (Garden Gnome, Gilded Painting, ...) do not earn it.
+     * @param {{ dailyBonuses?: Array<{ source: string, bonusPerDay: number }>, trackableItemValues?: Object<string, number> }} [options]
+     *   dailyBonuses: flat dollars added for every paying atmospheric buff day, one entry per source
+     *   (AtmosphericBuffService.getAtmosphericDailyBonusSources: Tome-Bound Cat, Focused Atmosphere).
+     *   Sources stack and each gets its own receipt row.
+     *   Trackable setting-item days (Garden Gnome, Gilded Painting, ...) do not earn them.
      * @returns {Reward} Reward with dollars only
      */
     static calculateAtmosphericBuffRewards(
@@ -637,7 +639,7 @@ export class RewardCalculator {
         forcedActiveBuffNames = [],
         options = {}
     ) {
-        const { dailyBonus = 0, dailyBonusSource = null, trackableItemValues = {} } = options;
+        const { dailyBonuses = [], trackableItemValues = {} } = options;
         let total = 0;
         let bonusDays = 0;
         const processedBuffs = [];
@@ -700,17 +702,21 @@ export class RewardCalculator {
             }
         }
 
-        // Flat per-day item bonus (e.g. Tome-Bound Cat +$1 on every paying atmospheric buff day).
-        if (dailyBonus > 0 && bonusDays > 0) {
-            const bonusTotal = bonusDays * dailyBonus;
-            total += bonusTotal;
-            reward.receipt.modifiers.push({
-                source: dailyBonusSource || 'Atmospheric bonus',
-                type: 'atmospheric-bonus',
-                value: bonusTotal,
-                description: `${bonusDays} days × +$${dailyBonus}`,
-                currency: GAME_CONFIG.atmospheric.resource
-            });
+        // Flat per-day bonuses (Tome-Bound Cat, Focused Atmosphere, ...): +$N on every paying
+        // atmospheric buff day, one named receipt row per source.
+        if (bonusDays > 0 && Array.isArray(dailyBonuses)) {
+            for (const { source, bonusPerDay } of dailyBonuses) {
+                if (!(bonusPerDay > 0)) continue;
+                const bonusTotal = bonusDays * bonusPerDay;
+                total += bonusTotal;
+                reward.receipt.modifiers.push({
+                    source: source || 'Atmospheric bonus',
+                    type: 'atmospheric-bonus',
+                    value: bonusTotal,
+                    description: `${bonusDays} days × +$${bonusPerDay}`,
+                    currency: GAME_CONFIG.atmospheric.resource
+                });
+            }
         }
 
         reward[GAME_CONFIG.atmospheric.resource] = total;

@@ -58,7 +58,15 @@ export const GAME_CONFIG = Object.freeze({
     atmospheric: {
         resource: 'dollars',
         baseValue: 1,
-        sanctumBonus: 2
+        sanctumBonus: 2,
+        // Level 7 permanent bonus (player-facing text: permanentBonuses.json key "7").
+        // At or above `minLevel`, every paying atmospheric buff day earns `bonusPerDay` more,
+        // on the same days as the Tome-Bound Cat bonus and stacking with it.
+        focusedAtmosphere: {
+            name: 'Focused Atmosphere',
+            minLevel: 7,
+            bonusPerDay: 1
+        }
     },
 
     /**

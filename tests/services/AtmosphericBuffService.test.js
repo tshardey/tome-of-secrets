@@ -81,9 +81,13 @@ import {
     shouldExcludeFromQuestBonuses,
     getTrackableAtmosphericItemValues,
     getAtmosphericDailyBonus,
+    getLevelAtmosphericDailyBonus,
+    getAtmosphericDailyBonusSources,
+    sumAtmosphericDailyBonuses,
     atmosphericBuffCountsForReward
 } from '../../assets/js/services/AtmosphericBuffService.js';
 import { STORAGE_KEYS } from '../../assets/js/character-sheet/storageKeys.js';
+import { GAME_CONFIG } from '../../assets/js/config/gameConfig.js';
 
 describe('AtmosphericBuffService', () => {
 
@@ -299,6 +303,58 @@ describe('AtmosphericBuffService', () => {
             expect(getAtmosphericDailyBonus({ [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Plain Charm' }] }))
                 .toEqual({ bonusPerDay: 0, modifierItemName: null });
             expect(getAtmosphericDailyBonus({})).toEqual({ bonusPerDay: 0, modifierItemName: null });
+        });
+    });
+
+    describe('Focused Atmosphere (level 7 permanent bonus)', () => {
+        const { minLevel, bonusPerDay } = GAME_CONFIG.atmospheric.focusedAtmosphere;
+        const catState = { [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Tome-Bound Cat' }] };
+
+        test('config matches the level 7 permanent bonus players see', () => {
+            expect(minLevel).toBe(7);
+            expect(bonusPerDay).toBe(1);
+        });
+
+        test('getLevelAtmosphericDailyBonus is null below the required level', () => {
+            expect(getLevelAtmosphericDailyBonus(minLevel - 1)).toBeNull();
+            expect(getLevelAtmosphericDailyBonus(1)).toBeNull();
+            expect(getLevelAtmosphericDailyBonus(undefined)).toBeNull();
+            expect(getLevelAtmosphericDailyBonus('')).toBeNull();
+        });
+
+        test('getLevelAtmosphericDailyBonus applies at and above the required level', () => {
+            const expected = { source: 'Focused Atmosphere (Level 7)', bonusPerDay };
+            expect(getLevelAtmosphericDailyBonus(minLevel)).toEqual(expected);
+            expect(getLevelAtmosphericDailyBonus(String(minLevel + 3))).toEqual(expected);
+        });
+
+        test('sources: none below level 7 without the Cat', () => {
+            expect(getAtmosphericDailyBonusSources({}, { level: 6 })).toEqual([]);
+            expect(getAtmosphericDailyBonusSources({})).toEqual([]);
+        });
+
+        test('sources: Cat alone', () => {
+            expect(getAtmosphericDailyBonusSources(catState, { level: 6 }))
+                .toEqual([{ source: 'Tome-Bound Cat', bonusPerDay: 1 }]);
+        });
+
+        test('sources: level 7 alone', () => {
+            expect(getAtmosphericDailyBonusSources({}, { level: 7 }))
+                .toEqual([{ source: 'Focused Atmosphere (Level 7)', bonusPerDay: 1 }]);
+        });
+
+        test('sources: level 7 plus Cat stack as separate named sources (+$2/day)', () => {
+            const sources = getAtmosphericDailyBonusSources(catState, { level: 8 });
+            expect(sources).toEqual([
+                { source: 'Tome-Bound Cat', bonusPerDay: 1 },
+                { source: 'Focused Atmosphere (Level 7)', bonusPerDay: 1 }
+            ]);
+            expect(sumAtmosphericDailyBonuses(sources)).toBe(2);
+        });
+
+        test('sumAtmosphericDailyBonuses ignores empty and non-positive entries', () => {
+            expect(sumAtmosphericDailyBonuses()).toBe(0);
+            expect(sumAtmosphericDailyBonuses([{ bonusPerDay: 0 }, null, { bonusPerDay: 3 }])).toBe(3);
         });
     });
 

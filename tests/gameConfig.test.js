@@ -47,7 +47,12 @@ describe('Game Configuration', () => {
   });
 
   it('should have atmospheric configuration', () => {
-    expect(GAME_CONFIG.atmospheric).toEqual({ resource: 'dollars', baseValue: 1, sanctumBonus: 2 });
+    expect(GAME_CONFIG.atmospheric).toEqual({
+      resource: 'dollars',
+      baseValue: 1,
+      sanctumBonus: 2,
+      focusedAtmosphere: { name: 'Focused Atmosphere', minLevel: 7, bonusPerDay: 1 }
+    });
   });
 
   it('should configure the monthly Transmutation and Philosopher\'s Stone exchanges', () => {

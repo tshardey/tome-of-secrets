@@ -668,7 +668,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 { 'The Candlight Study': { daysUsed: 4, isActive: true } },
                 [],
                 [],
-                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
+                { dailyBonuses: [{ source: 'Tome-Bound Cat', bonusPerDay: 1 }] }
             );
 
             expect(rewards.dollars).toBe(8); // 4 × $1 base + 4 × $1 cat
@@ -679,7 +679,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 { 'The Candlight Study': { daysUsed: 10, isActive: true } },
                 [],
                 [],
-                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
+                { dailyBonuses: [{ source: 'Tome-Bound Cat', bonusPerDay: 1 }] }
             );
             const receipt = rewards.getReceipt();
 
@@ -693,7 +693,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 { 'The Candlight Study': { daysUsed: 5, isActive: false } },
                 [],
                 [],
-                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat' }
+                { dailyBonuses: [{ source: 'Tome-Bound Cat', bonusPerDay: 1 }] }
             );
 
             expect(rewards.dollars).toBe(0);
@@ -735,8 +735,7 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 [],
                 [],
                 {
-                    dailyBonus: 1,
-                    dailyBonusSource: 'Tome-Bound Cat',
+                    dailyBonuses: [{ source: 'Tome-Bound Cat', bonusPerDay: 1 }],
                     trackableItemValues: { 'Garden Gnome': 1, 'Gilded Painting': 1, 'Mystical Moth': 1 }
                 }
             );
@@ -752,11 +751,51 @@ describe('RewardCalculator - End of Month Calculations', () => {
                 { 'Garden Gnome': { daysUsed: 6, isActive: false } },
                 [],
                 [],
-                { dailyBonus: 1, dailyBonusSource: 'Tome-Bound Cat', trackableItemValues: { 'Garden Gnome': 1 } }
+                { dailyBonuses: [{ source: 'Tome-Bound Cat', bonusPerDay: 1 }], trackableItemValues: { 'Garden Gnome': 1 } }
             );
 
             expect(rewards.dollars).toBe(6);
             expect(rewards.getReceipt().modifiers.find((m) => m.source === 'Tome-Bound Cat')).toBeUndefined();
+        });
+
+        test('Focused Atmosphere alone adds +$1 per paying atmospheric buff day as a named receipt row', () => {
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                { 'The Candlight Study': { daysUsed: 5, isActive: true } },
+                [],
+                [],
+                { dailyBonuses: [{ source: 'Focused Atmosphere (Level 7)', bonusPerDay: 1 }] }
+            );
+
+            expect(rewards.dollars).toBe(10); // 5 × $1 base + 5 × $1 Focused Atmosphere
+            const line = rewards.getReceipt().modifiers.find((m) => m.source === 'Focused Atmosphere (Level 7)');
+            expect(line).toMatchObject({ type: 'atmospheric-bonus', value: 5, description: '5 days × +$1', currency: 'dollars' });
+        });
+
+        test('Focused Atmosphere and Tome-Bound Cat stack, each on its own receipt row', () => {
+            const rewards = RewardCalculator.calculateAtmosphericBuffRewards(
+                {
+                    'The Candlight Study': { daysUsed: 5, isActive: true },
+                    'Garden Gnome': { daysUsed: 3, isActive: false }
+                },
+                [],
+                [],
+                {
+                    dailyBonuses: [
+                        { source: 'Tome-Bound Cat', bonusPerDay: 1 },
+                        { source: 'Focused Atmosphere (Level 7)', bonusPerDay: 1 }
+                    ],
+                    trackableItemValues: { 'Garden Gnome': 1 }
+                }
+            );
+
+            // 5 buff + 3 gnome = $8 base, then +$1 Cat and +$1 Focused Atmosphere on the 5 buff days only
+            expect(rewards.dollars).toBe(18);
+            const bonusRows = rewards.getReceipt().modifiers.filter((m) => m.type === 'atmospheric-bonus');
+            expect(bonusRows.map((m) => [m.source, m.value])).toEqual([
+                ['Tome-Bound Cat', 5],
+                ['Focused Atmosphere (Level 7)', 5]
+            ]);
+            expect(rewards.getReceipt().final.dollars).toBe(18);
         });
 
         test('should not pay a trackable item with zero days used', () => {

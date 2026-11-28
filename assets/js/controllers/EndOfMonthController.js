@@ -15,7 +15,8 @@ import * as data from '../character-sheet/data.js';
 import { toast } from '../ui/toast.js';
 import { EffectRegistry } from '../services/EffectRegistry.js';
 import { buildEffectContext } from '../services/effectContext.js';
-import { getAtmosphericDailyBonus, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
+import { getAtmosphericDailyBonusSources, getTrackableAtmosphericItemValues } from '../services/AtmosphericBuffService.js';
+import { parseIntOr } from '../utils/helpers.js';
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -85,7 +86,9 @@ export class EndOfMonthController extends BaseController {
                 })
             );
 
-            const { bonusPerDay, modifierItemName } = getAtmosphericDailyBonus(stateAdapter.state);
+            // Current level at End of Month (Focused Atmosphere and quest draw helpers read it).
+            const level = Math.max(1, parseIntOr(document.getElementById('level')?.value, 1));
+            const dailyBonuses = getAtmosphericDailyBonusSources(stateAdapter.state, { level });
             const trackableItemValues = getTrackableAtmosphericItemValues(stateAdapter.state);
 
             // Calculate atmospheric buff rewards using RewardCalculator
@@ -93,7 +96,7 @@ export class EndOfMonthController extends BaseController {
                 atmosphericBuffs,
                 associatedBuffs,
                 forcedBuffNames,
-                { dailyBonus: bonusPerDay, dailyBonusSource: modifierItemName, trackableItemValues }
+                { dailyBonuses, trackableItemValues }
             );
 
             // Reset atmospheric buffs (re-activate pipeline-forced buffs after reset)
@@ -153,8 +156,6 @@ export class EndOfMonthController extends BaseController {
                 permanentBonuses: data.permanentBonuses || {}
             };
             const school = document.getElementById('wizardSchool')?.value || '';
-            const levelRaw = document.getElementById('level')?.value;
-            const level = Math.max(1, parseInt(levelRaw, 10) || 1);
             const questDrawHelpers = stateAdapter.getQuestDrawHelpers(helperCatalogs, { school, level });
             stateAdapter.refreshQuestDrawHelpersAtEndOfMonth(questDrawHelpers);
             if (stateAdapter.removeUsedOneTimeQuestDrawTempBuffsAtEOM(questDrawHelpers)) {
