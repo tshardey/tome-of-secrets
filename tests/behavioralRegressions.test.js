@@ -22,6 +22,7 @@ import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-
 import * as data from '../assets/js/character-sheet/data.js';
 import { getAtmosphericDailyBonusSources } from '../assets/js/services/AtmosphericBuffService.js';
 import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
+import { resolveLibraryBookCompletion } from '../assets/js/character-sheet/bookCompletion.js';
 
 const DUNGEON_ROLLS_WITH_TMP_BUFF = new Map([
     [1, { name: "The Librarian's Hoard", duration: 'one-time' }],
@@ -325,9 +326,36 @@ describe('Behavioral regressions - named game entities', () => {
             expect(insightful.cadence).toBe('always');
         });
 
-        test('Level 6 Novice Focus text does not currently alter base book completion XP in RewardCalculator', () => {
-            const rewards = RewardCalculator.calculateBookCompletionRewards(1);
-            expect(rewards.xp).toBe(15);
+        describe('Level 6 Novice\'s Focus pays +5 XP for a completed book of 300+ pages (#187)', () => {
+            const complete = (pageCount, level) => resolveLibraryBookCompletion({
+                book: { title: 'A Long Book', pageCount },
+                completedBooksSet: new Set(),
+                booksCompletedThisMonth: 0,
+                level
+            }).reward;
+
+            test('level 6 completing a 300-page book earns 15 + 5 XP with a named receipt row', () => {
+                const reward = complete(300, 6);
+                expect(reward.xp).toBe(20);
+                const rows = reward.getReceipt().modifiers.map((m) => [m.source, m.value]);
+                expect(rows).toEqual([
+                    ['End of Month - Book Completion', 15],
+                    ['Novice\'s Focus (Level 6)', 5]
+                ]);
+            });
+
+            test('level 5 or a 299-page book earns the base XP only', () => {
+                expect(complete(300, 5).xp).toBe(15);
+                expect(complete(299, 6).xp).toBe(15);
+            });
+
+            test('the level 6 rule text matches the configured level, name, pages and amount', () => {
+                const { name, minLevel, minPages, bonusXP } = GAME_CONFIG.endOfMonth.novicesFocus;
+                const text = data.permanentBonuses[String(minLevel)].replace(/<[^>]+>/g, '');
+                expect(text).toContain(`${name}:`);
+                expect(text).toContain(`+${bonusXP} XP`);
+                expect(text).toContain(`${minPages} pages or more`);
+            });
         });
 
         describe('Level 7 Focused Atmosphere pays +$1 per paying atmospheric buff day (#173)', () => {

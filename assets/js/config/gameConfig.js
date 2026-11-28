@@ -38,7 +38,16 @@ export const GAME_CONFIG = Object.freeze({
      * End of month rewards
      */
     endOfMonth: {
-        bookCompletionXP: 15 // XP per unique book completed
+        bookCompletionXP: 15, // XP per unique book completed
+        // Level 6 permanent bonus (player-facing text: permanentBonuses.json key "6").
+        // At or above `minLevel`, a book of `minPages` pages or more earns `bonusXP` on top of
+        // bookCompletionXP, paid with it (same once-per-book rule and monthly book cap).
+        novicesFocus: {
+            name: "Novice's Focus",
+            minLevel: 6,
+            minPages: 300,
+            bonusXP: 5
+        }
     },
 
     /**

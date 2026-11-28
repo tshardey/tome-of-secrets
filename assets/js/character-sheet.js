@@ -17,7 +17,7 @@ import { setSaveJSON } from './character-sheet/persistence.js';
 import { parseIntOr } from './utils/helpers.js';
 import { initializeFormPersistence, showSaveIndicator } from './character-sheet/formPersistence.js';
 import { initializeStateDependentUI } from './character-sheet/stateInitUI.js';
-import { RewardCalculator } from './services/RewardCalculator.js';
+import { resolveLibraryBookCompletion, MAX_REWARDED_BOOKS_PER_MONTH } from './character-sheet/bookCompletion.js';
 import { defaultQuestMonthYearIfEmpty } from './character-sheet/calendarPeriod.js';
 import { createQuestDraftedHook } from './character-sheet/questDraftHook.js';
 import { populateDropdowns } from './character-sheet/dropdownInit.js';
@@ -138,17 +138,23 @@ export async function initializeCharacterSheet() {
             ui.renderCompletedQuests();
         }
         // Book count and XP: only when marking a book complete in Library (not from quest completion)
-        if (result.book && result.book.title && completedBooksSet && !completedBooksSet.has(result.book.title)) {
-            completedBooksSet.add(result.book.title);
+        const booksCompletedInput = document.getElementById('books-completed-month');
+        const current = parseIntOr(booksCompletedInput?.value, 0);
+        const { isNewBook, reward } = resolveLibraryBookCompletion({
+            book: result.book,
+            completedBooksSet,
+            booksCompletedThisMonth: current,
+            // Level when the book is completed (Novice's Focus reads it)
+            level: Math.max(1, parseIntOr(document.getElementById('level')?.value, 1))
+        });
+        if (isNewBook) {
             if (saveCompletedBooksSet) saveCompletedBooksSet();
-            const booksCompletedInput = document.getElementById('books-completed-month');
             if (booksCompletedInput) {
-                const current = parseIntOr(booksCompletedInput.value, 0);
-                if (current < 10) {
+                if (reward) {
                     booksCompletedInput.value = current + 1;
-                    updateCurrency(RewardCalculator.calculateBookCompletionRewards(1));
+                    updateCurrency(reward);
                     const shelfColors = safeGetJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, []);
-                    if (shelfColors.length < 10) {
+                    if (shelfColors.length < MAX_REWARDED_BOOKS_PER_MONTH) {
                         const newColors = [...shelfColors, ui.getRandomShelfColor()];
                         setSaveJSON(STORAGE_KEYS.SHELF_BOOK_COLORS, newColors);
                         characterState[STORAGE_KEYS.SHELF_BOOK_COLORS] = newColors;
