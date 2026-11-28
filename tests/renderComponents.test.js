@@ -11,6 +11,7 @@ import {
     renderAbilityCard
 } from '../assets/js/character-sheet/renderComponents.js';
 import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
+import { renderRoomCard } from '../assets/js/character-sheet/cardRenderer.js';
 import { applyBlueprintRewardToQuest } from '../assets/js/services/QuestRewardService.js';
 
 describe('Render Components', () => {
@@ -620,6 +621,39 @@ describe('Render Components', () => {
                 const img = card.querySelector('.quest-card-dungeon-image');
                 expect(img).toBeFalsy();
             });
+        });
+    });
+
+    // #171: escapeHtml must not wrap values set via setAttribute/textContent,
+    // otherwise entities render literally (e.g. "Scholar&#039;s Sigil").
+    describe('no double-escaping in attributes and text (#171)', () => {
+        test('item card alt keeps apostrophes/ampersands and src keeps its query string', () => {
+            const item = {
+                name: "Visiting Scholar's Sigil & Seal",
+                type: 'Wearable',
+                img: 'https://example.com/sigil.png?a=1&b=2',
+                bonus: 'Test bonus'
+            };
+            const img = renderItemCard(item, 0, {}).querySelector('img');
+            expect(img.getAttribute('alt')).toBe("Visiting Scholar's Sigil & Seal");
+            expect(img.getAttribute('src')).toBe('https://example.com/sigil.png?a=1&b=2');
+        });
+
+        test('room card alt keeps the raw apostrophe', () => {
+            const card = renderRoomCard({ name: "The Archivist's Vault", cardImage: 'room.png' });
+            const alt = card.querySelector('img').getAttribute('alt');
+            expect(alt).toBe("The Archivist's Vault");
+            expect(alt).not.toContain('&#039;');
+        });
+
+        test('innerHTML paths still escape markup', () => {
+            const card = renderRoomCard({
+                name: 'Room',
+                challenge: '<script>alert(1)</script>'
+            });
+            const challenge = card.querySelector('.card-challenge');
+            expect(challenge.querySelector('script')).toBeNull();
+            expect(challenge.textContent).toContain('<script>alert(1)</script>');
         });
     });
 

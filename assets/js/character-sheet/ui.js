@@ -2,7 +2,6 @@ import * as data from './data.js';
 import { characterState } from './state.js';
 import { keeperBackgrounds, allItems } from './data.js';
 import { parseIntOr } from '../utils/helpers.js';
-import { escapeHtml } from '../utils/sanitize.js';
 import { clearElement, appendHTML, createElement } from '../utils/domHelpers.js';
 import { safeGetJSON, safeSetJSON } from '../utils/storage.js';
 import { STORAGE_KEYS } from './storageKeys.js';
@@ -245,7 +244,7 @@ export function renderMasteryAbilities(smpInput) {
     viewModel.unlearnedOptions.forEach(optionData => {
         const option = document.createElement('option');
         option.value = optionData.value;
-        option.textContent = escapeHtml(optionData.text);
+        option.textContent = optionData.text;
         abilitySelect.appendChild(option);
     });
 }
