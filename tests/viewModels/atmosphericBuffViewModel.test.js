@@ -37,6 +37,13 @@ jest.mock('../../assets/js/services/AtmosphericBuffService.js', () => ({
         }
         return { bonusPerDay: 0, modifierItemName: null };
     }),
+    // Real per-day source rules (shared with End of Month payout) over the mocked data module below.
+    getAtmosphericDailyBonusSources: jest.requireActual('../../assets/js/services/AtmosphericBuffService.js')
+        .getAtmosphericDailyBonusSources,
+    getLevelAtmosphericDailyBonus: jest.requireActual('../../assets/js/services/AtmosphericBuffService.js')
+        .getLevelAtmosphericDailyBonus,
+    sumAtmosphericDailyBonuses: jest.requireActual('../../assets/js/services/AtmosphericBuffService.js')
+        .sumAtmosphericDailyBonuses,
     getTrackableAtmosphericItemValues: jest.fn((state) => {
         const equipped = state?.equippedItems || [];
         if (equipped.some((i) => i?.name === 'Garden Gnome')) {
@@ -283,6 +290,71 @@ describe('AtmosphericBuffViewModel', () => {
             const catRow = viewModels.find(vm => vm.name === 'Tome-Bound Cat');
             expect(catRow.dailyValue).toBe('+$2/day');
             expect(catRow.modifierBonusPerDay).toBe(2);
+        });
+
+        describe('Focused Atmosphere (level 7, #173)', () => {
+            const levelRowName = 'Focused Atmosphere (Level 7)';
+
+            test('below level 7: no bonus and no modifier row', () => {
+                const viewModels = createAtmosphericBuffViewModel(mockState, '', '', 6);
+                expect(viewModels.find(vm => vm.name === 'Buff1').total).toBe(3); // 3 × $1
+                expect(viewModels.find(vm => vm.name === levelRowName)).toBeUndefined();
+            });
+
+            test('level 7 alone adds +$1 per paying day and shows a named modifier row', () => {
+                const viewModels = createAtmosphericBuffViewModel(mockState, '', '', 7);
+                expect(viewModels.find(vm => vm.name === 'Buff1').total).toBe(6); // 3 × ($1 + $1)
+                const levelRow = viewModels.find(vm => vm.name === levelRowName);
+                expect(levelRow).toMatchObject({
+                    isModifierItem: true,
+                    isLevelBonus: true,
+                    modifierBonusPerDay: 1,
+                    dailyValue: '+$1/day',
+                    total: '+$1 per paying day',
+                    isDisabled: true
+                });
+            });
+
+            test('level above 7 still gets the bonus', () => {
+                const viewModels = createAtmosphericBuffViewModel(mockState, '', '', 10);
+                expect(viewModels.find(vm => vm.name === 'Buff1').total).toBe(6);
+            });
+
+            test('inactive rows keep showing 0 at level 7 (#170)', () => {
+                const viewModels = createAtmosphericBuffViewModel(mockState, '', '', 7);
+                const buff2 = viewModels.find(vm => vm.name === 'Buff2');
+                expect(buff2.isCounted).toBe(false);
+                expect(buff2.total).toBe(0);
+            });
+
+            test("Grove Tender's forced buff earns the bonus", () => {
+                const state = { atmosphericBuffs: { 'The Soaking in Nature': { daysUsed: 3, isActive: false } } };
+                const groveBuff = createAtmosphericBuffViewModel(state, '', 'groveTender', 7)
+                    .find(vm => vm.name === 'The Soaking in Nature');
+                expect(groveBuff.total).toBe(6); // 3 × ($1 + $1)
+            });
+
+            test('trackable item days do not earn the bonus', () => {
+                const state = {
+                    atmosphericBuffs: { 'Garden Gnome': { daysUsed: 4, isActive: false } },
+                    equippedItems: [{ name: 'Garden Gnome' }]
+                };
+                const gnomeRow = createAtmosphericBuffViewModel(state, '', '', 7).find(vm => vm.name === 'Garden Gnome');
+                expect(gnomeRow.total).toBe(8); // 4 × $2 item value only
+            });
+
+            test('level 7 plus Tome-Bound Cat stack (+$2/day) with each source on its own row', () => {
+                const state = { ...mockState, equippedItems: [{ name: 'Tome-Bound Cat' }] };
+                const viewModels = createAtmosphericBuffViewModel(state, '', '', 7);
+                expect(viewModels.find(vm => vm.name === 'Buff1').total).toBe(9); // 3 × ($1 + $1 Cat + $1 level)
+                expect(viewModels.find(vm => vm.name === 'Tome-Bound Cat').modifierBonusPerDay).toBe(1);
+                expect(viewModels.find(vm => vm.name === levelRowName).modifierBonusPerDay).toBe(1);
+            });
+
+            test('sanctum-associated buff adds the bonus on top of the sanctum rate', () => {
+                const viewModels = createAtmosphericBuffViewModel(mockState, 'sanctum1', '', 7);
+                expect(viewModels.find(vm => vm.name === 'Buff1').total).toBe(9); // 3 × ($2 sanctum + $1)
+            });
         });
     });
 });

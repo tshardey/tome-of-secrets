@@ -366,9 +366,10 @@ export function renderAtmosphericBuffs(librarySanctumSelect) {
     // Get background from DOM
     const keeperBackgroundSelect = document.getElementById('keeperBackground');
     const background = keeperBackgroundSelect ? keeperBackgroundSelect.value : '';
-    
+    const level = parseIntOr(document.getElementById('level')?.value, 1);
+
     // Create view model
-    const buffViewModels = createAtmosphericBuffViewModel(characterState, selectedSanctum, background);
+    const buffViewModels = createAtmosphericBuffViewModel(characterState, selectedSanctum, background, level);
 
     // Render each buff row using view model
     buffViewModels.forEach(buffVM => {

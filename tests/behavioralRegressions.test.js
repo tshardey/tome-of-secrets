@@ -20,6 +20,8 @@ import { QuestController } from '../assets/js/controllers/QuestController.js';
 import { StateAdapter } from '../assets/js/character-sheet/stateAdapter.js';
 import { STORAGE_KEYS, createEmptyCharacterState } from '../assets/js/character-sheet/storageKeys.js';
 import * as data from '../assets/js/character-sheet/data.js';
+import { getAtmosphericDailyBonusSources } from '../assets/js/services/AtmosphericBuffService.js';
+import { GAME_CONFIG } from '../assets/js/config/gameConfig.js';
 
 const DUNGEON_ROLLS_WITH_TMP_BUFF = new Map([
     [1, { name: "The Librarian's Hoard", duration: 'one-time' }],
@@ -328,9 +330,42 @@ describe('Behavioral regressions - named game entities', () => {
             expect(rewards.xp).toBe(15);
         });
 
-        test.skip(
-            'Level 7 Focused Atmosphere (+1 to atmospheric bonuses) is currently display-text only in reward flow',
-            () => {}
-        );
+        describe('Level 7 Focused Atmosphere pays +$1 per paying atmospheric buff day (#173)', () => {
+            const buffs = { 'The Candlight Study': { daysUsed: 5, isActive: true } };
+            const catState = {
+                ...createEmptyCharacterState(),
+                [STORAGE_KEYS.EQUIPPED_ITEMS]: [{ name: 'Tome-Bound Cat' }]
+            };
+            const payAtLevel = (state, level) => RewardCalculator.calculateAtmosphericBuffRewards(
+                buffs, [], [], { dailyBonuses: getAtmosphericDailyBonusSources(state, { level }) }
+            );
+
+            test('level 6 earns the base rate only', () => {
+                expect(payAtLevel(createEmptyCharacterState(), 6).dollars).toBe(5);
+            });
+
+            test('level 7 earns +$1 per paying day, as a named receipt row', () => {
+                const rewards = payAtLevel(createEmptyCharacterState(), 7);
+                expect(rewards.dollars).toBe(10);
+                expect(rewards.getReceipt().modifiers.find((m) => m.source === 'Focused Atmosphere (Level 7)'))
+                    .toMatchObject({ value: 5, description: '5 days × +$1' });
+            });
+
+            test('level 7 stacks with the Tome-Bound Cat (+$2 per paying day)', () => {
+                const rewards = payAtLevel(catState, 7);
+                expect(rewards.dollars).toBe(15);
+                const sources = rewards.getReceipt().modifiers
+                    .filter((m) => m.type === 'atmospheric-bonus')
+                    .map((m) => m.source);
+                expect(sources).toEqual(['Tome-Bound Cat', 'Focused Atmosphere (Level 7)']);
+            });
+
+            test('the level 7 rule text matches the configured level, name and amount', () => {
+                const { name, minLevel, bonusPerDay } = GAME_CONFIG.atmospheric.focusedAtmosphere;
+                const text = data.permanentBonuses[String(minLevel)];
+                expect(text).toContain(`${name}:`);
+                expect(text).toContain(`+$${bonusPerDay} on atmospheric days`);
+            });
+        });
     });
 });

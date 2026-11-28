@@ -99,16 +99,12 @@ export class CharacterController extends BaseController {
             // Skip if level didn't actually change (e.g., from handleLevelUp)
             if (newLevel === previousLevel) {
                 // Still update UI
-                uiModule.updateXpNeeded(levelInput, xpNeededInput);
-                uiModule.updateXpProgressBar();
-                uiModule.renderPermanentBonuses(levelInput);
+                this.refreshLevelDependentUI(levelInput, xpNeededInput);
                 return;
             }
-            
+
             // Update UI first
-            uiModule.updateXpNeeded(levelInput, xpNeededInput);
-            uiModule.updateXpProgressBar();
-            uiModule.renderPermanentBonuses(levelInput);
+            this.refreshLevelDependentUI(levelInput, xpNeededInput);
             
             // If level increased, apply rewards for all levels between previous and new
             if (newLevel > previousLevel && data.levelRewards) {
@@ -162,6 +158,23 @@ export class CharacterController extends BaseController {
             onSanctumChange();
             this.saveState();
         });
+    }
+
+    /**
+     * Refresh every UI piece that depends on the character's level: XP needed, progress bar,
+     * permanent bonuses list, and the atmospheric buffs table (Focused Atmosphere changes its totals).
+     * @param {HTMLInputElement} levelInput
+     * @param {HTMLInputElement|null} xpNeededInput
+     */
+    refreshLevelDependentUI(levelInput, xpNeededInput) {
+        const { ui: uiModule } = this.dependencies;
+        uiModule.updateXpNeeded(levelInput, xpNeededInput);
+        uiModule.updateXpProgressBar();
+        uiModule.renderPermanentBonuses(levelInput);
+        const librarySanctumSelect = document.getElementById('librarySanctum');
+        if (librarySanctumSelect && uiModule.renderAtmosphericBuffs) {
+            uiModule.renderAtmosphericBuffs(librarySanctumSelect);
+        }
     }
 
     /**
@@ -220,9 +233,7 @@ export class CharacterController extends BaseController {
         this.applyLevelRewards(currentLevel, newLevel);
 
         // Update UI (this will also be called by the change event, but that's fine - it's idempotent)
-        uiModule.updateXpNeeded(levelInput, xpNeededInput);
-        uiModule.updateXpProgressBar();
-        uiModule.renderPermanentBonuses(levelInput);
+        this.refreshLevelDependentUI(levelInput, xpNeededInput);
 
         this.saveState();
     }

@@ -109,6 +109,46 @@ export function getAtmosphericDailyBonus(state) {
 }
 
 /**
+ * Focused Atmosphere (level permanent bonus): flat per-day atmospheric bonus once the character
+ * reaches GAME_CONFIG.atmospheric.focusedAtmosphere.minLevel.
+ * @param {number|string} level - Character's current level
+ * @returns {{ source: string, bonusPerDay: number }|null} null below the required level
+ */
+export function getLevelAtmosphericDailyBonus(level) {
+    const { name, minLevel, bonusPerDay } = GAME_CONFIG.atmospheric.focusedAtmosphere;
+    const currentLevel = parseInt(level, 10);
+    if (!Number.isFinite(currentLevel) || currentLevel < minLevel || !(bonusPerDay > 0)) return null;
+    return { source: `${name} (Level ${minLevel})`, bonusPerDay };
+}
+
+/**
+ * Every flat per-day bonus added to each paying atmospheric buff day, one entry per named source
+ * (Tome-Bound Cat, Focused Atmosphere, ...). Sources stack. Both End of Month payout
+ * (RewardCalculator.calculateAtmosphericBuffRewards dailyBonuses) and the atmospheric buff table
+ * read this list, so display equals payout. Trackable setting-item days never earn these bonuses.
+ * @param {Object} state - Character state object
+ * @param {{ level?: number|string }} [options] - Character's current level (form field, not in state)
+ * @returns {Array<{ source: string, bonusPerDay: number }>}
+ */
+export function getAtmosphericDailyBonusSources(state, { level } = {}) {
+    const sources = [];
+    const { bonusPerDay, modifierItemName } = getAtmosphericDailyBonus(state);
+    if (bonusPerDay > 0) sources.push({ source: modifierItemName, bonusPerDay });
+    const levelBonus = getLevelAtmosphericDailyBonus(level);
+    if (levelBonus) sources.push(levelBonus);
+    return sources;
+}
+
+/**
+ * Total dollars per paying atmospheric buff day across all sources.
+ * @param {Array<{ bonusPerDay: number }>} sources - From getAtmosphericDailyBonusSources
+ * @returns {number}
+ */
+export function sumAtmosphericDailyBonuses(sources = []) {
+    return sources.reduce((sum, s) => sum + (s?.bonusPerDay > 0 ? s.bonusPerDay : 0), 0);
+}
+
+/**
  * Get associated buffs for a sanctum
  * @param {string} sanctumKey - Sanctum key
  * @returns {Array<string>} Array of associated buff names

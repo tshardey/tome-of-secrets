@@ -15,6 +15,9 @@ import {
     getAssociatedBuffs,
     getBuffState,
     getAtmosphericDailyBonus,
+    getAtmosphericDailyBonusSources,
+    getLevelAtmosphericDailyBonus,
+    sumAtmosphericDailyBonuses,
     getTrackableAtmosphericItemValues
 } from '../services/AtmosphericBuffService.js';
 
@@ -51,12 +54,17 @@ function getEquippedAtmosphericRewardItems(state) {
  * @param {Object} state - Character state object
  * @param {string} selectedSanctum - Selected sanctum key
  * @param {string} background - Background key
- * @returns {Array<Object>} Array of buff view models (includes rows for atmospheric reward items when equipped/displayed)
+ * @param {number} [level=1] - Character's current level (Focused Atmosphere)
+ * @returns {Array<Object>} Array of buff view models (includes rows for atmospheric reward items when equipped/displayed,
+ *   and a modifier row for Focused Atmosphere at the required level)
  */
-export function createAtmosphericBuffViewModel(state, selectedSanctum, background) {
+export function createAtmosphericBuffViewModel(state, selectedSanctum, background, level = 1) {
     const associatedBuffs = getAssociatedBuffs(selectedSanctum);
     const atmosphericBuffsState = state.atmosphericBuffs || {};
+    // Same per-day sources End of Month pays (Tome-Bound Cat, Focused Atmosphere); they stack.
+    const dailyBonusPerDay = sumAtmosphericDailyBonuses(getAtmosphericDailyBonusSources(state, { level }));
     const { bonusPerDay } = getAtmosphericDailyBonus(state);
+    const levelBonus = getLevelAtmosphericDailyBonus(level);
     const trackableItemValues = getTrackableAtmosphericItemValues(state);
 
     const buffViewModels = [];
@@ -82,8 +90,8 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         }
 
         // Total shows only what End of Month pays (same rule as RewardCalculator.calculateAtmosphericBuffRewards()):
-        // an inactive row keeps its entered days but totals 0. An item's flat per-day bonus
-        // (e.g. Tome-Bound Cat +$1/day) is added to each paying atmospheric buff day.
+        // an inactive row keeps its entered days but totals 0. Flat per-day bonuses
+        // (Tome-Bound Cat, Focused Atmosphere) are added to each paying atmospheric buff day.
         const isCounted = atmosphericBuffCountsForReward({
             daysUsed: buffState.daysUsed,
             isActive: buffState.isActive,
@@ -92,8 +100,8 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
         let total = 0;
         if (isCounted) {
             total = calculateBuffTotal(buffState.daysUsed, dailyValue);
-            if (bonusPerDay > 0 && total > 0) {
-                total += calculateBuffTotal(buffState.daysUsed, bonusPerDay);
+            if (dailyBonusPerDay > 0 && total > 0) {
+                total += calculateBuffTotal(buffState.daysUsed, dailyBonusPerDay);
             }
         }
 
@@ -124,7 +132,7 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             const itemState = atmosphericBuffsState[name] || {};
             const daysUsed = typeof itemState.daysUsed === 'number' && !isNaN(itemState.daysUsed) ? Math.max(0, itemState.daysUsed) : 0;
             const dailyValue = trackableItemValues[name] ?? 0;
-            // No Cat per-day bonus here: it pays on atmospheric buff days only.
+            // No per-day bonuses here (Cat, Focused Atmosphere): they pay on atmospheric buff days only.
             const isCounted = atmosphericBuffCountsForReward({ daysUsed, isTrackableItem: true });
             const total = isCounted ? calculateBuffTotal(daysUsed, dailyValue) : 0;
             buffViewModels.push({
@@ -162,6 +170,26 @@ export function createAtmosphericBuffViewModel(state, selectedSanctum, backgroun
             });
         }
     });
+
+    // Focused Atmosphere (level permanent bonus): its own named modifier row, rendered like the Cat's.
+    if (levelBonus) {
+        buffViewModels.push({
+            key: levelBonus.source,
+            name: levelBonus.source,
+            dailyValue: `+$${levelBonus.bonusPerDay}/day`,
+            daysUsed: 0,
+            isActive: true,
+            total: `+$${levelBonus.bonusPerDay} per paying day`,
+            isHighlighted: false,
+            isGroveBuff: false,
+            isAssociated: false,
+            isDisabled: true,
+            isModifierItem: true,
+            isLevelBonus: true,
+            modifierBonusPerDay: levelBonus.bonusPerDay,
+            bonus: 'Permanent level bonus'
+        });
+    }
 
     return buffViewModels;
 }

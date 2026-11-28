@@ -311,7 +311,7 @@ describe('Dollar economy: catalog values match the spec tables', () => {
             { 'The Candlight Study': { daysUsed: 4, isActive: true } },
             [],
             [],
-            { dailyBonus: cat.atmosphericBonusPerDay, dailyBonusSource: 'Tome-Bound Cat' }
+            { dailyBonuses: [{ source: 'Tome-Bound Cat', bonusPerDay: cat.atmosphericBonusPerDay }] }
         );
         const withoutCat = RewardCalculator.calculateAtmosphericBuffRewards(
             { 'The Candlight Study': { daysUsed: 4, isActive: true } },
